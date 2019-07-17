@@ -47,6 +47,7 @@ public final class GATKVCFConstants {
     public static final String AS_FISHER_STRAND_KEY =               "AS_FS";
     public static final String AS_SB_TABLE_KEY =                    "AS_SB_TABLE";
     public static final String SB_TABLE_KEY =                       "SB_TABLE";
+    public static final String AS_SBP_TABLE_KEY =                    "AS_SBP_TABLE";
     public static final String GC_CONTENT_KEY =                     "GC";
     public static final String GQ_MEAN_KEY =                        "GQ_MEAN";
     public static final String GQ_STDEV_KEY =                       "GQ_STDDEV";
@@ -99,6 +100,7 @@ public final class GATKVCFConstants {
     public static final String SAMPLE_LIST_KEY =                    "Samples";
     public static final String STRAND_ODDS_RATIO_KEY =              "SOR";
     public static final String AS_STRAND_ODDS_RATIO_KEY =           "AS_SOR";
+    public static final String AS_STRAND_ODDS_RATIO_PROB_KEY =      "AS_SORP";
     public static final String STR_PRESENT_KEY =                    "STR";
     public static final String TRANSMISSION_DISEQUILIBRIUM_KEY =    "TDT";
     public static final String VARIANT_TYPE_KEY =                   "VariantType";

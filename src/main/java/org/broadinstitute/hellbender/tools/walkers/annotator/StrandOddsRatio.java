@@ -121,7 +121,7 @@ import static java.lang.Math.min;
 @DocumentedFeature(groupName=HelpConstants.DOC_CAT_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_ANNOTATORS_SUMMARY, summary="Strand bias estimated by the symmetric odds ratio test (SOR)")
 public final class StrandOddsRatio extends StrandBiasTest implements StandardAnnotation {
 
-    private static final double PSEUDOCOUNT = 1.0;
+    private static final double PSEUDOCOUNT = 0.01;
     private static final int MIN_COUNT = 0;
 
     @Override
@@ -145,6 +145,8 @@ public final class StrandOddsRatio extends StrandBiasTest implements StandardAnn
         return annotationForOneTable(calculateSOR(table));
     }
 
+
+
     /**
      * Computes the SOR value of a table after augmentation. Based on the symmetric odds ratio but modified to take on
      * low values when the reference +/- read count ratio is skewed but the alt count ratio is not.  Natural log is taken
@@ -155,6 +157,7 @@ public final class StrandOddsRatio extends StrandBiasTest implements StandardAnn
      * @param table The table before adding pseudocounts
      * @return the SOR annotation value
      */
+
     public static double calculateSOR(final int[][] table) {
         final double t00 = table[0][0] + PSEUDOCOUNT;
         final double t01 = table[0][1] + PSEUDOCOUNT;
@@ -163,11 +166,26 @@ public final class StrandOddsRatio extends StrandBiasTest implements StandardAnn
 
         final double ratio = (t00 / t01) * (t11 / t10) + (t01 / t00) * (t10 / t11);
 
-        final double refRatio = min(t00, t01)/ max(t00, t01);
-        final double altRatio = min(t10, t11)/ max(t10, t11);
+        final double refRatio = min(t00, t01) / max(t00, t01);
+        final double altRatio = min(t10, t11) / max(t10, t11);
 
         return Math.log(ratio) + Math.log(refRatio) - Math.log(altRatio);
     }
+
+    public static double calculateSOR(final double[][] table) {
+        final double t00 = table[0][0] + PSEUDOCOUNT;
+        final double t01 = table[0][1] + PSEUDOCOUNT;
+        final double t11 = table[1][1] + PSEUDOCOUNT;
+        final double t10 = table[1][0] + PSEUDOCOUNT;
+
+        final double ratio = (t00 / t01) * (t11 / t10) + (t01 / t00) * (t10 / t11);
+
+        final double refRatio = min(t00, t01) / max(t00, t01);
+        final double altRatio = min(t10, t11) / max(t10, t11);
+
+        return Math.log(ratio) + Math.log(refRatio) - Math.log(altRatio);
+    }
+
 
     /**
      * Returns an annotation result given a sor
