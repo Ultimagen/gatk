@@ -12,6 +12,17 @@ import java.util.Map;
  * Common interface for assembly-haplotype vs reads likelihood engines.
  */
 public interface ReadLikelihoodCalculationEngine extends AutoCloseable {
+
+    enum Implementation {
+        /**
+         * Classic full pair-hmm all haplotypes vs all reads.
+         */
+        PairHMM,
+
+        FlowBased
+    }
+
+
     /**
      * Calculates the likelihood of reads across many samples evaluated against haplotypes resulting from the
      * active region assembly process.
