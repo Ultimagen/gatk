@@ -15,7 +15,6 @@ import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
-
 import java.util.*;
 import java.util.function.ToDoubleFunction;
 
