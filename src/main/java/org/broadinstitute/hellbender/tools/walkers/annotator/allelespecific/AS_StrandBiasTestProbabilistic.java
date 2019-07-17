@@ -29,7 +29,6 @@ public abstract class AS_StrandBiasTestProbabilistic extends StrandBiasTest impl
     @Override
     public String getPrimaryRawKey() { return GATKVCFConstants.AS_SBP_TABLE_KEY; }
 
-
     /**
      * @return true if annotation has secondary raw keys
      */
