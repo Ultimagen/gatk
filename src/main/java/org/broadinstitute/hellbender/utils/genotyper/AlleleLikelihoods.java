@@ -7,6 +7,10 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.math3.stat.descriptive.rank.Median;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerEngine;
+import org.broadinstitute.hellbender.utils.IndexRange;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerGenotypingDebugger;
 import org.broadinstitute.hellbender.utils.MathUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
@@ -32,8 +36,9 @@ import java.util.stream.IntStream;
  */
 public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> implements SampleList, AlleleList<A> {
 
-    public static final double LOG_10_INFORMATIVE_THRESHOLD = 0.2;
+    public static final double LOG_10_INFORMATIVE_THRESHOLD = 0.02;
     public static final double NATURAL_LOG_INFORMATIVE_THRESHOLD = MathUtils.log10ToLog(LOG_10_INFORMATIVE_THRESHOLD);
+    private static final Logger logger = LogManager.getLogger(AlleleLikelihoods.class);
 
     protected boolean isNaturalLog = false;
     private SimpleInterval subsettedGenomicLoc;
@@ -449,7 +454,8 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
     private BestAllele searchBestAllele(final int sampleIndex, final int evidenceIndex, final boolean canBeReference, Optional<double[]> priorities) {
         final int alleleCount = alleles.numberOfAlleles();
         if (alleleCount == 0 || (alleleCount == 1 && referenceAlleleIndex == 0 && !canBeReference)) {
-            return new BestAllele(sampleIndex, evidenceIndex, MISSING_INDEX, Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY);
+            return new BestAllele(sampleIndex, evidenceIndex, MISSING_INDEX,
+                    Double.NEGATIVE_INFINITY, MISSING_INDEX, Double.NEGATIVE_INFINITY);
         }
 
         final double[][] sampleValues = valuesBySampleIndex[sampleIndex];
@@ -500,7 +506,7 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
         bestLikelihood = sampleValues[bestAlleleIndex][evidenceIndex];
         secondBestLikelihood = secondBestIndex != bestAlleleIndex ? sampleValues[secondBestIndex][evidenceIndex] : Double.NEGATIVE_INFINITY;
 
-        return new BestAllele(sampleIndex, evidenceIndex, bestAlleleIndex, bestLikelihood, secondBestLikelihood);
+        return new BestAllele(sampleIndex, evidenceIndex, bestAlleleIndex, bestLikelihood, secondBestIndex, secondBestLikelihood);
     }
 
     private BestAllele searchBestAllele(final int sampleIndex, final int evidenceIndex, final boolean canBeReference) {
@@ -1106,7 +1112,7 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
          * Null if there is no possible match (no allele?).
          */
         public final A allele;
-
+        public final A second_best_allele;
         /**
          * The containing sample.
          */
@@ -1121,6 +1127,7 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
          * If allele != null, the indicates the likelihood of the evidence.
          */
         public final double likelihood;
+        public final double secondBestLikelihood;
 
         /**
          * Confidence that the evidence actually was generated under that likelihood.
@@ -1129,12 +1136,14 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
         public final double confidence;
 
         private BestAllele(final int sampleIndex, final int evidenceIndex, final int bestAlleleIndex,
-                           final double likelihood, final double secondBestLikelihood) {
-            allele = bestAlleleIndex == MISSING_INDEX ? null : alleles.getAllele(bestAlleleIndex);
+                           final double likelihood, final int secondBestAlleleIndex, final double secondBestLikelihood) {
+            allele = bestAlleleIndex == -1 ? null : alleles.getAllele(bestAlleleIndex);
+            second_best_allele = secondBestAlleleIndex == -1 ? null : alleles.getAllele(secondBestAlleleIndex);
             this.likelihood = likelihood;
             sample = samples.getSample(sampleIndex);
             evidence = evidenceBySampleIndex.get(sampleIndex).get(evidenceIndex);
             confidence = likelihood == secondBestLikelihood ? 0 : likelihood - secondBestLikelihood;
+            this.secondBestLikelihood = secondBestLikelihood;
         }
 
         public boolean isInformative() {
@@ -1232,6 +1241,7 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
             removeEvidenceByIndex(s, indexesToRemove);
         }
     }
+
 
 
     private Object2IntMap<EVIDENCE> evidenceIndexBySampleIndex(final int sampleIndex) {
