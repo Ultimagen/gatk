@@ -33,7 +33,6 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
 
         this.log10globalReadMismappingRate = log10globalReadMismappingRate;
         this.expectedErrorRatePerBase = expectedErrorRatePerBase;
-
     }
     @Override
     public AlleleLikelihoods<GATKRead, Haplotype> computeReadLikelihoods(AssemblyResultSet assemblyResultSet,
