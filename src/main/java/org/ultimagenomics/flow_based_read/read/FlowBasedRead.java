@@ -573,7 +573,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         return find_left_clipping(bases_clipped);
     }
 
-
     private int[] find_left_clipping(int bases_clipped){
         int[] result = new int[2];
         if (bases_clipped==0){
