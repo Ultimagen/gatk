@@ -14,6 +14,7 @@ import org.apache.logging.log4j.Logger;
 import org.broadinstitute.gatk.nativebindings.smithwaterman.SWOverhangStrategy;
 import org.broadinstitute.hellbender.engine.AlignmentContext;
 import org.broadinstitute.hellbender.engine.AssemblyRegion;
+import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.engine.GATKPathSpecifier;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.walkers.ReferenceConfidenceVariantContextMerger;
@@ -38,7 +39,6 @@ import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.ultimagenomics.flow_based_read.alignment.FlowBasedAlignmentEngine;
 import org.ultimagenomics.flow_based_read.tests.AlleleLikelihoodWriter;
 import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
