@@ -38,7 +38,6 @@ import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.ultimagenomics.flow_based_read.alignment.FlowBasedAlignmentEngine;
 import org.ultimagenomics.flow_based_read.tests.AlleleLikelihoodWriter;
 import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.*;

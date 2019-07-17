@@ -259,7 +259,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
-
     private void fillFlowMatrix(byte [] kh, int [] kf,
                                 double [] kd_probs ) {
         for ( int i = 0 ; i < kh.length; i++ ) {
