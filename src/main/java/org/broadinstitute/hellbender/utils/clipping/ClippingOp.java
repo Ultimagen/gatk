@@ -436,13 +436,15 @@ public final class ClippingOp {
                 // we're still clipping or just finished perfectly
                 if (index + shift == stop + 1) {
                     alignmentShift += calculateHardClippingAlignmentShift(cigarElement, cigarElement.getLength());
-                    newCigar.add(new CigarElement(totalHardClipCount + alignmentShift, CigarOperator.HARD_CLIP));
+                    newCigar.add(new CigarElement(totalHardClipCount, CigarOperator.HARD_CLIP));
+                    //newCigar.add(new CigarElement(totalHardClipCount + alignmentShift, CigarOperator.HARD_CLIP));
                 }
                 // element goes beyond what we need to clip
                 else if (index + shift > stop + 1) {
                     final int elementLengthAfterChopping = cigarElement.getLength() - (stop - index + 1);
                     alignmentShift += calculateHardClippingAlignmentShift(cigarElement, stop - index + 1);
-                    newCigar.add(new CigarElement(totalHardClipCount + alignmentShift, CigarOperator.HARD_CLIP));
+                    newCigar.add(new CigarElement(totalHardClipCount, CigarOperator.HARD_CLIP));
+                    //newCigar.add(new CigarElement(totalHardClipCount + alignmentShift, CigarOperator.HARD_CLIP));
                     newCigar.add(new CigarElement(elementLengthAfterChopping, cigarElement.getOperator()));
                 }
                 index += shift;
@@ -508,7 +510,10 @@ public final class ClippingOp {
                     totalHardClipCount += cigarElement.getLength();
                 }
             }
-            newCigar.add(new CigarElement(totalHardClipCount + alignmentShift, CigarOperator.HARD_CLIP));
+
+//            newCigar.add(new CigarElement(totalHardClipCount + alignmentShift, CigarOperator.HARD_CLIP));
+            newCigar.add(new CigarElement(totalHardClipCount, CigarOperator.HARD_CLIP));
+
         }
         return cleanHardClippedCigar(newCigar);
     }
