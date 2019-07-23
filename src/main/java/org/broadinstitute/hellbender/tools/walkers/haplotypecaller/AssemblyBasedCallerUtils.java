@@ -34,7 +34,7 @@ import org.broadinstitute.hellbender.utils.read.*;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
-
+import org.ultimagenomics.flow_based_read.alignment.FlowBasedAlignmentEngine;
 import java.io.File;
 import java.util.*;
 import java.util.function.Function;
@@ -213,6 +213,8 @@ public final class AssemblyBasedCallerUtils {
                 return new PairHMMLikelihoodCalculationEngine((byte) likelihoodArgs.gcpHMM, likelihoodArgs.pairHMMNativeArgs.getPairHMMArgs(), likelihoodArgs.pairHMM, log10GlobalReadMismappingRate, likelihoodArgs.pcrErrorModel, likelihoodArgs.BASE_QUALITY_SCORE_THRESHOLD);
             case Random:
                 return new RandomLikelihoodCalculationEngine();
+            case FlowBased:
+                return new FlowBasedAlignmentEngine(log10GlobalReadMismappingRate);
             default:
                 throw new UserException("Unsupported likelihood calculation engine.");
         }

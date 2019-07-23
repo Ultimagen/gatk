@@ -22,7 +22,8 @@ public interface ReadLikelihoodCalculationEngine extends AutoCloseable {
         /**
          * Random likelihoods, used to establish a baseline benchmark for other meaningful implementations.
          */
-        Random
+        Random,
+        FlowBased
     }
 
 
