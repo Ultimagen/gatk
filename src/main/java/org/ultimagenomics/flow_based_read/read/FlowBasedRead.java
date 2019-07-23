@@ -160,6 +160,15 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         int clip_right = clip_right_pair[0];
         int right_hmer_clip = clip_right_pair[1];
 
+        if ((clip_left < 0) || (clip_right < 0)  || (clip_left >= getKeyLength() ) || ( clip_right >= getKeyLength())) {
+            throw new GATKException.ShouldNeverReachHereException("Weird read clip calculated");
+            //return 1;
+        }
+
+        if ((left_hmer_clip < 0) || (right_hmer_clip < 0)  || (left_hmer_clip >= 10 ) || ( right_hmer_clip >= 10)) {
+            throw new GATKException.ShouldNeverReachHereException("Weird read clip calculated");
+            //return 1;
+        }
 
         int original_length = key.length;
 
@@ -188,6 +197,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         for ( int i = 0 ; i < new_flow_matrix.length; i++) {
             new_flow_matrix[i] = Arrays.copyOfRange(flow_matrix[i], clip_left, original_length - clip_right);
         }
+
         flow_matrix = new_flow_matrix;
         if (shift_left) {
             shiftColumnUp(flow_matrix, 0, left_hmer_clip);

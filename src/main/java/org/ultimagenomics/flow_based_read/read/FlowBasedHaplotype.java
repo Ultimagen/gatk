@@ -34,7 +34,7 @@ public class FlowBasedHaplotype  extends Allele {
 
     public FlowBasedHaplotype(Haplotype source_haplotype, String flow_order, int clipping){
         super(source_haplotype.getBases(), source_haplotype.isReference());
-        key = base2key(source_haplotype.getBases(), flow_order, 8 );
+        key = base2key(source_haplotype.getBases(), flow_order, 1000 );
         this.flow_order = flow_order;
         genomeLoc = source_haplotype.getGenomeLocation();
         cigar = source_haplotype.getCigar();

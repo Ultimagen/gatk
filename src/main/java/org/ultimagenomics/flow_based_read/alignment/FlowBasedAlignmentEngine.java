@@ -97,7 +97,8 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             throw new GATKException.ShouldNeverReachHereException("Read should be aligned with the reference");
         }
         if ((haplotype.getStart()>read.getStart())||(haplotype.getEnd() < read.getEnd())) {
-            throw new GATKException.ShouldNeverReachHereException("Read should be contained in the haplotype");
+            return Double.NEGATIVE_INFINITY;
+//            throw new GATKException.ShouldNeverReachHereException("Read should be contained in the haplotype");
         }
 
         int read_start = read.getStart();
@@ -121,9 +122,9 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         int clip_right = tmp[0];
         int right_hmer_clip = tmp[1];
 
-        if ((left_hmer_clip > 11) || (right_hmer_clip > 11)) {
-            throw new GATKException.ShouldNeverReachHereException("Weird haplotype clip calculated");
-        }
+        //if ((left_hmer_clip > 11) || (right_hmer_clip > 11)) {
+         //   throw new GATKException.ShouldNeverReachHereException("Weird haplotype clip calculated");
+        //}
 
         if ((clip_left >= haplotype.getKeyLength()) || (clip_right >= haplotype.getKeyLength())){
             return Double.NEGATIVE_INFINITY;
@@ -155,6 +156,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             int [] locations_to_fetch = new int[read.getKeyLength()];
             for (int i = s; i < s+read.getKeyLength(); i++ ){
                 locations_to_fetch[i-s] = key[i]&0xff;
+                locations_to_fetch[i-s] = locations_to_fetch[i-s] < 8 ? locations_to_fetch[i-s] : 8;
             }
             double result = 0 ;
             for ( int i = 0 ; i < locations_to_fetch.length; i++ ){
