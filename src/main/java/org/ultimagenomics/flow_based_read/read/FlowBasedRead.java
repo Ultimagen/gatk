@@ -45,7 +45,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         double [] gtr_probs = phredToProb(kq);
 
         byte [] kh = getAttributeAsByteArray( "kh" );
-        byte [] kf = getAttributeAsByteArray("kf");
+        int [] kf = getAttributeAsIntArray("kf");
         byte [] kd = getAttributeAsByteArray( "kd");
 
         double [] kd_probs = phredToProb(kd);
@@ -96,10 +96,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
-    private void fillFlowMatrix(byte [] kh, byte [] kf,
+    private void fillFlowMatrix(byte [] kh, int [] kf,
                                 double [] kd_probs, double [] key_probs ) {
         for ( int i = 0 ; i < kh.length; i++ ) {
-            flow_matrix[kh[i]&0xff][kf[i]&0xff] = kd_probs[i];
+            flow_matrix[kh[i]&0xff][kf[i]] = kd_probs[i];
         }
 
         for (int i = 0 ; i < key.length; i++ ) {
@@ -118,13 +118,20 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             for (int i = 0; i < ret.length; i++)
                 ret[i] = tmp[i] & 0xff; //converting signed byte to unsigned
             return Arrays.copyOf(ret, ret.length);
-        } else if (attributeValue instanceof int[]) {
+        } else if ((attributeValue instanceof int[])) {
             int[] ret = (int[]) attributeValue;
+            return Arrays.copyOf(ret, ret.length);
+        } else if  (attributeValue instanceof short[]) {
+            short [] tmp = (short[]) attributeValue;
+            int[] ret = new int[tmp.length];
+            for (int i = 0 ; i < tmp.length; i++ )
+                ret[i] = tmp[i];
             return Arrays.copyOf(ret, ret.length);
         }else {
             throw new GATKException.ReadAttributeTypeMismatch(attributeName, "integer array");
         }
     }
+
 
 
     private void validateSequence(){
