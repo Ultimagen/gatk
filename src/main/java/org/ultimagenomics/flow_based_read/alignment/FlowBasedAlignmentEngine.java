@@ -16,10 +16,10 @@ import java.util.*;
 
 
 public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine {
-    final private static String FLOW_ORDER="TACG";
+    //final private static String FLOW_ORDER="TACG";
     private double log10globalReadMismappingRate;
     private static final double EXPECTED_ERROR_RATE_PER_BASE = 0.02;
-
+    private static final double LOG10_QUAL_PER_BASE = Double.NEGATIVE_INFINITY;
     public FlowBasedAlignmentEngine(double log10globalReadMismappingRate) {
         this.log10globalReadMismappingRate = log10globalReadMismappingRate;
 
@@ -41,7 +41,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         }
 
         result.normalizeLikelihoods(log10globalReadMismappingRate);
-        result.filterPoorlyModeledReads(EXPECTED_ERROR_RATE_PER_BASE);
+        result.filterPoorlyModeledReads(EXPECTED_ERROR_RATE_PER_BASE, LOG10_QUAL_PER_BASE);
 
         return result;
     }
@@ -66,7 +66,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         }
 
         result.normalizeLikelihoods(log10globalReadMismappingRate);
-        result.filterPoorlyModeledReads(EXPECTED_ERROR_RATE_PER_BASE);
+        result.filterPoorlyModeledReads(EXPECTED_ERROR_RATE_PER_BASE, LOG10_QUAL_PER_BASE);
 
         return result;
     }
@@ -75,16 +75,22 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
     private void computeReadLikelihoods(LikelihoodMatrix<Haplotype> likelihoods) {
 
         List<FlowBasedRead> processedReads = new ArrayList<>(likelihoods.numberOfReads());
+        String flow_order = null;
         for (int i = 0 ; i < likelihoods.numberOfReads(); i++) {
             FlowBasedRead tmp = new FlowBasedRead(likelihoods.reads().get(i));
             tmp.apply_alignment();
+            if ( flow_order == null)  {
+                String fo = tmp.getFlowOrder();
+                if (fo.length()==4) {
+                    flow_order = fo;
+                }
+            }
             processedReads.add(tmp);
         }
-
         FlowBasedHaplotype fbh;
 
         for (int i = 0; i < likelihoods.numberOfAlleles(); i++){
-            fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i), FLOW_ORDER, 8);
+            fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i), flow_order, 8);
             for (int j = 0 ; j < likelihoods.numberOfReads(); j++){
 
                 likelihoods.set(i,j,haplotypeReadMatching(fbh,processedReads.get(j)));
@@ -122,14 +128,10 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         int clip_right = tmp[0];
         int right_hmer_clip = tmp[1];
 
-        //if ((left_hmer_clip > 11) || (right_hmer_clip > 11)) {
-         //   throw new GATKException.ShouldNeverReachHereException("Weird haplotype clip calculated");
-        //}
 
         if ((clip_left >= haplotype.getKeyLength()) || (clip_right >= haplotype.getKeyLength())){
             return Double.NEGATIVE_INFINITY;
         }
-
 
         if ((left_hmer_clip <0) | (right_hmer_clip < 0)) {
             throw new GATKException.ShouldNeverReachHereException("Negative hmer clips found. Check");
@@ -152,7 +154,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             }
         }
         double best_alignment = Double.NEGATIVE_INFINITY;
-        for ( int s = starting_point ; (s < starting_point + FLOW_ORDER.length()*2) && ( s+read.getKeyLength() <= key.length); s+= FLOW_ORDER.length()){
+        for ( int s = starting_point ; (s < starting_point + 4*2) && ( s+read.getKeyLength() <= key.length); s+= 4){
             int [] locations_to_fetch = new int[read.getKeyLength()];
             for (int i = s; i < s+read.getKeyLength(); i++ ){
                 locations_to_fetch[i-s] = key[i]&0xff;
