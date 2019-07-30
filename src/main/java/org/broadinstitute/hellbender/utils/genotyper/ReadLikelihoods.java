@@ -8,6 +8,9 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.math3.stat.descriptive.rank.Median;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerEngine;
 import org.broadinstitute.hellbender.utils.IndexRange;
 import org.broadinstitute.hellbender.utils.MathUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
@@ -34,6 +37,7 @@ public class ReadLikelihoods<A extends Allele> implements SampleList, AlleleList
 
     public static final double LOG_10_INFORMATIVE_THRESHOLD = 0.2;
     public static final double NATURAL_LOG_INFORMATIVE_THRESHOLD = MathUtils.log10ToLog(LOG_10_INFORMATIVE_THRESHOLD);
+    private static final Logger logger = LogManager.getLogger(ReadLikelihoods.class);
 
     private boolean isNaturalLog = false;
 
@@ -814,6 +818,21 @@ public class ReadLikelihoods<A extends Allele> implements SampleList, AlleleList
 
     }
 
+    public void filterPoorlyModeledReads(final double maximumErrorPerBase, final double log10QualPerBase) {
+        Utils.validateArg(alleles.numberOfAlleles() > 0, "unsupported for read-likelihood collections with no alleles");
+        Utils.validateArg(!Double.isNaN(maximumErrorPerBase) && maximumErrorPerBase > 0.0, "the maximum error per base must be a positive number");
+
+        new IndexRange(0, samples.numberOfSamples()).forEach(s -> {
+            final GATKRead[] sampleReads = readsBySampleIndex[s];
+            final List<Integer> removeIndices = new IndexRange(0, sampleReads.length)
+                    .filter(r -> readIsPoorlyModelled(s, r, sampleReads[r], maximumErrorPerBase, log10QualPerBase));
+            //logger.info(String.format("Removing %d reads out of %d", removeIndices.size(), sampleReads.length));
+
+            removeSampleReads(s, removeIndices, alleles.numberOfAlleles());
+        });
+
+    }
+
     private boolean readIsPoorlyModelled(final int sampleIndex, final int readIndex, final GATKRead read, final double maxErrorRatePerBase) {
         final double maxErrorsForRead = Math.min(2.0, Math.ceil(read.getLength() * maxErrorRatePerBase));
         final double log10QualPerBase = -4.0;
@@ -823,6 +842,20 @@ public class ReadLikelihoods<A extends Allele> implements SampleList, AlleleList
         final double[][] sampleValues = valuesBySampleIndex[sampleIndex];
         for (int a = 0; a < alleleCount; a++) {
             if (sampleValues[a][readIndex] >= log10MaxLikelihoodForTrueAllele) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean readIsPoorlyModelled(final int sampleIndex, final int readIndex, final GATKRead read,
+                                         final double maxErrorRatePerBase, final double log10QualPerBase) {
+        final double maxErrorsForRead = Math.min(2.0, Math.ceil(read.getLength() * maxErrorRatePerBase));
+        final double log10MaxLikelihoodForTrueAllele = maxErrorsForRead * log10QualPerBase;
+        final int alleleCount = alleles.numberOfAlleles();
+        final double[][] sampleValues = valuesBySampleIndex[sampleIndex];
+        for (int a = 0; a < alleleCount; a++) {
+            if (sampleValues[a][readIndex] > log10MaxLikelihoodForTrueAllele) {
                 return false;
             }
         }

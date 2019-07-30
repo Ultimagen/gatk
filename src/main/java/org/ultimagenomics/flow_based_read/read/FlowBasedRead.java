@@ -41,19 +41,14 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         getKey2Base();
         flow_order = getFlow2Base(getAttributeAsString("KS"), key.length);
         flow_matrix = new double[max_hmer+1][key.length];
-        byte [] kq = getAttributeAsByteArray("kq");
-        double [] gtr_probs = phredToProb(kq);
 
         byte [] kh = getAttributeAsByteArray( "kh" );
         int [] kf = getAttributeAsIntArray("kf");
         byte [] kd = getAttributeAsByteArray( "kd");
 
         double [] kd_probs = phredToProb(kd);
-        for ( int i = 0 ; i < kd_probs.length; i++ ) {
-            kd_probs[i] = 1 - kd_probs[i];
-        }
 
-        fillFlowMatrix( kh, kf, kd_probs, gtr_probs);
+        fillFlowMatrix( kh, kf, kd_probs);
 
         validateSequence();
     }
@@ -74,16 +69,25 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         this.read = read;
     }
 
+    public String getFlowOrder() {
+        return new String(Arrays.copyOfRange(flow_order, 0, Math.min(4,flow_order.length)));
+    }
     public Direction getDirection(){
         return direction;
     }
+
     private double[] phredToProb(byte [] kq) {
         double [] result = new double[kq.length];
         for (int i = 0 ; i < kq.length; i++ ) {
-            result[i] = 1-Math.pow(10, -(double)kq[i]/10);
+            if (kq[i] < 0) {
+                result[i] = 1-Math.pow(10, ((double)kq[i])/10);
+            } else {
+                result[i] = Math.pow(10, ((double)-kq[i])/10);
+            }
         }
         return result;
     }
+
 
     private byte[] getForwardSequence(){
         if (!isReverseStrand()) {
@@ -97,14 +101,11 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     }
 
     private void fillFlowMatrix(byte [] kh, int [] kf,
-                                double [] kd_probs, double [] key_probs ) {
+                                double [] kd_probs ) {
         for ( int i = 0 ; i < kh.length; i++ ) {
-            flow_matrix[kh[i]&0xff][kf[i]] = kd_probs[i];
+            flow_matrix[kh[i]&0xff][kf[i]] = 1-kd_probs[i];
         }
 
-        for (int i = 0 ; i < key.length; i++ ) {
-             flow_matrix[key[i]][i] = key_probs[i];
-        }
     }
 
     private int[] getAttributeAsIntArray(String attributeName) {
