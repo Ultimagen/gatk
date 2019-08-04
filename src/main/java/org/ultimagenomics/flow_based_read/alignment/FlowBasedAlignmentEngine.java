@@ -1,5 +1,6 @@
 package org.ultimagenomics.flow_based_read.alignment;
 
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.ultimagenomics.flow_based_read.utils.Direction;
 import org.ultimagenomics.flow_based_read.read.FlowBasedHaplotype;
 import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
@@ -12,6 +13,8 @@ import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 
 
@@ -25,7 +28,9 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
 
     }
     @Override
-    public ReadLikelihoods<Haplotype> computeReadLikelihoods(AssemblyResultSet assemblyResultSet, SampleList samples, Map<String, List<GATKRead>> perSampleReadList) {
+    public ReadLikelihoods<Haplotype> computeReadLikelihoods(AssemblyResultSet assemblyResultSet,
+                                                             SampleList samples,
+                                                             Map<String, List<GATKRead>> perSampleReadList) {
         Utils.nonNull(assemblyResultSet, "assemblyResultSet is null");
         Utils.nonNull(samples, "samples is null");
         Utils.nonNull(perSampleReadList, "perSampleReadList is null");
@@ -40,7 +45,50 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             computeReadLikelihoods(result.sampleMatrix(i));
         }
 
-        result.normalizeLikelihoods(log10globalReadMismappingRate);
+//        if ((haplotypes.getAllele(0).getStartPosition() > 5256600) &&
+//                (haplotypes.getAllele(0).getStartPosition() < 5256700)) {
+//            System.out.println(haplotypes.getAllele(0).getStartPosition());
+//            try {
+////                result.sampleMatrix(0)
+//                String output_file = "/home/ilya/proj/VariantCalling/work/190801/tmp.matrix.txt";
+//                FileWriter writer = new FileWriter(output_file) ;
+//                for ( int sample =0 ; sample < sampleCount; sample++){
+//                    writer.write(Integer.toString(sample));
+//                    writer.write("\n");
+//                    for ( int allele = 0 ; allele < result.sampleMatrix(sample).numberOfAlleles(); allele++){
+//                        for ( int read = 0; read < result.sampleMatrix(sample).numberOfReads(); read++) {
+//                            writer.write(Double.toString(result.sampleMatrix(sample).get(allele,read)));
+//                            writer.write(" ");
+//                        }
+//                        writer.write("\n");
+//                    }
+//
+//                }
+//                writer.close();
+//
+//                output_file = "/home/ilya/proj/VariantCalling/work/190801/read.names.txt";
+//                writer = new FileWriter(output_file) ;
+//                for ( int read = 0; read < result.sampleMatrix(0).numberOfReads(); read++) {
+//                    writer.write((result.sampleReads(0).get(read).getName()));
+//                        writer.write("\n");
+//                }
+//                writer.close();
+//
+//                output_file = "/home/ilya/proj/VariantCalling/work/190801/haplotypes.txt";
+//                writer = new FileWriter(output_file) ;
+//                for ( int allele = 0; allele< result.sampleMatrix(0).numberOfAlleles(); allele++) {
+//                    writer.write((result.alleles().get(allele).toString()));
+//                    writer.write("\n");
+//                }
+//                writer.close();
+//
+//            }
+//            catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        }
+
+            result.normalizeLikelihoods(log10globalReadMismappingRate);
         result.filterPoorlyModeledReads(EXPECTED_ERROR_RATE_PER_BASE, LOG10_QUAL_PER_BASE);
 
         return result;
@@ -154,11 +202,11 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             }
         }
         double best_alignment = Double.NEGATIVE_INFINITY;
-        for ( int s = starting_point ; (s < starting_point + 4*2) && ( s+read.getKeyLength() <= key.length); s+= 4){
+        for ( int s = starting_point ; (s < starting_point + 4*2+1) && ( s+read.getKeyLength() <= key.length); s+= 4){
             int [] locations_to_fetch = new int[read.getKeyLength()];
             for (int i = s; i < s+read.getKeyLength(); i++ ){
                 locations_to_fetch[i-s] = key[i]&0xff;
-                locations_to_fetch[i-s] = locations_to_fetch[i-s] < 8 ? locations_to_fetch[i-s] : 8;
+                locations_to_fetch[i-s] = locations_to_fetch[i-s] < 9 ? locations_to_fetch[i-s] : 9;
             }
             double result = 0 ;
             for ( int i = 0 ; i < locations_to_fetch.length; i++ ){
