@@ -35,7 +35,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private boolean trimmed_to_haplotype = false;
     private int trim_left_base = 0 ;
     private int trim_right_base = 0 ;
-
+    private final int MINIMAL_READ_LENGTH = 10; // check if this is the right number
     public FlowBasedRead(SAMRecord samRecord) {
         super(samRecord);
         this.samRecord = samRecord;
@@ -185,10 +185,17 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         int left_hmer_clip = clip_left_pair[1];
         int clip_right = clip_right_pair[0];
         int right_hmer_clip = clip_right_pair[1];
-        apply_clipping(clip_left, left_hmer_clip, clip_right, right_hmer_clip);
-        trimmed_to_haplotype = true;
-        trim_left_base = clip_left_base;
-        trim_right_base = clip_right_base;
+        if (getLength() - clip_left_base - clip_right_base < MINIMAL_READ_LENGTH) {
+            trimmed_to_haplotype = true;
+            valid_key=false;
+            trim_left_base=clip_left_base;
+            trim_right_base = clip_right_base;
+        } else {
+            apply_clipping(clip_left, left_hmer_clip, clip_right, right_hmer_clip);
+            trimmed_to_haplotype = true;
+            trim_left_base = clip_left_base;
+            trim_right_base = clip_right_base;
+        }
     }
 
     private void apply_clipping(int clip_left, int left_hmer_clip, int clip_right, int right_hmer_clip){
