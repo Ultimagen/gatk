@@ -32,6 +32,9 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private double[][] flow_matrix;
     private boolean valid_key;
     private Direction direction = Direction.SYNTHESIS;
+    private boolean trimmed_to_haplotype = false;
+    private int trim_left_base = 0 ;
+    private int trim_right_base = 0 ;
 
     public FlowBasedRead(SAMRecord samRecord) {
         super(samRecord);
@@ -151,6 +154,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     public double getProb(int flow, int hmer) {
         return flow_matrix[hmer][flow];
     }
+
     public void apply_alignment(){
 
         if ((getDirection() == Direction.SYNTHESIS) && ( isReverseStrand() )) {
@@ -168,6 +172,26 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         int clip_right = clip_right_pair[0];
         int right_hmer_clip = clip_right_pair[1];
 
+        apply_clipping(clip_left, left_hmer_clip, clip_right, right_hmer_clip);
+
+        setDirection(Direction.REFERENCE);
+
+    }
+
+    public void apply_base_clipping(int clip_left_base, int clip_right_base){
+        int[] clip_left_pair = find_left_clipping(clip_left_base);
+        int[] clip_right_pair = find_right_clipping(clip_right_base);
+        int clip_left = clip_left_pair[0];
+        int left_hmer_clip = clip_left_pair[1];
+        int clip_right = clip_right_pair[0];
+        int right_hmer_clip = clip_right_pair[1];
+        apply_clipping(clip_left, left_hmer_clip, clip_right, right_hmer_clip);
+        trimmed_to_haplotype = true;
+        trim_left_base = clip_left_base;
+        trim_right_base = clip_right_base;
+    }
+
+    private void apply_clipping(int clip_left, int left_hmer_clip, int clip_right, int right_hmer_clip){
         if ((clip_left < 0) || (clip_right < 0)  || (clip_left >= getKeyLength() ) || ( clip_right >= getKeyLength())) {
             throw new GATKException.ShouldNeverReachHereException("Weird read clip calculated");
             //return 1;
@@ -198,7 +222,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
 
         key = Arrays.copyOfRange(key, clip_left, original_length - clip_right);
-        flow2base = Arrays.copyOfRange(flow2base, clip_left, original_length - clip_right);
+        getKey2Base();
         flow_order = Arrays.copyOfRange(flow_order, clip_left, original_length - clip_right);
 
         double [][] new_flow_matrix = new double[flow_matrix.length][original_length - clip_left - clip_right] ;
@@ -214,7 +238,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         if (shift_right) {
             shiftColumnUp(flow_matrix, flow_matrix[0].length-1, right_hmer_clip);
         }
-        setDirection(Direction.REFERENCE);
 
     }
 
@@ -309,6 +332,14 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
 
         int bases_clipped = start.getLength();
+        return find_left_clipping(bases_clipped);
+    }
+
+    private int[] find_left_clipping(int bases_clipped){
+        int[] result = new int[2];
+        if (bases_clipped==0){
+            return result;
+        }
         int index =0 ;
         int stop_clip = 0;
         //System.out.println("Based clipped: "+Integer.toString(bases_clipped));
@@ -342,6 +373,16 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
 
         int bases_clipped = end.getLength();
+
+        return find_right_clipping(bases_clipped);
+    }
+
+    private int[] find_right_clipping(int bases_clipped) {
+        int[] result = new int[2];
+        if (bases_clipped==0){
+            return result;
+        }
+
         int index =0 ;
         int stop_clip = 0;
 
@@ -363,6 +404,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         result[1] = hmer_clipped;
         return result;
     }
+
 
     public void writeKey(FileWriter oos)
             throws IOException {
@@ -388,6 +430,28 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     public int getKeyLength() {
         return key.length;
+    }
+
+    public int totalKeyBases()  {
+        int sum = 0 ;
+        for (int i = 0 ; i < key.length; i++){
+            sum += key[i];
+        }
+        return sum;
+    }
+
+    public int seqLength(){
+        return forward_sequence.length;
+    }
+    public boolean isTrimmed_to_haplotype() {
+        return trimmed_to_haplotype;
+    }
+
+    public int getTrimmedStart() {
+        return trim_left_base + getStart();
+    }
+    public int getTrimmedEnd() {
+        return getEnd() - trim_right_base;
     }
 }
 
