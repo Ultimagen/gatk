@@ -45,8 +45,8 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             computeReadLikelihoods(result.sampleMatrix(i));
         }
 
-//        if ((haplotypes.getAllele(0).getStartPosition() > 5256600) &&
-//                (haplotypes.getAllele(0).getStartPosition() < 5256700)) {
+//        if ((haplotypes.getAllele(0).getStartPosition() > 5256800) &&
+//                (haplotypes.getAllele(0).getStartPosition() < 5257100)) {
 //            System.out.println(haplotypes.getAllele(0).getStartPosition());
 //            try {
 ////                result.sampleMatrix(0)
@@ -88,7 +88,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
 //            }
 //        }
 
-            result.normalizeLikelihoods(log10globalReadMismappingRate);
+        result.normalizeLikelihoods(log10globalReadMismappingRate);
         result.filterPoorlyModeledReads(EXPECTED_ERROR_RATE_PER_BASE, LOG10_QUAL_PER_BASE);
 
         return result;
@@ -123,10 +123,13 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
     private void computeReadLikelihoods(LikelihoodMatrix<Haplotype> likelihoods) {
 
         List<FlowBasedRead> processedReads = new ArrayList<>(likelihoods.numberOfReads());
+        List<FlowBasedHaplotype> processedHaplotypes = new ArrayList<>(likelihoods.numberOfAlleles());
         String flow_order = null;
+
         for (int i = 0 ; i < likelihoods.numberOfReads(); i++) {
             FlowBasedRead tmp = new FlowBasedRead(likelihoods.reads().get(i));
             tmp.apply_alignment();
+
             if ( flow_order == null)  {
                 String fo = tmp.getFlowOrder();
                 if (fo.length()==4) {
@@ -135,30 +138,50 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             }
             processedReads.add(tmp);
         }
+
         FlowBasedHaplotype fbh;
 
         for (int i = 0; i < likelihoods.numberOfAlleles(); i++){
             fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i), flow_order, 8);
-            for (int j = 0 ; j < likelihoods.numberOfReads(); j++){
+            processedHaplotypes.add(fbh);
+        }
 
+        //NOTE: we assume all haplotypes start and end on the same place!
+        int haplotype_start = processedHaplotypes.get(0).getStart();
+        int haplotype_end = processedHaplotypes.get(0).getEnd();
+        for (int i = 0 ; i < processedReads.size(); i++) {
+            FlowBasedRead fbr=processedReads.get(i);
+            int read_start = fbr.getStart();
+            int read_end = fbr.getEnd();
+            int diff_left = haplotype_start - read_start;
+            int diff_right = read_end - haplotype_end;
+            fbr.apply_base_clipping(Math.max(0, diff_left), Math.max(diff_right, 0));
+        }
+
+        for (int i = 0; i < likelihoods.numberOfAlleles(); i++){
+            fbh = processedHaplotypes.get(i);
+            for (int j = 0 ; j < likelihoods.numberOfReads(); j++){
                 likelihoods.set(i,j,haplotypeReadMatching(fbh,processedReads.get(j)));
             }
         }
+
     }
 
     private double haplotypeReadMatching(FlowBasedHaplotype haplotype, FlowBasedRead read) throws GATKException {
+
+
         if (read.getDirection() != Direction.REFERENCE ) {
             throw new GATKException.ShouldNeverReachHereException("Read should be aligned with the reference");
         }
-        if ((haplotype.getStart()>read.getStart())||(haplotype.getEnd() < read.getEnd())) {
-            return Double.NEGATIVE_INFINITY;
-//            throw new GATKException.ShouldNeverReachHereException("Read should be contained in the haplotype");
+
+        if (!read.isTrimmed_to_haplotype()) {
+            throw new GATKException.ShouldNeverReachHereException("Reads should be trimmed to the haplotype");
         }
 
-        int read_start = read.getStart();
-        int read_end = read.getEnd();
-        int haplotype_start = ReadUtils.getReadCoordinateForReferenceCoordinate(haplotype.getStart(), haplotype.getCigar(), read_start, null, false);
-        int haplotype_end = ReadUtils.getReadCoordinateForReferenceCoordinate(haplotype.getStart(), haplotype.getCigar(), read_end, null, false);
+        int haplotype_start = ReadUtils.getReadCoordinateForReferenceCoordinate(haplotype.getStart(), haplotype.getCigar(),
+                read.getTrimmedStart(), null, false);
+        int haplotype_end = ReadUtils.getReadCoordinateForReferenceCoordinate(haplotype.getStart(), haplotype.getCigar(),
+                read.getTrimmedEnd(), null, false);
 
         int left_clip = haplotype_start;
         int right_clip = haplotype.length()-haplotype_end-1;
