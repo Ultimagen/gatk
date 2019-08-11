@@ -82,11 +82,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private double[] phredToProb(byte [] kq) {
         double [] result = new double[kq.length];
         for (int i = 0 ; i < kq.length; i++ ) {
-            if (kq[i] < 0) {
-                result[i] = 1-Math.pow(10, ((double)kq[i])/10);
-            } else {
-                result[i] = Math.pow(10, ((double)-kq[i])/10);
-            }
+            result[i] = Math.pow(10, ((double)-kq[i])/10);
         }
         return result;
     }
@@ -106,7 +102,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private void fillFlowMatrix(byte [] kh, int [] kf,
                                 double [] kd_probs ) {
         for ( int i = 0 ; i < kh.length; i++ ) {
-            flow_matrix[kh[i]&0xff][kf[i]] = 1-kd_probs[i];
+            flow_matrix[kh[i] & 0xff][kf[i]] = kd_probs[i];
         }
 
     }
