@@ -1,5 +1,6 @@
 package org.ultimagenomics.flow_based_read.tests;
 
+import htsjdk.samtools.SAMFileHeader;
 import org.ultimagenomics.flow_based_read.alignment.FlowBasedAlignmentEngine;
 import org.ultimagenomics.flow_based_read.read.FlowBasedHaplotype;
 import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
@@ -29,7 +30,7 @@ public class test_haplotype_matching {
         ArrayList<Haplotype> haplotypes = new ArrayList<>();
         int count_reads = 0;
         int count_haplotypes = 0;
-
+        ArrayList<SAMFileHeader> headers = new ArrayList<>();
         for ( final SAMRecord rec : reader ) {
             SAMRecordToGATKReadAdapter tmp = new SAMRecordToGATKReadAdapter(rec);
             if (!tmp.getAttributeAsString("RG").startsWith("ArtificialHaplotype")) {
@@ -52,8 +53,9 @@ public class test_haplotype_matching {
 
         System.out.println(String.format("%d reads %d haplotypes", count_reads, count_haplotypes));
         ArrayList<FlowBasedRead> fbrs = new ArrayList<>();
+        int cnt = 0 ;
         for (final GATKRead r :  reads) {
-            fbrs.add(new FlowBasedRead(r));
+            fbrs.add(new FlowBasedRead(r, "TACG"));
         }
         for (FlowBasedRead fbr : fbrs ) fbr.apply_alignment();
 

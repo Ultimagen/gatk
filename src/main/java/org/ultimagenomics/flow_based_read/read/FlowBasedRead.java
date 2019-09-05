@@ -1,9 +1,8 @@
 package org.ultimagenomics.flow_based_read.read;
 
+import htsjdk.samtools.*;
+import org.apache.commons.lang.ArrayUtils;
 import org.ultimagenomics.flow_based_read.utils.Direction;
-import htsjdk.samtools.CigarElement;
-import htsjdk.samtools.CigarOperator;
-import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.util.SequenceUtil;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
@@ -36,12 +35,33 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private int trim_left_base = 0 ;
     private int trim_right_base = 0 ;
     private final int MINIMAL_READ_LENGTH = 10; // check if this is the right number
+//    public FlowBasedRead(SAMRecord samRecord) {
+//        super(samRecord);
+//        this.samRecord = samRecord;
+//        forward_sequence = getForwardSequence();
+//        key = getAttributeAsByteArray("ks");
+//        getKey2Base();
+//        flow_order = getFlow2Base(getAttributeAsString("KS"), key.length);
+//        flow_matrix = new double[max_hmer+1][key.length];
+//
+//        byte [] kh = getAttributeAsByteArray( "kh" );
+//        int [] kf = getAttributeAsIntArray("kf");
+//        byte [] kd = getAttributeAsByteArray( "kd");
+//
+//        double [] kd_probs = phredToProb(kd);
+//
+//        fillFlowMatrix( kh, kf, kd_probs);
+//
+//        validateSequence();
+//    }
     public FlowBasedRead(SAMRecord samRecord) {
         super(samRecord);
         this.samRecord = samRecord;
+
         forward_sequence = getForwardSequence();
-        key = getAttributeAsByteArray("ks");
+        key = getAttributeAsByteArray("kr");
         getKey2Base();
+
         flow_order = getFlow2Base(getAttributeAsString("KS"), key.length);
         flow_matrix = new double[max_hmer+1][key.length];
 
@@ -49,12 +69,56 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         int [] kf = getAttributeAsIntArray("kf");
         byte [] kd = getAttributeAsByteArray( "kd");
 
+        byte [] key_kh = key;
+        int [] key_kf = new int[key.length];
+        for ( int i = 0 ; i < key_kf.length ; i++)
+            key_kf[i] = i;
+        byte [] key_kd = new byte[key.length];
+
+        kh = ArrayUtils.addAll(kh, key_kh);
+        kf = ArrayUtils.addAll(kf, key_kf);
+        kd = ArrayUtils.addAll(kd, key_kd);
+
         double [] kd_probs = phredToProb(kd);
 
         fillFlowMatrix( kh, kf, kd_probs);
 
         validateSequence();
     }
+
+    public FlowBasedRead(SAMRecord samRecord, String _flow_order) {
+        super(samRecord);
+        this.samRecord = samRecord;
+        forward_sequence = getForwardSequence();
+        key = getAttributeAsByteArray("kr");
+        getKey2Base();
+
+        flow_order = getFlow2Base(_flow_order, key.length);
+
+        //flow_order = getFlow2Base(getAttributeAsString("KS"), key.length);
+        flow_matrix = new double[max_hmer+1][key.length];
+
+        byte [] kh = getAttributeAsByteArray( "kh" );
+        int [] kf = getAttributeAsIntArray("kf");
+        byte [] kd = getAttributeAsByteArray( "kd");
+
+        byte [] key_kh = key;
+        int [] key_kf = new int[key.length];
+        for ( int i = 0 ; i < key_kf.length ; i++)
+            key_kf[i] = i;
+        byte [] key_kd = new byte[key.length];
+
+        kh = ArrayUtils.addAll(kh, key_kh);
+        kf = ArrayUtils.addAll(kf, key_kf);
+        kd = ArrayUtils.addAll(kd, key_kd);
+
+        double [] kd_probs = phredToProb(kd);
+
+        fillFlowMatrix( kh, kf, kd_probs);
+
+        validateSequence();
+    }
+
 
     public FlowBasedRead(FlowBasedRead other) {
         super(other.samRecord);
@@ -67,14 +131,16 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         direction = other.direction;
     }
 
-    public FlowBasedRead(GATKRead read) {
-        this(read.convertToSAMRecord(null));
+    public FlowBasedRead(GATKRead read, String flow_order) {
+        this(read.convertToSAMRecord(null), flow_order);
         this.read = read;
     }
 
     public String getFlowOrder() {
         return new String(Arrays.copyOfRange(flow_order, 0, Math.min(4,flow_order.length)));
     }
+
+
     public Direction getDirection(){
         return direction;
     }

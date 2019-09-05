@@ -1,5 +1,7 @@
 package org.ultimagenomics.flow_based_read.alignment;
 
+import htsjdk.samtools.SAMFileHeader;
+import ngs.ReadGroup;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.ultimagenomics.flow_based_read.utils.Direction;
 import org.ultimagenomics.flow_based_read.read.FlowBasedHaplotype;
@@ -42,7 +44,8 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         final ReadLikelihoods<Haplotype> result = new ReadLikelihoods<>(samples, haplotypes, perSampleReadList);
         final int sampleCount = result.numberOfSamples();
         for (int i = 0; i < sampleCount; i++) {
-            computeReadLikelihoods(result.sampleMatrix(i));
+            SAMFileHeader hdr= assemblyResultSet.getRegionForGenotyping().getHeader();
+            computeReadLikelihoods(result.sampleMatrix(i), hdr);
         }
 
 //        if ((haplotypes.getAllele(0).getStartPosition() > 5256800) &&
@@ -110,7 +113,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         final ReadLikelihoods<Haplotype> result = new ReadLikelihoods<>(samples, haplotypes, perSampleReadList);
         final int sampleCount = result.numberOfSamples();
         for (int i = 0; i < sampleCount; i++) {
-            computeReadLikelihoods(result.sampleMatrix(i));
+            computeReadLikelihoods(result.sampleMatrix(i), null);
         }
 
         result.normalizeLikelihoods(log10globalReadMismappingRate);
@@ -120,18 +123,21 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
     }
 
 
-    private void computeReadLikelihoods(LikelihoodMatrix<Haplotype> likelihoods) {
+    private void computeReadLikelihoods(LikelihoodMatrix<Haplotype> likelihoods,
+                                        SAMFileHeader hdr) {
 
         List<FlowBasedRead> processedReads = new ArrayList<>(likelihoods.numberOfReads());
         List<FlowBasedHaplotype> processedHaplotypes = new ArrayList<>(likelihoods.numberOfAlleles());
         String flow_order = null;
-
+        String fo;
         for (int i = 0 ; i < likelihoods.numberOfReads(); i++) {
-            FlowBasedRead tmp = new FlowBasedRead(likelihoods.reads().get(i));
+            GATKRead rd = likelihoods.reads().get(i);
+            fo = hdr.getReadGroup(rd.getReadGroup()).getFlowOrder();
+            FlowBasedRead tmp = new FlowBasedRead(rd, fo);
             tmp.apply_alignment();
 
             if ( flow_order == null)  {
-                String fo = tmp.getFlowOrder();
+                fo = tmp.getFlowOrder();
                 if (fo.length()==4) {
                     flow_order = fo;
                 }
