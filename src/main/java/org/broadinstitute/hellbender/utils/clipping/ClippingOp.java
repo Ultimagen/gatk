@@ -391,7 +391,7 @@ public final class ClippingOp {
         hardClippedRead.setBases(newBases);
         hardClippedRead.setCigar(cigarShift.cigar);
         if (start == 0 && !read.isUnmapped()) {
-            hardClippedRead.setPosition(read.getContig(), read.getStart() + calculateAlignmentStartShift(cigar, cigarShift.cigar));
+            hardClippedRead.setPosition(read.getContig(), read.getStart() + calculateAlignmentStartShift(cigar, stop-start+1));
         }
 
         if (ReadUtils.hasBaseIndelQualities(read)) {
@@ -622,6 +622,46 @@ public final class ClippingOp {
         final int oldShift = calcHardSoftOffset(oldCigar);
         return newShift - oldShift;
     }
+
+    //Calculates how much alignment should be shifted when hard clipping is applied
+    // Very similar to getNewAlignmentShift but hardClipping is considered as "consuming read bases"
+    private int calculateAlignmentStartShift(final Cigar oldCigar, final int clipping) {
+        final int oldShift = calcHardSoftOffset(oldCigar);
+
+        final int newReadBasesClipped = clipping;
+        int readBasesClipped = oldShift; // The number of read bases consumed on the new cigar before reference bases are consumed
+
+        int refBasesClipped = 0; // A measure of the reference offset between the oldCigar and the clippedCigar
+
+        for (final CigarElement e : oldCigar.getCigarElements()) {
+            int curRefLength = e.getLength();
+            int curReadLength = e.getLength();
+            if (!e.getOperator().consumesReadBases()) {
+                curReadLength = 0;
+            }
+
+            boolean truncated = false;
+            if ( readBasesClipped + curReadLength > newReadBasesClipped) {
+                curReadLength = newReadBasesClipped - readBasesClipped;
+                curRefLength = curReadLength;
+                truncated = true;
+            }
+
+            if (!e.getOperator().consumesReferenceBases()) {
+                curRefLength = 0;
+            }
+
+            readBasesClipped += curReadLength;
+            refBasesClipped += curRefLength;
+
+            if (readBasesClipped >= newReadBasesClipped || truncated) {
+                break;
+            }
+        }
+
+        return refBasesClipped; // if oldNum is negative it means some of the preceding N/Ds were trimmed but not all so we take absolute value
+    }
+
 
     private int calculateHardClippingAlignmentShift(final CigarElement cigarElement, final int clippedLength) {
         // Insertions should be discounted from the total hard clip count
