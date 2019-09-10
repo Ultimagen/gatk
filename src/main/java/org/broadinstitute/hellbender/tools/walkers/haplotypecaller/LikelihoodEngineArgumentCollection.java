@@ -15,7 +15,7 @@ import java.io.Serializable;
 public final class LikelihoodEngineArgumentCollection implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    @Hidden
+
     @Advanced
     @Argument(fullName = "likelihood-calculation-engine",
             doc= "What likelihood calculation engine to use to calculate the relative likelihood of reads vs haplotypes", optional = true)
