@@ -548,7 +548,8 @@ public final class ClippingOp {
                 } else if (!readHasStarted && cigarElement.getOperator() == CigarOperator.HARD_CLIP) {
                     totalHardClip += cigarElement.getLength();
                 } else if (!readHasStarted && cigarElement.getOperator() == CigarOperator.DELETION) {
-                    totalHardClip += cigarElement.getLength();
+                    //totalHardClip += cigarElement.getLength();
+                    totalHardClip += 0;
                 } else if (!readHasStarted && cigarElement.getOperator() == CigarOperator.SKIPPED_REGION) {
                     totalHardClip += cigarElement.getLength();
                 }
