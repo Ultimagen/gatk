@@ -1,6 +1,8 @@
 package org.broadinstitute.hellbender.utils.clipping;
 
 import htsjdk.samtools.*;
+import org.broadinstitute.hellbender.utils.BaseUtils;
+import org.broadinstitute.hellbender.utils.read.AlignmentUtils;
 import org.broadinstitute.hellbender.utils.read.ArtificialReadUtils;
 import org.broadinstitute.hellbender.utils.read.CigarUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
@@ -45,6 +47,7 @@ public final class ReadClipperUnitTest extends GATKBaseTest {
     public void testHardClipByReadCoordinates() {
         for (Cigar cigar : cigarList) {
             GATKRead read = ReadClipperTestUtils.makeReadFromCigar(cigar);
+
             int readLength = read.getLength();
             for (int i = 0; i < readLength; i++) {
                 GATKRead clipLeft = ReadClipper.hardClipByReadCoordinates(read, 0, i);
@@ -477,6 +480,33 @@ public final class ReadClipperUnitTest extends GATKBaseTest {
         Assert.assertEquals(clippedRead.getBaseQualities().length, 0);
         Assert.assertEquals(clippedRead.numCigarElements(), 0);
         Assert.assertTrue(clippedRead.isUnmapped());
+    }
+
+    //test fix for https://github.com/broadinstitute/gatk/issues/6139
+    @DataProvider(name="test-hard-clip-clips-right-amount")
+    Object[][] cigarsToClipData(){
+        return new Object[][]{
+                new Object[]{"20M", 6},
+                new Object[]{"3M2I20M", 4},
+                new Object[]{"10I20M", 0},
+                new Object[]{"3M2D20M", 8},
+        };
+    }
+
+    @Test (dataProvider="test-hard-clip-clips-right-amount")
+    public void testHardClipSoftClippedBasesClipsTheCorrectAmount(final String cigarString, final int alignmentOffset) {
+        final int start = 100;
+        final GATKRead originalRead = ArtificialReadUtils.createArtificialRead(TextCigarCodec.decode(cigarString));
+        BaseUtils.fillWithRandomBases(originalRead.getBasesNoCopy(),0,originalRead.getLength());
+        originalRead.setPosition(originalRead.getContig(), start);
+
+        final GATKRead clippedRead = ReadClipper.hardClipByReadCoordinates(originalRead, 0, 5);
+        Assert.assertEquals(
+                clippedRead.getCigar().getReadLength() + AlignmentUtils.getNumHardClippedBases(clippedRead),
+                originalRead.getCigar().getReadLength(), " Clipped cigar: " + clippedRead.getCigar());
+        Assert.assertEquals(clippedRead.getStart(),start + alignmentOffset, " Clipped cigar: " + clippedRead.getCigar());
+        Assert.assertEquals(clippedRead.getBasesNoCopy(),Arrays.copyOfRange(originalRead.getBases(),6,originalRead.getBasesNoCopy().length));
+        Assert.assertEquals(clippedRead.getBaseQualitiesNoCopy(),Arrays.copyOfRange(originalRead.getBaseQualitiesNoCopy(),6,originalRead.getBaseQualitiesNoCopy().length));
     }
 
 }
