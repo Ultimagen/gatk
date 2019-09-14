@@ -490,6 +490,7 @@ public final class ReadClipperUnitTest extends GATKBaseTest {
                 new Object[]{"3M2I20M", 4},
                 new Object[]{"10I20M", 0},
                 new Object[]{"3M2D20M", 8},
+                new Object[]{"3M10N20M", 16}
         };
     }
 
