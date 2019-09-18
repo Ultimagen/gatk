@@ -619,8 +619,8 @@ public final class ClippingOp {
         return newShift - oldShift;
     }
 
-    //Calculates how much alignment should be shifted when hard clipping is applied
-    // Very similar to getNewAlignmentShift but hardClipping is considered as "consuming read bases"
+    //Calculates how much the alignment should be shifted when hard/soft clipping is applied
+    // to the cigar
     private int calculateAlignmentStartShift(final Cigar oldCigar, final int clipping) {
         // if the read was already hardclipped - we need to clip more (i.e. clipping is considered
         // "in addition" to the previously existing clipping) and shift the alignment more
