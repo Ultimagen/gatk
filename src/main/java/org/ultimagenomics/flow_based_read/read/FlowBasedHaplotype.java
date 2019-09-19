@@ -72,11 +72,11 @@ public class FlowBasedHaplotype  extends Allele {
         int period = flow_order_bytes.length;
         while ( loc < bases.length ) {
             byte flowBase = flow_order_bytes[flow_number%period];
-            if (bases[loc]!=flowBase) {
+            if ((bases[loc]!=flowBase) && ( bases[loc]!=78)) {
                 result.add((byte) 0);
             } else {
                 int count = 0;
-                while ( ( loc < bases.length) && (bases[loc]==flowBase) ){
+                while ( ( loc < bases.length) && ((bases[loc]==flowBase) || (bases[loc]==78)) ){
                     loc++;
                     count ++;
                 }
