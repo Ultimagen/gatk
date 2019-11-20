@@ -671,18 +671,18 @@ public final class GenotypeAlleleCounts implements Comparable<GenotypeAlleleCoun
      * alleles 1 and 3 are absent, so we perform {@code action} on 1 and 3.
      */
     public void forEachAbsentAlleleIndex(final IntConsumer action, final int alleleCount) {
-        int presentAlleleIndex = 0;
-        int presentAllele = sortedAlleleCounts[0];
+        int currentAlleleIndex = 0;
+        int currentAllele = sortedAlleleCounts[0];
 
         for (int n = 0; n < alleleCount; n++) {
-            // if we find n in sortedAlleleCounts, it is present, so we move presentAllele to the next
+            // if we find n in sortedAlleleCounts, it is present, so we move currentAllele to the next
             // index in sortedAlleleCounts and skip the allele; otherwise the allele is absent and we perform the action on it.
-            if (n == presentAllele) {
+            if (n == currentAllele) {
                 // if we haven't exhausted all the present alleles, move to the next one.
                 // Note that distinctAlleleCount == sortedAlleleCounts.length/2
-                if (++presentAlleleIndex < distinctAlleleCount) {
+                if (++currentAlleleIndex < distinctAlleleCount) {
                     // every other entry in sortedAlleleCounts is an allele index; hence we multiply by 2
-                    presentAllele = sortedAlleleCounts[2 * presentAlleleIndex];
+                    currentAllele = sortedAlleleCounts[2 * currentAlleleIndex];
                 }
                 continue;
             }
@@ -690,9 +690,33 @@ public final class GenotypeAlleleCounts implements Comparable<GenotypeAlleleCoun
         }
     }
 
-    public double sumOverAlleleIndicesAndCounts(final IntToDoubleBiFunction func) {
-        return new IndexRange(0, distinctAlleleCount).sum(n -> func.apply(sortedAlleleCounts[2*n], sortedAlleleCounts[2*n+1]));
+
+    /**
+     * Perform an action for every allele index which is represented in this genotype.  For example if the total allele count
+     * is 4 and {@code sortedAlleleCounts} is [0,1,2,1] then alleles 0 and 2 are present, each with a count of 1, while
+     * alleles 1 and 3 are absent, so we perform {@code action} on 0 and 2.
+     */
+    public void forEachPresentAlleleIndex(final IntConsumer action, final int alleleCount) {
+        int currentAlleleIndex = 0;
+        int currentAllele = sortedAlleleCounts[0];
+
+        for (int n = 0; n < alleleCount; n++) {
+            // if we find n in sortedAlleleCounts, it is present, so we move currentAllele to the next
+            // index in sortedAlleleCounts and perform the action on it.
+            if (n == currentAllele) {
+                // if we haven't exhausted all the present alleles, move to the next one.
+                // Note that distinctAlleleCount == sortedAlleleCounts.length/2
+                if (++currentAlleleIndex < distinctAlleleCount) {
+                    // every other entry in sortedAlleleCounts is an allele index; hence we multiply by 2
+                    currentAllele = sortedAlleleCounts[2 * currentAlleleIndex];
+                }
+                action.accept(n);
+            }
+        }
     }
 
 
+    public double sumOverAlleleIndicesAndCounts(final IntToDoubleBiFunction func) {
+        return new IndexRange(0, distinctAlleleCount).sum(n -> func.apply(sortedAlleleCounts[2*n], sortedAlleleCounts[2*n+1]));
+    }
 }
