@@ -135,7 +135,8 @@ public final class AFCalculationResult {
      */
     public boolean passesThreshold(final Allele allele, final double phredScaleQualThreshold) {
         Utils.nonNull(allele);
-        return getLog10PosteriorOfAlleleAbsent(allele) + EPSILON < QualityUtils.qualToErrorProbLog10(phredScaleQualThreshold);
+        //using the approximation that log(1+x) ~ x for small values of x
+        return getLog10PosteriorOfAlleleAbsent(allele) - EPSILON < -QualityUtils.qualToErrorProb(phredScaleQualThreshold);
     }
 
     /**
