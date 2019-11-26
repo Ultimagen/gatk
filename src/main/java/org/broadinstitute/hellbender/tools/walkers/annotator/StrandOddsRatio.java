@@ -110,6 +110,9 @@ import static java.lang.Math.min;
  * <ul>
  *     <li><b><a href="https://software.broadinstitute.org/gatk/documentation/tooldocs/current/org_broadinstitute_hellbender_tools_walkers_annotator_allelespecific_AS_StrandOddsRatio.php">AS_StrandOddsRatio</a></b>
  *     allele-specific strand bias estimated by the symmetric odds ratio test.</li>
+ *     <li><b><a href="https://software.broadinstitute.org/gatk/documentation/tooldocs/current/org_broadinstitute_hellbender_tools_walkers_annotator_allelespecific_AS_StrandOddsRatioProbabilistic.php">AS_StrandOddsRatioProb</a></b>
+ *  *     allele-specific strand bias estimated by the symmetric odds ratio test where reads are distributed by their likelihood</li>
+ *  *
  *     <li><b><a href="https://software.broadinstitute.org/gatk/documentation/tooldocs/current/org_broadinstitute_hellbender_tools_walkers_annotator_StrandBiasBySample.php">StrandBiasBySample</a></b>
  *     outputs counts of read depth per allele for each strand orientation.</li>
  *     <li><b><a href="https://software.broadinstitute.org/gatk/documentation/tooldocs/current/org_broadinstitute_hellbender_tools_walkers_annotator_FisherStrand.php">FisherStrand</a></b>
