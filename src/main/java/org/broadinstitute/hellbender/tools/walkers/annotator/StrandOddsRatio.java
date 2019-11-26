@@ -121,7 +121,7 @@ import static java.lang.Math.min;
 @DocumentedFeature(groupName=HelpConstants.DOC_CAT_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_ANNOTATORS_SUMMARY, summary="Strand bias estimated by the symmetric odds ratio test (SOR)")
 public final class StrandOddsRatio extends StrandBiasTest implements StandardAnnotation {
 
-    private static final double PSEUDOCOUNT = 0.01;
+    private static final double PSEUDOCOUNT = 1;
     private static final int MIN_COUNT = 0;
 
     @Override
