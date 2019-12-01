@@ -179,10 +179,11 @@ public class HaplotypeBAMWriter implements AutoCloseable {
         Utils.nonNull(haplotypes, "haplotypes cannot be null");
         Utils.nonNull(bestHaplotypes, "bestHaplotypes cannot be null");
         Utils.nonNull(paddedReferenceLoc, "paddedReferenceLoc cannot be null");
-
+        int index = 0 ;
         if (writeHaplotypes) {
             for (final Haplotype haplotype : haplotypes) {
-                writeHaplotype(haplotype, paddedReferenceLoc, bestHaplotypes.contains(haplotype), callableRegion);
+                writeHaplotype(haplotype, paddedReferenceLoc, bestHaplotypes.contains(haplotype), callableRegion, index);
+                index++;
             }
         }
     }
@@ -198,7 +199,8 @@ public class HaplotypeBAMWriter implements AutoCloseable {
     private void writeHaplotype(final Haplotype haplotype,
                                 final Locatable paddedRefLoc,
                                 final boolean isAmongBestHaplotypes,
-                                final Locatable callableRegion) {
+                                final Locatable callableRegion,
+                                final int haplotype_count) {
         Utils.nonNull(haplotype, "haplotype cannot be null");
         Utils.nonNull(paddedRefLoc, "paddedRefLoc cannot be null");
 
@@ -209,7 +211,7 @@ public class HaplotypeBAMWriter implements AutoCloseable {
         record.setBaseQualities(Utils.dupBytes((byte) '!', haplotype.getBases().length));
         record.setCigar(AlignmentUtils.consolidateCigar(haplotype.getCigar()));
         record.setMappingQuality(isAmongBestHaplotypes ? bestHaplotypeMQ : otherMQ);
-        record.setReadName(output.getHaplotypeSampleTag() + uniqueNameCounter++);
+        record.setReadName(output.getHaplotypeSampleTag() + "_" + uniqueNameCounter++ + "_" + haplotype_count);
         record.setAttribute(output.getHaplotypeSampleTag(), haplotype.hashCode());
         record.setReadUnmappedFlag(false);
         record.setReferenceIndex(output.getBAMOutputHeader().getSequenceIndex(paddedRefLoc.getContig()));
