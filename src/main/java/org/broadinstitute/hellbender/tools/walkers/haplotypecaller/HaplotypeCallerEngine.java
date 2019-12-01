@@ -43,6 +43,7 @@ import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.broadinstitute.hellbender.utils.variant.HomoSapiensConstants;
 import org.broadinstitute.hellbender.utils.variant.writers.GVCFWriter;
+import org.ultimagenomics.flow_based_read.tests.AlleleLikelihoodWriter;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -91,6 +92,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
     // writes Haplotypes to a bam file when the -bamout option is specified
     private Optional<HaplotypeBAMWriter> haplotypeBAMWriter;
+    private Optional<AlleleLikelihoodWriter<GATKRead, Haplotype>> alleleLikelihoodWriter;
 
     private Set<String> sampleSet;
     private SampleList samplesList;
@@ -226,6 +228,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
 
         haplotypeBAMWriter = AssemblyBasedCallerUtils.createBamWriter(hcArgs, createBamOutIndex, createBamOutMD5, readsHeader);
+        alleleLikelihoodWriter = AssemblyBasedCallerUtils.createAlleleLikelihoodWriter(hcArgs);
         assemblyEngine = hcArgs.createReadThreadingAssembler();
         likelihoodCalculationEngine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(hcArgs.likelihoodArgs);
 
@@ -601,6 +604,10 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         // Calculate the likelihoods: CPU intensive part.
         final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods =
                 likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads);
+
+        if (alleleLikelihoodWriter.isPresent()) {
+            alleleLikelihoodWriter.get().writeAlleleLikelihoods(readLikelihoods);
+        }
 
         // Realign reads to their best haplotype.
         final Map<GATKRead, GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(readLikelihoods, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner);

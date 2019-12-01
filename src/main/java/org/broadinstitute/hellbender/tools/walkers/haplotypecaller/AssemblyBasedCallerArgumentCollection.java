@@ -18,6 +18,8 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     public static final String BAM_OUTPUT_LONG_NAME = "bam-output";
     public static final String BAM_OUTPUT_SHORT_NAME = "bamout";
     public static final String BAM_WRITER_TYPE_LONG_NAME = "bam-writer-type";
+    public static final String ALLELE_LIKELIHOOD_MATRIX_PATH = "alm-path";
+    public static final String ALLELE_LIKELIHOOD_MATRIX_INTERVAL = "alm-interval";
     public static final String DONT_USE_SOFT_CLIPPED_BASES_LONG_NAME = "dont-use-soft-clipped-bases";
     public static final String DO_NOT_RUN_PHYSICAL_PHASING_LONG_NAME = "do-not-run-physical-phasing";
     public static final String MAX_MNP_DISTANCE_LONG_NAME = "max-mnp-distance";
@@ -92,6 +94,14 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     // -----------------------------------------------------------------------------------------------
     // arguments for debugging / developing
     // -----------------------------------------------------------------------------------------------
+
+    @Advanced
+    @Argument(fullName = ALLELE_LIKELIHOOD_MATRIX_PATH, doc="File to write alleleLikelihoodMatrix", optional=true)
+    public String alleleLikelihoodMatrixPath=null;
+
+    @Advanced
+    @Argument(fullName = ALLELE_LIKELIHOOD_MATRIX_INTERVAL, doc="File to write alleleLikelihoodMatrix", optional=true)
+    public String alleleLikelihoodMatrixInterval=null;
 
     @Advanced
     @Argument(fullName = DONT_USE_SOFT_CLIPPED_BASES_LONG_NAME, doc = "Do not analyze soft clipped bases in the reads", optional = true)
