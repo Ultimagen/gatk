@@ -1237,7 +1237,7 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
 
             final int numberOfEvidence = sampleEvidence.size();
             for (int e = 0; e < numberOfEvidence; e++) {
-                if (maximumLikelihoodOverAllAlleles(s, e) < log10MinTrueLikelihood.applyAsDouble(sampleEvidence.get(e))) {
+                if (maximumLikelihoodOverAllAlleles(s, e) <= log10MinTrueLikelihood.applyAsDouble(sampleEvidence.get(e))) {
                     evidenceToRemove.add(sampleEvidence.get(e));
                 }
             }
