@@ -36,7 +36,10 @@ import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.ultimagenomics.flow_based_read.alignment.FlowBasedAlignmentEngine;
+import org.ultimagenomics.flow_based_read.tests.AlleleLikelihoodWriter;
+
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -247,6 +250,14 @@ public final class AssemblyBasedCallerUtils {
                 Optional.of(new HaplotypeBAMWriter(args.bamWriterType, IOUtils.getPath(args.bamOutputPath), createBamOutIndex, createBamOutMD5, header)) :
                 Optional.empty();
     }
+
+    public static Optional<AlleleLikelihoodWriter<GATKRead, Haplotype>> createAlleleLikelihoodWriter(final AssemblyBasedCallerArgumentCollection args) {
+        return args.alleleLikelihoodMatrixPath != null ?
+                Optional.of(new AlleleLikelihoodWriter<>(IOUtils.getPath(args.alleleLikelihoodMatrixPath),
+                        new SimpleInterval(args.alleleLikelihoodMatrixInterval) ) ):Optional.empty();
+    }
+
+
 
     // Contract: the List<Allele> alleles of the resulting VariantContext is the ref allele followed by alt alleles in the
     // same order as in the input vcs
