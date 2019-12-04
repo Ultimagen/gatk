@@ -6,12 +6,7 @@ import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMFileWriter;
 import htsjdk.samtools.reference.ReferenceSequenceFile;
 import htsjdk.samtools.util.Locatable;
-import htsjdk.variant.variantcontext.Allele;
-import htsjdk.variant.variantcontext.Genotype;
-import htsjdk.variant.variantcontext.GenotypeBuilder;
-import htsjdk.variant.variantcontext.GenotypesContext;
-import htsjdk.variant.variantcontext.VariantContext;
-import htsjdk.variant.variantcontext.VariantContextBuilder;
+import htsjdk.variant.variantcontext.*;
 import htsjdk.variant.vcf.VCFConstants;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -19,8 +14,6 @@ import org.apache.logging.log4j.Logger;
 import org.broadinstitute.gatk.nativebindings.smithwaterman.SWOverhangStrategy;
 import org.broadinstitute.hellbender.engine.AlignmentContext;
 import org.broadinstitute.hellbender.engine.AssemblyRegion;
-import org.broadinstitute.hellbender.exceptions.UserException;
-import org.broadinstitute.hellbender.engine.GATKPathSpecifier;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.walkers.ReferenceConfidenceVariantContextMerger;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.readthreading.ReadThreadingAssembler;
@@ -31,40 +24,23 @@ import org.broadinstitute.hellbender.utils.clipping.ReadClipper;
 import org.broadinstitute.hellbender.utils.fasta.CachingIndexedFastaSequenceFile;
 import org.broadinstitute.hellbender.utils.fragments.FragmentCollection;
 import org.broadinstitute.hellbender.utils.fragments.FragmentUtils;
-import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
-import org.broadinstitute.hellbender.utils.genotyper.IndexedAlleleList;
-import org.broadinstitute.hellbender.utils.genotyper.SampleList;
+import org.broadinstitute.hellbender.utils.genotyper.*;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.haplotype.HaplotypeBAMWriter;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 import org.broadinstitute.hellbender.utils.locusiterator.LocusIteratorByState;
 import org.broadinstitute.hellbender.utils.pileup.ReadPileup;
-import org.broadinstitute.hellbender.utils.read.AlignmentUtils;
-import org.broadinstitute.hellbender.utils.read.CigarUtils;
-import org.broadinstitute.hellbender.utils.read.GATKRead;
-import org.broadinstitute.hellbender.utils.read.ReadCoordinateComparator;
-import org.broadinstitute.hellbender.utils.read.ReadUtils;
+import org.broadinstitute.hellbender.utils.read.*;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.ultimagenomics.flow_based_read.alignment.FlowBasedAlignmentEngine;
 import org.ultimagenomics.flow_based_read.tests.AlleleLikelihoodWriter;
 import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
+
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.OptionalInt;
-import java.util.Set;
+import java.io.IOException;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -121,8 +97,7 @@ public final class AssemblyBasedCallerUtils {
                                       final byte minTailQuality,
                                       final SAMFileHeader readsHeader,
                                       final SampleList samplesList,
-                                      final boolean correctOverlappingBaseQualities,
-                                      final int extraBasesToClip) {
+                                      final boolean correctOverlappingBaseQualities) {
         if ( region.isFinalized() ) {
             return;
         }
@@ -132,7 +107,7 @@ public final class AssemblyBasedCallerUtils {
                 // TODO unclipping soft clips may introduce bases that aren't in the extended region if the unclipped bases
                 // TODO include a deletion w.r.t. the reference.  We must remove kmers that occur before the reference haplotype start
                 .map(read -> skipSoftClips || ! ReadUtils.hasWellDefinedFragmentSize(read) ?
-                    ReadClipper.hardClipSoftClippedBases(read, extraBasesToClip) : ReadClipper.revertSoftClippedBases(read))
+                    ReadClipper.hardClipSoftClippedBases(read) : ReadClipper.revertSoftClippedBases(read))
                 .map(read -> ReadClipper.hardClipLowQualEnds(read, minTailQualityToUse))
                 .filter(read -> read.getStart() <= read.getEnd())
                 .map(read -> read.isUnmapped() ? read : ReadClipper.hardClipAdaptorSequence(read))
@@ -210,9 +185,9 @@ public final class AssemblyBasedCallerUtils {
         return new SimpleInterval(region.getPaddedSpan().getContig(), padLeft, padRight);
     }
 
-    public static CachingIndexedFastaSequenceFile createReferenceReader(final GATKPathSpecifier referenceInput) {
+    public static CachingIndexedFastaSequenceFile createReferenceReader(final String reference) {
         // fasta reference reader to supplement the edges of the reference sequence
-        return new CachingIndexedFastaSequenceFile(referenceInput.toPath());
+        return new CachingIndexedFastaSequenceFile(IOUtils.getPath(reference));
     }
 
     /**
@@ -295,7 +270,7 @@ public final class AssemblyBasedCallerUtils {
                                                   final ReadThreadingAssembler assemblyEngine,
                                                   final SmithWatermanAligner aligner,
                                                   final boolean correctOverlappingBaseQualities){
-        finalizeRegion(region, argumentCollection.assemblerArgs.errorCorrectReads, argumentCollection.dontUseSoftClippedBases, (byte)(argumentCollection.minBaseQualityScore - 1), header, sampleList, correctOverlappingBaseQualities, 3);
+        finalizeRegion(region, argumentCollection.assemblerArgs.errorCorrectReads, argumentCollection.dontUseSoftClippedBases, (byte)(argumentCollection.minBaseQualityScore - 1), header, sampleList, correctOverlappingBaseQualities);
         if( argumentCollection.assemblerArgs.debugAssembly) {
             logger.info("Assembling " + region.getSpan() + " with " + region.size() + " reads:    (with overlap region = " + region.getPaddedSpan() + ")");
         }
@@ -595,7 +570,7 @@ public final class AssemblyBasedCallerUtils {
 
         for (final Haplotype h : haplotypes) {
 
-            final List<VariantContext> spanningEvents = h.getEventMap().getOverlappingEvents(loc,ref.length());
+            final List<VariantContext> spanningEvents = h.getEventMap().getOverlappingEvents(loc);
 
             if (spanningEvents.isEmpty()) {    //no events --> this haplotype supports the reference at this locus
                 result.get(ref).add(h);
@@ -629,150 +604,20 @@ public final class AssemblyBasedCallerUtils {
                         // because we're in GGA mode and it's not an allele we want
                         continue;
                     }
-                    // the event starts prior to the current location, so it's a spanning deletion
-                } else if (spanningEvent.getStart() < loc) {
-                    if (!result.containsKey(Allele.SPAN_DEL)) {
-                        result.put(Allele.SPAN_DEL, new ArrayList<>());
-                    }
-                    result.get(Allele.SPAN_DEL).add(h);
-                    break;
-                } else {
-                    // the event starts  the current location, so it's neither the allele nor the reference
-                    continue;
-                }
-            }
-
-        }
-        return result;
-    }
-
-    /**
-     * Returns a mapping from Allele in the mergedVC, which represents all of the alleles being genotyped at loc,
-     * to a list of Haplotypes that support that allele. If the mergedVC includes a spanning deletion allele, all haplotypes
-     * that support spanning deletions will be assigned to that allele in the map.
-     *
-     * @param mergedVC The merged variant context for the locus, which includes all active alternate alleles merged to a single reference allele
-     * @param genotyped_loc The locus that is being genotyped
-     * @param possibleEquivalentAlleles The loci that produced variants
-     * @param haplotypes Haplotypes for the current active region
-     * @return
-     */
-    public static Map<Allele, List<Haplotype>> createAlleleMapper(final VariantContext mergedVC, int genotyped_loc,
-                                                                  final List<VariantContext> possibleEquivalentAlleles,
-                                                                  final List<Haplotype> haplotypes) {
-
-        final Set<Integer> equivalent_loci = new HashSet<>(possibleEquivalentAlleles.stream()
-                .map(v -> v.getStart())
-                .collect(Collectors.toList()));
-        final Map<LocationAndAlleles, Integer> equivalentLocationAndAlleles = new HashMap<>();
-        int count = 0 ;
-        for (VariantContext v : possibleEquivalentAlleles) {
-            equivalentLocationAndAlleles.put(new LocationAndAlleles(v.getStart(), v.getAlleles()), count++);
-        }
-
-        final Map<Allele, List<Haplotype>> result = new LinkedHashMap<>();
-
-        final Allele ref = mergedVC.getReference();
-        result.put(ref, new ArrayList<>());
-
-        //Note: we can't use the alleles implied by eventsAtThisLoc because they are not yet merged to a common reference
-        //For example, a homopolymer AAAAA reference with a single and double deletion would yield (i) AA* A and (ii) AAA* A
-        //in eventsAtThisLoc, when in mergedVC it would yield AAA* AA A
-        mergedVC.getAlternateAlleles().stream().filter(a -> !a.isSymbolic()).forEach(a -> result.put(a, new ArrayList<>()));
-
-        for (final Haplotype h : haplotypes) {
-            List<VariantContext> spanningEvents = new ArrayList<>();
-            Set<LocationAndAlleles> uniqueSpanningEvents = new HashSet<>();
-            spanningEvents.addAll(h.getEventMap().getOverlappingEvents(genotyped_loc));
-            uniqueSpanningEvents.addAll(spanningEvents.stream().map(v -> new LocationAndAlleles(v.getStart(), v.getAlleles())).collect(Collectors.toList()));
-            for (int loc: equivalent_loci) {
-
-                List<VariantContext> tmp = h.getEventMap().getOverlappingEvents(loc);
-                for (VariantContext t : tmp ) {
-                    if (!uniqueSpanningEvents.contains(new LocationAndAlleles(t.getStart(), t.getAlleles()))) {
-                        spanningEvents.add(t);
-                        uniqueSpanningEvents.add(new LocationAndAlleles(t.getStart(), t.getAlleles()));
-                    }
-                }
-            }
-
-
-            boolean hasBeenAddedToAllele = false;
-
-            if (spanningEvents.isEmpty()) {    //no events --> this haplotype supports the reference at this locus
-                result.get(ref).add(h);
-                continue;
-            }
-
-            for (VariantContext spanningEvent : spanningEvents) {
-
-                if (spanningEvent.getStart() == genotyped_loc) {
-                    // the event starts at the current location
-
-                    if (spanningEvent.getReference().length() == mergedVC.getReference().length()) {
-                        // reference allele lengths are equal; we can just use the spanning event's alt allele
-                        // in the case of GGA mode the spanning event might not match an allele in the mergedVC
-                        if (result.containsKey(spanningEvent.getAlternateAllele(0))) {
-                            // variant contexts derived from the event map have only one alt allele each, so we can just
-                            // grab the first one (we're not assuming that the sample is biallelic)
-                            result.get(spanningEvent.getAlternateAllele(0)).add(h);
-                            hasBeenAddedToAllele = true;
-                        }
-                    } else if (spanningEvent.getReference().length() < mergedVC.getReference().length()) {
-                        // spanning event has shorter ref allele than merged VC; we need to pad out its alt allele
-                        final Map<Allele, Allele> spanningEventAlleleMappingToMergedVc
-                                = GATKVariantContextUtils.createAlleleMapping(mergedVC.getReference(), spanningEvent);
-                        final Allele remappedSpanningEventAltAllele = spanningEventAlleleMappingToMergedVc.get(spanningEvent.getAlternateAllele(0));
-                        // in the case of GGA mode the spanning event might not match an allele in the mergedVC
-                        if (result.containsKey(remappedSpanningEventAltAllele)) {
-                            result.get(remappedSpanningEventAltAllele).add(h);
-                            hasBeenAddedToAllele = true;
-                        }
-                    } else {
-                        // the process of creating the merged VC in AssemblyBasedCallerUtils::makeMergedVariantContext should have
-                        // already padded out the reference allele, therefore this spanning VC must not be in events at this site
-                        // because we're in GGA mode and it's not an allele we want
-                        continue;
-                    }
-
-                }
-
-                //Now we deal with the alleles with either spanning deletions or equivalent alleles on different locations
-                // Note that due to the way SpanningEvent was generated those will be coming **After** the spanningEvents on
-                // the genotyped locations
-                if (hasBeenAddedToAllele) {
-                    continue;
-
-                } else if (equivalentLocationAndAlleles.containsKey(new LocationAndAlleles(spanningEvent.getStart(), spanningEvent.getAlleles()))){
-                    int value = equivalentLocationAndAlleles.get(new LocationAndAlleles(spanningEvent.getStart(), spanningEvent.getAlleles()));
-                    Allele newAllele = Allele.create(String.format("<%d>", value).getBytes(), false);
-                    if (! result.containsKey(newAllele)) {
-                        result.put(newAllele, new ArrayList<>());
-                    }
-                    result.get(newAllele).add(h);
-                    hasBeenAddedToAllele = true;
-                    break;
-
 
                 } else {
                     // the event starts prior to the current location, so it's a spanning deletion
-
                     if (! result.containsKey(Allele.SPAN_DEL)) {
                         result.put(Allele.SPAN_DEL, new ArrayList<>());
                     }
                     result.get(Allele.SPAN_DEL).add(h);
-                    hasBeenAddedToAllele = true;
                     break;
                 }
-            }
-            if (!hasBeenAddedToAllele) {
-                result.get(ref).add(h);
             }
 
         }
         return result;
     }
-
 
     /**
      * Tries to phase the individual alleles based on pairwise comparisons to the other alleles based on all called haplotypes
