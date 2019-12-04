@@ -12,6 +12,7 @@ import org.broadinstitute.hellbender.utils.genotyper.*;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
+import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
 
 import java.util.*;
 import java.util.function.ToDoubleFunction;
@@ -22,7 +23,10 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
     private final double expectedErrorRatePerBase;
     private static final int ALIGNMENT_UNCERTAINTY = 4;
     private static final int FLOW_ORDER_CYCLE_LENGTH = 4;
-    public FlowBasedAlignmentEngine(double log10globalReadMismappingRate, final double expectedErrorRatePerBase) {
+    private static final double LOG10_QUAL_PER_BASE = Double.NEGATIVE_INFINITY;
+    final FlowBasedAlignmentArgumentCollection fbargs;
+    public FlowBasedAlignmentEngine(final FlowBasedAlignmentArgumentCollection flowBasedArgs, double log10globalReadMismappingRate, final double expectedErrorRatePerBase) {
+        this.fbargs = flowBasedArgs;
         this.log10globalReadMismappingRate = log10globalReadMismappingRate;
         this.expectedErrorRatePerBase = expectedErrorRatePerBase;
 
@@ -81,7 +85,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             }
 
             fo = hdr.getReadGroup(rd.getReadGroup()).getFlowOrder();
-            FlowBasedRead tmp = new FlowBasedRead(rd, fo, max_class);
+            FlowBasedRead tmp = new FlowBasedRead(rd, fo, max_class, fbargs);
             tmp.apply_alignment();
 
             if ( flow_order == null)  {

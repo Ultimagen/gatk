@@ -293,7 +293,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         assembledEventMapVariants = Optional.ofNullable(hcArgs.assemblerArgs.debugAssemblyVariantsOut != null ?
                 new PriorityQueue<>(200, new VariantContextComparator(readsHeader.getSequenceDictionary())) : null);
         assembledEventMapVcfOutputWriter.ifPresent(writer -> writeHeader(writer, readsHeader.getSequenceDictionary(), new HashSet<>()));
-        likelihoodCalculationEngine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(hcArgs.likelihoodArgs, !hcArgs.softClipLowQualityEnds);
+        likelihoodCalculationEngine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(hcArgs.likelihoodArgs, hcArgs.fbargs, !hcArgs.softClipLowQualityEnds);
     }
 
     private boolean isVCFMode() {
