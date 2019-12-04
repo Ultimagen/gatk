@@ -8,17 +8,17 @@ import java.io.Serializable;
 public class FlowBasedAlignmentArgumentCollection implements Serializable {
     private static final long serialVersionUID = -3405667551696313040L;
 
-    public static final String PROBABILITY_RATIO_THRESHOLD_LONG_NAME = "flow-probability-threshold";
-    public static final String REMOVE_LONGER_THAN_ONE_INDELS = "flow-remove-non-single-base-pair-indels";
-    public static final String REMOVE_ONE_TO_ZERO_PROBS = "flow-remove-one-zero-probs";
-    public static final String NUMBER_OF_POSSIBLE_PROBS = "flow-quantization-bins";
-    public static final String FILLING_VALUE="flow-fill-empty-bins-value";
+    private static final String PROBABILITY_RATIO_THRESHOLD_LONG_NAME = "flow-probability-threshold";
+    private static final String REMOVE_LONGER_THAN_ONE_INDELS = "flow-remove-non-single-base-pair-indels";
+    private static final String REMOVE_ONE_TO_ZERO_PROBS = "flow-remove-one-zero-probs";
+    private static final String NUMBER_OF_POSSIBLE_PROBS = "flow-quantization-bins";
+    private static final String FILLING_VALUE="flow-fill-empty-bins-value";
 
-    public static final double DEFAULT_RATIO_THRESHOLD = 0.003;
-    public static final double DEFAULT_FILLING_VALUE = 0.001;
-    public static final boolean DEFAULT_REMOVE_LONGER_INDELS = false;
-    public static final boolean DEFAULT_REMOVE_ONE_TO_ZERO = false;
-    public static final int DEFAULT_QUANTIZATION = 121;
+    private static final double DEFAULT_RATIO_THRESHOLD = 0.003;
+    private static final double DEFAULT_FILLING_VALUE = 0.001;
+    private static final boolean DEFAULT_REMOVE_LONGER_INDELS = false;
+    private static final boolean DEFAULT_REMOVE_ONE_TO_ZERO = false;
+    private static final int DEFAULT_QUANTIZATION = 121;
 
     @Advanced
     @Argument(fullName = PROBABILITY_RATIO_THRESHOLD_LONG_NAME, doc = "Lowest probability ratio to be used as an option", optional = true)
