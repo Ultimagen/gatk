@@ -1,8 +1,6 @@
 package org.ultimagenomics.flow_based_read.alignment;
 
 import htsjdk.samtools.SAMFileHeader;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.ultimagenomics.flow_based_read.utils.Direction;
 import org.ultimagenomics.flow_based_read.read.FlowBasedHaplotype;
 import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
@@ -15,6 +13,7 @@ import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
+
 import java.util.*;
 import java.util.function.ToDoubleFunction;
 
@@ -26,13 +25,11 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
     private static final int FLOW_ORDER_CYCLE_LENGTH = 4;
     private static final double LOG10_QUAL_PER_BASE = Double.NEGATIVE_INFINITY;
     final FlowBasedAlignmentArgumentCollection fbargs;
-    private final Logger logger = LogManager.getLogger(this.getClass());
-
     public FlowBasedAlignmentEngine(final FlowBasedAlignmentArgumentCollection flowBasedArgs, double log10globalReadMismappingRate, final double expectedErrorRatePerBase) {
         this.fbargs = flowBasedArgs;
-
         this.log10globalReadMismappingRate = log10globalReadMismappingRate;
         this.expectedErrorRatePerBase = expectedErrorRatePerBase;
+
     }
     @Override
     public AlleleLikelihoods<GATKRead, Haplotype> computeReadLikelihoods(AssemblyResultSet assemblyResultSet,
@@ -55,19 +52,16 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
 
 
         result.normalizeLikelihoods(log10globalReadMismappingRate);
-        result.filterPoorlyModeledEvidence(log10MinTrueLikelihood(expectedErrorRatePerBase));
+         result.filterPoorlyModeledEvidence(log10MinTrueLikelihood(expectedErrorRatePerBase));
 
         return result;
     }
 
     private ToDoubleFunction<GATKRead> log10MinTrueLikelihood(final double expectedErrorRate) {
         final double log10ErrorRate = Math.log10(expectedErrorRate);
-        final double catastrophicErrorRate = Math.log10(fbargs.filling_value);
-
         return read -> {
-            final double maxErrorsForRead = Math.max(3.0, Math.ceil(read.getLength() * expectedErrorRate));
-            final double maxCatastrophicErrorsForRead = Math.max(2.0, Math.ceil(read.getLength() * catastrophicErrorRate));
-            return maxErrorsForRead * log10ErrorRate + maxCatastrophicErrorsForRead*catastrophicErrorRate;
+            final double maxErrorsForRead = Math.min(2.0, Math.ceil(read.getLength() * expectedErrorRate));
+            return maxErrorsForRead * log10ErrorRate;
         };
     }
 
@@ -125,10 +119,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         for (int i = 0; i < likelihoods.numberOfAlleles(); i++){
             fbh = processedHaplotypes.get(i);
             for (int j = 0 ; j < likelihoods.evidenceCount(); j++){
-                final double    likelihood = haplotypeReadMatching(fbh,processedReads.get(j));
-                likelihoods.set(i,j,likelihood);
-                if ( logger.isDebugEnabled() )
-                    logger.debug("likelihood: " + likelihood + " "  + processedReads.get(j).getName() + " " + fbh.getBaseString());
+                likelihoods.set(i,j,haplotypeReadMatching(fbh,processedReads.get(j)));
             }
         }
 
@@ -172,10 +163,10 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
 
         if (!read.is_valid()) return Double.NEGATIVE_INFINITY;
 
-        int haplotype_start = ReadUtils.getReadIndexForReferenceCoordinate(haplotype.getStart(), haplotype.getCigar(),
-                read.getTrimmedStart()).getLeft();
-        int haplotype_end = ReadUtils.getReadIndexForReferenceCoordinate(haplotype.getStart(), haplotype.getCigar(),
-                read.getTrimmedEnd()).getLeft();
+        int haplotype_start = ReadUtils.getReadCoordinateForReferenceCoordinate(haplotype.getStart(), haplotype.getCigar(),
+                read.getTrimmedStart(), null, false);
+        int haplotype_end = ReadUtils.getReadCoordinateForReferenceCoordinate(haplotype.getStart(), haplotype.getCigar(),
+                read.getTrimmedEnd(), null, false);
 
         int left_clip = haplotype_start;
         int right_clip = haplotype.length()-haplotype_end-1;
@@ -219,24 +210,6 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
                 break;
             }
         }
-
-        if ( logger.isDebugEnabled() ) {
-            logger.debug("haplotype   " + read.getName() + " " + haplotype.getBaseString());
-            logger.debug("read        " + read.getName() + " " + read.getBasesString());
-            logger.debug("haplotype.f " + read.getName() + " " + new String(haplotype.getFlowOrderArray()));
-            logger.debug("read.f      " + read.getName() + " " + new String(read.getFlowOrderArray()));
-            logger.debug("haplotype.K " + read.getName() + " " + FlowBasedRead.keyAsString(haplotype.getKey()));
-            logger.debug("haplotype.k " + read.getName() + " " + FlowBasedRead.keyAsString(key));
-            logger.debug("read.k      " + read.getName() + " " + FlowBasedRead.keyAsString(read.getKey()));
-            logger.debug("starting point: " + read.getName() + " " + starting_point);
-        }
-
-        /*
-        if ( logger.isDebugEnabled() ) {
-            read.logMatrix(logger, "haplotypeReadMatching");
-        }
-         */
-
         double best_alignment = Double.NEGATIVE_INFINITY;
         for ( int s = starting_point ; (s < starting_point + ALIGNMENT_UNCERTAINTY*2+1) &&
                 ( s+read.getKeyLength() <= key.length); s+= ALIGNMENT_UNCERTAINTY){
@@ -248,10 +221,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             }
             double result = 0 ;
             for ( int i = 0 ; i < locations_to_fetch.length; i++ ){
-                double prob;
-                result += Math.log10(prob = read.getProb(i, locations_to_fetch[i]));
-                if ( logger.isDebugEnabled() )
-                    logger.debug("prob:" + read.getName() + " " + i + " " + locations_to_fetch[i] + " " + prob);
+                result += Math.log10(read.getProb(i, locations_to_fetch[i]));
             }
             if (result > best_alignment) {
                 best_alignment = result;
