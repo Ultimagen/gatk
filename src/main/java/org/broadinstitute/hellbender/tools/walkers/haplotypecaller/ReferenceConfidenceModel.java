@@ -432,7 +432,7 @@ public class ReferenceConfidenceModel {
         }
     }
 
-    protected static boolean isAltBeforeAssembly(final PileupElement element, final byte refBase){
+    public static boolean isAltBeforeAssembly(final PileupElement element, final byte refBase){
         return element.getBase() != refBase || element.isDeletion() || element.isBeforeDeletionStart()
                 || element.isAfterDeletionEnd() || element.isBeforeInsertion() || element.isAfterInsertion() || element.isNextToSoftClip();
     }

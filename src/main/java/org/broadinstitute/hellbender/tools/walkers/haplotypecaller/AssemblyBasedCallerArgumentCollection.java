@@ -146,4 +146,8 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     @Advanced
     @Argument(fullName = FORCE_CALL_FILTERED_ALLELES_LONG_NAME, shortName = FORCE_CALL_FILTERED_ALLELES_SHORT_NAME, doc = "Force-call filtered alleles included in the resource specified by --alleles", optional = true)
     public boolean forceCallFiltered = false;
+
+    @Advanced
+    @Argument(fullName = "strand-bias-pileup-p", doc = "p-value threshold for rejecting pileups as strand bias artifacts.", optional = true)
+    public double strandBiasPileupPValue = 0.0;
 }
