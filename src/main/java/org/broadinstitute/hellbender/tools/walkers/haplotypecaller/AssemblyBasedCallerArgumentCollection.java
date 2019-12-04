@@ -149,6 +149,10 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     public boolean forceCallFiltered = false;
 
     @Advanced
+    @Argument(fullName = "strand-bias-pileup-p", doc = "p-value threshold for rejecting pileups as strand bias artifacts.", optional = true)
+    public double strandBiasPileupPValue = 0.0;
+
+    @Advanced
     @Argument(fullName = ALLELE_EXTENSION_LONG_NAME,
             doc = "Likelihood and read-based annotations will only take into consideration reads " +
                     "that overlap the variant or any base no further than this distance expressed in base pairs",
