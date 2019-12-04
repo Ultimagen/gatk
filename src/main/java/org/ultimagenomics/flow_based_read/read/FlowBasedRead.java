@@ -27,7 +27,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private byte[] forward_sequence;
     private byte[] key;
     private int [] flow2base;
-    private int max_hmer = 13;
+    private int max_hmer;
     private byte[] flow_order;
     private double[][] flow_matrix;
     private boolean valid_key;

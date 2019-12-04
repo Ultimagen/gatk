@@ -21,7 +21,7 @@ import java.util.ArrayList;
 
 
 public class test_haplotype_matching {
-    public static void main(String[] args) throws FileNotFoundException, IOException{
+    public static void main(String[] args) throws IOException{
         System.out.println("Input reads file: " + args[0]);
         System.out.println("Input haplotypes file: " + args[1]);
         System.out.println("CR: " + args[2]);
@@ -35,12 +35,12 @@ public class test_haplotype_matching {
         for ( final SAMRecord rec : reader ) {
             SAMRecordToGATKReadAdapter tmp = new SAMRecordToGATKReadAdapter(rec);
             if (!tmp.getAttributeAsString("RG").startsWith("ArtificialHaplotype")) {
-                if (tmp.getAttributeAsString(("CR")).equals(new String(args[2]))) {
+                if (tmp.getAttributeAsString(("CR")).equals(args[2])) {
                     reads.add(tmp);
                     count_reads++;
                 }
             } else {
-                if (tmp.getAttributeAsString(("CR")).equals(new String(args[2]))) {
+                if (tmp.getAttributeAsString(("CR")).equals(args[2])) {
                     ChromosomeInterval gl = new ChromosomeInterval(tmp.getContig(), tmp.getStart(), tmp.getEnd());
 
                     Haplotype hap = new Haplotype(tmp.getBases(), gl);
