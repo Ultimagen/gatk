@@ -149,6 +149,10 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     public boolean forceCallFiltered = false;
 
     @Advanced
+    @Argument(fullName = "strand-bias-pileup-p", doc = "p-value threshold for rejecting pileups as strand bias artifacts.", optional = true)
+    public double strandBiasPileupPValue = 0.0;
+
+    @Advanced
     @Argument(fullName = "soft-clip-low-quality-ends", doc = "If enabled will preserve low-quality read ends as softclips (used for DRAGEN-GATK BQD genotyper model)", optional = true)
     public boolean softClipLowQualityEnds = false;
 
