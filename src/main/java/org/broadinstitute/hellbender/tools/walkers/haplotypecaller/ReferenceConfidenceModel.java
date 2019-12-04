@@ -6,25 +6,41 @@ import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.util.Locatable;
-import htsjdk.variant.variantcontext.*;
+import htsjdk.variant.variantcontext.Allele;
+import htsjdk.variant.variantcontext.GenotypeBuilder;
+import htsjdk.variant.variantcontext.GenotypeLikelihoods;
+import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.variantcontext.VariantContextBuilder;
 import htsjdk.variant.vcf.VCFHeaderLine;
 import htsjdk.variant.vcf.VCFSimpleHeaderLine;
 import org.apache.commons.lang3.tuple.Pair;
 import org.broadinstitute.hellbender.engine.AssemblyRegion;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.PloidyModel;
 import org.broadinstitute.hellbender.tools.walkers.variantutils.PosteriorProbabilitiesUtils;
-import org.broadinstitute.hellbender.utils.*;
+import org.broadinstitute.hellbender.utils.MathUtils;
+import org.broadinstitute.hellbender.utils.Nucleotide;
+import org.broadinstitute.hellbender.utils.QualityUtils;
+import org.broadinstitute.hellbender.utils.SimpleInterval;
+import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.genotyper.SampleList;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.pileup.PileupElement;
 import org.broadinstitute.hellbender.utils.pileup.ReadPileup;
-import org.broadinstitute.hellbender.utils.read.*;
+import org.broadinstitute.hellbender.utils.read.AlignmentUtils;
+import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.broadinstitute.hellbender.utils.variant.HomoSapiensConstants;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Code for estimating the reference confidence
@@ -52,6 +68,8 @@ public class ReferenceConfidenceModel {
      * </p>
      */
     private static final byte REF_MODEL_DELETION_QUAL = 30;
+
+    private static final byte MAX_QUAL_FOR_ACTIVE_REGION = 20;
 
     /**
      * Base calls with quality threshold lower than this number won't be considered when assessing the
@@ -360,11 +378,11 @@ public class ReferenceConfidenceModel {
      * @return a RefVsAnyResult genotype call.
      */
     public ReferenceConfidenceResult calcGenotypeLikelihoodsOfRefVsAny(final int ploidy,
-                                                        final ReadPileup pileup,
-                                                        final byte refBase,
-                                                        final byte minBaseQual,
-                                                        final MathUtils.RunningAverage hqSoftClips,
-                                                            final boolean readsWereRealigned) {
+                                                                       final ReadPileup pileup,
+                                                                       final byte refBase,
+                                                                       final byte minBaseQual,
+                                                                       final MathUtils.RunningAverage hqSoftClips,
+                                                                       final boolean readsWereRealigned) {
 
         final int likelihoodCount = ploidy + 1;
         final double log10Ploidy = MathUtils.log10(ploidy);
@@ -372,7 +390,7 @@ public class ReferenceConfidenceModel {
         final RefVsAnyResult result = new RefVsAnyResult(likelihoodCount);
         int readCount = 0;
         for (final PileupElement p : pileup) {
-            final byte qual = p.isDeletion() ? REF_MODEL_DELETION_QUAL : p.getQual();
+            final byte qual = p.isDeletion() ? REF_MODEL_DELETION_QUAL : (byte)Math.min(MAX_QUAL_FOR_ACTIVE_REGION, p.getQual());
             if (!p.isDeletion() && qual <= minBaseQual) {
                 continue;
             }
