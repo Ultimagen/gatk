@@ -12,6 +12,7 @@ import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
 import org.genomicsdb.importer.model.ChromosomeInterval;
+import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -54,8 +55,9 @@ public class test_haplotype_matching {
         System.out.println(String.format("%d reads %d haplotypes", count_reads, count_haplotypes));
         ArrayList<FlowBasedRead> fbrs = new ArrayList<>();
         int cnt = 0 ;
+        FlowBasedAlignmentArgumentCollection fbargs = new FlowBasedAlignmentArgumentCollection();
         for (final GATKRead r :  reads) {
-            fbrs.add(new FlowBasedRead(r, "TACG", 8));
+            fbrs.add(new FlowBasedRead(r, "TACG", 8, fbargs));
         }
         for (FlowBasedRead fbr : fbrs ) fbr.apply_alignment();
 
@@ -64,7 +66,7 @@ public class test_haplotype_matching {
             fbhs.add(new FlowBasedHaplotype(hap, "TACG", 8));
         }
 
-        FlowBasedAlignmentEngine fbe = new FlowBasedAlignmentEngine(-5, 0.02);
+        FlowBasedAlignmentEngine fbe = new FlowBasedAlignmentEngine(new FlowBasedAlignmentArgumentCollection(), -5, 0.02);
 
         final AlleleLikelihoods<GATKRead, Haplotype> haplotypeReadLikelihoods =
                 fbe.computeReadLikelihoods(haplotypes, reads);
