@@ -4,7 +4,12 @@ import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMSequenceDictionary;
 import htsjdk.samtools.reference.ReferenceSequenceFile;
 import htsjdk.samtools.util.RuntimeIOException;
-import htsjdk.variant.variantcontext.*;
+import htsjdk.variant.variantcontext.Allele;
+import htsjdk.variant.variantcontext.Genotype;
+import htsjdk.variant.variantcontext.GenotypeBuilder;
+import htsjdk.variant.variantcontext.GenotypesContext;
+import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.variantcontext.VariantContextBuilder;
 import htsjdk.variant.variantcontext.writer.Options;
 import htsjdk.variant.variantcontext.writer.VariantContextWriter;
 import htsjdk.variant.vcf.VCFConstants;
@@ -14,15 +19,31 @@ import htsjdk.variant.vcf.VCFStandardHeaderLines;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.argparser.CommandLineException;
-import org.broadinstitute.hellbender.engine.*;
+import org.broadinstitute.hellbender.engine.AlignmentContext;
+import org.broadinstitute.hellbender.engine.AssemblyRegion;
+import org.broadinstitute.hellbender.engine.AssemblyRegionEvaluator;
+import org.broadinstitute.hellbender.engine.FeatureContext;
+import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.engine.filters.MappingQualityReadFilter;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.engine.filters.ReadFilterLibrary;
 import org.broadinstitute.hellbender.engine.filters.WellformedReadFilter;
 import org.broadinstitute.hellbender.engine.spark.AssemblyRegionArgumentCollection;
 import org.broadinstitute.hellbender.exceptions.UserException;
-import org.broadinstitute.hellbender.tools.walkers.annotator.*;
-import org.broadinstitute.hellbender.tools.walkers.genotyper.*;
+import org.broadinstitute.hellbender.tools.walkers.annotator.Annotation;
+import org.broadinstitute.hellbender.tools.walkers.annotator.ChromosomeCounts;
+import org.broadinstitute.hellbender.tools.walkers.annotator.FisherStrand;
+import org.broadinstitute.hellbender.tools.walkers.annotator.QualByDepth;
+import org.broadinstitute.hellbender.tools.walkers.annotator.RMSMappingQuality;
+import org.broadinstitute.hellbender.tools.walkers.annotator.StandardAnnotation;
+import org.broadinstitute.hellbender.tools.walkers.annotator.StandardHCAnnotation;
+import org.broadinstitute.hellbender.tools.walkers.annotator.StrandBiasBySample;
+import org.broadinstitute.hellbender.tools.walkers.annotator.StrandOddsRatio;
+import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine;
+import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeLikelihoodsCalculationModel;
+import org.broadinstitute.hellbender.tools.walkers.genotyper.MinimalGenotypingEngine;
+import org.broadinstitute.hellbender.tools.walkers.genotyper.OutputMode;
+import org.broadinstitute.hellbender.tools.walkers.genotyper.UnifiedArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.readthreading.ReadThreadingAssembler;
 import org.broadinstitute.hellbender.utils.MathUtils;
 import org.broadinstitute.hellbender.utils.QualityUtils;
@@ -48,8 +69,22 @@ import org.broadinstitute.hellbender.utils.variant.writers.GVCFWriter;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.SortedSet;
 import java.util.stream.Collectors;
+
+import static org.broadinstitute.hellbender.utils.activityprofile.ActivityProfileState.Type.HIGH_QUALITY_SOFT_CLIPS;
+import static org.broadinstitute.hellbender.utils.activityprofile.ActivityProfileState.Type.NONE;
 
 /**
  * The core engine for the HaplotypeCaller that does all of the actual work of the tool.
@@ -448,12 +483,27 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
      * @return probability between 0.0 and 1.0 that the site is active (in practice with this implementation: either 0.0 or 1.0)
      */
     @Override
-    public ActivityProfileState isActive( final AlignmentContext context, final ReferenceContext ref, final FeatureContext features ) {
-        if ( forceCallingAllelesPresent && features.getValues(hcArgs.alleles, ref).stream().anyMatch(vc -> hcArgs.forceCallFiltered || vc.isNotFiltered())) {
+    public ActivityProfileState isActive(final AlignmentContext context, final ReferenceContext ref, final FeatureContext features) {
+        if (!hcArgs.STRATIFICATION_FOR_ACTIVE_REGION) {
+            return isActive_(context, ref, features, AlignmentContext.ReadOrientation.COMPLETE);
+        } else {
+            final ActivityProfileState forwardState = isActive_(context, ref, features, AlignmentContext.ReadOrientation.FORWARD);
+            final ActivityProfileState reverseState = isActive_(context, ref, features, AlignmentContext.ReadOrientation.REVERSE);
+
+            final double prob = Math.sqrt(forwardState.isActiveProb() * reverseState.isActiveProb());
+            final ActivityProfileState.Type resultState = forwardState.getResultState() == NONE && reverseState.getResultState() == NONE ? NONE : HIGH_QUALITY_SOFT_CLIPS;
+            final double mean = (forwardState.getResultValue().doubleValue() + reverseState.getResultValue().doubleValue()) / 2;
+
+            return new ActivityProfileState(forwardState.getLoc(), prob, resultState, mean);
+        }
+    }
+
+    private ActivityProfileState isActive_(final AlignmentContext context, final ReferenceContext ref, final FeatureContext features, final AlignmentContext.ReadOrientation stratification ) {
+        if (forceCallingAllelesPresent && features.getValues(hcArgs.alleles, ref).stream().anyMatch(vc -> hcArgs.forceCallFiltered || vc.isNotFiltered())) {
             return new ActivityProfileState(ref.getInterval(), 1.0);
         }
 
-        if( context == null || context.getBasePileup().isEmpty() ) {
+        if (context == null || context.getBasePileup().isEmpty()) {
             // if we don't have any data, just abort early
             return new ActivityProfileState(ref.getInterval(), 0.0);
         }
@@ -471,18 +521,18 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
         final GenotypesContext genotypes = GenotypesContext.create(splitContexts.keySet().size());
         final MathUtils.RunningAverage averageHQSoftClips = new MathUtils.RunningAverage();
-        for( final Map.Entry<String, AlignmentContext> sample : splitContexts.entrySet() ) {
+        for (final Map.Entry<String, AlignmentContext> sample : splitContexts.entrySet()) {
             // The ploidy here is not dictated by the sample but by the simple genotyping-engine used to determine whether regions are active or not.
             final int activeRegionDetectionHackishSamplePloidy = activeRegionEvaluationGenotyperEngine.getConfiguration().genotypeArgs.samplePloidy;
-            final double[] genotypeLikelihoods = ((RefVsAnyResult)referenceConfidenceModel.calcGenotypeLikelihoodsOfRefVsAny(
+            final double[] genotypeLikelihoods = ((RefVsAnyResult) referenceConfidenceModel.calcGenotypeLikelihoodsOfRefVsAny(
                     activeRegionDetectionHackishSamplePloidy,
-                    sample.getValue().getBasePileup(), ref.getBase(),
+                    sample.getValue().stratify(stratification).getBasePileup(), ref.getBase(),
                     hcArgs.minBaseQualityScore,
                     averageHQSoftClips, false)).genotypeLikelihoods;
-            genotypes.add( new GenotypeBuilder(sample.getKey()).alleles(noCall).PL(genotypeLikelihoods).make() );
+            genotypes.add(new GenotypeBuilder(sample.getKey()).alleles(noCall).PL(genotypeLikelihoods).make());
         }
 
-        final List<Allele> alleles = Arrays.asList(FAKE_REF_ALLELE , FAKE_ALT_ALLELE);
+        final List<Allele> alleles = Arrays.asList(FAKE_REF_ALLELE, FAKE_ALT_ALLELE);
         final double isActiveProb;
 
         if (genotypes.size() == 1) {
@@ -492,7 +542,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             final VariantContext vcOut = activeRegionEvaluationGenotyperEngine.calculateGenotypes(new VariantContextBuilder("HCisActive!", context.getContig(), context.getLocation().getStart(), context.getLocation().getEnd(), alleles).genotypes(genotypes).make());
             isActiveProb = vcOut == null ? 0.0 : QualityUtils.qualToProb(vcOut.getPhredScaledQual());
         }
-        return new ActivityProfileState(ref.getInterval(), isActiveProb, averageHQSoftClips.mean() > AVERAGE_HQ_SOFTCLIPS_HQ_BASES_THRESHOLD ? ActivityProfileState.Type.HIGH_QUALITY_SOFT_CLIPS : ActivityProfileState.Type.NONE, averageHQSoftClips.mean() );
+        return new ActivityProfileState(ref.getInterval(), isActiveProb, averageHQSoftClips.mean() > AVERAGE_HQ_SOFTCLIPS_HQ_BASES_THRESHOLD ? ActivityProfileState.Type.HIGH_QUALITY_SOFT_CLIPS : NONE, averageHQSoftClips.mean());
     }
 
     /**

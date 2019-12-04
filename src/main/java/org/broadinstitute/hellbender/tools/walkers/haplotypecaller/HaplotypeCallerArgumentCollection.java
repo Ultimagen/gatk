@@ -7,6 +7,7 @@ import org.broadinstitute.barclay.argparser.ArgumentCollection;
 import org.broadinstitute.barclay.argparser.Hidden;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.argumentcollections.DbsnpArgumentCollection;
+import org.broadinstitute.hellbender.engine.AlignmentContext;
 import org.broadinstitute.hellbender.engine.FeatureInput;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.StandardCallerArgumentCollection;
 
@@ -160,4 +161,13 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
     @Advanced
     @Argument(fullName= USE_FILTERED_READS_FOR_ANNOTATIONS_LONG_NAME, doc = "Use the contamination-filtered read maps for the purposes of annotating variants", optional=true)
     public boolean useFilteredReadMapForAnnotations = false;
+
+    @Argument(fullName = CORRECT_OVERLAPPING_BASE_QUALITIES_LONG_NAME)
+    public boolean doNotCorrectOverlappingBaseQualities = false;
+
+    @Advanced
+    @Hidden
+    @Argument(fullName = "avoid-strand-bias-in-active-region")
+    public boolean STRATIFICATION_FOR_ACTIVE_REGION = false;
+
 }
