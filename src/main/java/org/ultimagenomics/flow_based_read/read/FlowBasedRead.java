@@ -8,6 +8,7 @@ import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
+import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -36,9 +37,11 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private int trim_right_base = 0 ;
     private final int MINIMAL_READ_LENGTH = 10; // check if this is the right number
     private final double ERROR_PROB=1e-4;
-
+    private final FlowBasedAlignmentArgumentCollection fbargs;
     public FlowBasedRead(SAMRecord samRecord, int _max_hmer) {
         super(samRecord);
+        fbargs = new FlowBasedAlignmentArgumentCollection();
+
         max_hmer = _max_hmer;
         this.samRecord = samRecord;
 
@@ -52,7 +55,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         // we fill all values in the matrix with non-zeros to not discard any read
         for (int i = 0 ; i < max_hmer+1; i++) {
             for (int j = 0 ; j < key.length; j++ ){
-                flow_matrix[i][j] = ERROR_PROB;
+                flow_matrix[i][j] = fbargs.filling_value;
             }
         }
         byte [] kh = getAttributeAsByteArray( "kh" );
@@ -70,14 +73,27 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         kd = ArrayUtils.addAll(kd, key_kd);
 
         double [] kd_probs = phredToProb(kd);
+        clipProbs(kd_probs);
+
+        if (fbargs.remove_longer_than_one_indels) {
+            removeLongIndels( key_kh, kh, kf, kd_probs );
+        }
+
+        if (fbargs.remove_one_to_zero_probs) {
+            removeOneToZeroProbs(key_kh, kh, kf, kd_probs);
+        }
 
         fillFlowMatrix( kh, kf, kd_probs);
 
         validateSequence();
     }
-
     public FlowBasedRead(SAMRecord samRecord, String _flow_order, int _max_hmer) {
+        this(samRecord, _flow_order, _max_hmer, new FlowBasedAlignmentArgumentCollection());
+    }
+
+    public FlowBasedRead(SAMRecord samRecord, String _flow_order, int _max_hmer, FlowBasedAlignmentArgumentCollection fbargs) {
         super(samRecord);
+        this.fbargs = fbargs;
         max_hmer = _max_hmer;
         this.samRecord = samRecord;
         forward_sequence = getForwardSequence();
@@ -89,7 +105,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         flow_matrix = new double[max_hmer+1][key.length];
         for (int i = 0 ; i < max_hmer+1; i++) {
             for (int j = 0 ; j < key.length; j++ ){
-                flow_matrix[i][j] = ERROR_PROB;
+                flow_matrix[i][j] = fbargs.filling_value;
             }
         }
 
@@ -107,7 +123,17 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         kf = ArrayUtils.addAll(kf, key_kf);
         kd = ArrayUtils.addAll(kd, key_kd);
 
+        quantizeProbs(kd);
+
         double [] kd_probs = phredToProb(kd);
+        clipProbs(kd_probs);
+        if (fbargs.remove_longer_than_one_indels) {
+            removeLongIndels( key_kh, kh, kf, kd_probs );
+        }
+
+        if (fbargs.remove_one_to_zero_probs) {
+            removeOneToZeroProbs(key_kh, kh, kf, kd_probs);
+        }
 
         fillFlowMatrix( kh, kf, kd_probs);
 
@@ -125,11 +151,13 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         valid_key = other.valid_key;
         direction = other.direction;
         max_hmer = other.max_hmer;
+        fbargs = other.fbargs;
     }
 
-    public FlowBasedRead(GATKRead read, String flow_order, int _max_hmer) {
-        this(read.convertToSAMRecord(null), flow_order, _max_hmer);
+    public FlowBasedRead(GATKRead read, String flow_order, int _max_hmer, FlowBasedAlignmentArgumentCollection fbargs) {
+        this(read.convertToSAMRecord(null), flow_order, _max_hmer, fbargs);
         this.read = read;
+
     }
 
     public String getFlowOrder() {
@@ -161,6 +189,42 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             System.arraycopy(samRecord.getReadBases(), 0, result, 0, result.length);
             SequenceUtil.reverseComplement(result);
             return result;
+        }
+    }
+
+    private void clipProbs(double[] kd_probs) {
+        for ( int i = 0 ; i < kd_probs.length; i++ ){
+            if (kd_probs[i] < fbargs.probability_ratio_threshold) {
+                kd_probs[i] = fbargs.filling_value;
+            }
+        }
+    }
+
+    private void removeLongIndels(  byte [] key_kh, byte [] kh, int [] kf, double [] kd_probs ){
+        for ( int i = 0 ; i < kd_probs.length; i++ ) {
+            if (Math.abs(key_kh[kf[i]] - kh[i]) > 1 ){
+                kd_probs[i] = fbargs.filling_value;
+            }
+        }
+    }
+
+    private void removeOneToZeroProbs( byte [] key_kh, byte [] kh, int[] kf, double [] kd_probs) {
+        for ( int i = 0 ; i < kd_probs.length; i++ ) {
+            if (key_kh[kf[i]]==0 && kh[i]>0 ){
+                kd_probs[i] = fbargs.filling_value;
+            }
+        }
+    }
+
+    private void quantizeProbs( byte [] kd_probs ) {
+        int nQuants = fbargs.probability_quantization;
+        double bin_size = 60/nQuants;
+        for ( int i = 0 ; i < kd_probs.length; i++) {
+            if (kd_probs[i] <=0)
+                continue;
+            else {
+                kd_probs[i] = (byte)(bin_size * (int)(kd_probs[i]/bin_size)+1);
+            }
         }
     }
 

@@ -10,6 +10,7 @@ import org.broadinstitute.hellbender.cmdline.argumentcollections.DbsnpArgumentCo
 import org.broadinstitute.hellbender.engine.AlignmentContext;
 import org.broadinstitute.hellbender.engine.FeatureInput;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.StandardCallerArgumentCollection;
+import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -30,6 +31,9 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
 
     @ArgumentCollection
     public StandardCallerArgumentCollection standardArgs = new StandardCallerArgumentCollection();
+
+    @ArgumentCollection
+    public FlowBasedAlignmentArgumentCollection fbargs = new FlowBasedAlignmentArgumentCollection();
 
     @Override
     protected int getDefaultMaxMnpDistance() { return 0; }

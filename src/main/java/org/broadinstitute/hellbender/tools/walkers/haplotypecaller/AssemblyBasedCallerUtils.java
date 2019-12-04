@@ -37,6 +37,7 @@ import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.ultimagenomics.flow_based_read.alignment.FlowBasedAlignmentEngine;
 import org.ultimagenomics.flow_based_read.tests.AlleleLikelihoodWriter;
+import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
 
 import java.io.File;
 import java.io.IOException;
@@ -195,7 +196,12 @@ public final class AssemblyBasedCallerUtils {
      *
      * @return never {@code null}.
      */
+
     public static ReadLikelihoodCalculationEngine createLikelihoodCalculationEngine(final LikelihoodEngineArgumentCollection likelihoodArgs) {
+        return createLikelihoodCalculationEngine(likelihoodArgs, new FlowBasedAlignmentArgumentCollection());
+    }
+    public static ReadLikelihoodCalculationEngine createLikelihoodCalculationEngine(final LikelihoodEngineArgumentCollection likelihoodArgs,
+                                                                                    final FlowBasedAlignmentArgumentCollection flowBasedArgs) {
         //AlleleLikelihoods::normalizeLikelihoods uses Double.NEGATIVE_INFINITY as a flag to disable capping
         final double log10GlobalReadMismappingRate = likelihoodArgs.phredScaledGlobalReadMismappingRate < 0 ? Double.NEGATIVE_INFINITY
                 : QualityUtils.qualToErrorProbLog10(likelihoodArgs.phredScaledGlobalReadMismappingRate);
@@ -204,7 +210,7 @@ public final class AssemblyBasedCallerUtils {
             case PairHMM:
                 return new PairHMMLikelihoodCalculationEngine((byte) likelihoodArgs.gcpHMM, likelihoodArgs.pairHMMNativeArgs.getPairHMMArgs(), likelihoodArgs.pairHMM, log10GlobalReadMismappingRate, likelihoodArgs.pcrErrorModel, likelihoodArgs.BASE_QUALITY_SCORE_THRESHOLD);
             case FlowBased:
-                return new FlowBasedAlignmentEngine(log10GlobalReadMismappingRate, likelihoodArgs.expectedErrorPerBase);
+                return new FlowBasedAlignmentEngine(flowBasedArgs, log10GlobalReadMismappingRate, likelihoodArgs.expectedErrorPerBase);
             default:
                 throw new UserException("Unsupported likelihood calculation engine.");
         }
