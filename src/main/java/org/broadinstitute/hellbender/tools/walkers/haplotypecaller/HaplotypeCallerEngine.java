@@ -57,6 +57,7 @@ import org.broadinstitute.hellbender.utils.genotyper.SampleList;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.haplotype.HaplotypeBAMWriter;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
+import org.broadinstitute.hellbender.utils.pileup.PileupElement;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
@@ -173,6 +174,18 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
      * passed earlier filters (e.g. the walkers' own min MQ filter).
      */
     private static final int READ_QUALITY_FILTER_THRESHOLD = 20;
+
+    /**
+     * If checking for strand bias in isActive(), pileups where min(reverse strand alt count / forward strand alt count, forward strand alt count / reverse strand alt count)
+     * exceeds this threshold are automatically considered to be not a strand artifact, skipping the Fisher Exact test
+     */
+    private static final double STRAND_RATIO_TO_AUTOMATICALLY_ACCEPT_ACTIVE_PILEUP = 0.3;
+
+    /**
+     * If checking for strand bias in isActive(), pileups where min(reverse strand alt count / forward strand alt count, forward strand alt count / reverse strand alt count)
+     * is less than this threshold are automatically rejected as strand artifacts, skipping the Fisher Exact test
+     */
+    private static final double STRAND_RATIO_TO_AUTOMATICALLY_REJECT_ACTIVE_PILEUP = 0.1;
 
     private static final List<VariantContext> NO_CALLS = Collections.emptyList();
 
@@ -545,7 +558,41 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             final VariantContext vcOut = activeRegionEvaluationGenotyperEngine.calculateGenotypes(new VariantContextBuilder("HCisActive!", context.getContig(), context.getLocation().getStart(), context.getLocation().getEnd(), alleles).genotypes(genotypes).make());
             isActiveProb = vcOut == null ? 0.0 : QualityUtils.qualToProb(vcOut.getPhredScaledQual());
         }
-        return new ActivityProfileState(ref.getInterval(), isActiveProb, averageHQSoftClips.mean() > AVERAGE_HQ_SOFTCLIPS_HQ_BASES_THRESHOLD ? ActivityProfileState.Type.HIGH_QUALITY_SOFT_CLIPS : NONE, averageHQSoftClips.mean());
+
+        if (hcArgs.strandBiasPileupPValue > 0 && isActiveProb > 0) {
+            int altFwd = 0;
+            int altRev = 0;
+            int refFwd = 0;
+            int refRev = 0;
+            for (final PileupElement pe : context.getBasePileup()) {
+                final boolean reverse = pe.getRead().isReverseStrand();
+                if (ReferenceConfidenceModel.isAltBeforeAssembly(pe, ref.getBase())) {
+                    if (reverse) {
+                        altRev++;
+                    } else {
+                        altFwd++;
+                    }
+                } else {
+                    if (reverse) {
+                        refRev++;
+                    } else {
+                        refFwd++;
+                    }
+                }
+            }
+
+            final int minAlt = Math.min(altFwd, altRev);
+            final int maxAlt = Math.max(altFwd, altRev);
+
+            final boolean isStrandArtifact = !(minAlt > STRAND_RATIO_TO_AUTOMATICALLY_ACCEPT_ACTIVE_PILEUP * maxAlt) &&
+                    (minAlt < STRAND_RATIO_TO_AUTOMATICALLY_REJECT_ACTIVE_PILEUP * maxAlt || FisherStrand.pValueForContingencyTable(new int[][] { {refFwd, refRev}, {altFwd, altRev}}) < hcArgs.strandBiasPileupPValue);
+
+            if (isStrandArtifact) {
+                return new ActivityProfileState(ref.getInterval(), 0.0);
+            }
+        }
+        return new ActivityProfileState(ref.getInterval(), isActiveProb, averageHQSoftClips.mean() > AVERAGE_HQ_SOFTCLIPS_HQ_BASES_THRESHOLD ? ActivityProfileState.Type.HIGH_QUALITY_SOFT_CLIPS : ActivityProfileState.Type.NONE, averageHQSoftClips.mean() );
+
     }
 
     /**
