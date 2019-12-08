@@ -85,6 +85,9 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         fillFlowMatrix( kh, kf, kd_probs);
 
+        if (fbargs.symmetric_indels) {
+            smoothIndels(key_kh);
+        }
         validateSequence();
     }
     public FlowBasedRead(SAMRecord samRecord, String _flow_order, int _max_hmer) {
@@ -136,6 +139,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
 
         fillFlowMatrix( kh, kf, kd_probs);
+
+        if (fbargs.symmetric_indels) {
+            smoothIndels(key_kh);
+        }
 
         validateSequence();
     }
@@ -224,6 +231,17 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
                 continue;
             else {
                 kd_probs[i] = (byte)(bin_size * (int)(kd_probs[i]/bin_size)+1);
+            }
+        }
+    }
+
+    private void smoothIndels( byte [] kr ) {
+        for ( int i = 0 ; i < kr.length; i++ ){
+            byte idx = kr[i];
+            if (( idx > 1 ) && ( idx < max_hmer) ) {
+                double tmp = (flow_matrix[idx - 1][i] + flow_matrix[idx + 1][i]) / 2;
+                flow_matrix[idx - 1][i] = tmp;
+                flow_matrix[idx + 1][i] = tmp;
             }
         }
     }
