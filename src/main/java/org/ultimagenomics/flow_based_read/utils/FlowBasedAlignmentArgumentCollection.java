@@ -12,12 +12,14 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     private static final String REMOVE_LONGER_THAN_ONE_INDELS = "flow-remove-non-single-base-pair-indels";
     private static final String REMOVE_ONE_TO_ZERO_PROBS = "flow-remove-one-zero-probs";
     private static final String NUMBER_OF_POSSIBLE_PROBS = "flow-quantization-bins";
-    private static final String FILLING_VALUE="flow-fill-empty-bins-value";
+    private static final String FILLING_VALUE = "flow-fill-empty-bins-value";
+    private static final String SYMMETRIC_INDELS = "flow-symmetric-indel-probs";
 
     private static final double DEFAULT_RATIO_THRESHOLD = 0.003;
     private static final double DEFAULT_FILLING_VALUE = 0.001;
     private static final boolean DEFAULT_REMOVE_LONGER_INDELS = false;
     private static final boolean DEFAULT_REMOVE_ONE_TO_ZERO = false;
+    private static final boolean DEFAULT_SYMMETRIC_INDELS = false;
     private static final int DEFAULT_QUANTIZATION = 121;
 
     @Advanced
@@ -40,9 +42,9 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     @Argument(fullName = FILLING_VALUE, doc = "Value to fill the zeros of the matrix with", optional=true)
     public double filling_value = DEFAULT_FILLING_VALUE;
 
+    @Advanced
+    @Argument(fullName = SYMMETRIC_INDELS, doc = "Should indel probabilities be symmetric in flow", optional=true)
+    public boolean symmetric_indels = DEFAULT_SYMMETRIC_INDELS;
+
     public FlowBasedAlignmentArgumentCollection() {}
 }
-
-
-
-
