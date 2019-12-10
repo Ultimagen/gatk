@@ -68,6 +68,10 @@ public final class LikelihoodEngineArgumentCollection implements Serializable {
     @Argument(fullName="phred-scaled-global-read-mismapping-rate", doc="The global assumed mismapping rate for reads", optional = true)
     public int phredScaledGlobalReadMismappingRate = 45;
 
+    @Advanced
+    @Argument(fullName="expected-error-per-base", doc="The expected error-rate per base (for filtering out poorly modeled reads in the Flow-based likelihood model)", optional = true)
+    public double expectedErrorPerBase = .02;
+
     @ArgumentCollection
     public PairHMMNativeArgumentCollection pairHMMNativeArgs = new PairHMMNativeArgumentCollection();
 

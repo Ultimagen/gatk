@@ -64,11 +64,10 @@ public class test_haplotype_matching {
             fbhs.add(new FlowBasedHaplotype(hap, "TACG", 8));
         }
 
-        FlowBasedAlignmentEngine fbe = new FlowBasedAlignmentEngine(-5);
+        FlowBasedAlignmentEngine fbe = new FlowBasedAlignmentEngine(-5, 0.02);
 
         final AlleleLikelihoods<GATKRead, Haplotype> haplotypeReadLikelihoods =
                 fbe.computeReadLikelihoods(haplotypes, reads);
 
     }
-
 }
