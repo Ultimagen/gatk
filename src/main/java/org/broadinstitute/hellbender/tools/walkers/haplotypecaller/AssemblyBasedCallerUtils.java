@@ -204,7 +204,7 @@ public final class AssemblyBasedCallerUtils {
             case PairHMM:
                 return new PairHMMLikelihoodCalculationEngine((byte) likelihoodArgs.gcpHMM, likelihoodArgs.pairHMMNativeArgs.getPairHMMArgs(), likelihoodArgs.pairHMM, log10GlobalReadMismappingRate, likelihoodArgs.pcrErrorModel, likelihoodArgs.BASE_QUALITY_SCORE_THRESHOLD);
             case FlowBased:
-                return new FlowBasedAlignmentEngine(log10GlobalReadMismappingRate);
+                return new FlowBasedAlignmentEngine(log10GlobalReadMismappingRate, likelihoodArgs.expectedErrorPerBase);
             default:
                 throw new UserException("Unsupported likelihood calculation engine.");
         }
