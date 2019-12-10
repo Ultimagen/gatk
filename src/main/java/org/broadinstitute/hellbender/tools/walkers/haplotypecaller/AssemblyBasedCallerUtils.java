@@ -43,7 +43,6 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Created by davidben on 9/8/16.
@@ -219,7 +218,7 @@ public final class AssemblyBasedCallerUtils {
             case Random:
                 return new RandomLikelihoodCalculationEngine();
             case FlowBased:
-                return new FlowBasedAlignmentEngine(log10GlobalReadMismappingRate);
+                return new FlowBasedAlignmentEngine(log10GlobalReadMismappingRate, likelihoodArgs.expectedErrorPerBase);
             default:
                 throw new UserException("Unsupported likelihood calculation engine.");
         }
