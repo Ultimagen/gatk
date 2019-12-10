@@ -236,7 +236,7 @@ public final class AssemblyBasedCallerUtils {
                 likelihoodArgs.BASE_QUALITY_SCORE_THRESHOLD, likelihoodArgs.enableDynamicReadDisqualification, likelihoodArgs.readDisqualificationThresholdConstant,
                 likelihoodArgs.expectedErrorRatePerBase, !likelihoodArgs.disableSymmetricallyNormalizeAllelesToReference, likelihoodArgs.disableCapReadQualitiesToMapQ, handleSoftclips);
             case FlowBased:
-                return new FlowBasedAlignmentEngine(log10GlobalReadMismappingRate);
+                return new FlowBasedAlignmentEngine(log10GlobalReadMismappingRate, likelihoodArgs.expectedErrorPerBase);
             default:
                 throw new UserException("Unsupported likelihood calculation engine.");
         }
