@@ -569,7 +569,7 @@ public class JunctionTreeLinkedDeBruijnGraph extends AbstractReadThreadingGraph 
         }
 
         /**
-         * Returns the root node for this edge (ensuring that it has had its count intcremented to keep track of the total evidence spanning this tree.
+         * Returns the root node for this edge (ensuring that it has had its count incremented to keep track of the total evidence spanning this tree.
          *
          * @return
          */
