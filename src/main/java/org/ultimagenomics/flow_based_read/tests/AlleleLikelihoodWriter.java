@@ -61,6 +61,7 @@ public class AlleleLikelihoodWriter<EVIDENCE extends Locatable, A extends Allele
                             output.write("\n");
                         }
                     }
+                    output.flush();
                 }
             }
         } catch (IOException err) {
@@ -73,6 +74,7 @@ public class AlleleLikelihoodWriter<EVIDENCE extends Locatable, A extends Allele
     @Override
     public void close() {
         try {
+            output.flush();
             output.close();
         } catch (IOException err) {
             throw (new RuntimeException("Unable to close matrix file"));
