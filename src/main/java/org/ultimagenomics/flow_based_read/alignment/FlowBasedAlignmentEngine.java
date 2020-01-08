@@ -48,7 +48,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
 
 
         result.normalizeLikelihoods(log10globalReadMismappingRate);
-        result.filterPoorlyModeledEvidence(log10MinTrueLikelihood(expectedErrorRatePerBase));
+         result.filterPoorlyModeledEvidence(log10MinTrueLikelihood(expectedErrorRatePerBase));
 
         return result;
     }
