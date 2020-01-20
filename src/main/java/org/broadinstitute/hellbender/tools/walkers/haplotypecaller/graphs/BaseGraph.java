@@ -118,7 +118,7 @@ public abstract class BaseGraph<V extends BaseVertex, E extends BaseEdge> extend
         for( final E e : edgeSet() ) {
             final SeqVertex seqInV = vertexMap.get(getEdgeSource(e));
             final SeqVertex seqOutV = vertexMap.get(getEdgeTarget(e));
-            seqGraph.addEdge(seqInV, seqOutV, new BaseEdge(e.isRef(), e.getMultiplicity()));
+            seqGraph.addEdge(seqInV, seqOutV, e.copy());
         }
 
         return seqGraph;

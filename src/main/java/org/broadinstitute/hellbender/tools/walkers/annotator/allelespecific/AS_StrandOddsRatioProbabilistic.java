@@ -105,6 +105,4 @@ public class AS_StrandOddsRatioProbabilistic extends AS_StrandBiasTestProbabilis
         }
         return annotationMap;
     }
-
-
 }

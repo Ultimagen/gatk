@@ -50,7 +50,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         final AlleleLikelihoods<GATKRead, Haplotype> result = new AlleleLikelihoods<>(samples, haplotypes, perSampleReadList);
         final int sampleCount = result.numberOfSamples();
         for (int i = 0; i < sampleCount; i++) {
-            SAMFileHeader hdr= assemblyResultSet.getRegionForGenotyping().getHeader();
+            SAMFileHeader hdr = assemblyResultSet.getRegionForGenotyping().getHeader();
             computeReadLikelihoods(result.sampleMatrix(i), hdr);
         }
 
@@ -204,9 +204,8 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         }
 
         int original_length = haplotype.getKeyLength();
-        clip_left = clip_left-ALIGNMENT_UNCERTAINTY>0 ? clip_left-ALIGNMENT_UNCERTAINTY:0;
-        clip_right = original_length - clip_right + ALIGNMENT_UNCERTAINTY < original_length ?
-                            original_length - clip_right+ALIGNMENT_UNCERTAINTY : original_length;
+        clip_left = Math.max(clip_left - ALIGNMENT_UNCERTAINTY, 0);
+        clip_right = Math.min(original_length - clip_right + ALIGNMENT_UNCERTAINTY, original_length);
 
         byte [] key;
         key = Arrays.copyOfRange(haplotype.getKey(), clip_left, clip_right);
@@ -244,8 +243,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             int [] locations_to_fetch = new int[read.getKeyLength()];
             for (int i = s; i < s+read.getKeyLength(); i++ ){
                 locations_to_fetch[i-s] = key[i]&0xff;
-                locations_to_fetch[i-s] = locations_to_fetch[i-s] < read.getMaxHmer()+1 ?
-                        locations_to_fetch[i-s] : read.getMaxHmer()+1;
+//                locations_to_fetch[i-s] = Math.min(locations_to_fetch[i - s], read.getMaxHmer() + 1);
             }
             double result = 0 ;
             for ( int i = 0 ; i < locations_to_fetch.length; i++ ){

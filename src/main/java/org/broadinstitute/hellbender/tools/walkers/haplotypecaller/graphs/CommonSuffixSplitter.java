@@ -2,7 +2,14 @@ package org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs;
 
 import org.broadinstitute.hellbender.utils.Utils;
 
-import java.util.*;
+//import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Split a collection of middle nodes in a graph into their shared prefix and suffix values
@@ -38,7 +45,7 @@ public final class CommonSuffixSplitter {
         Utils.validateArg(graph.vertexSet().contains(v), () -> "graph doesn't contain vertex v " + v);
         final Collection<SeqVertex> toSplit= graph.incomingVerticesOf(v);
 
-        final SeqVertex suffixVTemplate = commonSuffix(graph, v, toSplit);
+        final SeqVertex suffixVTemplate = commonSuffix(graph, v, toSplit, true);
         if (suffixVTemplate == null){
             return false;
         }
@@ -59,7 +66,7 @@ public final class CommonSuffixSplitter {
                     } else {
                         incomingTarget = prefixV;
                         graph.addVertex(prefixV);
-                        graph.addEdge(prefixV, suffixV, new BaseEdge(out.isRef(), 1));
+                        graph.addEdge(prefixV, suffixV, new BaseEdge(out.isRef(), 1,1));
                         edgesToRemove.add(out);
                     }
 
@@ -78,11 +85,96 @@ public final class CommonSuffixSplitter {
                 return true;
     }
 
-    private static SeqVertex commonSuffix(final SeqGraph graph, final SeqVertex v, final Collection<SeqVertex> toSplit) {
-        if ( toSplit.size() < 2 ){
+    /**
+     * Simple single-function interface to split and then update a graph
+     *
+     * @param graph the graph containing the vertices in toSplit
+     * @param v The top node whose outgoing vertices we'd like to split
+     * @return true if some useful splitting was done, false otherwise
+     */
+    public static boolean splitFromTop(final SeqGraph graph, final SeqVertex v) {
+        Utils.nonNull(graph, "graph cannot be null");
+        Utils.nonNull(v, "v cannot be null");
+        Utils.validateArg(graph.vertexSet().contains(v), () -> "graph doesn't contain vertex v " + v);
+        final Collection<SeqVertex> toSplit= graph.outgoingVerticesOf(v);
+
+        final SeqVertex suffixVTemplate = commonSuffix(graph, v, toSplit,false);
+        if (suffixVTemplate == null){
+            return false;
+        }
+        final List<BaseEdge> edgesToRemove = new LinkedList<>();
+        final List<SeqVertex> nodesToMerge = new LinkedList<>();
+
+//        graph.printGraph(new File("topsplit.pre_" + v.getSequenceString() + "." + counter + ".dot"), 0);
+        for ( final SeqVertex mid : toSplit ) {
+            // create my own copy of the suffix
+            final SeqVertex suffixV = new SeqVertex(suffixVTemplate.getSequence());
+            nodesToMerge.add(suffixV);
+            graph.addVertex(suffixV);
+            final SeqVertex prefixV = mid.withoutSuffix(suffixV.getSequence());
+            final BaseEdge in = graph.incomingEdgeOf(mid);
+            final SeqVertex topTarget;
+            if ( prefixV == null ) {
+                // this node is entirely explained by suffix
+                topTarget=suffixV;
+            } else {
+                topTarget=prefixV;
+                graph.addVertex(prefixV);
+                graph.addEdge(prefixV, suffixV, in.copy());
+                edgesToRemove.add(in);
+            }
+            graph.addEdge(v, topTarget, in.copy());
+
+            graph.addEdge(suffixV, graph.getEdgeTarget(in), in.copy());
+
+            for ( final BaseEdge out : graph.outgoingEdgesOf(mid) ) {
+                graph.addEdge(suffixV,graph.getEdgeTarget(out), out.copy());
+                edgesToRemove.add(out);
+            }
+        }
+
+        graph.removeAllVertices(toSplit);
+        graph.removeAllEdges(edgesToRemove);
+//        graph.printGraph(new File("topsplit.mid_" + v.getSequenceString() + "." + counter + ".dot"), 0);
+
+        merge(graph,nodesToMerge);
+
+//        graph.printGraph(new File("topsplit.post_" + v.getSequenceString() + "." + counter++ + ".dot"), 0);
+
+        return true;
+    }
+
+
+    private static void merge(final SeqGraph graph, final List<SeqVertex> nodesToMerge) {
+        final Collection<BaseEdge> edgesToRemove = new LinkedList<>();
+
+        final SeqVertex newVertex = new SeqVertex(nodesToMerge.get(0).getSequence());
+        graph.addVertices(newVertex);
+
+        for (final SeqVertex node : nodesToMerge) {
+            for (final BaseEdge edge : new ArrayList<>(graph.incomingEdgesOf(node))) {
+                GraphUtils.addOrModifyEdge(graph,graph.getEdgeSource(edge),newVertex,edge);
+                edgesToRemove.add(edge);
+            }
+        }
+
+        for (final SeqVertex node : nodesToMerge) {
+            for (final BaseEdge edge :  new ArrayList<>(graph.outgoingEdgesOf(node))) {
+                edgesToRemove.add(edge);
+                GraphUtils.addOrModifyEdge(graph, newVertex, graph.getEdgeTarget(edge), edge);
+            }
+        }
+        graph.removeAllEdges(edgesToRemove);
+        graph.removeAllVertices(nodesToMerge);
+    }
+
+    private static SeqVertex commonSuffix(final SeqGraph graph, final SeqVertex v, final Collection<SeqVertex> toSplit, final boolean bottom) {
+        if (toSplit.size() < 2) {
             // Can only split at least 2 vertices
             return null;
-        } else if ( ! safeToSplit(graph, v, toSplit) ) {
+        } else if (!(bottom ?
+                safeToSplitBot(graph, v, toSplit) :
+                safeToSplitTop(graph, v, toSplit))) {
             return null;
         }
 
@@ -99,7 +191,7 @@ public final class CommonSuffixSplitter {
     }
 
     /**
-     * Would factoring out this suffix result in elimating the reference source vertex?
+     * Would factoring out this suffix result in eliminating the reference source vertex?
      * @param graph the graph
      * @param commonSuffix the common suffix of all toSplits
      * @param toSplits the list of vertices we're are trying to split
@@ -144,9 +236,10 @@ public final class CommonSuffixSplitter {
      * @param toMerge the set of vertices we'd be splitting up
      * @return true if we can safely split up toMerge
      */
-    private static boolean safeToSplit(final SeqGraph graph, final SeqVertex bot, final Collection<SeqVertex> toMerge) {
+    private static boolean safeToSplitBot(final SeqGraph graph, final SeqVertex bot, final Collection<SeqVertex> toMerge) {
         final Collection<SeqVertex> outgoingOfBot = new HashSet<>(graph.outgoingVerticesOf(bot));
         for ( final SeqVertex m : toMerge ) {
+
             final Set<BaseEdge> outs = graph.outgoingEdgesOf(m);
             if ( m == bot || outs.size() != 1 || ! graph.outgoingVerticesOf(m).contains(bot) )
                 // m == bot => don't allow self cycles in the graph
@@ -162,6 +255,32 @@ public final class CommonSuffixSplitter {
 
         return true;
     }
+    /**
+     * Can we safely split up the vertices in toMerge?
+     *
+     * @param graph a graph
+     * @param top a vertex whose incoming vertices we want to split
+     * @param toMerge the set of vertices we'd be splitting up
+     * @return true if we can safely split up toMerge
+     */
+    private static boolean safeToSplitTop(final SeqGraph graph, final SeqVertex top, final Collection<SeqVertex> toMerge) {
+        final Collection<SeqVertex> incommingOfTop = new HashSet<>(graph.incomingVerticesOf(top));
+        for (final SeqVertex m : toMerge) {
+
+            final Set<BaseEdge> ins = graph.incomingEdgesOf(m);
+            if (m == top || ins.size() != 1 || !graph.incomingVerticesOf(m).contains(top)) {
+                // m == top => don't allow self cycles in the graph
+                return false;
+            }
+            if (incommingOfTop.contains(m)) {
+                // forbid cycles from bottom -> mid
+                return false;
+            }
+        }
+
+        return true;
+    }
+
 
     /**
      * Return the longest suffix of bases shared among all provided vertices

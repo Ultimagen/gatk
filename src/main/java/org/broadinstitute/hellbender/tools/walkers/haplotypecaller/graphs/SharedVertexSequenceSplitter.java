@@ -231,14 +231,14 @@ public final class SharedVertexSequenceSplitter {
     private void addSuffixNodeAndEdges(final SeqVertex bot) {
         outer.addVertex(getSuffixV());
         if ( bot != null ) {
-            outer.addEdge(getSuffixV(), bot, BaseEdge.makeOREdge(splitGraph.incomingEdgesOf(getSuffixV()), 1));
+            outer.addEdge(getSuffixV(), bot, BaseEdge.makeOREdge(splitGraph.incomingEdgesOf(getSuffixV())));
         }
     }
 
     private void addPrefixNodeAndEdges(final SeqVertex top) {
         outer.addVertex(getPrefixV());
         if ( top != null ) {
-            outer.addEdge(top, getPrefixV(), BaseEdge.makeOREdge(splitGraph.outgoingEdgesOf(getPrefixV()), 1));
+            outer.addEdge(top, getPrefixV(), BaseEdge.makeOREdge(splitGraph.outgoingEdgesOf(getPrefixV())));
         }
     }
 
@@ -284,7 +284,7 @@ public final class SharedVertexSequenceSplitter {
         if ( e == null ) {
             // there's no edge, so we return a newly allocated one and don't schedule e for removal
             // the weight must be 0 to preserve sum through the diamond
-            return new BaseEdge(outer.isReferenceNode(v), 0);
+            return new BaseEdge(outer.isReferenceNode(v), 0,0);
         } else {
             // schedule edge for removal, and return a freshly allocated one for our graph to use
             edgesToRemove.add(e);

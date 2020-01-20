@@ -186,7 +186,7 @@ public class GenotypingEngineUnitTest extends GATKBaseTest {
                         .collect(Collectors.toList()))
                 .make();
 
-        final VariantContext variantContext = genotypingEngine.calculateGenotypes(vc, GenotypeLikelihoodsCalculationModel.BOTH);
+        final VariantContext variantContext = genotypingEngine.calculateGenotypes(vc, null);
         if (expectedEventualAlleles != 1) {
             Assert.assertNotNull(variantContext);
             Assert.assertEquals(variantContext.getAlleles().size(), expectedEventualAlleles,

@@ -82,6 +82,18 @@ public class CNNVariantTrain extends CommandLineProgram {
     @Argument(fullName = "validation-steps", shortName = "validation-steps", doc = "Number of validation steps per epoch.", optional = true, minValue = 0)
     private int validationSteps = 2;
 
+    @Argument(fullName = "downsample-indels", doc = "Fraction of indels that will be used.", optional = true, minValue = 0)
+    private double downsampleIndels = 0.5;
+
+    @Argument(fullName = "downsample-snps", doc = "Fraction of snps that will be used.", optional = true, minValue = 0)
+    private double downsampleSnps = 0.05;
+
+    @Argument(fullName = "downsample-not-indels", doc = "Fraction of false-indels that will be used.", optional = true, minValue = 0)
+    private double downsampleNotIndels = 1;
+
+    @Argument(fullName = "downsample-not-snps", doc = "Fraction of false-snps that will be used.", optional = true, minValue = 0)
+    private double downsampleNotSnps = 1;
+
     @Argument(fullName = "image-dir", shortName = "image-dir", doc = "Path where plots and figures are saved.", optional = true)
     private String imageDir;
 
@@ -94,11 +106,14 @@ public class CNNVariantTrain extends CommandLineProgram {
     @Argument(fullName = "conv-dropout", shortName = "conv-dropout", doc = "Dropout rate in convolution layers", optional = true)
     private float convDropout = 0.0f;
 
+    @Argument(fullName = "batch-size", shortName = "batch-size", doc = "Size of training batches", optional = true)
+    private int batchSize = 32;
+
     @Argument(fullName = "conv-batch-normalize", shortName = "conv-batch-normalize", doc = "Batch normalize convolution layers", optional = true)
     private boolean convBatchNormalize = false;
 
     @Argument(fullName = "conv-layers", shortName = "conv-layers", doc = "List of number of filters to use in each convolutional layer", optional = true)
-    private List<Integer> convLayers = new ArrayList<Integer>();
+    private List<Integer> convLayers = new ArrayList<>();
 
     @Argument(fullName = "padding", shortName = "padding", doc = "Padding for convolution layers, valid or same", optional = true)
     private String padding = "valid";
@@ -155,7 +170,12 @@ public class CNNVariantTrain extends CommandLineProgram {
                 "--epochs", Integer.toString(epochs),
                 "--training_steps", Integer.toString(trainingSteps),
                 "--validation_steps", Integer.toString(validationSteps),
+                "--downsample_snps", Double.toString(downsampleSnps),
+                "--downsample_not_snps", Double.toString(downsampleNotSnps),
+                "--downsample_not_indels", Double.toString(downsampleNotIndels),
                 "--gatk_version", this.getVersion(),
+                "--gatk_version", this.getVersion(),
+                "--batch_size", Integer.toString(this.batchSize),
                 "--id", modelName));
 
         // Add boolean arguments

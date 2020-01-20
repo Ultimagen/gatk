@@ -59,7 +59,7 @@ public class CommonSuffixMergerUnitTest extends GATKBaseTest {
                             for ( int i = 0; i < nMids; i++) {
                                 final SeqVertex mid = new SeqVertex(bases.get(i) + commonSuffix);
                                 graph.addVertex(mid);
-                                graph.addEdge(mid, v, new BaseEdge(i == 0, multi++));
+                                graph.addEdge(mid, v, new BaseEdge(i == 0, multi++, multi));
                                 mids.add(mid);
 
                                 tops.add(new SeqVertex(bases.get(i)));
@@ -68,14 +68,14 @@ public class CommonSuffixMergerUnitTest extends GATKBaseTest {
                             graph.addVertices(tops);
                             for ( final SeqVertex t : tops ) {
                                 for ( int i = 0; i < nTopConnections; i++ ) {
-                                    graph.addEdge(t, mids.get(i), new BaseEdge(i == 0, multi++));
+                                    graph.addEdge(t, mids.get(i), new BaseEdge(i == 0, multi++, multi));
                                 }
                             }
 
                             for ( int i = 0; i < nBots; i++ ) {
                                 final SeqVertex bot = new SeqVertex(bases.get(i));
                                 graph.addVertex(bot);
-                                graph.addEdge(v, bot, new BaseEdge(i == 0, multi++));
+                                graph.addEdge(v, bot, new BaseEdge(i == 0, multi++, multi));
 
                             }
 
@@ -106,8 +106,8 @@ public class CommonSuffixMergerUnitTest extends GATKBaseTest {
         try {
             Assert.assertEquals(sortedActualKBestHaplotypes, sortedOriginalKBestHaplotypes);
         } catch ( AssertionError e ) {
-            if ( PRINT_GRAPHS ) original.printGraph(new File(String.format("%s.original.dot", name, actual.vertexSet().size())), 0);
-            if ( PRINT_GRAPHS ) actual.printGraph(new File(String.format("%s.actual.dot", name, actual.vertexSet().size())), 0);
+            if ( PRINT_GRAPHS ) original.printGraph(new File(String.format("%s.original.dot", name)), 0);
+            if ( PRINT_GRAPHS ) actual.printGraph(new File(String.format("%s.actual.dot", name)), 0);
             throw e;
         }
     }
