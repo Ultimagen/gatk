@@ -71,4 +71,13 @@ public final class GraphUtils {
         return Utils.nonNull(kmers).stream().mapToInt(kmer -> kmer.length).min().orElse(0);
     }
 
+    public static void addOrModifyEdge(final SeqGraph graph, final SeqVertex source, final SeqVertex target, final BaseEdge newEdge) {
+        final BaseEdge prevEdge = graph.getEdge(source, target);
+        if (prevEdge != null) {
+            prevEdge.incMultiplicity(newEdge);
+            prevEdge.setIsRef(prevEdge.isRef() || newEdge.isRef());
+        } else {
+            graph.addEdge(source, target, newEdge.copy());
+        }
+    }
 }

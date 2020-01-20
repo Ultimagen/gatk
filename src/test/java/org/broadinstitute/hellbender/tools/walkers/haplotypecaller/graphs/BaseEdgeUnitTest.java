@@ -7,7 +7,6 @@ import org.testng.annotations.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public final class BaseEdgeUnitTest extends GATKBaseTest {
@@ -16,9 +15,13 @@ public final class BaseEdgeUnitTest extends GATKBaseTest {
         List<Object[]> tests = new ArrayList<>();
 
         // this functionality can be adapted to provide input data for whatever you might want in your data
-        for ( final int multiplicity : Arrays.asList(1, 2, 3) ) {
-            for ( final boolean isRef : Arrays.asList(true, false) ) {
-                tests.add(new Object[]{isRef, multiplicity});
+        for (final int multiplicity : Arrays.asList(1, 2, 3)) {
+            for (final boolean isRef : Arrays.asList(true, false)) {
+                for (final Boolean forwardStrand : Arrays.asList(null, Boolean.TRUE, Boolean.FALSE)) {
+                    tests.add(new Object[]{isRef,
+                            forwardStrand == null || forwardStrand ? multiplicity : 0,
+                            forwardStrand == null || !forwardStrand ? multiplicity : 0});
+                }
             }
         }
 
@@ -26,31 +29,31 @@ public final class BaseEdgeUnitTest extends GATKBaseTest {
     }
 
     @Test(dataProvider = "EdgeCreationData")
-    public void testBasic(final boolean isRef, final int mult) {
-        final BaseEdge e = new BaseEdge(isRef, mult);
+    public void testBasic(final boolean isRef, final int fMult, final int rMult) {
+        final BaseEdge e = new BaseEdge(isRef, fMult, rMult);
         Assert.assertEquals(e.isRef(), isRef);
-        Assert.assertEquals(e.getMultiplicity(), mult);
-        Assert.assertEquals(e.getPruningMultiplicity(), mult);
-        Assert.assertEquals(e.getDotLabel(), Integer.toString(mult));
+        Assert.assertEquals(e.getMultiplicity(), fMult + rMult);
+        Assert.assertEquals(e.getPruningMultiplicity(), Math.min(fMult, rMult));
+        Assert.assertEquals(e.getDotLabel(), String.format("%d//%d", fMult, rMult));
 
-        e.toString();//just check not blowing up
+        e.toString(); //just check not blowing up
 
         e.setIsRef(!isRef);
         Assert.assertEquals(e.isRef(), !isRef);
 
         e.toString();//just check not blowing up
 
-        e.setMultiplicity(mult + 1);
-        Assert.assertEquals(e.getMultiplicity(), mult + 1);
-        Assert.assertEquals(e.getPruningMultiplicity(), mult + 1);
-        Assert.assertEquals(e.getDotLabel(), Integer.toString(mult + 1));
+        e.setMultiplicity(fMult + 1, rMult);
+        Assert.assertEquals(e.getMultiplicity(), rMult + fMult + 1);
+        Assert.assertEquals(e.getPruningMultiplicity(), Math.min(fMult + 1, rMult));
+        Assert.assertEquals(e.getDotLabel(), String.format("%d//%d", fMult + 1, rMult));
 
         e.toString();//just check not blowing up
 
-        e.incMultiplicity(2);
-        Assert.assertEquals(e.getMultiplicity(), mult + 3);
-        Assert.assertEquals(e.getPruningMultiplicity(), mult + 3);
-        Assert.assertEquals(e.getDotLabel(), Integer.toString(mult + 3));
+        e.incMultiplicity(1, true);
+        Assert.assertEquals(e.getMultiplicity(), rMult + fMult + 2);
+        Assert.assertEquals(e.getPruningMultiplicity(), Math.min(fMult + 1, rMult + 1));
+        Assert.assertEquals(e.getDotLabel(), String.format("%d//%d", fMult + 1, rMult + 1));
 
         e.toString();//just check not blowing up
 
@@ -64,50 +67,60 @@ public final class BaseEdgeUnitTest extends GATKBaseTest {
     }
 
     @Test(dataProvider = "EdgeCreationData")
-    public void testAdd(final boolean isRef, final int mult) {
-        final BaseEdge e1 = new BaseEdge(isRef, mult);
-        final BaseEdge e2 = new BaseEdge(isRef, mult);
+    public void testAdd(final boolean isRef, final int fMult,final int rMult) {
+        final BaseEdge e1 = new BaseEdge(isRef, fMult,rMult);
+        final BaseEdge e2 = new BaseEdge(isRef, fMult,rMult);
         final BaseEdge e3 = e1.add(e2);
         Assert.assertTrue(e1 == e3);//identity
         Assert.assertEquals(e1.isRef(), isRef);
-        Assert.assertEquals(e1.getMultiplicity(), mult*2);
-        Assert.assertEquals(e1.getPruningMultiplicity(), mult*2);
-        Assert.assertEquals(e1.getDotLabel(), Integer.toString(mult*2));
+        Assert.assertEquals(e1.getMultiplicity(), 2*(fMult+rMult));
+        Assert.assertEquals(e1.getPruningMultiplicity(), 2*Math.min(fMult,rMult));
+        Assert.assertEquals(e1.getDotLabel(), String.format("%d//%d", 2*fMult, 2*rMult));
 
-        final BaseEdge e4 = new BaseEdge(!isRef, mult);
+        final BaseEdge e4 = new BaseEdge(!isRef, fMult,rMult);
         e1.add(e4);
-        Assert.assertEquals(e1.isRef(), true); //one or the other was ref
+        Assert.assertTrue(e1.isRef()); //one or the other was ref
     }
 
-    @Test
-    public void testAddOr() {
-        final BaseEdge e1f = new BaseEdge(false, 1);
-        final BaseEdge e2f = new BaseEdge(false, 2);
-        final BaseEdge e1e2 = BaseEdge.makeOREdge(Arrays.asList(e1f, e2f), 4);
-        Assert.assertEquals(e1e2.getMultiplicity(), 4);
-        Assert.assertEquals(e1e2.isRef(), false);
-
-        final BaseEdge e3t = new BaseEdge(true, 3);
-        final BaseEdge e1e2e3 = BaseEdge.makeOREdge(Arrays.asList(e1f, e2f, e3t), 4);
-        Assert.assertEquals(e1e2e3.getMultiplicity(), 4);
-        Assert.assertEquals(e1e2e3.isRef(), true);
+    @DataProvider
+    Object[][] testAddOrWhichStrand(){
+        return new Object[][] {
+                {Boolean.TRUE},
+                {Boolean.FALSE},
+                {null}
+        };
     }
 
-        @Test(expectedExceptions = IllegalArgumentException.class)
+    @Test(dataProvider = "testAddOrWhichStrand")
+    public void testAddOr(final Boolean forwardStrand) {
+
+        final BaseEdge e1f = new BaseEdge(false, forwardStrand == null || forwardStrand ? 1 : 0, forwardStrand == null || !forwardStrand ? 1 : 0);
+        final BaseEdge e2f = new BaseEdge(false, forwardStrand == null || forwardStrand ? 2 : 0, forwardStrand == null || !forwardStrand ? 2 : 0);
+        final BaseEdge e1e2 = BaseEdge.makeOREdge(Arrays.asList(e1f, e2f));
+        Assert.assertEquals(e1e2.getMultiplicity(), forwardStrand == null ? 6 : 3);
+        Assert.assertFalse(e1e2.isRef());
+
+        final BaseEdge e3t = new BaseEdge(true, forwardStrand == null || forwardStrand ? 3 : 0, forwardStrand == null || !forwardStrand ? 3 : 0);
+        final BaseEdge e1e2e3 = BaseEdge.makeOREdge(Arrays.asList(e1f, e2f, e3t));
+        Assert.assertEquals(e1e2e3.getMultiplicity(), forwardStrand == null ? 12 : 6);
+        Assert.assertTrue(e1e2e3.isRef());
+    }
+
+    @Test(expectedExceptions = IllegalArgumentException.class)
     public void testAddNull() {
-        final BaseEdge e = new BaseEdge(false, 1);
+        final BaseEdge e = new BaseEdge(false, 1, 2);
         e.add(null);
     }
 
-    @Test
-    public void testEdgeWeightComparator() {
-        final BaseEdge e10 = new BaseEdge(false, 10);
-        final BaseEdge e5 = new BaseEdge(true, 5);
-        final BaseEdge e2 = new BaseEdge(false, 2);
-        final BaseEdge e1 = new BaseEdge(false, 1);
+    @Test(dataProvider = "testAddOrWhichStrand")
+    public void testEdgeWeightComparator(final Boolean forwardStrand) {
+        final BaseEdge e10 = new BaseEdge(false, forwardStrand == null || forwardStrand ? 10 : 0, forwardStrand == null || !forwardStrand ? 10 : 0);
+        final BaseEdge e5 = new BaseEdge(true, forwardStrand == null || forwardStrand ? 5 : 0, forwardStrand == null || !forwardStrand ? 5 : 0);
+        final BaseEdge e2 = new BaseEdge(false, forwardStrand == null || forwardStrand ? 2 : 0, forwardStrand == null || !forwardStrand ? 2 : 0);
+        final BaseEdge e1 = new BaseEdge(false, forwardStrand == null || forwardStrand ? 1 : 0, forwardStrand == null || !forwardStrand ? 1 : 0);
 
         final List<BaseEdge> edges = new ArrayList<>(Arrays.asList(e1, e2, e5, e10));
-        Collections.sort(edges, BaseEdge.EDGE_MULTIPLICITY_ORDER);
+        edges.sort(BaseEdge.EDGE_MULTIPLICITY_ORDER);
         Assert.assertEquals(edges.get(0), e10);
         Assert.assertEquals(edges.get(1), e5);
         Assert.assertEquals(edges.get(2), e2);
