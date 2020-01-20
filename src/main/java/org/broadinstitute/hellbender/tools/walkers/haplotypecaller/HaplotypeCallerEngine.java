@@ -3,6 +3,7 @@ package org.broadinstitute.hellbender.tools.walkers.haplotypecaller;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMSequenceDictionary;
 import htsjdk.samtools.reference.ReferenceSequenceFile;
+import htsjdk.samtools.util.CloserUtil;
 import htsjdk.samtools.util.RuntimeIOException;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
@@ -607,6 +608,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             return NO_CALLS;
         }
 
+        //logger.info(region.toString());
         final List<VariantContext> VCpriors = new ArrayList<>();
         if (hcArgs.standardArgs.genotypeArgs.supportVariants != null) {
             features.getValues(hcArgs.standardArgs.genotypeArgs.supportVariants).stream().forEach(VCpriors::add);
@@ -641,7 +643,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
         if (assemblyDebugOutStream != null) {
             assemblyDebugOutStream.println("\nThere were " + untrimmedAssemblyResult.getHaplotypeList().size() + " haplotypes found. Here they are:");
-            for (String haplotype : untrimmedAssemblyResult.getHaplotypeList().stream().map(haplotype -> haplotype.toString()).sorted().collect(Collectors.toList())) {
+            for (final String haplotype : untrimmedAssemblyResult.getHaplotypeList().stream().map(Haplotype::toString).sorted().collect(Collectors.toList())) {
                 assemblyDebugOutStream.println(haplotype);
             }
         }
@@ -650,7 +652,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
         final AssemblyRegionTrimmer.Result trimmingResult = trimmer.trim(region, allVariationEvents, referenceContext);
 
-        if ( ! trimmingResult.isVariationPresent() && ! hcArgs.disableOptimizations ) {
+        if (!trimmingResult.isVariationPresent() && !hcArgs.disableOptimizations) {
             return referenceModelForNoVariation(region, false, VCpriors);
         }
 
@@ -671,17 +673,17 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
         // abort early if something is out of the acceptable range
         // TODO is this ever true at this point??? perhaps GGA. Need to check.
-        if( ! assemblyResult.isVariationPresent() && ! hcArgs.disableOptimizations ) {
+        if (!assemblyResult.isVariationPresent() && !hcArgs.disableOptimizations) {
             return referenceModelForNoVariation(region, false, VCpriors);
         }
 
         // For sure this is not true if gVCF is on.
-        if ( hcArgs.dontGenotype ) {
+        if (hcArgs.dontGenotype) {
             return NO_CALLS; // user requested we not proceed
         }
 
         // TODO is this ever true at this point??? perhaps GGA. Need to check.
-        if ( regionForGenotyping.size() == 0 && ! hcArgs.disableOptimizations ) {
+        if (regionForGenotyping.size() == 0 && !hcArgs.disableOptimizations) {
             // no reads remain after filtering so nothing else to do!
             return referenceModelForNoVariation(region, false, VCpriors);
         }
@@ -694,13 +696,24 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods =
                 likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads);
 
-        if (alleleLikelihoodWriter.isPresent()) {
-            alleleLikelihoodWriter.get().writeAlleleLikelihoods(readLikelihoods);
+        alleleLikelihoodWriter.ifPresent(
+                writer -> writer.writeAlleleLikelihoods(readLikelihoods));
+
+
+//        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsBoth = subsetHaplotypesByContigs(readLikelihoods);
+//        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsForward = subsetHaplotypesByContigs(subsetLikelihoodsByStrand(subsettedReadLikelihoodsBoth,StrandsToUse.FORWARD));
+//        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsReverse = subsetHaplotypesByContigs(subsetLikelihoodsByStrand(subsettedReadLikelihoodsBoth.subsetToAlleles(subsettedReadLikelihoodsForward.alleles()),StrandsToUse.REVERSE));
+
+        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal = readLikelihoods;
+
+        if (assemblyDebugOutStream != null) {
+            assemblyDebugOutStream.println("\nThere were " + subsettedReadLikelihoodsFinal.alleles().size() + " haplotypes found after subsetting by contigs. Here they are:");
+            subsettedReadLikelihoodsFinal.alleles().stream().map(Haplotype::toString).sorted().forEach(assemblyDebugOutStream::println);
         }
 
         // Realign reads to their best haplotype.
-        final Map<GATKRead, GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(readLikelihoods, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner);
-        readLikelihoods.changeEvidence(readRealignments);
+        final Map<GATKRead, GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(subsettedReadLikelihoodsFinal, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner);
+        subsettedReadLikelihoodsFinal.changeEvidence(readRealignments);
 
         // Note: we used to subset down at this point to only the "best" haplotypes in all samples for genotyping, but there
         //  was a bad interaction between that selection and the marginalization that happens over each event when computing
@@ -709,8 +722,8 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         //  in the genotyping, but we lose information if we select down to a few haplotypes.  [EB]
 
         final CalledHaplotypes calledHaplotypes = genotypingEngine.assignGenotypeLikelihoods(
-                haplotypes,
-                readLikelihoods,
+                subsettedReadLikelihoodsFinal.alleles(),
+                subsettedReadLikelihoodsFinal,
                 perSampleFilteredReadList,
                 assemblyResult.getFullReferenceWithPadding(),
                 assemblyResult.getPaddedReferenceLoc(),
@@ -728,7 +741,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                 calledHaplotypeSet.add(assemblyResult.getReferenceHaplotype());
             }
             haplotypeBAMWriter.get().writeReadsAlignedToHaplotypes(haplotypes, assemblyResult.getPaddedReferenceLoc(), haplotypes,
-                                                             calledHaplotypeSet, readLikelihoods,regionForGenotyping.getSpan());
+                                                             calledHaplotypeSet, subsettedReadLikelihoodsFinal,regionForGenotyping.getSpan());
         }
 
         if( hcArgs.assemblerArgs.debugAssembly) {
@@ -747,7 +760,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
                 result.addAll(referenceConfidenceModel.calculateRefConfidence(assemblyResult.getReferenceHaplotype(),
                         calledHaplotypes.getCalledHaplotypes(), assemblyResult.getPaddedReferenceLoc(), regionForGenotyping,
-                        readLikelihoods, genotypingEngine.getPloidyModel(), calledHaplotypes.getCalls(), hcArgs.standardArgs.genotypeArgs.supportVariants != null,
+                        subsettedReadLikelihoodsFinal, genotypingEngine.getPloidyModel(), calledHaplotypes.getCalls(), hcArgs.standardArgs.genotypeArgs.supportVariants != null,
                         VCpriors));
 
                 trimmingResult.nonVariantRightFlankRegion().ifPresent(flank -> result.addAll(referenceModelForNoVariation(flank, false, VCpriors)));
@@ -763,6 +776,117 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                     .collect(Collectors.toList());
         }
     }
+
+    private AlleleLikelihoods<GATKRead, Haplotype> subsetLikelihoodsByStrand(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods, final StrandsToUse strandsToUse) {
+        return readLikelihoods.subsetLikelihoodsToReads(strandsToUse::useRead);
+    };
+
+//    static private Set<Allele> getJoinedContigs(final Haplotype haplotype){
+//        Set<Allele> joinedContigs = new HashSet<>();
+//        //noinspection ResultOfMethodCallIgnored
+//        haplotype.contigs.stream().reduce((a, b) -> {
+//            joinedContigs.add(new JoinedContigs(a, b));
+//            return b;
+//        });
+//        return joinedContigs;
+//    }
+//    private AlleleLikelihoods<GATKRead, Haplotype> subsetHaplotypesByContigs(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods ){
+//
+//        boolean removedHaplotype = true;
+//        AlleleLikelihoods<GATKRead, Haplotype> currentReadLikelihoods = readLikelihoods;
+//        while (removedHaplotype) {
+//        // build map from contig to haplotype
+//            final Map<Allele, List<Haplotype>> contigHaplotypeMap = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
+//            currentReadLikelihoods.alleles()
+//                    .forEach(h -> getJoinedContigs(h).forEach(
+//                            jh -> contigHaplotypeMap.get(jh).add(h))
+//                    );
+//
+//            final List<Haplotype> eventualAlleles = new ArrayList<>(currentReadLikelihoods.alleles());
+//            if (eventualAlleles.stream().noneMatch(Allele::isReference)) {
+//                throw new IllegalStateException("Reference haplotype must always remain!");
+//            }
+//            // repeat until no change.
+//            removedHaplotype = false;
+//
+//            //find contigs that only have the reference haplotypes and remove them.
+//            final List<Allele> refOnlyContigs = contigHaplotypeMap.keySet().stream().filter(c -> contigHaplotypeMap.get(c).stream().anyMatch(Allele::isReference)).collect(Collectors.toList());
+//            refOnlyContigs.forEach(contigHaplotypeMap::remove);
+//
+//            // find contigs that have all the haplotypes in them and remove them.
+//            final List<Allele> allHapContigs = contigHaplotypeMap.keySet().stream().filter(c -> contigHaplotypeMap.get(c).containsAll(eventualAlleles)).collect(Collectors.toList());
+//            allHapContigs.forEach(contigHaplotypeMap::remove);
+//
+//            //find contigs that have no haplotypes in them and remove them.
+//            final List<Allele> noHapContigs = contigHaplotypeMap.keySet().stream().filter(c -> contigHaplotypeMap.get(c).isEmpty()).collect(Collectors.toList());
+//            noHapContigs.forEach(contigHaplotypeMap::remove);
+//
+//            final List<Allele> allAlleles = new ArrayList<>(contigHaplotypeMap.keySet());
+//
+//            final AlleleLikelihoods<GATKRead, Haplotype> finalCurrentReadLikelihoods = currentReadLikelihoods;
+//            final List<Integer> collectedRPLs = allAlleles.stream().map(c -> getContigLikelihood(finalCurrentReadLikelihoods, c)).collect(Collectors.toList());
+//            final Integer worstRPL = collectedRPLs.stream().max(Integer::compareTo).orElse(Integer.MIN_VALUE);
+//
+//            final int THRESHOLD = -30;
+//            //THRESHOLD is a constant...needs to become a parameter
+//            if (worstRPL > THRESHOLD) {
+//                final Allele badContig = allAlleles.get(collectedRPLs.indexOf(worstRPL));
+//
+//                final ArrayList<Haplotype> haplotypesWithContig = new ArrayList<>(contigHaplotypeMap.get(badContig));
+//                haplotypesWithContig.removeIf(Allele::isReference);
+//
+//                removedHaplotype = eventualAlleles.removeAll(haplotypesWithContig);
+//                if (eventualAlleles.stream().noneMatch(Allele::isReference)) {
+//                    throw new IllegalStateException("Reference haplotype must always remain!");
+//                }
+//                //subset to remaining haplotypes:
+//                currentReadLikelihoods = currentReadLikelihoods.subsetToAlleles(eventualAlleles);
+//            }
+//        }
+//
+//        return currentReadLikelihoods;
+//    }
+
+    private enum StrandsToUse {
+        FORWARD(true),
+        REVERSE(false);
+
+        private final boolean useForwardStrand;
+
+        StrandsToUse(final boolean useForwardStrand) {
+            this.useForwardStrand = useForwardStrand;
+        }
+
+        boolean useRead(GATKRead read) {
+            return read.isReverseStrand() ^ useForwardStrand;
+        }
+    }
+
+//    private int getContigLikelihood(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods, final Allele contig) {
+//        Map<Allele,List<Haplotype>> contigHaplotypeMap = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
+//
+//        final Allele notContig = InverseAllele.of(contig);
+//
+//        readLikelihoods.alleles().stream().filter(h -> getJoinedContigs(h).contains(contig)).forEach(contigHaplotypeMap.get(contig)::add);
+//        readLikelihoods.alleles().stream().filter(h -> !getJoinedContigs(h).contains(contig)).forEach(contigHaplotypeMap.get(notContig)::add);
+//
+//        final AlleleLikelihoods<GATKRead, Allele> contigLikelihoods = readLikelihoods.marginalize(contigHaplotypeMap);
+//        // iterate over contigs and see what their qual is.
+//
+//        GenotypingData<Allele> genotypingData = new GenotypingData<>(genotypingEngine.getPloidyModel(), contigLikelihoods);
+//
+//        IndependentSampleGenotypesModel genotypesModel = new IndependentSampleGenotypesModel();
+//
+//        AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(contig, notContig));
+//
+//        final GenotypingLikelihoods<Allele> genotypingLikelihoods = genotypesModel.calculateLikelihoods(alleleList, genotypingData);
+//
+//        final int[] asPL = genotypingLikelihoods.sampleLikelihoods(0).getAsPLs();
+//        final int retVal;
+//        retVal = Math.min(asPL[1], asPL[0]) - asPL[2]; // if this is "large", reject the contig.
+//        return retVal;
+//    }
+//
 
     private boolean containsCalls(final CalledHaplotypes calledHaplotypes) {
         return calledHaplotypes.getCalls().stream()
@@ -781,9 +905,9 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
     private List<VariantContext> referenceModelForNoVariation(final AssemblyRegion region, final boolean needsToBeFinalized, final List<VariantContext> VCpriors) {
         if ( emitReferenceConfidence() ) {
             //TODO - why the activeRegion cannot manage its own one-time finalization and filtering?
-            //TODO - perhaps we can remove the last parameter of this method and the three lines bellow?
+            //TODO - perhaps we can remove the last parameter of this method and the three lines below?
             if ( needsToBeFinalized ) {
-                AssemblyBasedCallerUtils.finalizeRegion(region, hcArgs.assemblerArgs.errorCorrectReads, hcArgs.dontUseSoftClippedBases, minTailQuality, readsHeader, samplesList, ! hcArgs.doNotCorrectOverlappingBaseQualities);
+                AssemblyBasedCallerUtils.finalizeRegion(region, hcArgs.assemblerArgs.errorCorrectReads, hcArgs.dontUseSoftClippedBases, minTailQuality, readsHeader, samplesList, ! hcArgs.doNotCorrectOverlappingBaseQualities, 3);
             }
             filterNonPassingReads(region);
 
@@ -805,10 +929,8 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
     public void shutdown() {
         likelihoodCalculationEngine.close();
         aligner.close();
-        if ( haplotypeBAMWriter.isPresent() ) {
-            haplotypeBAMWriter.get().close();
-        }
-        if ( referenceReader != null){
+        haplotypeBAMWriter.ifPresent(HaplotypeBAMWriter::close);
+        if ( referenceReader != null) {
             try {
                 referenceReader.close();
             } catch (IOException e) {
@@ -829,7 +951,10 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
         final Set<GATKRead> readsToRemove = new LinkedHashSet<>();
         for( final GATKRead rec : activeRegion.getReads() ) {
-            if( rec.getLength() < READ_LENGTH_FILTER_THRESHOLD || rec.getMappingQuality() < READ_QUALITY_FILTER_THRESHOLD || ! ReadFilterLibrary.MATE_ON_SAME_CONTIG_OR_NO_MAPPED_MATE.test(rec) || (hcArgs.keepRG != null && !rec.getReadGroup().equals(hcArgs.keepRG)) ) {
+            if( rec.getLength() < READ_LENGTH_FILTER_THRESHOLD ||
+                    rec.getMappingQuality() < READ_QUALITY_FILTER_THRESHOLD ||
+                    !ReadFilterLibrary.MATE_ON_SAME_CONTIG_OR_NO_MAPPED_MATE.test(rec) ||
+                    (hcArgs.keepRG != null && !rec.getReadGroup().equals(hcArgs.keepRG)) ) {
                 readsToRemove.add(rec);
             }
         }

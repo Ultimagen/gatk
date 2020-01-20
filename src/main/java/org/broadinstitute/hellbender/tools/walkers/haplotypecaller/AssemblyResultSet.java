@@ -5,6 +5,7 @@ import htsjdk.samtools.util.Locatable;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.spark.util.CollectionsUtils;
 import org.broadinstitute.hellbender.engine.AssemblyRegion;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.readthreading.AbstractReadThreadingGraph;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
@@ -268,6 +269,11 @@ public final class AssemblyResultSet {
         final boolean assemblyResultAdditionReturn =  add(ar);
 
         if (haplotypes.contains(h)) {
+//            haplotypes.stream()
+//                    .filter(e->e.equals(h))
+//                    .findFirst()
+//                    .ifPresent(hh->hh.contigs=h.contigs);
+//
             final AssemblyResult previousAr = assemblyResultByHaplotype.get(h);
             if (previousAr == null) {
                 assemblyResultByHaplotype.put(h, ar);

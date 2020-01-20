@@ -24,6 +24,8 @@ public final class Kmer {
     private final int length;
     private final int hash;
 
+    // were the bases read in this direction? (for non-ref kmers)
+    private boolean originalOrientation;
     /**
      * Create a new kmer using all bases in kmer
      * @param kmer a non-null byte[]. The input array must not be modified by the caller.

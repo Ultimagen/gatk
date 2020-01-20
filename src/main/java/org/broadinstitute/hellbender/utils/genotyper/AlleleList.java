@@ -4,7 +4,6 @@ import htsjdk.variant.variantcontext.Allele;
 import org.broadinstitute.hellbender.utils.Utils;
 
 import java.util.AbstractList;
-import java.util.Iterator;
 import java.util.List;
 
 /**

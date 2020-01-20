@@ -21,7 +21,18 @@ import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAlignment;
 import org.jgrapht.EdgeFactory;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -30,7 +41,8 @@ import java.util.stream.Collectors;
  * Read threading graph class intended to contain duplicated code between {@link ReadThreadingGraph} and {@link JunctionTreeLinkedDeBruijnGraph}.
  */
 public abstract class AbstractReadThreadingGraph extends BaseGraph<MultiDeBruijnVertex, MultiSampleEdge> implements KmerSearchableGraph<MultiDeBruijnVertex, MultiSampleEdge> {
-    private static final long serialVersionUID = 1l;
+    private static final long serialVersionUID = 1L;
+    //TODO: it might be better to use unicode or somesuch text in the anonymous sample name to avoid the possibility of collision
     private static final String ANONYMOUS_SAMPLE = "XXX_UNNAMED_XXX";
     private static final boolean WRITE_GRAPH = false;
     private static final boolean DEBUG_NON_UNIQUE_CALC = false;
@@ -77,7 +89,7 @@ public abstract class AbstractReadThreadingGraph extends BaseGraph<MultiDeBruijn
      * @param kmerSize must be >= 1
      */
     public AbstractReadThreadingGraph(final int kmerSize, final boolean debugGraphTransformations, final byte minBaseQualityToUseInAssembly, final int numPruningSamples) {
-        super(kmerSize, new MyEdgeFactory(numPruningSamples));
+        super(kmerSize, new SingleMultiplicityEdgeFactory(numPruningSamples));
 
         Utils.validateArg(kmerSize > 0, () -> "bad minkKmerSize " + kmerSize);
 
@@ -106,7 +118,7 @@ public abstract class AbstractReadThreadingGraph extends BaseGraph<MultiDeBruijn
     // whether reads are needed after graph construction
     protected abstract boolean shouldRemoveReadsAfterGraphConstruction();
 
-    // Method that will be called immediately before haplotype finding in the event there are alteations that must be made to the graph based on implementation
+    // Method that will be called immediately before haplotype finding in the event there are alterations that must be made to the graph based on implementation
     public abstract void postProcessForHaplotypeFinding(File debugGraphOutputPath, Locatable refHaplotype);
 
     /**
@@ -203,44 +215,44 @@ public abstract class AbstractReadThreadingGraph extends BaseGraph<MultiDeBruijn
 
     /**
      * Add the all bases in sequence to the graph
-     *
      * @param sequence a non-null sequence
      * @param isRef    is this the reference sequence?
+     * @param fromReverseStrand
      */
     @VisibleForTesting
-    public final void addSequence(final byte[] sequence, final boolean isRef) {
-        addSequence("anonymous", sequence, isRef);
+    public final void addSequence(final byte[] sequence, final boolean isRef, final boolean fromReverseStrand) {
+        addSequence("anonymous", sequence, isRef, fromReverseStrand );
     }
 
     /**
      * Add all bases in sequence to this graph
      *
-     * @see #addSequence(String, String, byte[], int, int, int, boolean) for full information
+     * @see #addSequence(String, String, byte[], int, int, int, boolean, boolean) for full information
      */
-    public final void addSequence(final String seqName, final byte[] sequence, final boolean isRef) {
-        addSequence(seqName, sequence, 1, isRef);
+    public final void addSequence(final String seqName, final byte[] sequence, final boolean isRef, final boolean fromReverseStrand) {
+        addSequence(seqName, sequence, 1, isRef, fromReverseStrand);
     }
 
     /**
      * Add all bases in sequence to this graph
      *
-     * @see #addSequence(String, String, byte[], int, int, int, boolean) for full information
+     * @see #addSequence(String, String, byte[], int, int, int, boolean, boolean) for full information
      */
-    public final void addSequence(final String seqName, final byte[] sequence, final int count, final boolean isRef) {
-        addSequence(seqName, ANONYMOUS_SAMPLE, sequence, 0, sequence.length, count, isRef);
+    public final void addSequence(final String seqName, final byte[] sequence, final int count, final boolean isRef, final boolean fromReverseStrand) {
+        addSequence(seqName, ANONYMOUS_SAMPLE, sequence, 0, sequence.length, count, isRef, fromReverseStrand);
     }
 
     /**
      * Add bases in sequence to this graph
-     *
-     * @param seqName  a useful seqName for this read, for debugging purposes
+     *  @param seqName  a useful seqName for this read, for debugging purposes
      * @param sequence non-null sequence of bases
      * @param start    the first base offset in sequence that we should use for constructing the graph using this sequence, inclusive
      * @param stop     the last base offset in sequence that we should use for constructing the graph using this sequence, exclusive
      * @param count    the representative count of this sequence (to use as the weight)
      * @param isRef    is this the reference sequence.
+     * @param fromReverseStrand
      */
-    protected void addSequence(final String seqName, final String sampleName, final byte[] sequence, final int start, final int stop, final int count, final boolean isRef) {
+    protected void addSequence(final String seqName, final String sampleName, final byte[] sequence, final int start, final int stop, final int count, final boolean isRef, final boolean fromReverseStrand) {
         // note that argument testing is taken care of in SequenceForKmers
         Utils.validate(!alreadyBuilt, "Attempting to add sequence to a graph that has already been built");
 
@@ -248,7 +260,7 @@ public abstract class AbstractReadThreadingGraph extends BaseGraph<MultiDeBruijn
         List<SequenceForKmers> sampleSequences = pending.computeIfAbsent(sampleName, s -> new LinkedList<>());
 
         // add the new sequence to the list of sequences for sample
-        sampleSequences.add(new SequenceForKmers(seqName, sequence, start, stop, count, isRef));
+        sampleSequences.add(new SequenceForKmers(seqName, sequence, start, stop, count, isRef, fromReverseStrand));
     }
 
     /**
@@ -286,7 +298,7 @@ public abstract class AbstractReadThreadingGraph extends BaseGraph<MultiDeBruijn
         // loop over all of the bases in sequence, extending the graph by one base at each point, as appropriate
         MultiDeBruijnVertex vertex = startingVertex;
         for (int i = startPos + 1; i <= seqForKmers.stop - kmerSize; i++) {
-            vertex = extendChainByOne(vertex, seqForKmers.sequence, i, seqForKmers.count, seqForKmers.isRef);
+            vertex = extendChainByOne(vertex, seqForKmers.sequence, i, seqForKmers.count, seqForKmers.isRef, seqForKmers.fromReverseStrand);
             if (seqForKmers.isRef) {
                 referencePath.add(vertex);
             }
@@ -527,8 +539,8 @@ public abstract class AbstractReadThreadingGraph extends BaseGraph<MultiDeBruijn
             return 0;
         }
 
-        // it's safe to merge now
-        addEdge(danglingTailMergeResult.danglingPath.get(altIndexToMerge), danglingTailMergeResult.referencePath.get(refIndexToMerge), ((MyEdgeFactory) getEdgeFactory()).createEdge(false, 1));
+        // it's safe to merge now TODO: fix direction of count
+        addEdge(danglingTailMergeResult.danglingPath.get(altIndexToMerge), danglingTailMergeResult.referencePath.get(refIndexToMerge), ((SingleMultiplicityEdgeFactory) getEdgeFactory()).createEdge(false, 1,false));
 
         return 1;
     }
@@ -562,7 +574,8 @@ public abstract class AbstractReadThreadingGraph extends BaseGraph<MultiDeBruijn
             return 0;
         }
 
-        addEdge(danglingHeadMergeResult.referencePath.get(indexesToMerge + 1), danglingHeadMergeResult.danglingPath.get(indexesToMerge), ((MyEdgeFactory) getEdgeFactory()).createEdge(false, 1));
+        //TODO: fix the direction of merge...if important
+        addEdge(danglingHeadMergeResult.referencePath.get(indexesToMerge + 1), danglingHeadMergeResult.danglingPath.get(indexesToMerge), ((SingleMultiplicityEdgeFactory) getEdgeFactory()).createEdge(false, 1,false));
 
         return 1;
     }
@@ -838,7 +851,7 @@ public abstract class AbstractReadThreadingGraph extends BaseGraph<MultiDeBruijn
             final MultiDeBruijnVertex newV = new MultiDeBruijnVertex(Arrays.copyOfRange(sequenceToExtend, i, i + kmerSize));
             addVertex(newV);
             final MultiSampleEdge newE = addEdge(newV, prevV);
-            newE.setMultiplicity(sourceEdge.getMultiplicity());
+            newE.setMultiplicity(sourceEdge);
             danglingHeadMergeResult.danglingPath.add(newV);
             prevV = newV;
         }
@@ -859,7 +872,7 @@ public abstract class AbstractReadThreadingGraph extends BaseGraph<MultiDeBruijn
             final byte suffix = prev.getSuffix();
             final byte seqBase = originalKmer[offset];
             if (suffix == seqBase && (increaseCountsThroughBranches || inDegreeOf(vertex) == 1)) {
-                edge.incMultiplicity(seqForKmers.count);
+                edge.incMultiplicity(seqForKmers.count,seqForKmers.fromReverseStrand);
                 increaseCountsInMatchedKmers(seqForKmers, prev, originalKmer, offset - 1);
             }
         }
@@ -919,11 +932,12 @@ public abstract class AbstractReadThreadingGraph extends BaseGraph<MultiDeBruijn
      * @param prevVertex a non-null vertex where sequence was last anchored in the graph
      * @param sequence   the sequence we're threading through the graph
      * @param kmerStart  the start of the current kmer in graph we'd like to add
-     * @param count      the number of observations of this kmer in graph (can be > 1 for GGA)
+     * @param count      the number of observations of this kmer in graph (can be > 1 for GGA) //TODO: can be __less__ than one?
      * @param isRef      is this the reference sequence?
+     * @param fromReverseStrand
      * @return a non-null vertex connecting prevVertex to in the graph based on sequence
      */
-    protected MultiDeBruijnVertex extendChainByOne(final MultiDeBruijnVertex prevVertex, final byte[] sequence, final int kmerStart, final int count, final boolean isRef) {
+    protected MultiDeBruijnVertex extendChainByOne(final MultiDeBruijnVertex prevVertex, final byte[] sequence, final int kmerStart, final int count, final boolean isRef, final boolean fromReverseStrand) {
         final Set<MultiSampleEdge> outgoingEdges = outgoingEdgesOf(prevVertex);
 
         final int nextPos = kmerStart + kmerSize - 1;
@@ -931,7 +945,7 @@ public abstract class AbstractReadThreadingGraph extends BaseGraph<MultiDeBruijn
             final MultiDeBruijnVertex target = getEdgeTarget(outgoingEdge);
             if (target.getSuffix() == sequence[nextPos]) {
                 // we've got a match in the chain, so simply increase the count of the edge by 1 and continue
-                outgoingEdge.incMultiplicity(count);
+                outgoingEdge.incMultiplicity(count, fromReverseStrand );
                 return target;
             }
         }
@@ -942,7 +956,7 @@ public abstract class AbstractReadThreadingGraph extends BaseGraph<MultiDeBruijn
 
         // either use our merge vertex, or create a new one in the chain
         final MultiDeBruijnVertex nextVertex = mergeVertex == null ? createVertex(kmer) : mergeVertex;
-        addEdge(prevVertex, nextVertex, ((MyEdgeFactory) getEdgeFactory()).createEdge(isRef, count));
+        addEdge(prevVertex, nextVertex, ((SingleMultiplicityEdgeFactory) getEdgeFactory()).createEdge(isRef, count,fromReverseStrand));
         return nextVertex;
     }
 
@@ -968,7 +982,7 @@ public abstract class AbstractReadThreadingGraph extends BaseGraph<MultiDeBruijn
                 if (start != -1 && len >= kmerSize) {
                     // if the sequence is long enough to get some value out of, add it to the graph
                     final String name = read.getName() + '_' + start + '_' + end;
-                    addSequence(name, ReadUtils.getSampleName(read, header), sequence, start, end, 1, false);
+                    addSequence(name, ReadUtils.getSampleName(read, header), sequence, start, end, 1, false, read.isReverseStrand());
                 }
 
                 lastGood = -1; // reset the last good base
@@ -998,22 +1012,43 @@ public abstract class AbstractReadThreadingGraph extends BaseGraph<MultiDeBruijn
     /**
      * Edge factory that encapsulates the numPruningSamples assembly parameter
      */
-    protected static final class MyEdgeFactory implements EdgeFactory<MultiDeBruijnVertex, MultiSampleEdge> {
+    protected static final class SingleMultiplicityEdgeFactory implements EdgeFactory<MultiDeBruijnVertex, MultiSampleEdge> {
         final int numPruningSamples;
 
-        MyEdgeFactory(final int numPruningSamples) {
+        SingleMultiplicityEdgeFactory(final int numPruningSamples) {
             this.numPruningSamples = numPruningSamples;
         }
 
+        //This creates an edge with zero multiplicity. make sure you increment the correct direction after creation.
         @Override
         public MultiSampleEdge createEdge(final MultiDeBruijnVertex sourceVertex, final MultiDeBruijnVertex targetVertex) {
-            return new MultiSampleEdge(false, 1, numPruningSamples);
+            return new MultiSampleEdge(false, 0,0, numPruningSamples);
         }
 
-        MultiSampleEdge createEdge(final boolean isRef, final int multiplicity) {
-            return new MultiSampleEdge(isRef, multiplicity, numPruningSamples);
+        MultiSampleEdge createEdge(final boolean isRef, final int multiplicity, final boolean fromReverseStrand) {
+            return new MultiSampleEdge(isRef, fromReverseStrand ? multiplicity : 0, !fromReverseStrand ? multiplicity : 0, numPruningSamples);
         }
     }
+
+//    /**
+//     * Edge factory that encapsulates the numPruningSamples assembly parameter
+//     */
+//    protected static final class DoubleMultiplicityEdgeFactory implements EdgeFactory<MultiDeBruijnVertex, MultiSampleEdge> {
+//
+//        SingleMultiplicityEdgeFactory(final int numPruningSamples) {
+//            this.numPruningSamples = numPruningSamples;
+//        }
+//
+//        @Override
+//        public MultiSampleEdge createEdge(final MultiDeBruijnVertex sourceVertex, final MultiDeBruijnVertex targetVertex) {
+//            return new MultiSampleEdge(false, 1, numPruningSamples);
+//        }
+//
+//        MultiSampleEdge createEdge(final boolean isRef, final int multiplicity) {
+//            return new MultiSampleEdge(isRef, multiplicity, numPruningSamples);
+//        }
+//    }
+
 
     /**
      * Class to keep track of the important dangling chain merging data
@@ -1048,11 +1083,12 @@ public abstract class AbstractReadThreadingGraph extends BaseGraph<MultiDeBruijn
         final int stop;
         final int count;
         final boolean isRef;
+        final boolean fromReverseStrand;
 
         /**
          * Create a new sequence for creating kmers
          */
-        SequenceForKmers(final String name, final byte[] sequence, final int start, final int stop, final int count, final boolean ref) {
+        SequenceForKmers(final String name, final byte[] sequence, final int start, final int stop, final int count, final boolean ref, final boolean fromReverseStrand) {
             Utils.nonNull(sequence, "Sequence is null ");
             Utils.validateArg(start >= 0, () -> "Invalid start " + start);
             Utils.validateArg(stop >= start, () -> "Invalid stop " + stop);
@@ -1063,7 +1099,8 @@ public abstract class AbstractReadThreadingGraph extends BaseGraph<MultiDeBruijn
             this.start = start;
             this.stop = stop;
             this.count = count;
-            isRef = ref;
+            this.isRef = ref;
+            this.fromReverseStrand = fromReverseStrand;
         }
     }
 }

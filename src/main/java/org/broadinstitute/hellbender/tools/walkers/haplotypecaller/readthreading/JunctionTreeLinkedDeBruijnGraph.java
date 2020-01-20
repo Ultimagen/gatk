@@ -338,7 +338,7 @@ public class JunctionTreeLinkedDeBruijnGraph extends AbstractReadThreadingGraph 
         for( final MultiSampleEdge e : edgeSet() ) {
             final SeqVertex seqInV = vertexToOrigionalSeqVertex.get(getEdgeSource(e));
             final SeqVertex seqOutV = vertexToOrigionalSeqVertex.get(getEdgeTarget(e));
-            printingSeqGraph.addEdge(seqInV, seqOutV, new BaseEdge(e.isRef(), e.getMultiplicity()));
+            printingSeqGraph.addEdge(seqInV, seqOutV, e.copy());
         }
 
         final Map<SeqVertex, SeqVertex> originalSeqVertexToMergedVerex = printingSeqGraph.zipLinearChainsWithVertexMapping();
@@ -427,7 +427,7 @@ public class JunctionTreeLinkedDeBruijnGraph extends AbstractReadThreadingGraph 
         SYMBOLIC_END_EDGE = addEdge(getReferenceSinkVertex(), SYMBOLIC_END_VETEX);
 
         readThreadingJunctionTrees = new HashMap<>();
-        pending.values().stream().flatMap(Collection::stream).forEach(this::threadSequenceForJuncitonTree);
+        pending.values().stream().flatMap(Collection::stream).forEach(this::threadSequenceForJunctionTree);
     }
 
     /**
@@ -447,7 +447,7 @@ public class JunctionTreeLinkedDeBruijnGraph extends AbstractReadThreadingGraph 
      *
      * @param seqForKmers
      */
-    private void threadSequenceForJuncitonTree(final SequenceForKmers seqForKmers) {
+    private void threadSequenceForJunctionTree(final SequenceForKmers seqForKmers) {
         // Maybe handle this differently, the reference junction tree should be held seperatedly from everything else.
         if (seqForKmers.isRef) {
             return;
@@ -731,7 +731,7 @@ public class JunctionTreeLinkedDeBruijnGraph extends AbstractReadThreadingGraph 
             trackedNodes.clear();
         }
 
-        // Adds a junction tree prevVertex if the vertex warrants a junciton tree
+        // Adds a junction tree prevVertex if the vertex warrants a junction tree
         private void addTreeIfNecessary(MultiDeBruijnVertex prevVertex) {
             if (vertexWarrantsJunctionTree(prevVertex)) {
                 trackedNodes.add(readThreadingJunctionTrees.computeIfAbsent(prevVertex, k -> new ThreadingTree(prevVertex)).getAndIncrementRootNode());

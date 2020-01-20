@@ -14,8 +14,15 @@ import org.broadinstitute.hellbender.utils.BaseUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.param.ParamUtils;
 
-import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Queue;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
@@ -319,7 +326,13 @@ public final class EventMap extends TreeMap<Integer, VariantContext> {
      * Returns any events in the map that overlap loc, including spanning deletions and events that start at loc.
      */
     public List<VariantContext> getOverlappingEvents(final int loc) {
-        return headMap(loc, true).values().stream().filter(v -> v.getEnd() >= loc).collect(Collectors.toList());
+        return getOverlappingEvents(loc, 1);
     }
 
+    /**
+     * Returns any events in the map that overlap loc, including spanning deletions and events that start at loc.
+     */
+    public List<VariantContext> getOverlappingEvents(final int loc, final int length) {
+        return headMap(loc + length - 1, true).values().stream().filter(v -> v.getEnd() >= loc).collect(Collectors.toList());
+    }
 }
