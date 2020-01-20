@@ -114,7 +114,7 @@ public final class AssemblyResultSetUnitTest extends GATKBaseTest {
     public Iterator<Object[]> trimmingData() {
         final AssemblyRegion activeRegion = new AssemblyRegion(new SimpleInterval("1",1000,1100), 25, header);
         final int length = activeRegion.getPaddedSpan().size();
-        final RandomDNA rnd = new RandomDNA(13); // keep it prepoducible by fixing the seed to lucky 13.
+        final RandomDNA rnd = new RandomDNA(13); // keep it reproducible by fixing the seed to lucky 13.
         final AssemblyRegionTestDataSet actd = new AssemblyRegionTestDataSet(10,new String(rnd.nextBases(length)),new String[] {
                 "Civar:*1T*" }, new String[0], new byte[0], new byte[0], new byte[0]);
 
@@ -124,7 +124,7 @@ public final class AssemblyResultSetUnitTest extends GATKBaseTest {
 
         final ReadThreadingGraph rtg = new ReadThreadingGraph(10);
         for (final Haplotype h : haplotypes)
-            rtg.addSequence("seq-" + Math.abs(h.hashCode()), h.getBases(), h.isReference());
+            rtg.addSequence("seq-" + Math.abs(h.hashCode()), h.getBases(), h.isReference(), false );
         final SeqGraph seqGraph = rtg.toSequenceGraph();
         final AssemblyResult ar = new AssemblyResult(AssemblyResult.Status.ASSEMBLED_SOME_VARIATION,seqGraph, rtg);
         final Map<Haplotype,AssemblyResult> result =

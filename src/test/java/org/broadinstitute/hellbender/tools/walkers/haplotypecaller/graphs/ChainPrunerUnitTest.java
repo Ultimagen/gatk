@@ -37,7 +37,7 @@ public final class ChainPrunerUnitTest extends GATKBaseTest {
                     final int nExpected = edgeWeight < pruneFactor && ! isRef ? 3 : 0;
                     SeqGraph graph = new SeqGraph(11);
                     graph.addVertices(v1, v2, v3);
-                    graph.addEdges(() -> new BaseEdge(isRef, edgeWeight), v1, v2, v3);
+                    graph.addEdges(() -> new BaseEdge(isRef, edgeWeight,edgeWeight), v1, v2, v3);
                     tests.add(new Object[]{"combinatorial", graph, pruneFactor, nExpected > 0 ? Collections.emptySet() : graph.vertexSet(), OptionalInt.of(1)});
                 }
             }
@@ -47,15 +47,15 @@ public final class ChainPrunerUnitTest extends GATKBaseTest {
             SeqGraph graph = new SeqGraph(11);
             graph.addVertices(v1, v2, v3);
             graph.addVertices(v4, v5);
-            graph.addEdges(() -> new BaseEdge(true, 1), v4, v5);
-            graph.addEdges(() -> new BaseEdge(false, 1), v4, v1, v2, v3, v5);
+            graph.addEdges(() -> new BaseEdge(true, 1,1), v4, v5);
+            graph.addEdges(() -> new BaseEdge(false, 1,1), v4, v1, v2, v3, v5);
             tests.add(new Object[]{"bad internal branch", graph, 2, new HashSet<>(Arrays.asList(v4, v5)), OptionalInt.of(2)});
         }
 
         { // has bad cycle
             SeqGraph graph = new SeqGraph(11);
             graph.addVertices(v1, v2, v3, v4);
-            graph.addEdges(() -> new BaseEdge(false, 1), v4, v1, v2, v3, v1);
+            graph.addEdges(() -> new BaseEdge(false, 1,1), v4, v1, v2, v3, v1);
             // note that we'll remove v4 because it's low weight
             tests.add(new Object[]{"has bad cycle", graph, 2, Collections.emptySet(), OptionalInt.of(2)});
         }
@@ -63,7 +63,7 @@ public final class ChainPrunerUnitTest extends GATKBaseTest {
         { // has good cycle
             SeqGraph graph = new SeqGraph(111);
             graph.addVertices(v1, v2, v3, v4);
-            graph.addEdges(() -> new BaseEdge(false, 3), v4, v1, v2, v3, v1);
+            graph.addEdges(() -> new BaseEdge(false, 3,3), v4, v1, v2, v3, v1);
             // note that we'll remove v4 because it's low weight
             tests.add(new Object[]{"has good cycle", graph, 2, graph.vertexSet(), OptionalInt.of(2)});
         }
@@ -71,43 +71,43 @@ public final class ChainPrunerUnitTest extends GATKBaseTest {
         { // has branch
             SeqGraph graph = new SeqGraph(11);
             graph.addVertices(v1, v2, v3, v4, v5, v6);
-            graph.addEdges(() -> new BaseEdge(false, 1), v1, v2, v3, v4, v6);
-            graph.addEdges(() -> new BaseEdge(false, 1), v1, v2, v3, v5, v6);
+            graph.addEdges(() -> new BaseEdge(false, 1,1), v1, v2, v3, v4, v6);
+            graph.addEdges(() -> new BaseEdge(false, 1,1), v1, v2, v3, v5, v6);
             tests.add(new Object[]{"has two bad branches", graph, 2, Collections.emptySet(), OptionalInt.of(3)});
         }
 
         { // middle vertex above threshold => no one can be removed
             SeqGraph graph = new SeqGraph(11);
             graph.addVertices(v1, v2, v3, v4, v5);
-            graph.addEdges(() -> new BaseEdge(false, 1), v1, v2);
-            graph.addEdges(() -> new BaseEdge(false, 3), v2, v3);
-            graph.addEdges(() -> new BaseEdge(false, 1), v3, v4, v5);
+            graph.addEdges(() -> new BaseEdge(false, 1,1), v1, v2);
+            graph.addEdges(() -> new BaseEdge(false, 3,3), v2, v3);
+            graph.addEdges(() -> new BaseEdge(false, 1,1), v3, v4, v5);
             tests.add(new Object[]{"middle vertex above factor", graph, 2, graph.vertexSet(), OptionalInt.of(1)});
         }
 
         { // the branching node has value > pruneFactor
             SeqGraph graph = new SeqGraph(11);
             graph.addVertices(v1, v2, v3, v4, v5, v6);
-            graph.addEdges(() -> new BaseEdge(false, 3), v1, v2);
-            graph.addEdges(() -> new BaseEdge(false, 3), v2, v3);
-            graph.addEdges(() -> new BaseEdge(false, 1), v3, v4, v6);
-            graph.addEdges(() -> new BaseEdge(false, 3), v2, v5, v6);
+            graph.addEdges(() -> new BaseEdge(false, 3,3), v1, v2);
+            graph.addEdges(() -> new BaseEdge(false, 3,3), v2, v3);
+            graph.addEdges(() -> new BaseEdge(false, 1,1), v3, v4, v6);
+            graph.addEdges(() -> new BaseEdge(false, 3,3), v2, v5, v6);
             tests.add(new Object[]{"branch node greater than pruneFactor", graph, 2, graph.vertexSet(), OptionalInt.of(3)});
         }
 
         { // A single isolated chain with weights all below pruning should be pruned
             SeqGraph graph = new SeqGraph(11);
             graph.addVertices(v1, v2, v3, v4, v5);
-            graph.addEdges(() -> new BaseEdge(false, 1), v1, v2, v3);
-            graph.addEdges(() -> new BaseEdge(false, 5), v4, v5);
+            graph.addEdges(() -> new BaseEdge(false, 1,1), v1, v2, v3);
+            graph.addEdges(() -> new BaseEdge(false, 5,5), v4, v5);
             tests.add(new Object[]{"isolated chain", graph, 2, new LinkedHashSet<>(Arrays.asList(v4, v5)), OptionalInt.of(2)});
         }
 
         { // A chain with weights all below pruning should be pruned, even if it connects to another good chain
             SeqGraph graph = new SeqGraph(11);
             graph.addVertices(v1, v2, v3, v4, v5, v6);
-            graph.addEdges(() -> new BaseEdge(false, 1), v1, v2, v3, v5);
-            graph.addEdges(() -> new BaseEdge(false, 5), v4, v5, v6);
+            graph.addEdges(() -> new BaseEdge(false, 1,1), v1, v2, v3, v5);
+            graph.addEdges(() -> new BaseEdge(false, 5,5), v4, v5, v6);
             tests.add(new Object[]{"bad chain branching into good one", graph, 2, new HashSet<>(Arrays.asList(v4, v5, v6)), OptionalInt.of(3)});
         }
 
@@ -139,13 +139,13 @@ public final class ChainPrunerUnitTest extends GATKBaseTest {
     public void testAdaptivePruning(final int kmerSize, final byte[] ref, final byte[] alt, final double altFraction, final double errorRate, final int depthPerAlignmentStart, final double logOddsThreshold) {
         final RandomGenerator rng = RandomGeneratorFactory.createRandomGenerator(new Random(kmerSize + FastMath.round(10000*(errorRate + altFraction))));
         final ReadThreadingGraph graph = new ReadThreadingGraph(kmerSize);
-        graph.addSequence(ref, true);
+        graph.addSequence(ref, true, false);
         final List<byte[]> reads = IntStream.range(0, ref.length)
                 .mapToObj(start -> IntStream.range(0, depthPerAlignmentStart).mapToObj(n -> generateReadWithErrors(rng.nextDouble() < altFraction ? alt : ref, start, errorRate, rng)))
                 .flatMap(s -> s).collect(Collectors.toList());
 
-        reads.forEach(read -> graph.addSequence(read, false));
-
+        reads.forEach(read -> graph.addSequence(read, false, false));
+        reads.forEach(read -> graph.addSequence(read, false, true));
 
         // note: these are the steps in ReadThreadingAssembler::createGraph
         graph.buildGraphIfNecessary();

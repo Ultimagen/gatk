@@ -88,7 +88,7 @@ public final class PathUnitTest extends GATKBaseTest {
         g.addVertex(v4);  //sink
         final BaseEdge e1 = g.addEdge(v1, v2);
 
-        e1.incMultiplicity(1);
+        e1.incMultiplicity(1, false);
 
         final BaseEdge e2 = g.addEdge(v2, v3);
         g.addEdge(v3, v4);

@@ -34,6 +34,8 @@ final class SplitCommonSuffices extends VertexBasedTransformer {
         } else {
             alreadySplit.add(bottom);
             return CommonSuffixSplitter.split(getGraph(), bottom);
+//            ||
+//                    CommonSuffixSplitter.splitFromTop(getGraph(),bottom);
         }
     }
 }

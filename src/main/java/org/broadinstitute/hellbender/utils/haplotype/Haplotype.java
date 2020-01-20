@@ -7,6 +7,7 @@ import htsjdk.samtools.util.Locatable;
 import htsjdk.variant.variantcontext.Allele;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
+//import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.BaseEdge;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.read.AlignmentUtils;
@@ -15,6 +16,7 @@ import org.broadinstitute.hellbender.utils.read.ReadUtils;
 
 import java.util.Arrays;
 import java.util.Comparator;
+//import java.util.List;
 
 public final class Haplotype extends Allele {
     private static final long serialVersionUID = 1L;
@@ -24,13 +26,14 @@ public final class Haplotype extends Allele {
      */
     public static final Comparator<Haplotype> SIZE_AND_BASE_ORDER =
             Comparator.comparingInt((Haplotype hap) -> hap.getBases().length)
-                      .thenComparing(hap -> hap.getBaseString());
+                      .thenComparing(Allele::getBaseString);
 
     private Locatable genomeLocation = null;
     private EventMap eventMap = null;
     private Cigar cigar;
     private int alignmentStartHapwrtRef;
     private double score = Double.NaN;
+//    public List<? extends Allele> contigs = null;
 
     // debug information for tracking kmer sizes used in graph construction for debug output
     private int kmerSize = 0;
@@ -125,6 +128,8 @@ public final class Haplotype extends Allele {
         ret.setScore(score);
         ret.setKmerSize(kmerSize);
         ret.setAlignmentStartHapwrtRef(newStart + getAlignmentStartHapwrtRef());
+        //TODO: need to trim this down as well.
+//        ret.contigs=contigs;
         return ret;
     }
 
