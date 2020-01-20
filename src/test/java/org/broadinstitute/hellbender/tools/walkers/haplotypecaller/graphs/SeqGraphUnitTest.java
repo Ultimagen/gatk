@@ -274,7 +274,7 @@ public final class SeqGraphUnitTest extends GATKBaseTest {
     @Test(dataProvider = "MergingData", enabled = !DEBUG)
     public void testMerging(final SeqGraph graph, final SeqGraph expected) {
         final SeqGraph merged = graph.clone();
-        merged.simplifyGraph(1);
+        merged.simplifyGraph(1 ,()->"");
         try {
             Assert.assertTrue(SeqGraph.graphEquals(merged, expected));
         } catch (AssertionError e) {
@@ -302,8 +302,8 @@ public final class SeqGraphUnitTest extends GATKBaseTest {
         final SeqVertex bot = new SeqVertex("C");
         graph.addVertices(top, mid1, mid2, bot);
         graph.addEdges(top, mid2, bot);
-        graph.addEdge(top, mid1, new BaseEdge(true, 1));
-        graph.addEdge(mid1, bot, new BaseEdge(true, 1));
+        graph.addEdge(top, mid1, new BaseEdge(true, 1, 1));
+        graph.addEdge(mid1, bot, new BaseEdge(true, 1, 1));
 
         final SeqGraph expected = new SeqGraph(11);
         expected.addVertex(new SeqVertex("AACTC"));
@@ -429,7 +429,7 @@ public final class SeqGraphUnitTest extends GATKBaseTest {
                     expected.addVertex(acg);
 
                     for ( final SeqVertex v : makeVertices(nIncoming) ) {
-                        final BaseEdge e = new BaseEdge(false, edgeWeight++);
+                        final BaseEdge e = new BaseEdge(false, edgeWeight++, edgeWeight);
                         graph.addVertices(v);
                         graph.addEdge(v, a1, e);
                         expected.addVertex(v);
@@ -437,7 +437,7 @@ public final class SeqGraphUnitTest extends GATKBaseTest {
                     }
 
                     for ( final SeqVertex v : makeVertices(nOutgoing) ) {
-                        final BaseEdge e = new BaseEdge(false, edgeWeight++);
+                        final BaseEdge e = new BaseEdge(false, edgeWeight++, edgeWeight);
                         graph.addVertices(v);
                         graph.addEdge(g1, v, e);
                         expected.addVertex(v);
@@ -494,5 +494,4 @@ public final class SeqGraphUnitTest extends GATKBaseTest {
 
         graph.simplifyGraph();
     }
-
 }

@@ -51,6 +51,48 @@ public final class CommonSuffixSplitterUnitTest extends GATKBaseTest {
         Assert.assertFalse(CommonSuffixSplitter.split(original, v3), "Cannot split graph with multiple outgoing edges from middle nodes");
     }
 
+    @Test
+    public void testNonFanSplit(){
+        final SeqGraph original = new SeqGraph(11);
+        final SeqVertex v1 = new SeqVertex("TOP");
+        final SeqVertex v2 = new SeqVertex("A_REST");
+        final SeqVertex v3 = new SeqVertex("T_REST");
+        final SeqVertex v4 = new SeqVertex("inter");
+        final SeqVertex v5 = new SeqVertex("BOT");
+
+        original.addVertices(v1, v2, v3, v4, v5);
+
+        original.addEdges(v1, v2, v4, v5);
+        original.addEdges(v1, v3, v4);
+        original.addEdges(v3, v5);
+
+        original.printGraph(new File("testSplitComplexCycle.PRE.dot"), 0);
+        original.simplifyGraph();
+        original.printGraph(new File("testSplitComplexCycle.POST.dot"), 0);
+    }
+
+
+
+    @Test
+    public void testTopSplit(){
+        final SeqGraph original = new SeqGraph(11);
+        final SeqVertex v1 = new SeqVertex("TOP");
+        final SeqVertex v2 = new SeqVertex("GTTAA");
+        final SeqVertex v3 = new SeqVertex("TTAA");
+        final SeqVertex v4 = new SeqVertex("BOTTOM");
+        final SeqVertex v5 = new SeqVertex("other");
+
+        original.addVertices(v1, v2, v3, v4, v5);
+
+        original.addEdges(v1, v3, v4);
+        original.addEdges(v1, v2, v4);
+        original.addEdges(v2, v5);
+
+        original.printGraph(new File("testSplitComplexCycle.PRE.dot"), 0);
+        Assert.assertTrue(CommonSuffixSplitter.splitFromTop(original, v1), "Should be able to split pre-cycle graph");
+        original.printGraph(new File("testSplitComplexCycle.POST.dot"), 0);
+    }
+
     @Test(enabled = !DEBUG)
     public void testSplitNoCycles() {
         final SeqGraph original = new SeqGraph(11);
@@ -102,10 +144,10 @@ public final class CommonSuffixSplitterUnitTest extends GATKBaseTest {
         final SeqVertex v4 = new SeqVertex("C");
 
         original.addVertices(v1, v2, v3, v4);
-        original.addEdge(v1, v2, new BaseEdge(false, 12));
-        original.addEdge(v2, v3, new BaseEdge(false, 23));
-        original.addEdge(v3, v4, new BaseEdge(false, 34));
-        original.addEdge(v4, v2, new BaseEdge(false, 42));
+        original.addEdge(v1, v2, new BaseEdge(false, 12, 0));
+        original.addEdge(v2, v3, new BaseEdge(false, 23, 0));
+        original.addEdge(v3, v4, new BaseEdge(false, 34, 0));
+        original.addEdge(v4, v2, new BaseEdge(false, 42, 0));
 
 //        original.printGraph(new File("testSplitInfiniteCycleFailure.dot"), 0);
 

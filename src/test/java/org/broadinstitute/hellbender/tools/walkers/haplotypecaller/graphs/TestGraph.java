@@ -24,7 +24,7 @@ public final class TestGraph extends BaseGraph<MultiDeBruijnVertex, BaseEdge> {
     private static class MyEdgeFactory implements EdgeFactory<MultiDeBruijnVertex, BaseEdge> {
         @Override
         public BaseEdge createEdge(MultiDeBruijnVertex sourceVertex, MultiDeBruijnVertex targetVertex) {
-            return new BaseEdge(false, 1);
+            return new BaseEdge(false, 1, 1);
         }
     }
 
@@ -57,7 +57,7 @@ public final class TestGraph extends BaseGraph<MultiDeBruijnVertex, BaseEdge> {
 
         final MultiDeBruijnVertex v1 = new MultiDeBruijnVertex( kmer1 , true);
         final MultiDeBruijnVertex v2 = new MultiDeBruijnVertex( kmer2 , true);
-        final BaseEdge toAdd = new BaseEdge(isRef, multiplicity);
+        final BaseEdge toAdd = new BaseEdge(isRef, multiplicity, multiplicity);
 
         addVertices(v1, v2);
         addOrUpdateEdge(v1, v2, toAdd);

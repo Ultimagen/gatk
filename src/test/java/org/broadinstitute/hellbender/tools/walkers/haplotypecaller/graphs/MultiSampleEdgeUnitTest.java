@@ -43,7 +43,7 @@ public final class MultiSampleEdgeUnitTest extends GATKBaseTest {
      */
     @Test(dataProvider = "MultiplicityData")
     public void testMultiplicity(final MultiplicityTestProvider cfg) {
-        final MultiSampleEdge edge = new MultiSampleEdge(false, 0, cfg.numSamplesPruning);
+        final MultiSampleEdge edge = new MultiSampleEdge(false, 0, 0,cfg.numSamplesPruning);
         Assert.assertEquals(edge.getMultiplicity(), 0);
         Assert.assertEquals(edge.getPruningMultiplicity(), 0);
 
@@ -58,7 +58,7 @@ public final class MultiSampleEdgeUnitTest extends GATKBaseTest {
         for ( int i = 0; i < cfg.countsPerSample.size(); i++ ) {
             int countForSample = 0;
             for ( int count = 0; count < cfg.countsPerSample.get(i); count++ ) {
-                edge.incMultiplicity(1);
+                edge.incMultiplicity(1,false);
                 total++;
                 countForSample++;
                 Assert.assertEquals(edge.getMultiplicity(), total);
@@ -72,6 +72,8 @@ public final class MultiSampleEdgeUnitTest extends GATKBaseTest {
         Collections.sort(counts);
         final int prune = counts.get(Math.max(counts.size() - cfg.numSamplesPruning, 0));
         Assert.assertEquals(edge.getMultiplicity(), total);
-        Assert.assertEquals(edge.getPruningMultiplicity(), prune);
+        // this forgets that pruning is now defined as the min of forward and reverse...
+//        Assert.assertEquals(edge.getPruningMultiplicity(), prune);
+        Assert.assertEquals(edge.getPruningMultiplicity(), 0);
     }
 }

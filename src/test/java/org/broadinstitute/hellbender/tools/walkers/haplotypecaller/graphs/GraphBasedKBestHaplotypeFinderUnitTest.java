@@ -136,8 +136,8 @@ public final class GraphBasedKBestHaplotypeFinderUnitTest extends GATKBaseTest {
             final SeqVertex v = new SeqVertex(seqs.get(i));
             graph.addVertex(v);
             vertices.add(v);
-            if ( source != null ) graph.addEdge(source, v, new BaseEdge(false, weight++));
-            if ( target != null ) graph.addEdge(v, target, new BaseEdge(false, weight++));
+            if ( source != null ) graph.addEdge(source, v, new BaseEdge(false, weight++, 0));
+            if ( target != null ) graph.addEdge(v, target, new BaseEdge(false, weight++, 0));
         }
         return vertices;
     }
@@ -188,10 +188,10 @@ public final class GraphBasedKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         graph.addVertex(v2Ref);
         graph.addVertex(v2Alt);
         graph.addVertex(v3);
-        graph.addEdge(v, v2Ref, new BaseEdge(true, 10));
-        graph.addEdge(v2Ref, v3, new BaseEdge(true, 10));
-        graph.addEdge(v, v2Alt, new BaseEdge(false, 5));
-        graph.addEdge(v2Alt, v3, new BaseEdge(false, 5));
+        graph.addEdge(v, v2Ref, new BaseEdge(true, 10,0));
+        graph.addEdge(v2Ref, v3, new BaseEdge(true, 10,0));
+        graph.addEdge(v, v2Alt, new BaseEdge(false, 5,0));
+        graph.addEdge(v2Alt, v3, new BaseEdge(false, 5,0));
 
         // Construct the test path
         Path<SeqVertex,BaseEdge> path = new Path<>(v, graph);
@@ -303,20 +303,20 @@ public final class GraphBasedKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         graph.addVertex(v6Alt);
         graph.addVertex(v7);
         graph.addVertex(postV);
-        graph.addEdge(preV, v, new BaseEdge(false, 1));
-        graph.addEdge(v, v2Ref, new BaseEdge(true, 10));
-        graph.addEdge(v2Ref, v3, new BaseEdge(true, 10));
-        graph.addEdge(v, v2Alt, new BaseEdge(false, 5));
-        graph.addEdge(v2Alt, v3, new BaseEdge(false, 5));
-        graph.addEdge(v3, v4Ref, new BaseEdge(true, 10));
-        graph.addEdge(v4Ref, v5, new BaseEdge(true, 10));
-        graph.addEdge(v3, v4Alt, new BaseEdge(false, 5));
-        graph.addEdge(v4Alt, v5, new BaseEdge(false, 5));
-        graph.addEdge(v5, v6Ref, new BaseEdge(true, 11));
-        graph.addEdge(v6Ref, v7, new BaseEdge(true, 11));
-        graph.addEdge(v5, v6Alt, new BaseEdge(false, 55));
-        graph.addEdge(v6Alt, v7, new BaseEdge(false, 55));
-        graph.addEdge(v7, postV, new BaseEdge(false, 1));
+        graph.addEdge(preV, v, new BaseEdge(false, 1, 0));
+        graph.addEdge(v, v2Ref, new BaseEdge(true, 10, 0));
+        graph.addEdge(v2Ref, v3, new BaseEdge(true, 10, 0));
+        graph.addEdge(v, v2Alt, new BaseEdge(false, 5, 0));
+        graph.addEdge(v2Alt, v3, new BaseEdge(false, 5, 0));
+        graph.addEdge(v3, v4Ref, new BaseEdge(true, 10, 0));
+        graph.addEdge(v4Ref, v5, new BaseEdge(true, 10, 0));
+        graph.addEdge(v3, v4Alt, new BaseEdge(false, 5, 0));
+        graph.addEdge(v4Alt, v5, new BaseEdge(false, 5, 0));
+        graph.addEdge(v5, v6Ref, new BaseEdge(true, 11, 0));
+        graph.addEdge(v6Ref, v7, new BaseEdge(true, 11, 0));
+        graph.addEdge(v5, v6Alt, new BaseEdge(false, 55, 0));
+        graph.addEdge(v6Alt, v7, new BaseEdge(false, 55, 0));
+        graph.addEdge(v7, postV, new BaseEdge(false, 1, 0));
 
         // Construct the test path
         Path<SeqVertex,BaseEdge> path = new Path<>( (offRefBeginning ? preV : v), graph);
@@ -381,8 +381,8 @@ public final class GraphBasedKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         final SeqVertex ref = new SeqVertex("CCCCCGGG");
 
         graph.addVertices(top, bot, alt, ref);
-        graph.addEdges(() -> new BaseEdge(true, 1), top, ref, bot);
-        graph.addEdges(() -> new BaseEdge(false, 1), top, alt, bot);
+        graph.addEdges(() -> new BaseEdge(true, 1,0), top, ref, bot);
+        graph.addEdges(() -> new BaseEdge(false, 1,0), top, alt, bot);
 
         @SuppressWarnings("all")
         final List<KBestHaplotype<SeqVertex, BaseEdge>> bestPaths = new GraphBasedKBestHaplotypeFinder<>(graph,top,bot).findBestHaplotypes();
@@ -431,18 +431,18 @@ public final class GraphBasedKBestHaplotypeFinderUnitTest extends GATKBaseTest {
 
         graph.addVertices(top, bot, mid, midAndTopExt, bot, botExt, botExtTop, botExtBot, refStart, refEnd);
         // First "diamond" with 3 mostly equivalent cost paths
-        graph.addEdges(() -> new BaseEdge(false, 34), refStart, bot, botExt);
-        graph.addEdges(() -> new BaseEdge(true, 33), refStart, top, midAndTopExt);
-        graph.addEdges(() -> new BaseEdge(false, 32), refStart, mid, midAndTopExt);
+        graph.addEdges(() -> new BaseEdge(false, 34, 0), refStart, bot, botExt);
+        graph.addEdges(() -> new BaseEdge(true, 33, 0), refStart, top, midAndTopExt);
+        graph.addEdges(() -> new BaseEdge(false, 32, 0), refStart, mid, midAndTopExt);
 
         // The best looking path reconnects with a very poor edge multiplicity to midAndTopExt (This is this is what casues the bug)
-        graph.addEdges(() -> new BaseEdge(false, 1), bot, midAndTopExt);
+        graph.addEdges(() -> new BaseEdge(false, 1, 0), bot, midAndTopExt);
         // There is another diamond at bot ext that will end up discounting that path from being in the k best
-        graph.addEdges(() -> new BaseEdge(false, 15), botExt, botExtTop, refEnd);
-        graph.addEdges(() -> new BaseEdge(false, 18), botExt, botExtBot, refEnd);
+        graph.addEdges(() -> new BaseEdge(false, 15, 0), botExt, botExtTop, refEnd);
+        graph.addEdges(() -> new BaseEdge(false, 18, 0), botExt, botExtBot, refEnd);
 
         // Wheras the path is smooth sailing from refEnd
-        graph.addEdges(() -> new BaseEdge(true, 65), midAndTopExt, refEnd);
+        graph.addEdges(() -> new BaseEdge(true, 65, 0), midAndTopExt, refEnd);
 
         @SuppressWarnings("all")
         final List<KBestHaplotype<SeqVertex, BaseEdge>> bestPaths = new GraphBasedKBestHaplotypeFinder<>(graph,refStart,refEnd).findBestHaplotypes(2);
@@ -464,8 +464,8 @@ public final class GraphBasedKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         final SeqVertex alt = new SeqVertex( "ACAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGA" );
         final SeqVertex ref = new SeqVertex( "TGTGTGTGTGTGTGACAGAGAGAGAGAGAGAGAGAGAGAGAGAGA" );
         graph.addVertices(top, bot, alt, ref);
-        graph.addEdges(() -> new BaseEdge(true, 1), top, ref, bot);
-        graph.addEdges(() -> new BaseEdge(false, 1), top, alt, bot);
+        graph.addEdges(() -> new BaseEdge(true, 1, 0), top, ref, bot);
+        graph.addEdges(() -> new BaseEdge(false, 1, 0), top, alt, bot);
 
         @SuppressWarnings("all")
         final List<KBestHaplotype<SeqVertex, BaseEdge>> paths = new GraphBasedKBestHaplotypeFinder<>(graph, top, bot).findBestHaplotypes();
@@ -501,7 +501,7 @@ public final class GraphBasedKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         final MultiDeBruijnVertex k8 = new MultiDeBruijnVertex( "GCCCT".getBytes() );
         final MultiDeBruijnVertex refEnd = new MultiDeBruijnVertex( "CCCTT".getBytes() );
         graph.addVertices(refSource, k1, k2, k3, k4, k5, k6, k7, k8, refEnd);
-        graph.addEdges(() -> new MultiSampleEdge(true, 1, 1), refSource, k1, k2, k3, k4, k5, k6, k7, k8, refEnd);
+        graph.addEdges(() -> new MultiSampleEdge(true, 1, 0,1), refSource, k1, k2, k3, k4, k5, k6, k7, k8, refEnd);
 
         @SuppressWarnings("all")
         final List<KBestHaplotype<MultiDeBruijnVertex, MultiSampleEdge>> paths = new GraphBasedKBestHaplotypeFinder<>(graph, refSource, refEnd).findBestHaplotypes();
@@ -535,8 +535,8 @@ public final class GraphBasedKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         final MultiDeBruijnVertex v6 = new MultiDeBruijnVertex( "GCGCC".getBytes() );
         final MultiDeBruijnVertex v7 = new MultiDeBruijnVertex( "CGCCC".getBytes() );
         graph.addVertices(refSource, k1, k2, k3, k4, k5, k6, k7, k8, refEnd, v3, v4, v5, v6, v7);
-        graph.addEdges(() -> new MultiSampleEdge(true, 1, 4), refSource, k1, k2, k3, k4, k5, k6, k7, k8, refEnd);
-        graph.addEdges(() -> new MultiSampleEdge(false, 1, 3), k2, v3, v4, v5, v6, v7, k8);
+        graph.addEdges(() -> new MultiSampleEdge(true, 1, 0,4), refSource, k1, k2, k3, k4, k5, k6, k7, k8, refEnd);
+        graph.addEdges(() -> new MultiSampleEdge(false, 1, 0,3), k2, v3, v4, v5, v6, v7, k8);
 
         @SuppressWarnings("all")
         final List<KBestHaplotype<MultiDeBruijnVertex, MultiSampleEdge>> paths = new GraphBasedKBestHaplotypeFinder<>(graph, refSource, refEnd).findBestHaplotypes();
@@ -610,8 +610,8 @@ public final class GraphBasedKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         SeqVertex bot = new SeqVertex(Strings.repeat("N", padSize));
 
         graph.addVertices(top, ref, alt, bot);
-        graph.addEdges(() -> new BaseEdge(true, 1), top, ref, bot);
-        graph.addEdges(() -> new BaseEdge(false, 1), top, alt, bot);
+        graph.addEdges(() -> new BaseEdge(true, 1, 0), top, ref, bot);
+        graph.addEdges(() -> new BaseEdge(false, 1, 0), top, alt, bot);
 
         // Construct the test path
         Path<SeqVertex,BaseEdge> path = makePath(Arrays.asList(top, alt, bot), graph);

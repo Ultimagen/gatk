@@ -132,7 +132,6 @@ public final class AlleleFrequencyCalculator {
         }
 
         double[] log10POfZeroCountsByAllele = new double[numAlleles];
-        double[] log10POfNonZeroCountsByAllele = new double[numAlleles];
 
         double log10PNoVariant = 0;
 
@@ -184,11 +183,6 @@ public final class AlleleFrequencyCalculator {
             final double[] log10PNoAllele = log10AbsentPosteriors.stream()
                     .mapToDouble(buffer -> MathUtils.log10SumLog10(buffer.toDoubleArray()))
                     .map(x -> Math.min(0, x)).toArray();    // if prob of non hom ref > 1 due to finite precision, short-circuit to avoid NaN
-
-            final double[] log10PYesAllele = log10PresentPosteriors.stream()
-                    .mapToDouble(buffer -> MathUtils.log10SumLog10(buffer.toDoubleArray()))
-                    .map(x -> Math.min(0, x)).toArray();    // if prob of non hom ref > 1 due to finite precision, short-circuit to avoid NaN
-
 
             // multiply the cumulative probabilities of alleles being absent, which is addition of logs
             MathUtils.addToArrayInPlace(log10POfZeroCountsByAllele, log10PNoAllele);
