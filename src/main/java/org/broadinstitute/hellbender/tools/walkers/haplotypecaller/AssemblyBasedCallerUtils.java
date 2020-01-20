@@ -6,7 +6,12 @@ import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMFileWriter;
 import htsjdk.samtools.reference.ReferenceSequenceFile;
 import htsjdk.samtools.util.Locatable;
-import htsjdk.variant.variantcontext.*;
+import htsjdk.variant.variantcontext.Allele;
+import htsjdk.variant.variantcontext.Genotype;
+import htsjdk.variant.variantcontext.GenotypeBuilder;
+import htsjdk.variant.variantcontext.GenotypesContext;
+import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.variantcontext.VariantContextBuilder;
 import htsjdk.variant.vcf.VCFConstants;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -25,13 +30,19 @@ import org.broadinstitute.hellbender.utils.clipping.ReadClipper;
 import org.broadinstitute.hellbender.utils.fasta.CachingIndexedFastaSequenceFile;
 import org.broadinstitute.hellbender.utils.fragments.FragmentCollection;
 import org.broadinstitute.hellbender.utils.fragments.FragmentUtils;
-import org.broadinstitute.hellbender.utils.genotyper.*;
+import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
+import org.broadinstitute.hellbender.utils.genotyper.IndexedAlleleList;
+import org.broadinstitute.hellbender.utils.genotyper.SampleList;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.haplotype.HaplotypeBAMWriter;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 import org.broadinstitute.hellbender.utils.locusiterator.LocusIteratorByState;
 import org.broadinstitute.hellbender.utils.pileup.ReadPileup;
-import org.broadinstitute.hellbender.utils.read.*;
+import org.broadinstitute.hellbender.utils.read.AlignmentUtils;
+import org.broadinstitute.hellbender.utils.read.CigarUtils;
+import org.broadinstitute.hellbender.utils.read.GATKRead;
+import org.broadinstitute.hellbender.utils.read.ReadCoordinateComparator;
+import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
@@ -39,8 +50,20 @@ import org.ultimagenomics.flow_based_read.alignment.FlowBasedAlignmentEngine;
 import org.ultimagenomics.flow_based_read.tests.AlleleLikelihoodWriter;
 import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
 import java.io.File;
-import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -97,7 +120,8 @@ public final class AssemblyBasedCallerUtils {
                                       final byte minTailQuality,
                                       final SAMFileHeader readsHeader,
                                       final SampleList samplesList,
-                                      final boolean correctOverlappingBaseQualities) {
+                                      final boolean correctOverlappingBaseQualities,
+                                      final int extraBasesToClip) {
         if ( region.isFinalized() ) {
             return;
         }
@@ -107,7 +131,7 @@ public final class AssemblyBasedCallerUtils {
                 // TODO unclipping soft clips may introduce bases that aren't in the extended region if the unclipped bases
                 // TODO include a deletion w.r.t. the reference.  We must remove kmers that occur before the reference haplotype start
                 .map(read -> skipSoftClips || ! ReadUtils.hasWellDefinedFragmentSize(read) ?
-                    ReadClipper.hardClipSoftClippedBases(read) : ReadClipper.revertSoftClippedBases(read))
+                    ReadClipper.hardClipSoftClippedBases(read, extraBasesToClip) : ReadClipper.revertSoftClippedBases(read))
                 .map(read -> ReadClipper.hardClipLowQualEnds(read, minTailQualityToUse))
                 .filter(read -> read.getStart() <= read.getEnd())
                 .map(read -> read.isUnmapped() ? read : ReadClipper.hardClipAdaptorSequence(read))
@@ -270,7 +294,7 @@ public final class AssemblyBasedCallerUtils {
                                                   final ReadThreadingAssembler assemblyEngine,
                                                   final SmithWatermanAligner aligner,
                                                   final boolean correctOverlappingBaseQualities){
-        finalizeRegion(region, argumentCollection.assemblerArgs.errorCorrectReads, argumentCollection.dontUseSoftClippedBases, (byte)(argumentCollection.minBaseQualityScore - 1), header, sampleList, correctOverlappingBaseQualities);
+        finalizeRegion(region, argumentCollection.assemblerArgs.errorCorrectReads, argumentCollection.dontUseSoftClippedBases, (byte)(argumentCollection.minBaseQualityScore - 1), header, sampleList, correctOverlappingBaseQualities, 3);
         if( argumentCollection.assemblerArgs.debugAssembly) {
             logger.info("Assembling " + region.getSpan() + " with " + region.size() + " reads:    (with overlap region = " + region.getPaddedSpan() + ")");
         }
@@ -570,7 +594,7 @@ public final class AssemblyBasedCallerUtils {
 
         for (final Haplotype h : haplotypes) {
 
-            final List<VariantContext> spanningEvents = h.getEventMap().getOverlappingEvents(loc);
+            final List<VariantContext> spanningEvents = h.getEventMap().getOverlappingEvents(loc,ref.length());
 
             if (spanningEvents.isEmpty()) {    //no events --> this haplotype supports the reference at this locus
                 result.get(ref).add(h);
@@ -604,14 +628,16 @@ public final class AssemblyBasedCallerUtils {
                         // because we're in GGA mode and it's not an allele we want
                         continue;
                     }
-
-                } else {
                     // the event starts prior to the current location, so it's a spanning deletion
-                    if (! result.containsKey(Allele.SPAN_DEL)) {
+                } else if (spanningEvent.getStart() < loc) {
+                    if (!result.containsKey(Allele.SPAN_DEL)) {
                         result.put(Allele.SPAN_DEL, new ArrayList<>());
                     }
                     result.get(Allele.SPAN_DEL).add(h);
                     break;
+                } else {
+                    // the event starts  the current location, so it's neither the allele nor the reference
+                    continue;
                 }
             }
 

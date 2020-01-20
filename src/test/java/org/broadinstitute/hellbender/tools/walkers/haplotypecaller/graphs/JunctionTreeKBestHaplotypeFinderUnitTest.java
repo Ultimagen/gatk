@@ -47,10 +47,10 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
     @Test (dataProvider = "loopingReferences")
     public void testRecoveryOfLoopingReferenceSequences(final String ref, final int kmerSize, final int readlength, final boolean resolvable) {
         final JunctionTreeLinkedDeBruijnGraph assembler = new JunctionTreeLinkedDeBruijnGraph(kmerSize);
-        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(ref), true, false);
         // Add "reads" to the graph
         for (int i = 0; i + readlength <= ref.length(); i ++) {
-            assembler.addSequence("anonymous", Arrays.copyOfRange(getBytes(ref), i, i + readlength), false);
+            assembler.addSequence("anonymous", Arrays.copyOfRange(getBytes(ref), i, i + readlength), false, false);
         }
         assembler.buildGraphIfNecessary();
         assembler.generateJunctionTrees();
@@ -79,10 +79,10 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         final int readlength = 6;
 
         final JunctionTreeLinkedDeBruijnGraph assembler = new JunctionTreeLinkedDeBruijnGraph(kmerSize);
-        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(ref), true, false);
         // Add "reads" to the graph
         for (int i = 0; i + readlength < ref.length(); i ++) {
-            assembler.addSequence("anonymous", Arrays.copyOfRange(getBytes(ref), i, i + readlength), false);
+            assembler.addSequence("anonymous", Arrays.copyOfRange(getBytes(ref), i, i + readlength), false, false);
         }
         assembler.buildGraphIfNecessary();
         assembler.generateJunctionTrees();
@@ -106,13 +106,13 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         String read1 = "AAAACAC"+"T"+"CTGTGCGG"+"C"+"GGGTT"; // CGAC merges with the below read
         String read2 =                "TGTGCGG"+"A"+"GGGTT"; // doesn't show up in the first graph
 
-        assembler.addSequence("reference", getBytes(ref), true);
+        assembler.addSequence("reference", getBytes(ref), true, false);
 
-        assembler.addSequence("anonymous", getBytes(read1), false);
-        assembler.addSequence("anonymous", getBytes(read1), false);
-        assembler.addSequence("anonymous", getBytes(read1), false);
+        assembler.addSequence("anonymous", getBytes(read1), false, false);
+        assembler.addSequence("anonymous", getBytes(read1), false, false);
+        assembler.addSequence("anonymous", getBytes(read1), false, false);
 
-        assembler.addSequence("anonymous", getBytes(read2), false);
+        assembler.addSequence("anonymous", getBytes(read2), false, false);
 
         assembler.buildGraphIfNecessary();
         assembler.generateJunctionTrees();
@@ -136,13 +136,13 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         String read1 = "AAAACAC"+"T"+"CTGTGCGG"+"C"+"GGGTT"; // CGAC merges with the below read
         String read2 =                    "TAGAGTG"+"GGGTT"; // creates a branch off of the uncovered reference path
 
-        assembler.addSequence("reference", getBytes(ref), true);
+        assembler.addSequence("reference", getBytes(ref), true, false);
 
-        assembler.addSequence("anonymous", getBytes(read1), false);
-        assembler.addSequence("anonymous", getBytes(read1), false);
-        assembler.addSequence("anonymous", getBytes(read1), false);
+        assembler.addSequence("anonymous", getBytes(read1), false, false);
+        assembler.addSequence("anonymous", getBytes(read1), false, false);
+        assembler.addSequence("anonymous", getBytes(read1), false, false);
 
-        assembler.addSequence("anonymous", getBytes(read2), false);
+        assembler.addSequence("anonymous", getBytes(read2), false, false);
 
         assembler.buildGraphIfNecessary();
         assembler.generateJunctionTrees();
@@ -166,22 +166,22 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         String incompletePath =                "TGTGCGG"+"C"+"TTTAGAGAG"+"A"+"GGGTTCC"+"A"+"GAGAGATATA"+"G"+"GAGTTTTGTTT"; // njote that this point is a copy of path 2 after its first C variant
 
         // Ensure that completePath1 will have the highest score by weighting it heavily
-        assembler.addSequence("reference", getBytes(ref), true);
+        assembler.addSequence("reference", getBytes(ref), true, false);
 
-        assembler.addSequence("anonymous", getBytes(completePath1), false);
-        assembler.addSequence("anonymous", getBytes(completePath1), false);
-        assembler.addSequence("anonymous", getBytes(completePath1), false);
-        assembler.addSequence("anonymous", getBytes(completePath1), false);
-        assembler.addSequence("anonymous", getBytes(completePath1), false);
+        assembler.addSequence("anonymous", getBytes(completePath1), false, false);
+        assembler.addSequence("anonymous", getBytes(completePath1), false, false);
+        assembler.addSequence("anonymous", getBytes(completePath1), false, false);
+        assembler.addSequence("anonymous", getBytes(completePath1), false, false);
+        assembler.addSequence("anonymous", getBytes(completePath1), false, false);
 
         // followed by lower weight complete path 2
-        assembler.addSequence("anonymous", getBytes(completePath2), false);
-        assembler.addSequence("anonymous", getBytes(completePath2), false);
-        assembler.addSequence("anonymous", getBytes(completePath2), false);
+        assembler.addSequence("anonymous", getBytes(completePath2), false, false);
+        assembler.addSequence("anonymous", getBytes(completePath2), false, false);
+        assembler.addSequence("anonymous", getBytes(completePath2), false, false);
 
         // And the incomplete path
-        assembler.addSequence("anonymous", getBytes(incompletePath), false);
-        assembler.addSequence("anonymous", getBytes(incompletePath), false);
+        assembler.addSequence("anonymous", getBytes(incompletePath), false, false);
+        assembler.addSequence("anonymous", getBytes(incompletePath), false, false);
 
         assembler.buildGraphIfNecessary();
         assembler.generateJunctionTrees();
@@ -205,10 +205,10 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         final int readlength = 8;
 
         final JunctionTreeLinkedDeBruijnGraph assembler = new JunctionTreeLinkedDeBruijnGraph(kmerSize);
-        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(ref), true, false);
         // Add "reads" to the graph
         for (int i = 0; i + readlength < ref.length(); i ++) {
-            assembler.addSequence("anonymous", Arrays.copyOfRange(getBytes(alt), i, i + readlength), false);
+            assembler.addSequence("anonymous", Arrays.copyOfRange(getBytes(alt), i, i + readlength), false, false);
         }
         assembler.buildGraphIfNecessary();
         assembler.generateJunctionTrees();
@@ -225,15 +225,16 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
     // note that this particular case is recovered by virtue of the fact that the reference path itself has weight
     public void testDegernerateLoopingDanglingEnd() {
         final String ref = "GACACTCACGCACGGCC";
-        final String alt = "GACACTCACCCCCCCCC"; // the alt ends with a looping and un-escpaed string that is repetative, this will make a path that has no hope of escape (RUN!)
+        final String alt = "GACACTCACCCCCCCCC"; // the alt ends with a looping and un-escaped string that is repetitive, this will make a path that has no hope of escape (RUN!)
         final int kmerSize = 5;
         final int readlength = 8;
 
         final JunctionTreeLinkedDeBruijnGraph assembler = new JunctionTreeLinkedDeBruijnGraph(kmerSize);
-        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(ref), true, false);
         // Add "reads" to the graph
         for (int i = 0; i + readlength < ref.length(); i ++) {
-            assembler.addSequence("anonymous", Arrays.copyOfRange(getBytes(alt), i, i + readlength), false);
+            assembler.addSequence("anonymous", Arrays.copyOfRange(getBytes(alt), i, i + readlength), false, false);
+            assembler.addSequence("anonymous", Arrays.copyOfRange(getBytes(alt), i, i + readlength), false, true);
         }
         assembler.buildGraphIfNecessary();
         assembler.generateJunctionTrees();
@@ -241,7 +242,7 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         final List<String> bestPaths = new JunctionTreeKBestHaplotypeFinder<>(assembler).setJunctionTreeEvidenceWeightThreshold(1)
                 .findBestHaplotypes(5).stream().map(haplotype -> new String(haplotype.getBases())).collect(Collectors.toList());
 
-        // For this graph structure, there is no evidence whatsoever that a path follow the reference, unfortunately this means we can currently not recover the loop in the alt
+        // For this graph structure, there is no evidence whatsoever that a path follows the reference, unfortunately this means we can currently not recover the loop in the alt
         Assert.assertTrue(bestPaths.isEmpty());
 
     }
@@ -256,9 +257,13 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         String read1 = "AAAACAC"+"TCGA"+"CTGTGGGG"+"C"+"GGGTT"; // CGAC merges with the below read
         String read2 = "AAAACAC"+"TCGA"+"CTGTGGGG"+"C"+"GGGTT"; // CGAC merges with the above read
 
-        assembler.addSequence("anonymous", getBytes(ref), true);
-        assembler.addSequence("anonymous", getBytes(read1), false);
-        assembler.addSequence("anonymous", getBytes(read2), false);
+        assembler.addSequence("anonymous", getBytes(ref), true, false);
+        assembler.addSequence("anonymous", getBytes(read1), false, false);
+        assembler.addSequence("anonymous", getBytes(read2), false, false);
+
+        assembler.addSequence("anonymous", getBytes(read1), false, true);
+        assembler.addSequence("anonymous", getBytes(read2), false, true);
+
 
         assembler.buildGraphIfNecessary();
         assembler.generateJunctionTrees();
@@ -282,12 +287,12 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         String alt1 = "AAACAC"+"A"+"ATGGCGG"+"T"+"GGAGTT"+"G"+"GCTCGAA"+"A"+"GGCGTA"+"G"+"CCTACCT";
         String alt2 = "AAACAC"+"A"+"ATGGCGG"+"T"+"GGAGTT"+"G"+"GCTCGAA"+"A"+"GGCGTA"+"C"+"CCTACCT"; //No expansion of the last path
 
-        assembler1.addSequence("anonymous", getBytes(ref), true);
-        assembler2.addSequence("anonymous", getBytes(ref), true);
+        assembler1.addSequence("anonymous", getBytes(ref), true, false);
+        assembler2.addSequence("anonymous", getBytes(ref), true, false);
         // Add short sequences of reads to generate the appropriate alt paths
         for (int i = 0; i + 6 < ref.length(); i ++) {
-            assembler1.addSequence("anonymous", Arrays.copyOfRange(getBytes(alt1), i, i + 7), false);
-            assembler2.addSequence("anonymous", Arrays.copyOfRange(getBytes(alt2), i, i + 7), false);
+            assembler1.addSequence("anonymous", Arrays.copyOfRange(getBytes(alt1), i, i + 7), false, false);
+            assembler2.addSequence("anonymous", Arrays.copyOfRange(getBytes(alt2), i, i + 7), false, false);
         }
 
         assembler1.buildGraphIfNecessary();
@@ -319,10 +324,10 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         String alt1 = "AAACAAG"+"T"+"TTGGGTTCG"+"G"+"GCGGGGTTC"+"A"+"CTCGAAGT"+"C"+"CTTGGTAATAT"+"G"+"GGGGGCCCC"; // Alt with different values for all sites
 
         // Generate some reads that do not span the entire active region
-        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(ref), true, false);
         for (int i = 0; i + readlength < ref.length(); i++) {
-            assembler.addSequence("anonymous", getBytes(alt1.substring(i, i + readlength)), false);
-            assembler.addSequence("anonymous", getBytes(ref.substring(i, i + readlength)), false);
+            assembler.addSequence("anonymous", getBytes(alt1.substring(i, i + readlength)), false, false);
+            assembler.addSequence("anonymous", getBytes(ref.substring(i, i + readlength)), false, false);
         }
 
         assembler.buildGraphIfNecessary();
@@ -354,10 +359,10 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         String alt1 = "AAACAAG"+"T"+"TTGGGTTCG"+"G"+"GCGGGGTTC"+"A"+"CTCGAAGT"+"C"+"CTTGGTAATAT"+"G"+"GGGGGCCCC"; // Alt with different values for all sites
 
         // Generate some reads that do not span the entire active region
-        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(ref), true, false);
 
-        assembler.addSequence("anonymous", getBytes(alt1), false);
-        assembler.addSequence("anonymous", getBytes(ref), false);
+        assembler.addSequence("anonymous", getBytes(alt1), false, false);
+        assembler.addSequence("anonymous", getBytes(ref), false, false);
 
         assembler.buildGraphIfNecessary();
         assembler.generateJunctionTrees();
@@ -391,10 +396,10 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         String alt2 = "AAACAAG"+"T"+"TTGGGTTCG"+"G"+"GCGGGGTTC"+"C"+"CTCGAAGT"+"C"+"CTTGGTAATAT"+"G"+"GGGGGCCCC"; // Alt with one different value from alt1
 
         // Generate some reads that do not span the entire active region
-        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(ref), true, false);
         for (int i = 0; i + readlength < ref.length(); i++) {
-            assembler.addSequence("anonymous", getBytes(alt1.substring(i, i + readlength)), false);
-            assembler.addSequence("anonymous", getBytes(alt2.substring(i, i + readlength)), false);
+            assembler.addSequence("anonymous", getBytes(alt1.substring(i, i + readlength)), false, false);
+            assembler.addSequence("anonymous", getBytes(alt2.substring(i, i + readlength)), false, false);
         }
 
         assembler.buildGraphIfNecessary();
@@ -425,9 +430,9 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         String ref = "AACTTGGGTGTGTGAAACCCGGGTTGTGTGTGAA"; // The sequence GTGTGTGAA is repeated
 
         // Generate some reads that do not span the entire active region
-        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(ref), true, false);
         for (int i = 0; i <= ref.length(); i+=2) {
-            assembler.addSequence("anonymous", getBytes(ref.substring(i, i + readlength <= ref.length() ? i + readlength : ref.length())), false);
+            assembler.addSequence("anonymous", getBytes(ref.substring(i, i + readlength <= ref.length() ? i + readlength : ref.length())), false, false);
         }
 
         assembler.buildGraphIfNecessary();
@@ -458,9 +463,9 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         String ref = "AACTTGGGTGTGTGAAACCCGGGTTGTGTGTGAA"; // The sequence GTGTGTGAA is repeated
 
         // Generate some reads that do not span the entire active region
-        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(ref), true, false);
         for (int i = 0; i + readlength < ref.length() - 2; i++) { //the - 2 means that we don't span to the end
-            assembler.addSequence("anonymous", getBytes(ref.substring(i, i + readlength)), false);
+            assembler.addSequence("anonymous", getBytes(ref.substring(i, i + readlength)), false, false);
         }
 
         assembler.buildGraphIfNecessary();
@@ -492,9 +497,10 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         String alt = "AACTGGGTT"+"T"+"GCGCGCGTTACCCGTTT"; // Alt contig with error spanning past the end of the reference sequence
 
         // Generate some reads that do not span the entire active region
-        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(ref), true, false);
         for (int i = 0; i + readlength < alt.length(); i++) {
-            assembler.addSequence("anonymous", getBytes(alt.substring(i, i + readlength)), false);
+            assembler.addSequence("anonymous", getBytes(alt.substring(i, i + readlength)), false, false);
+            assembler.addSequence("anonymous", getBytes(alt.substring(i, i + readlength)), false, true);
         }
 
         assembler.buildGraphIfNecessary();
@@ -526,9 +532,10 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         String alt = "AACTGGGTT"+"T"+"GCGCGCGTTACCC"; // Alt contig that doesn't reach the end of the reference
 
         // Generate some reads that do not span the entire active region
-        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(ref), true, false);
         for (int i = 0; i + readlength < alt.length(); i++) {
-            assembler.addSequence("anonymous", getBytes(alt.substring(i, i + readlength)), false);
+            assembler.addSequence("anonymous", getBytes(alt.substring(i, i + readlength)), false, false);
+            assembler.addSequence("anonymous", getBytes(alt.substring(i, i + readlength)), false, true);
         }
 
         assembler.buildGraphIfNecessary();
@@ -559,10 +566,10 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         String ref = "AAACTTTCGCGGGCCCTTAAACCCGCCCTTAAACCCGCCCTTAAACCGCTGTAAGAAA"; // The sequence GCCCTTAAACCC (12 bases) is repeated
 
         // Generate some reads that do not span the entire active region
-        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(ref), true, false);
         for (int i = 0; i + readlength < ref.length(); i++) {
-            assembler.addSequence("anonymous", getBytes(ref.substring(i, i + readlength)), false);
-            assembler.addSequence("anonymous", getBytes(ref.substring(i, i + readlength)), false);
+            assembler.addSequence("anonymous", getBytes(ref.substring(i, i + readlength)), false, false);
+            assembler.addSequence("anonymous", getBytes(ref.substring(i, i + readlength)), false, false);
         }
 
         assembler.buildGraphIfNecessary();
@@ -599,19 +606,19 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         int shortReadLength = 10;
 
         // Add the reference a few times to get it into the junction trees
-        assembler.addSequence("anonymous", getBytes(ref), true);
-        assembler.addSequence("anonymous", getBytes(ref), false);
-        assembler.addSequence("anonymous", getBytes(ref), false);
-        assembler.addSequence("anonymous", getBytes(ref), false);
+        assembler.addSequence("anonymous", getBytes(ref), true, false);
+        assembler.addSequence("anonymous", getBytes(ref), false, false);
+        assembler.addSequence("anonymous", getBytes(ref), false, false);
+        assembler.addSequence("anonymous", getBytes(ref), false, false);
 
         // Add haplotype 1 reads that are long enough to catch the last variant site from the first junction tree (22)
         for (int i = 0; i + longReadLength < ref.length(); i++) {
-            assembler.addSequence("anonymous", getBytes(haplotype1.substring(i, i + longReadLength)), false);
+            assembler.addSequence("anonymous", getBytes(haplotype1.substring(i, i + longReadLength)), false, false);
         }
 
         // Add haplotype 2 reads that are long enough to leapfrog the entire haplotype but insufficient to establish the G->T->C path on the first tree
         for (int i = 0; i + shortReadLength < ref.length(); i++) {
-            assembler.addSequence("anonymous", getBytes(haplotype2.substring(i, i + shortReadLength)), false);
+            assembler.addSequence("anonymous", getBytes(haplotype2.substring(i, i + shortReadLength)), false, false);
         }
 
         assembler.generateJunctionTrees();
@@ -640,10 +647,10 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         String read1 = "AAAACAC"+"CCGA"+"CTGTGGGG"+"C"+"GGGTT"; // CGAC merges with the below read
         String read2 = "AAAACAC"+"TCGA"+"CTGTGGGG"+"C"+"GGGTT"; // CGAC merges with the above read
 
-        assembler.addSequence("anonymous", getBytes(ref), true);
-        assembler.addSequence("anonymous", getBytes(refRead1), false);
-        assembler.addSequence("anonymous", getBytes(read1), false);
-        assembler.addSequence("anonymous", getBytes(read2), false);
+        assembler.addSequence("anonymous", getBytes(ref), true, false);
+        assembler.addSequence("anonymous", getBytes(refRead1), false, false);
+        assembler.addSequence("anonymous", getBytes(read1), false, false);
+        assembler.addSequence("anonymous", getBytes(read2), false, false);
 
         assembler.buildGraphIfNecessary();
         assembler.generateJunctionTrees();
@@ -676,8 +683,8 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         // A simple snip het
         String refRead = "AAATCTTCGGGGGGGGGGGGGGTTTCTGGG";
 
-        assembler.addSequence("anonymous", getBytes(ref), true);
-        assembler.addSequence("anonymous", getBytes(refRead), false);
+        assembler.addSequence("anonymous", getBytes(ref), true, false);
+        assembler.addSequence("anonymous", getBytes(refRead), false, false);
 
         assembler.buildGraphIfNecessary();
         assembler.generateJunctionTrees();
@@ -703,11 +710,11 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         String altTCRead1 = "GGGAAAT" + "T" + "TCCGGC" + "C" + "CGTTTA"; // Keeps the T, then replaces a T with a C
         String altTCRead2 = "GGGAAAT" + "T" + "TCCGGC" + "C" + "CGTTTA"; // Keeps the T, then replaces a T with a C
 
-        assembler.addSequence("anonymous", getBytes(ref), true);
-        assembler.addSequence("anonymous", getBytes(altAARead1), false);
-        assembler.addSequence("anonymous", getBytes(altAARead2), false);
-        assembler.addSequence("anonymous", getBytes(altTCRead1), false);
-        assembler.addSequence("anonymous", getBytes(altTCRead2), false);
+        assembler.addSequence("anonymous", getBytes(ref), true, false);
+        assembler.addSequence("anonymous", getBytes(altAARead1), false, false);
+        assembler.addSequence("anonymous", getBytes(altAARead2), false, false);
+        assembler.addSequence("anonymous", getBytes(altTCRead1), false, false);
+        assembler.addSequence("anonymous", getBytes(altTCRead2), false, false);
 
         assembler.buildGraphIfNecessary();
         assembler.generateJunctionTrees();
@@ -770,8 +777,8 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
             final MultiDeBruijnVertex v = new MultiDeBruijnVertex(seqs.get(i).getBytes());
             graph.addVertex(v);
             vertices.add(v);
-            if ( source != null ) graph.addEdge(source, v, new MultiSampleEdge(false, weight++, 1));
-            if ( target != null ) graph.addEdge(v, target, new MultiSampleEdge(false, weight++, 1));
+            if ( source != null ) graph.addEdge(source, v, new MultiSampleEdge(false, weight++, 0,1));
+            if ( target != null ) graph.addEdge(v, target, new MultiSampleEdge(false, weight++, 0,1));
         }
         return vertices;
     }
@@ -817,9 +824,9 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         final String ref = preRef + Strings.repeat("A", refBubbleLength) + postRef;
         final String alt = preRef + Strings.repeat("A", altBubbleLength-1) + "T" + postRef;
 
-        graph.addSequence("anonomyous", ref.getBytes(),  true);
-        for (int i = 0; i < 5; i++) graph.addSequence("anonomyous", ref.getBytes(), 1, false);
-        for (int i = 0; i < 10; i++) graph.addSequence("anonomyous", alt.getBytes(), 1, false);
+        graph.addSequence("anonomyous", ref.getBytes(),  true, false);
+        for (int i = 0; i < 5; i++) graph.addSequence("anonomyous", ref.getBytes(), 1, false, false);
+        for (int i = 0; i < 10; i++) graph.addSequence("anonomyous", alt.getBytes(), 1, false, false);
 
         graph.buildGraphIfNecessary();
         graph.generateJunctionTrees();
@@ -900,20 +907,20 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         graph.addVertex(v6Alt);
         graph.addVertex(v7);
         graph.addVertex(postV);
-        graph.addEdge(preV, v, new BaseEdge(false, 1));
-        graph.addEdge(v, v2Ref, new BaseEdge(true, 10));
-        graph.addEdge(v2Ref, v3, new BaseEdge(true, 10));
-        graph.addEdge(v, v2Alt, new BaseEdge(false, 5));
-        graph.addEdge(v2Alt, v3, new BaseEdge(false, 5));
-        graph.addEdge(v3, v4Ref, new BaseEdge(true, 10));
-        graph.addEdge(v4Ref, v5, new BaseEdge(true, 10));
-        graph.addEdge(v3, v4Alt, new BaseEdge(false, 5));
-        graph.addEdge(v4Alt, v5, new BaseEdge(false, 5));
-        graph.addEdge(v5, v6Ref, new BaseEdge(true, 11));
-        graph.addEdge(v6Ref, v7, new BaseEdge(true, 11));
-        graph.addEdge(v5, v6Alt, new BaseEdge(false, 55));
-        graph.addEdge(v6Alt, v7, new BaseEdge(false, 55));
-        graph.addEdge(v7, postV, new BaseEdge(false, 1));
+        graph.addEdge(preV, v, new BaseEdge(false, 1, 0));
+        graph.addEdge(v, v2Ref, new BaseEdge(true, 10, 0));
+        graph.addEdge(v2Ref, v3, new BaseEdge(true, 10, 0));
+        graph.addEdge(v, v2Alt, new BaseEdge(false, 5, 0));
+        graph.addEdge(v2Alt, v3, new BaseEdge(false, 5, 0));
+        graph.addEdge(v3, v4Ref, new BaseEdge(true, 10, 0));
+        graph.addEdge(v4Ref, v5, new BaseEdge(true, 10, 0));
+        graph.addEdge(v3, v4Alt, new BaseEdge(false, 5, 0));
+        graph.addEdge(v4Alt, v5, new BaseEdge(false, 5, 0));
+        graph.addEdge(v5, v6Ref, new BaseEdge(true, 11, 0));
+        graph.addEdge(v6Ref, v7, new BaseEdge(true, 11, 0));
+        graph.addEdge(v5, v6Alt, new BaseEdge(false, 55, 0));
+        graph.addEdge(v6Alt, v7, new BaseEdge(false, 55, 0));
+        graph.addEdge(v7, postV, new BaseEdge(false, 1, 0));
 
         // Construct the test path
         Path<SeqVertex,BaseEdge> path = new Path<>( (offRefBeginning ? preV : v), graph);
@@ -977,9 +984,9 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         final String ref = "TTTT" + "CCCCCGGG" + "TTT";
         final String alt = "TTTT" + "AAACCCCC" + "TTT";
 
-        graph.addSequence("anonymous", getBytes(ref), true);
-        graph.addSequence("anonymous", getBytes(ref), false);
-        graph.addSequence("anonymous", getBytes(alt), false);
+        graph.addSequence("anonymous", getBytes(ref), true, false);
+        graph.addSequence("anonymous", getBytes(ref), false, false);
+        graph.addSequence("anonymous", getBytes(alt), false, false);
         graph.buildGraphIfNecessary();
         graph.recoverDanglingHeads(0, 0,  true, SmithWatermanJavaAligner.getInstance());
         graph.recoverDanglingTails(0, 0,  true, SmithWatermanJavaAligner.getInstance());
@@ -1031,18 +1038,18 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
 
         graph.addVertices(top, bot, mid, midAndTopExt, bot, botExt, botExtTop, botExtBot, refStart, refEnd);
         // First "diamond" with 3 mostly equivalent cost paths
-        graph.addEdges(() -> new BaseEdge(false, 34), refStart, bot, botExt);
-        graph.addEdges(() -> new BaseEdge(true, 33), refStart, top, midAndTopExt);
-        graph.addEdges(() -> new BaseEdge(false, 32), refStart, mid, midAndTopExt);
+        graph.addEdges(() -> new BaseEdge(false, 34, 0), refStart, bot, botExt);
+        graph.addEdges(() -> new BaseEdge(true, 33, 0), refStart, top, midAndTopExt);
+        graph.addEdges(() -> new BaseEdge(false, 32, 0), refStart, mid, midAndTopExt);
 
         // The best looking path reconnects with a very poor edge multiplicity to midAndTopExt (This is this is what casues the bug)
-        graph.addEdges(() -> new BaseEdge(false, 1), bot, midAndTopExt);
+        graph.addEdges(() -> new BaseEdge(false, 1, 0), bot, midAndTopExt);
         // There is another diamond at bot ext that will end up discounting that path from being in the k best
-        graph.addEdges(() -> new BaseEdge(false, 15), botExt, botExtTop, refEnd);
-        graph.addEdges(() -> new BaseEdge(false, 18), botExt, botExtBot, refEnd);
+        graph.addEdges(() -> new BaseEdge(false, 15, 0), botExt, botExtTop, refEnd);
+        graph.addEdges(() -> new BaseEdge(false, 18, 0), botExt, botExtBot, refEnd);
 
         // Wheras the path is smooth sailing from refEnd
-        graph.addEdges(() -> new BaseEdge(true, 65), midAndTopExt, refEnd);
+        graph.addEdges(() -> new BaseEdge(true, 65, 0), midAndTopExt, refEnd);
 
         @SuppressWarnings("all")
         final List<KBestHaplotype<SeqVertex, BaseEdge>> bestPaths = new JunctionTreeKBestHaplotypeFinder<>(graph,refStart,refEnd).findBestHaplotypes(2);
@@ -1065,9 +1072,9 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         String alt = "NNNNNNNNNNN"+"ACAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGA"+"NNN"; // Alt with one different value from alt1
 
         // Generate some reads that do not span the entire active region
-        graph.addSequence("anonymous", getBytes(ref), true);
-        graph.addSequence("anonymous", getBytes(ref), false);
-        graph.addSequence("anonymous", getBytes(alt), false);
+        graph.addSequence("anonymous", getBytes(ref), true, false);
+        graph.addSequence("anonymous", getBytes(ref), false, false);
+        graph.addSequence("anonymous", getBytes(alt), false, false);
         graph.buildGraphIfNecessary();
         graph.recoverDanglingHeads(0, 2, true, SmithWatermanJavaAligner.getInstance());
         graph.generateJunctionTrees();
@@ -1106,7 +1113,7 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         final MultiDeBruijnVertex k8 = new MultiDeBruijnVertex( "GCCCT".getBytes() );
         final MultiDeBruijnVertex refEnd = new MultiDeBruijnVertex( "CCCTT".getBytes() );
         graph.addVertices(refSource, k1, k2, k3, k4, k5, k6, k7, k8, refEnd);
-        graph.addEdges(() -> new MultiSampleEdge(true, 1, 1), refSource, k1, k2, k3, k4, k5, k6, k7, k8, refEnd);
+        graph.addEdges(() -> new MultiSampleEdge(true, 1, 0,1), refSource, k1, k2, k3, k4, k5, k6, k7, k8, refEnd);
 
         @SuppressWarnings("all")
         final List<KBestHaplotype<MultiDeBruijnVertex, MultiSampleEdge>> paths = new JunctionTreeKBestHaplotypeFinder<>(graph, refSource, refEnd).findBestHaplotypes();
@@ -1140,8 +1147,8 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         final MultiDeBruijnVertex v6 = new MultiDeBruijnVertex( "GCGCC".getBytes() );
         final MultiDeBruijnVertex v7 = new MultiDeBruijnVertex( "CGCCC".getBytes() );
         graph.addVertices(refSource, k1, k2, k3, k4, k5, k6, k7, k8, refEnd, v3, v4, v5, v6, v7);
-        graph.addEdges(() -> new MultiSampleEdge(true, 1, 4), refSource, k1, k2, k3, k4, k5, k6, k7, k8, refEnd);
-        graph.addEdges(() -> new MultiSampleEdge(false, 1, 3), k2, v3, v4, v5, v6, v7, k8);
+        graph.addEdges(() -> new MultiSampleEdge(true, 1, 0, 4), refSource, k1, k2, k3, k4, k5, k6, k7, k8, refEnd);
+        graph.addEdges(() -> new MultiSampleEdge(false, 1, 0, 3), k2, v3, v4, v5, v6, v7, k8);
 
         @SuppressWarnings("all")
         final List<KBestHaplotype<MultiDeBruijnVertex, MultiSampleEdge>> paths = new JunctionTreeKBestHaplotypeFinder<>(graph, refSource, refEnd).findBestHaplotypes();
@@ -1209,9 +1216,9 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         String alt1 = "TAAACAAG"+"T"+"TTGGGTTCG"+"G"+"GCGGGGTTC"+"A"+"CTCGAAGT"+"C"+"CTTGGTAATAT"+"G"+"GGGGGCCCC"; // Alt with different values for all sites
 
         // Generate some reads that do not span the entire active region
-        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(ref), true, false);
         for (int i = 0; i + readlength < ref.length(); i++) {
-            assembler.addSequence("anonymous", getBytes(alt1.substring(i, i + readlength)), false);
+            assembler.addSequence("anonymous", getBytes(alt1.substring(i, i + readlength)), false, false);
         }
 
         assembler.buildGraphIfNecessary();
@@ -1244,13 +1251,13 @@ public class JunctionTreeKBestHaplotypeFinderUnitTest extends GATKBaseTest {
         String alt2 =                        "AGCGGTCT"+"G"+"CGAAGT"+"T"+"CTTGGTAATAT"+"A"+"GGGGGCCCC"; // A snippet of reference sequence starting after an uncovered reference edge
 
         // Generate some reads that do not span the entire active region
-        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(ref), true, false);
         for (int i = 0; i + readlength < ref.length(); i++) {
-            assembler.addSequence("anonymous", getBytes(alt1.substring(i, i + readlength)), false);
+            assembler.addSequence("anonymous", getBytes(alt1.substring(i, i + readlength)), false, false);
         }
 
         for (int i = 0; i + readlength < alt2.length(); i++) {
-            assembler.addSequence("anonymous", getBytes(alt2.substring(i, i + readlength)), false);
+            assembler.addSequence("anonymous", getBytes(alt2.substring(i, i + readlength)), false, false);
         }
 
         assembler.buildGraphIfNecessary();

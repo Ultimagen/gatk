@@ -2,6 +2,7 @@ package org.broadinstitute.hellbender.utils.genotyper;
 
 import com.google.common.annotations.VisibleForTesting;
 import htsjdk.samtools.util.Locatable;
+import htsjdk.utils.ValidationUtils;
 import htsjdk.variant.variantcontext.Allele;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -9,14 +10,25 @@ import org.apache.commons.collections.ListUtils;
 import org.apache.commons.math3.stat.descriptive.rank.Median;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerEngine;
 import org.broadinstitute.hellbender.utils.IndexRange;
 import org.broadinstitute.hellbender.utils.MathUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.downsampling.AlleleBiasedDownsamplingUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.ToDoubleFunction;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -157,6 +169,82 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
         numberOfEvidences = IntStream.range(0, sampleCount)
           .map(i -> evidenceBySampleIndex.get(i).size())
           .toArray();
+    }
+
+
+    public AlleleLikelihoods<EVIDENCE,A> subsetToAlleles(Collection<A> subsetOfAlleles){
+        ValidationUtils.validateArg(alleles.asListOfAlleles().containsAll(subsetOfAlleles),
+                () -> String.format("subsetOfAlleles must be a subset of the present alleles. Found atleast one allele that is not present: %s",
+                        subsetOfAlleles.stream()
+                                .filter(a -> !alleles.containsAllele(a))
+                                .findFirst()
+                                .map(A::toString)
+                                .orElse("")));
+
+        final int numberOfAlleles = subsetOfAlleles.size();
+        final List<A> orderedSubsetOfAlleles=new ArrayList<>(subsetOfAlleles);
+
+        final double[][][] values = new double[this.numberOfSamples()][][];
+        for (int sampleI = 0; sampleI < this.numberOfSamples(); sampleI++) {
+            values[sampleI] = new double[numberOfAlleles][];
+            for (int alleleI = 0; alleleI < numberOfAlleles; alleleI++) {
+                values[sampleI][alleleI] = this.valuesBySampleIndex[sampleI][indexOfAllele(orderedSubsetOfAlleles.get(alleleI))];
+            }
+        }
+
+        return new AlleleLikelihoods<>(
+                new IndexedAlleleList<>(subsetOfAlleles),
+                this.samples,
+                evidenceBySampleIndex,
+                values);
+    }
+
+    public AlleleLikelihoods<EVIDENCE, A> subsetLikelihoodsToReads(final Predicate<EVIDENCE> filter){
+
+        final List<List<EVIDENCE>> evidenceBySampleIndex = new ArrayList<>(numberOfSamples());
+
+        final double[][][] values = new double[numberOfSamples()][][];
+
+        for(int i = 0; i < numberOfSamples(); i++) {
+
+            BitSet presentReads = new BitSet();
+            final int finalI = i;
+            //test shortcut if all reads in a sample are included:
+            if (IntStream.range(0, this.sampleEvidence(finalI).size()).allMatch(j -> filter.test(this.sampleEvidence(finalI).get(j)))) {
+                values[i] = this.valuesBySampleIndex[i];
+                evidenceBySampleIndex.add(this.sampleEvidence(i));
+                continue;
+            }
+
+            final double [][] sampleValues = values[i] = new double[numberOfAlleles()][];
+            final List<EVIDENCE> sampleEvidence = new ArrayList<>();
+            evidenceBySampleIndex.add(sampleEvidence);
+
+            IntStream.range(0, this.sampleEvidence(finalI).size())
+                    .filter(j -> filter.test(this.sampleEvidence(finalI).get(j)))
+                    .forEach(r-> {
+                        presentReads.set(r);
+                        sampleEvidence.add(this.sampleEvidence(finalI).get(r));
+                    });
+
+            final int cardinality = presentReads.cardinality();
+
+            for (int a = 0; a < numberOfAlleles(); a++) {
+                final double[] sampleAlleleValues = sampleValues[a] = new double[cardinality];
+                int prevRead = 0;
+                for (int r = 0; r < cardinality; r++) {
+                    prevRead = presentReads.nextSetBit(prevRead);
+                    sampleAlleleValues[r] = this.valuesBySampleIndex[i][a][prevRead];
+                    prevRead++;
+                }
+            }
+        }
+
+        return new AlleleLikelihoods<>(
+                new IndexedAlleleList<>(alleles()),
+                samples,
+                evidenceBySampleIndex,
+                values);
     }
 
     // Add all the indices to alleles, sample and evidence in the look-up maps.
@@ -638,10 +726,10 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
 
         // we get the index correspondence between new old -> new allele, -1 entries mean that the old
         // allele does not map to any new; supported but typically not the case.
-        final int[] oldToNewAlleleIndexMap = oldToNewAlleleIndexMap(newToOldAlleleMap, oldAlleleCount, newAlleles);
+        final List<BitSet> newToOldAlleleIndex = this.newToOldAlleleIndexMap(newToOldAlleleMap, oldAlleleCount, newAlleles);
 
         // We calculate the marginal likelihoods.
-        final double[][][] newLikelihoodValues = marginalLikelihoods(oldAlleleCount, newAlleleCount, oldToNewAlleleIndexMap);
+        final double[][][] newLikelihoodValues = marginalLikelihoodsDirect( newAlleleCount, newToOldAlleleIndex);
 
         final int sampleCount = samples.numberOfSamples();
 
@@ -652,7 +740,7 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
         }
 
         // Finally we create the new evidence-likelihood
-        final AlleleLikelihoods<EVIDENCE, B> result = new AlleleLikelihoods<EVIDENCE, B>(
+        final AlleleLikelihoods<EVIDENCE, B> result = new AlleleLikelihoods<>(
                 new IndexedAlleleList(newAlleles),
                 samples,
                 newEvidenceBySampleIndex,
@@ -692,6 +780,37 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
         return result;
     }
 
+    // Calculate the marginal likelihoods considering the old -> new allele index mapping.
+    private double[][][] marginalLikelihoodsDirect(final int newAlleleCount, final List<BitSet> newToOldAlleleIndexMap) {
+
+        final int sampleCount = samples.numberOfSamples();
+        final double[][][] result = new double[sampleCount][][];
+
+        for (int s = 0; s < sampleCount; s++) {
+            final int sampleEvidenceCount = evidenceBySampleIndex.get(s).size();
+            final double[][] oldSampleValues = valuesBySampleIndex[s];
+            final double[][] newSampleValues = result[s] = new double[newAlleleCount][sampleEvidenceCount];
+            // We initiate all likelihoods to -Inf.
+//            for (int a = 0; a < newAlleleCount; a++) {
+//                Arrays.fill(newSampleValues[a], Double.NEGATIVE_INFINITY);
+//            }
+
+            // For each old allele and unit of evidence we update the new table keeping the maximum likelihood.
+            for (int newAllele = 0; newAllele < newAlleleCount; newAllele++) {
+                final BitSet oldAlleleSet = newToOldAlleleIndexMap.get(newAllele);
+                for (int r = 0; r < sampleEvidenceCount; r++) {
+                    final int finalR = r;
+                    newSampleValues[newAllele][finalR] = oldAlleleSet.stream()
+                            .mapToDouble(oldA -> oldSampleValues[oldA][finalR])
+                            .max()
+                            .orElse(Double.NEGATIVE_INFINITY);
+                }
+            }
+        }
+        return result;
+    }
+
+
     // calculates an old to new allele index map array.
     private <B extends Allele> int[] oldToNewAlleleIndexMap(final Map<B, List<A>> newToOldAlleleMap, final int oldAlleleCount, final B[] newAlleles) {
         Arrays.stream(newAlleles).forEach(Utils::nonNull);
@@ -716,6 +835,29 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
         }
         return oldToNewAlleleIndexMap;
     }
+
+
+    // calculates an old to new allele index map array.
+    private <B extends Allele> List<BitSet> newToOldAlleleIndexMap(final Map<B, List<A>> newToOldAlleleMap, final int oldAlleleCount, final B[] newAlleles) {
+        Arrays.stream(newAlleles).forEach(Utils::nonNull);
+        Utils.containsNoNull(newToOldAlleleMap.values(), "no new allele list can be null");
+        newToOldAlleleMap.values().forEach(oldList -> Utils.containsNoNull(oldList,"old alleles cannot be null"));
+
+        final List<BitSet>  newToOldAlleleIndexMap = new ArrayList<>(newAlleles.length);
+        IntStream.range(0, newAlleles.length).forEach(i -> newToOldAlleleIndexMap.add(i, new BitSet(oldAlleleCount)));
+
+        for (int newIndex = 0; newIndex < newAlleles.length; newIndex++) {
+            for (final A oldAllele : newToOldAlleleMap.get(newAlleles[newIndex])) {
+                final int oldAlleleIndex = indexOfAllele(oldAllele);
+                if (oldAlleleIndex == -1) {
+                    throw new IllegalArgumentException("missing old allele " + oldAllele + " in likelihood collection ");
+                }
+                newToOldAlleleIndexMap.get(newIndex).set(oldAlleleIndex);
+            }
+        }
+        return newToOldAlleleIndexMap;
+    }
+
 
     /**
      * Add more evidence to the collection.

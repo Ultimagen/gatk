@@ -129,11 +129,13 @@ def write_read_and_annotation_tensors(args, include_annotations=True, pileup=Fal
     vcf_reader = get_vcf_reader(args.input_vcf)
     vcf_ram = get_vcf_reader(args.train_vcf)
 
+
     if args.chrom:
         variants = vcf_reader.fetch(args.chrom, args.start_pos, args.end_pos)
     else:
         variants = vcf_reader
 
+    variant=None
     for variant in variants:
         for allele_idx, allele in enumerate(variant.ALT):
             idx_offset, ref_start, ref_end = get_variant_window(args, variant)

@@ -3,6 +3,7 @@ package org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs;
 import org.apache.commons.lang3.ArrayUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 
+//import java.io.File;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Set;
@@ -17,6 +18,7 @@ import java.util.Set;
 public final class SharedSequenceMerger {
     private SharedSequenceMerger() { }
 
+//    private static int counter = 0;
     /**
      * Attempt to merge the incoming vertices of v
      *
@@ -32,14 +34,15 @@ public final class SharedSequenceMerger {
         if ( ! canMerge(graph, v, prevs) ) {
             return false;
         } else {
+//            graph.printGraph(new File("merge.pre_" + v.getSequenceString() + "." + counter + ".dot"), 0);
             final Collection<BaseEdge> edgesToRemove = new LinkedList<>();
             final byte[] prevSeq = prevs.iterator().next().getSequence();
             final SeqVertex newV = new SeqVertex(ArrayUtils.addAll(prevSeq, v.getSequence()));
             graph.addVertex(newV);
 
-            for ( final SeqVertex prev : prevs ) {
-                for ( final BaseEdge prevIn : graph.incomingEdgesOf(prev) ) {
-                    graph.addEdge(graph.getEdgeSource(prevIn), newV, prevIn.copy());
+            for (final SeqVertex prev : prevs) {
+                for (final BaseEdge prevIn : graph.incomingEdgesOf(prev)) {
+                    GraphUtils.addOrModifyEdge(graph, graph.getEdgeSource(prevIn), newV, prevIn);
                     edgesToRemove.add(prevIn);
                 }
             }
@@ -51,6 +54,7 @@ public final class SharedSequenceMerger {
             graph.removeAllVertices(prevs);
             graph.removeVertex(v);
             graph.removeAllEdges(edgesToRemove);
+//            graph.printGraph(new File("merge.post_" + v.getSequenceString() + "." + (counter++) + ".dot"), 0);
 
             return true;
         }
