@@ -77,7 +77,7 @@ public final class BaseGraphUnitTest extends GATKBaseTest {
         final SeqVertex rm2 = new SeqVertex("AGTC");
         graph.addVertices(rm1, rm2);
         Assert.assertEquals(graph.vertexSet().size(), kept.size() + 2);
-        final BaseEdge rm12e = new BaseEdge(false, 1);
+        final BaseEdge rm12e = new BaseEdge(false, 1, 0);
         graph.addEdge(rm1, rm2, rm12e);
 
         final SeqGraph original = graph.clone();
@@ -113,7 +113,7 @@ public final class BaseGraphUnitTest extends GATKBaseTest {
         g.addVertices(v2, v3, v4, v5);
         g.addEdge(v1, v2);
         g.addEdge(v2, v3);
-        final BaseEdge refEdge = new BaseEdge(true, 1);
+        final BaseEdge refEdge = new BaseEdge(true, 1,0);
 
         final int edgeCountWayBefore = g.edgeSet().size();
         g.addOrUpdateEdge(v3, v4, refEdge);
@@ -188,7 +188,7 @@ public final class BaseGraphUnitTest extends GATKBaseTest {
         SeqVertex b9 = new SeqVertex("CCCC");
 
         graph.addVertices(src, end, g1, g2, g3, g4, g5, g6, g7, g8);
-        graph.addEdges(() -> new BaseEdge(true, 1), src, g1, g2, g4, end);
+        graph.addEdges(() -> new BaseEdge(true, 1,0), src, g1, g2, g4, end);
         graph.addEdges(src, g1, g5, g6, g7, end);
         graph.addEdges(src, g1, g5, g8, g7, end);
         graph.addEdges(src, g1, g3, end);
@@ -243,7 +243,7 @@ public final class BaseGraphUnitTest extends GATKBaseTest {
         SeqVertex b6 = new SeqVertex("GGG");
 
         graph.addVertices(src, end, g1, g2, g3, g4, g5, g6, g7, g8, gPrev, gPrev1, gPrev2, gAfter, gAfter1, gAfter2);
-        graph.addEdges(() -> new BaseEdge(true, 1), src, g1, g2, g4, end);
+        graph.addEdges(() -> new BaseEdge(true, 1,0), src, g1, g2, g4, end);
         graph.addEdges(src, g1, g5, g6, g7, end);
         graph.addEdges(src, g1, g5, g8, g7, end);
         graph.addEdges(src, g1, g3, end);

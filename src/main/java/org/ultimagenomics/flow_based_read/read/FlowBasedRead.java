@@ -6,6 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.ultimagenomics.flow_based_read.utils.Direction;
 import htsjdk.samtools.util.SequenceUtil;
+import org.apache.commons.lang.ArrayUtils;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
@@ -293,7 +294,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             for (int i = 0 ; i < tmp.length; i++ )
                 ret[i] = tmp[i];
             return Arrays.copyOf(ret, ret.length);
-        }else {
+        } else {
             throw new GATKException.ReadAttributeTypeMismatch(attributeName, "integer array");
         }
     }
@@ -304,6 +305,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         for (byte b : key) {
             if (b > maxHmer - 1) {
                 valid_key = false;
+                break;
             }
         }
         valid_key = true;
