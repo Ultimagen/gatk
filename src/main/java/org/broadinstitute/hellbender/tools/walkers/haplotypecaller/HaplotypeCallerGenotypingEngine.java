@@ -5,6 +5,7 @@ import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMSequenceDictionary;
 import htsjdk.samtools.util.Locatable;
 import htsjdk.variant.variantcontext.*;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.engine.FeatureContext;
@@ -37,6 +38,8 @@ import java.util.stream.Collectors;
  */
 public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCallerArgumentCollection> {
 
+    public static final int ALLELE_EXTENSION = 2;
+    private static final int MAX_SAME_ALLELE_DIST = 30;
     private static final Logger logger = LogManager.getLogger(HaplotypeCallerGenotypingEngine.class);
     private static final OneShotLogger DRAGENConaminationWarning = new OneShotLogger(logger);
 
@@ -50,7 +53,7 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
     private final int maxGenotypeCountToEnumerate;
     private final Map<Integer, Integer> practicalAlleleCountForPloidy = new HashMap<>();
 
-    protected final boolean doPhysicalPhasing;
+    private final boolean doPhysicalPhasing;
 
     private final DragstrParams dragstrParams;
 
@@ -138,11 +141,23 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
         // that carry events among the haplotypes
         final SortedSet<Integer> startPosKeySet = EventMap.buildEventMapsForHaplotypes(haplotypes, ref, refLoc, hcArgs.assemblerArgs.debugAssembly, maxMnpDistance);
 
+        //Later addition (Jukebox) - looking for variants that seem to be the same up to hmer indel, yet are placed on different locations.
+        //These variants should be actually placed on the same location and their haplotypes should map to each other and not necessarily
+        //to the reference
+        final HaplotypeAlleleMatrix coocurrence = new HaplotypeAlleleMatrix(haplotypes);
+        List<Pair<LocationAndAlleles, LocationAndAlleles>> exclusivePairs = coocurrence.nonCoOcurringVariants();
+        exclusivePairs = HaplotypeAlleleMatrix.filterExclusivePairsByDistance(exclusivePairs, MAX_SAME_ALLELE_DIST);
+        exclusivePairs = coocurrence.filterSameUpToHmerPairs(exclusivePairs, refLoc.getStart());
+        Map<LocationAndAlleles, Set<LocationAndAlleles>> exclusivePairMap = HaplotypeAlleleMatrix.getExclusiveAlleleMap(exclusivePairs);
+//        System.out.println(String.format("%d Exclusive pairs", exclusivePairs.size()));
+
+
         // Walk along each position in the key set and create each event to be outputted
         final Set<Haplotype> calledHaplotypes = new HashSet<>();
         final List<VariantContext> returnCalls = new ArrayList<>();
         final int ploidy = configuration.genotypeArgs.samplePloidy;
         final List<Allele> noCallAlleles = GATKVariantContextUtils.noCallAlleles(ploidy);
+
 
         if (withBamOut) {
             //add annotations to reads for alignment regions and calling regions
@@ -159,9 +174,11 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
                 continue;
             }
 
-            final List<VariantContext> eventsAtThisLoc = AssemblyBasedCallerUtils.getVariantContextsFromActiveHaplotypes(loc, haplotypes, !hcArgs.disableSpanningEventGenotyping);
-
-            final List<VariantContext> eventsAtThisLocWithSpanDelsReplaced = replaceSpanDels(eventsAtThisLoc,
+            final List<VariantContext> eventsAtThisLoc = AssemblyBasedCallerUtils.getVariantContextsFromActiveHaplotypes(loc,
+                    haplotypes, !hcArgs.disableSpanningEventGenotyping);
+            final List<VariantContext> eventsAtThisLocAndPossibleEquivalents = addPossibleEquivalents(loc, eventsAtThisLoc,
+                    exclusivePairMap, haplotypes);
+            final List<VariantContext> eventsAtThisLocWithSpanDelsReplaced = replaceSpanDels(eventsAtThisLocAndPossibleEquivalents,
                     Allele.create(ref[loc - refLoc.getStart()], true), loc);
 
             VariantContext mergedVC = AssemblyBasedCallerUtils.makeMergedVariantContext(eventsAtThisLocWithSpanDelsReplaced);
@@ -221,7 +238,8 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
                 readAlleleLikelihoods = prepareReadAlleleLikelihoodsForAnnotation(readLikelihoods, perSampleFilteredReadList,
                         emitReferenceConfidence, alleleMapper, readAlleleLikelihoods, call, variantCallingRelevantOverlap);
 
-                VariantContext annotatedCall = makeAnnotatedCall(ref, refLoc, tracker, header, mergedVC, mergedAllelesListSizeBeforePossibleTrimming, readAlleleLikelihoods, call, annotationEngine);
+                VariantContext annotatedCall = makeAnnotatedCall(ref, refLoc, tracker, header, mergedVC,
+                        mergedAllelesListSizeBeforePossibleTrimming, readAlleleLikelihoods, call, annotationEngine);
 
                 if (dragstrs != null && GATKVariantContextUtils.containsInlineIndel(annotatedCall)) {
                     final int strOffset = loc - refLoc.getStart() + 1;
@@ -582,4 +600,5 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
         }
         return overlappingFilteredReads;
     }
+
 }
