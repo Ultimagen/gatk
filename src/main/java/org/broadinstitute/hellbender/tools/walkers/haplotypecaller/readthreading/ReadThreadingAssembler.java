@@ -41,6 +41,7 @@ import org.broadinstitute.hellbender.utils.read.CigarUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import java.util.stream.Collectors;
+import org.ultimagenomics.haplotype_calling.LHWRefView;
 
 import java.io.File;
 import java.io.IOException;
@@ -56,7 +57,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 
@@ -163,6 +163,7 @@ public final class ReadThreadingAssembler {
                                               final ReadErrorCorrector readErrorCorrector,
                                               final SAMFileHeader header,
                                               final SmithWatermanAligner aligner,
+                                              final LHWRefView,
                                               final SWParameters danglingEndSWParameters,
                                               final SWParameters haplotypeToReferenceSWParameters) {
         Utils.nonNull(assemblyRegion, "Assembly engine cannot be used with a null AssemblyRegion.");
@@ -182,6 +183,8 @@ public final class ReadThreadingAssembler {
 
         final List<AbstractReadThreadingGraph> nonRefRTGraphs = new LinkedList<>();
         final List<SeqGraph> nonRefSeqGraphs = new LinkedList<>();
+        if ( refView != null )
+            logger.debug("starting runLocalAssembly with refView: " + refView);
         final AssemblyResultSet resultSet = new AssemblyResultSet();
         resultSet.setRegionForGenotyping(assemblyRegion);
         resultSet.setFullReferenceWithPadding(fullReferenceWithPadding);
@@ -189,6 +192,7 @@ public final class ReadThreadingAssembler {
         final SimpleInterval activeRegionExtendedLocation = assemblyRegion.getPaddedSpan();
         refHaplotype.setGenomeLocation(activeRegionExtendedLocation);
         resultSet.add(refHaplotype);
+        resultSet.setRefView(refView);
         // either follow the old method for building graphs and then assembling or assemble and haplotype call before expanding kmers
         if (generateSeqGraph) {
             assembleKmerGraphsAndHaplotypeCall(refHaplotype, refLoc, header, aligner, danglingEndSWParameters,
@@ -343,7 +347,7 @@ public final class ReadThreadingAssembler {
                                   final Haplotype refHaplotype, final SimpleInterval refLoc, final SimpleInterval activeRegionWindow,
                                   final AssemblyResultSet resultSet, final SmithWatermanAligner aligner, final SWParameters haplotypeToReferenceSWParameters) {
         // add the reference haplotype separately from all the others to ensure that it is present in the list of haplotypes
-        final Set<Haplotype> returnHaplotypes = new LinkedHashSet<>();
+        Set<Haplotype> returnHaplotypes = new LinkedHashSet<>();
 
         final int activeRegionStart = refHaplotype.getAlignmentStartHapwrtRef();
         int failedCigars = 0;
@@ -431,6 +435,13 @@ public final class ReadThreadingAssembler {
             for (Haplotype h: resultSet.getHaplotypeList()) {
                 if (h.isReference() && (h.contigs==null))
                     h.contigs = getRefHaplotypesContigs(h, returnHaplotypes);
+            }
+
+
+            // uncollapse haplotypes now?
+            if ( resultSet != null && resultSet.getRefView() != null ) {
+                returnHaplotypes = new LinkedHashSet<>(resultSet.getRefView().uncollapseHaplotypesByRef(resultSet.getHaplotypeList(), true, true));
+                resultSet.replaceAllHaplotypes(returnHaplotypes);
             }
 
             assemblyResult.setDiscoveredHaplotypes(returnHaplotypes);
