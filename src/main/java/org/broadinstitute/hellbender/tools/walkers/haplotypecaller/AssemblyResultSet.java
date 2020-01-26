@@ -14,6 +14,7 @@ import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.haplotype.EventMap;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.param.ParamUtils;
+import org.ultimagenomics.haplotype_calling.LHWRefView;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -48,6 +49,7 @@ public final class AssemblyResultSet {
     private OptionalInt lastMaxMnpDistanceUsed = OptionalInt.empty();
     private boolean debug;
     private static final Logger logger = LogManager.getLogger(AssemblyResultSet.class);
+    private LHWRefView refView;
 
     /**
      * Constructs a new empty assembly result set.
@@ -70,9 +72,10 @@ public final class AssemblyResultSet {
      *
      * @return never {@code null}, a new trimmed assembly result set.
      */
-    public AssemblyResultSet trimTo(final AssemblyRegion trimmedAssemblyRegion) {
+    public AssemblyResultSet trimTo(final AssemblyRegion trimmedAssemblyRegion, LHWRefView refView) {
 
-        final Map<Haplotype,Haplotype> originalByTrimmedHaplotypes = calculateOriginalByTrimmedHaplotypes(trimmedAssemblyRegion.getPaddedSpan());
+        Locatable                span = trimmedAssemblyRegion.getPaddedSpan();
+        final Map<Haplotype,Haplotype> originalByTrimmedHaplotypes = calculateOriginalByTrimmedHaplotypes(span);
         if (refHaplotype == null) {
             throw new IllegalStateException("refHaplotype is null");
         }
@@ -235,6 +238,7 @@ public final class AssemblyResultSet {
      * @return {@code true} if the assembly result set has been modified as a result of this call.
      */
     public boolean add(final Haplotype h) {
+
         Utils.nonNull(h, "input haplotype cannot be null");
         Utils.nonNull(h.getGenomeLocation(), "haplotype genomeLocation cannot be null");
         if (haplotypes.contains(h)) {
@@ -547,5 +551,20 @@ public final class AssemblyResultSet {
 
     public void setDebug(boolean debug) {
         this.debug = debug;
+    }
+
+    public LHWRefView getRefView() {
+        return refView;
+    }
+
+    public void setRefView(LHWRefView refView) {
+        this.refView = refView;
+    }
+
+    public void replaceAllHaplotypes(Set<Haplotype> list) {
+        haplotypes.clear();;
+        refHaplotype = null;
+        for ( Haplotype h : list )
+            add(h);
     }
 }

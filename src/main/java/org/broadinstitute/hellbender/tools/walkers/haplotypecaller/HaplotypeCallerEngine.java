@@ -47,11 +47,24 @@ import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.broadinstitute.hellbender.utils.variant.HomoSapiensConstants;
 import org.broadinstitute.hellbender.utils.variant.writers.GVCFWriter;
+import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
 import org.ultimagenomics.flow_based_read.tests.AlleleLikelihoodWriter;
+import org.ultimagenomics.haplotype_calling.LHWRefView;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.SortedSet;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -185,6 +198,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                                  ReferenceSequenceFile referenceReader, VariantAnnotatorEngine annotationEngine) {
         this.dragstrParams = DragstrParamUtils.parse(hcArgs.likelihoodArgs.dragstrParams);
         this.hcArgs = Utils.nonNull(hcArgs);
+        FlowBasedRead.setUltimaFlowMatrixMods(hcArgs.ultimaFlowMatrixMods);
         this.readsHeader = Utils.nonNull(readsHeader);
         this.referenceReader = Utils.nonNull(referenceReader);
         this.annotationEngine = Utils.nonNull(annotationEngine);
@@ -657,6 +671,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         // run the local assembler, getting back a collection of information on how we should proceed
         final AssemblyResultSet untrimmedAssemblyResult =  AssemblyBasedCallerUtils.assembleReads(region, givenAlleles, hcArgs, readsHeader, samplesList, logger, referenceReader, assemblyEngine, aligner, !hcArgs.doNotCorrectOverlappingBaseQualities);
         ReadThreadingAssembler.addAssembledVariantsToEventMapOutput(untrimmedAssemblyResult, assembledEventMapVariants, hcArgs.maxMnpDistance, assembledEventMapVcfOutputWriter);
+        final LHWRefView refView = untrimmedAssemblyResult.getRefView();
 
         if (assemblyDebugOutStream != null) {
             try {
@@ -678,7 +693,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             return referenceModelForNoVariation(region, false, VCpriors);
         }
 
-        final AssemblyResultSet assemblyResult = untrimmedAssemblyResult.trimTo(trimmingResult.getVariantRegion());
+        final AssemblyResultSet assemblyResult = untrimmedAssemblyResult.trimTo(trimmingResult.getVariantRegion(), refView);
 
         final AssemblyRegion regionForGenotyping = assemblyResult.getRegionForGenotyping();
         final List<GATKRead> readStubs = regionForGenotyping.getReads().stream()
@@ -717,8 +732,14 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
 
         // evaluate each sample's reads against all haplotypes
-        final List<Haplotype> haplotypes = assemblyResult.getHaplotypeList();
+        List<Haplotype> haplotypes = assemblyResult.getHaplotypeList();
         final Map<String,List<GATKRead>> reads = AssemblyBasedCallerUtils.splitReadsBySample(samplesList, readsHeader, regionForGenotyping.getReads());
+
+        // uncollapse haplotypes
+        List<Haplotype> uncollapsedAllHaplotypes = haplotypes;
+        if ( refView != null ) {
+            uncollapsedAllHaplotypes = refView.uncollapseHaplotypesByRef(haplotypes);
+        }
 
         if (HaplotypeCallerGenotypingDebugger.isEnabled()) {
             HaplotypeCallerGenotypingDebugger.println("\nUnclipped Haplotypes("+haplotypes.size()+"):");
@@ -767,6 +788,20 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         final Map<GATKRead, GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(subsettedReadLikelihoodsFinal, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner, readToHaplotypeSWParameters);
         subsettedReadLikelihoodsFinal.changeEvidence(readRealignments);
 
+
+        if ( refView != null ) {
+            haplotypes = refView.uncollapseHaplotypesByRef(haplotypes, true, false);
+            readLikelihoods.changeAlleles(haplotypes);
+        }
+
+
+
+        if ( refView != null ) {
+            haplotypes = refView.uncollapseHaplotypesByRef(haplotypes, true, false);
+            readLikelihoods.changeAlleles(haplotypes);
+        }
+
+
         // Note: we used to subset down at this point to only the "best" haplotypes in all samples for genotyping, but there
         //  was a bad interaction between that selection and the marginalization that happens over each event when computing
         //  GLs.  In particular, for samples that are heterozygous non-reference (B/C) the marginalization for B treats the
@@ -786,8 +821,8 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
 
         final CalledHaplotypes calledHaplotypes = genotypingEngine.assignGenotypeLikelihoods(
-                subsettedReadLikelihoodsFinal.alleles(),
-                subsettedReadLikelihoodsFinal,
+                haplotypes,
+                readLikelihoods,
                 perSampleFilteredReadList,
                 assemblyResult.getFullReferenceWithPadding(),
                 assemblyResult.getPaddedReferenceLoc(),
