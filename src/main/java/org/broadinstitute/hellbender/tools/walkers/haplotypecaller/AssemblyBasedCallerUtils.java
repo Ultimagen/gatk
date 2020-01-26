@@ -297,16 +297,6 @@ public final class AssemblyBasedCallerUtils {
             logger.debug("deploying refView on " + paddedReferenceLoc + ", region: " + region);
 
         try {
-            /*
-            AssemblyResultSet assemblyResultSet = assemblyEngine.runLocalAssembly(
-                    region,
-                    (refView == null) ? refHaplotype : refView.getCollapsedRefHaplotype(region.getPaddedSpan()),
-                    (refView == null) ? fullReferenceWithPadding : refView.getCollapsedFullRef(),
-                    (refView == null) ? paddedReferenceLoc : refView.getCollapsedLoc(paddedReferenceLoc),
-                    readErrorCorrector,
-                    header, aligner,
-                    refView);
-             */
             AssemblyResultSet assemblyResultSet = assemblyEngine.runLocalAssembly(
                     region,
                     refHaplotype,
