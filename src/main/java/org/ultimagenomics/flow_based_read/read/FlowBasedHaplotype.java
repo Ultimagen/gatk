@@ -192,5 +192,25 @@ public class FlowBasedHaplotype  extends Allele {
         return flow_order_array;
     }
 
+    //check if two haplotypes are equal up to a single hmer change
+    public boolean equalUpToHmerChange( FlowBasedHaplotype other ) {
+        if (other.getKeyLength() != getKeyLength() ){
+            return false;
+        }
+        int diff_counts = 0;
+        byte [] otherkey = other.getKey();
+        for (int i = 0 ; i < getKeyLength(); i ++ ) {
+            if (((key[i]==0) && (otherkey[i]!=0)) ||
+                    ((key[i]!=0) && ( otherkey[i]==0))) {
+                return false;
+            }
 
+            if (Math.abs(key[i]-otherkey[i]) > 0 ){
+                diff_counts ++;
+            }
+            if (diff_counts > 1 )
+                return false;
+        }
+        return true;
+    }
 }
