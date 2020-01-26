@@ -37,9 +37,9 @@ import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.ultimagenomics.flow_based_read.alignment.FlowBasedAlignmentEngine;
 import org.ultimagenomics.flow_based_read.tests.AlleleLikelihoodWriter;
 import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
+import org.ultimagenomics.haplotype_calling.CollapsedLargeHmerReferenceView;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -288,9 +288,23 @@ public final class AssemblyBasedCallerUtils {
                                 fullReferenceWithPadding) :
                         null)
                 : new PileupReadErrorCorrector(argumentCollection.assemblerArgs.pileupErrorCorrectionLogOdds, header);
+
+        // estblish reference mapper, if needed
+        final CollapsedLargeHmerReferenceView     refView = (argumentCollection.ultimaAssemblyCollapseHKerSize > 0 && CollapsedLargeHmerReferenceView.needsCollapsing(fullReferenceWithPadding, argumentCollection.ultimaAssemblyCollapseHKerSize, logger, argumentCollection.assemblerArgs.debugAssembly))
+                                            ? new CollapsedLargeHmerReferenceView(argumentCollection.ultimaAssemblyCollapseHKerSize, fullReferenceWithPadding, paddedReferenceLoc, refHaplotype, region, logger, argumentCollection.assemblerArgs.debugAssembly)
+                                            : null;
+
         try {
-            final AssemblyResultSet assemblyResultSet = assemblyEngine.runLocalAssembly(region, refHaplotype, fullReferenceWithPadding,
-                    paddedReferenceLoc, readErrorCorrector, header, aligner);
+            AssemblyResultSet assemblyResultSet = assemblyEngine.runLocalAssembly(
+                    region,
+                    (refView == null) ? refHaplotype : refView.getCollapsedRefHaplotype(region.getPaddedSpan()),
+                    (refView == null) ? fullReferenceWithPadding : refView.getCollapsedFullRef(),
+                    (refView == null) ? paddedReferenceLoc : refView.getCollapsedLoc(paddedReferenceLoc),
+                    readErrorCorrector,
+                    header, aligner,
+                    (refView == null) ? null : refView.getCollapsedReads(region),
+                    refView);
+
             if (!givenAlleles.isEmpty()) {
                 addGivenAlleles(region.getPaddedSpan().getStart(), givenAlleles, argumentCollection.maxMnpDistance, aligner, refHaplotype, assemblyResultSet);
             }
