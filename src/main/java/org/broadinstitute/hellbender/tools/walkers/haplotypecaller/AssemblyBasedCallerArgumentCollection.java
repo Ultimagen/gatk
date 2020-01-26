@@ -4,6 +4,7 @@ import htsjdk.variant.variantcontext.VariantContext;
 import org.broadinstitute.barclay.argparser.Advanced;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.ArgumentCollection;
+import org.broadinstitute.barclay.argparser.Hidden;
 import org.broadinstitute.hellbender.engine.FeatureInput;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.readthreading.ReadThreadingAssembler;
 import org.broadinstitute.hellbender.utils.haplotype.HaplotypeBAMWriter;
@@ -158,4 +159,10 @@ public abstract class AssemblyBasedCallerArgumentCollection {
                     "that overlap the variant or any base no further than this distance expressed in base pairs",
             optional = true)
     public int informativeReadOverlapMargin = 2;
+
+    @Hidden
+    @Advanced
+    @Argument(fullName="ultima-assembly-collapse-hmer-size", doc="Collapse reference regions with >Nhmer during assembly, normal value when used is 12", optional = true)
+    public int ultimaAssemblyCollapseHKerSize = 0;
+
 }
