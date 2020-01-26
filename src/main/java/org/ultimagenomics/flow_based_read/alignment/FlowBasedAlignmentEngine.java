@@ -57,16 +57,19 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
 
 
         result.normalizeLikelihoods(log10globalReadMismappingRate);
-         result.filterPoorlyModeledEvidence(log10MinTrueLikelihood(expectedErrorRatePerBase));
+        result.filterPoorlyModeledEvidence(log10MinTrueLikelihood(expectedErrorRatePerBase));
 
         return result;
     }
 
     private ToDoubleFunction<GATKRead> log10MinTrueLikelihood(final double expectedErrorRate) {
         final double log10ErrorRate = Math.log10(expectedErrorRate);
+        final double catastrophicErrorRate = Math.log10(fbargs.filling_value);
+
         return read -> {
-            final double maxErrorsForRead = Math.min(2.0, Math.ceil(read.getLength() * expectedErrorRate));
-            return maxErrorsForRead * log10ErrorRate;
+            final double maxErrorsForRead = Math.max(3.0, Math.ceil(read.getLength() * expectedErrorRate));
+            final double maxCatastrophicErrorsForRead = Math.max(2.0, Math.ceil(read.getLength() * catastrophicErrorRate));
+            return maxErrorsForRead * log10ErrorRate + maxCatastrophicErrorsForRead*catastrophicErrorRate;
         };
     }
 
