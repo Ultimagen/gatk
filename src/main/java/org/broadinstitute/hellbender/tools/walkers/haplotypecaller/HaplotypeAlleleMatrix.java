@@ -168,9 +168,6 @@ public class HaplotypeAlleleMatrix {
             Haplotype tmpHap = reference.insertAllele(ref, alt,
                     tmp.getLoc() - activeWindowStart,
                     tmp.getLoc() - activeWindowStart);
-//            if (tmpHap == null ) {
-//                throw new RuntimeException("Null haplotype detected");
-//            }
             modifiedHaplotypes.add(tmpHap);
 
         }
