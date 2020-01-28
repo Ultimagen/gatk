@@ -161,11 +161,9 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
 
             final List<VariantContext> eventsAtThisLoc = AssemblyBasedCallerUtils.getVariantContextsFromActiveHaplotypes(loc,
                     haplotypes, true);
-            final List<VariantContext> eventsAtThisLocAndPossibleEquivalents = addPossibleEquivalents(loc, eventsAtThisLoc,
+            final List<VariantContext> possibleEquivalents = getPossibleEquivalents(loc, eventsAtThisLoc,
                     exclusivePairMap, haplotypes);
-//            System.out.println(String.format("Loc=%d -> Initially: %d alleles, after: %d alleles", loc,
-//                    eventsAtThisLoc.size(), eventsAtThisLocAndPossibleEquivalents.size()));
-            final List<VariantContext> eventsAtThisLocWithSpanDelsReplaced = replaceSpanDels(eventsAtThisLocAndPossibleEquivalents,
+            final List<VariantContext> eventsAtThisLocWithSpanDelsReplaced = replaceSpanDels(eventsAtThisLoc,
                     Allele.create(ref[loc - refLoc.getStart()], true), loc);
 
             VariantContext mergedVC = AssemblyBasedCallerUtils.makeMergedVariantContext(eventsAtThisLocWithSpanDelsReplaced);
@@ -175,8 +173,8 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
             }
             
             int mergedAllelesListSizeBeforePossibleTrimming = mergedVC.getAlleles().size();
-
-            final Map<Allele, List<Haplotype>> alleleMapper = AssemblyBasedCallerUtils.createAlleleMapper(mergedVC, loc, haplotypes);
+            final Map<Allele, List<Haplotype>> alleleMapper = AssemblyBasedCallerUtils.createAlleleMapper(mergedVC, loc,
+                    possibleEquivalents, haplotypes);
 
             if( hcArgs.assemblerArgs.debugAssembly && logger != null ) {
                 logger.info("Genotyping event at " + loc + " with alleles = " + mergedVC.getAlleles());
@@ -222,7 +220,7 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
         return new CalledHaplotypes(phasedCalls, calledHaplotypes);
     }
 
-    private static List<VariantContext> addPossibleEquivalents(int loc,
+    private static List<VariantContext> getPossibleEquivalents(int loc,
                                                                List<VariantContext> eventsAtThisLoc,
                                                                Map<LocationAndAlleles, Set<LocationAndAlleles>> exclusivePairMap,
                                                                List<Haplotype> haplotypes) {
@@ -257,7 +255,6 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
                         results.add(v);
                     }
                 });
-        results.addAll(eventsAtThisLoc);
         return results;
 
     }
