@@ -176,9 +176,9 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
 
             final List<VariantContext> eventsAtThisLoc = AssemblyBasedCallerUtils.getVariantContextsFromActiveHaplotypes(loc,
                     haplotypes, !hcArgs.disableSpanningEventGenotyping);
-            final List<VariantContext> eventsAtThisLocAndPossibleEquivalents = addPossibleEquivalents(loc, eventsAtThisLoc,
+            final List<VariantContext> possibleEquivalents = getPossibleEquivalents(loc, eventsAtThisLoc,
                     exclusivePairMap, haplotypes);
-            final List<VariantContext> eventsAtThisLocWithSpanDelsReplaced = replaceSpanDels(eventsAtThisLocAndPossibleEquivalents,
+            final List<VariantContext> eventsAtThisLocWithSpanDelsReplaced = replaceSpanDels(eventsAtThisLoc,
                     Allele.create(ref[loc - refLoc.getStart()], true), loc);
 
             VariantContext mergedVC = AssemblyBasedCallerUtils.makeMergedVariantContext(eventsAtThisLocWithSpanDelsReplaced);
@@ -188,8 +188,8 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
             }
             
             int mergedAllelesListSizeBeforePossibleTrimming = mergedVC.getAlleles().size();
-
-            final Map<Allele, List<Haplotype>> alleleMapper = AssemblyBasedCallerUtils.createAlleleMapper(mergedVC, loc, haplotypes, !hcArgs.disableSpanningEventGenotyping);
+            final Map<Allele, List<Haplotype>> alleleMapper = AssemblyBasedCallerUtils.createAlleleMapper(mergedVC, loc,
+                    possibleEquivalents, haplotypes, !hcArgs.disableSpanningEventGenotyping);
 
             if( hcArgs.assemblerArgs.debugAssembly && logger != null ) {
                 logger.info("Genotyping event at " + loc + " with alleles = " + mergedVC.getAlleles());
