@@ -696,13 +696,10 @@ public final class AssemblyBasedCallerUtils {
             }
 
 
-            int addition_count = 0;
             boolean hasBeenAddedToAllele = false;
 
             if (spanningEvents.isEmpty()) {    //no events --> this haplotype supports the reference at this locus
                 result.get(ref).add(h);
-                hasBeenAddedToAllele = true;
-
                 continue;
             }
 
@@ -729,7 +726,6 @@ public final class AssemblyBasedCallerUtils {
                         if (result.containsKey(remappedSpanningEventAltAllele)) {
                             result.get(remappedSpanningEventAltAllele).add(h);
                             hasBeenAddedToAllele = true;
-                            addition_count++;
                         }
                     } else {
                         // the process of creating the merged VC in AssemblyBasedCallerUtils::makeMergedVariantContext should have
@@ -747,11 +743,10 @@ public final class AssemblyBasedCallerUtils {
                     continue;
                 } else if (equivalentLocationAndAlleles.contains(new LocationAndAlleles(spanningEvent.getStart(), spanningEvent.getAlleles()))){
 
-                    if (! result.containsKey(Allele.SPAN_DEL)) {
-                        result.put(Allele.SPAN_DEL, new ArrayList<>());
+                    if (! result.containsKey(Allele.UNSPECIFIED_ALTERNATE_ALLELE)) {
+                        result.put(Allele.UNSPECIFIED_ALTERNATE_ALLELE, new ArrayList<>());
                     }
-                    result.get(Allele.SPAN_DEL).add(h);
-                    addition_count++;
+                    result.get(Allele.UNSPECIFIED_ALTERNATE_ALLELE).add(h);
                     hasBeenAddedToAllele = true;
                     break;
 
@@ -763,7 +758,6 @@ public final class AssemblyBasedCallerUtils {
                         result.put(Allele.SPAN_DEL, new ArrayList<>());
                     }
                     result.get(Allele.SPAN_DEL).add(h);
-                    addition_count++;
                     hasBeenAddedToAllele = true;
                     break;
                 }

@@ -4,6 +4,7 @@ import com.google.common.annotations.VisibleForTesting;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMSequenceDictionary;
 import htsjdk.variant.variantcontext.*;
+import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -22,6 +23,7 @@ import org.broadinstitute.hellbender.utils.param.ParamUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.reference.ReferenceBases;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
+import spire.math.All;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -196,9 +198,17 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
                 mergedAllelesListSizeBeforePossibleTrimming++;
             }
 
+            if ( readAlleleLikelihoods.containsAllele(Allele.UNSPECIFIED_ALTERNATE_ALLELE)) {
+                final List<Allele> alleleList = ListUtils.union(mergedVC.getAlleles(),
+                        Arrays.asList(Allele.UNSPECIFIED_ALTERNATE_ALLELE));
+                mergedVC = new VariantContextBuilder(mergedVC).alleles(alleleList).make();
+                mergedAllelesListSizeBeforePossibleTrimming++;
+            }
+
             final GenotypesContext genotypes = calculateGLsForThisEvent(readAlleleLikelihoods, mergedVC, noCallAlleles);
             final VariantContext call = calculateGenotypes(new VariantContextBuilder(mergedVC).genotypes(genotypes).make(), givenAlleles);
-            if( call != null ) {
+
+            if( (call != null) && (!call.isSymbolic()) ) {
 
                 readAlleleLikelihoods = prepareReadAlleleLikelihoodsForAnnotation(readLikelihoods, perSampleFilteredReadList,
                         emitReferenceConfidence, alleleMapper, readAlleleLikelihoods, call, variantCallingRelevantOverlap);
@@ -256,7 +266,6 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
                     }
                 });
         return results;
-
     }
 
     @VisibleForTesting
@@ -433,10 +442,12 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
      * @param mergedVC               Input VC with event to genotype
      * @return                       GenotypesContext object wrapping genotype objects with PLs
      */
-    protected GenotypesContext calculateGLsForThisEvent(final AlleleLikelihoods<GATKRead, Allele> readLikelihoods, final VariantContext mergedVC, final List<Allele> noCallAlleles ) {
+    protected GenotypesContext calculateGLsForThisEvent(final AlleleLikelihoods<GATKRead, Allele> readLikelihoods,
+                                                        final VariantContext mergedVC, final List<Allele> noCallAlleles ) {
         Utils.nonNull(readLikelihoods, "readLikelihoods");
         Utils.nonNull(mergedVC, "mergedVC");
         final List<Allele> vcAlleles = mergedVC.getAlleles();
+
         final AlleleList<Allele> alleleList = readLikelihoods.numberOfAlleles() == vcAlleles.size() ? readLikelihoods : new IndexedAlleleList<>(vcAlleles);
         final GenotypingLikelihoods<Allele> likelihoods = genotypingModel.calculateLikelihoods(alleleList,new GenotypingData<>(ploidyModel,readLikelihoods));
         final int sampleCount = samples.numberOfSamples();
