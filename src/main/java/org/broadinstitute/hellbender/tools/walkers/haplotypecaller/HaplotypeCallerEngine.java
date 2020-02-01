@@ -47,6 +47,7 @@ import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.broadinstitute.hellbender.utils.variant.HomoSapiensConstants;
 import org.broadinstitute.hellbender.utils.variant.writers.GVCFWriter;
 import org.ultimagenomics.flow_based_read.tests.AlleleLikelihoodWriter;
+import org.ultimagenomics.haplotype_calling.CollapsedLargeHmerReferenceView;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -640,6 +641,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
         // run the local assembler, getting back a collection of information on how we should proceed
         final AssemblyResultSet untrimmedAssemblyResult =  AssemblyBasedCallerUtils.assembleReads(region, givenAlleles, hcArgs, readsHeader, samplesList, logger, referenceReader, assemblyEngine, aligner, !hcArgs.doNotCorrectOverlappingBaseQualities);
+        final CollapsedLargeHmerReferenceView refView = untrimmedAssemblyResult.getRefView();
 
         if (assemblyDebugOutStream != null) {
             try {
@@ -768,8 +770,8 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
 
         final CalledHaplotypes calledHaplotypes = genotypingEngine.assignGenotypeLikelihoods(
-                subsettedReadLikelihoodsFinal.alleles(),
-                subsettedReadLikelihoodsFinal,
+                refView == null ? haplotypes : refView.uncollapseByRef(haplotypes),
+                readLikelihoods,
                 perSampleFilteredReadList,
                 assemblyResult.getFullReferenceWithPadding(),
                 assemblyResult.getPaddedReferenceLoc(),
