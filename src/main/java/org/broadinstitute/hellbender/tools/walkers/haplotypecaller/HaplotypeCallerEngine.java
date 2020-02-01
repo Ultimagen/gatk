@@ -48,6 +48,7 @@ import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.broadinstitute.hellbender.utils.variant.HomoSapiensConstants;
 import org.broadinstitute.hellbender.utils.variant.writers.GVCFWriter;
 import org.ultimagenomics.flow_based_read.tests.AlleleLikelihoodWriter;
+import org.ultimagenomics.haplotype_calling.CollapsedLargeHmerReferenceView;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -611,6 +612,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
         // run the local assembler, getting back a collection of information on how we should proceed
         final AssemblyResultSet untrimmedAssemblyResult =  AssemblyBasedCallerUtils.assembleReads(region, givenAlleles, hcArgs, readsHeader, samplesList, logger, referenceReader, assemblyEngine, aligner, !hcArgs.doNotCorrectOverlappingBaseQualities);
+        final CollapsedLargeHmerReferenceView refView = untrimmedAssemblyResult.getRefView();
 
         if (assemblyDebugOutStream != null) {
             assemblyDebugOutStream.println("\nThere were " + untrimmedAssemblyResult.getHaplotypeList().size() + " haplotypes found. Here they are:");
@@ -701,8 +703,8 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         //  in the genotyping, but we lose information if we select down to a few haplotypes.  [EB]
 
         final CalledHaplotypes calledHaplotypes = genotypingEngine.assignGenotypeLikelihoods(
-                subsettedReadLikelihoodsFinal.alleles(),
-                subsettedReadLikelihoodsFinal,
+                refView == null ? haplotypes : refView.uncollapseByRef(haplotypes),
+                readLikelihoods,
                 perSampleFilteredReadList,
                 assemblyResult.getFullReferenceWithPadding(),
                 assemblyResult.getPaddedReferenceLoc(),
