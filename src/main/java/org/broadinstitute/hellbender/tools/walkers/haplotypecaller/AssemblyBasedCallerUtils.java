@@ -305,6 +305,7 @@ public final class AssemblyBasedCallerUtils {
                     header, aligner,
                     (refView == null) ? null : refView.getCollapsedReads(region),
                     refView);
+            assemblyResultSet.setRefView(refView);
 
             if (!givenAlleles.isEmpty()) {
                 addGivenAlleles(region.getPaddedSpan().getStart(), givenAlleles, argumentCollection.maxMnpDistance, aligner, refHaplotype, assemblyResultSet);
