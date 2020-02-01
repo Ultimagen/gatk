@@ -7,7 +7,6 @@ import htsjdk.samtools.util.Locatable;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.gatk.nativebindings.smithwaterman.SWOverhangStrategy;
 import org.broadinstitute.hellbender.engine.AssemblyRegion;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyResultSet;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
@@ -16,6 +15,7 @@ import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAlignment;
 
 import java.util.*;
+import java.util.stream.StreamSupport;
 
 public class CollapsedLargeHmerReferenceView {
 
@@ -47,6 +47,12 @@ public class CollapsedLargeHmerReferenceView {
         if ( debug ) {
             logger.info("CollapsedLargeHmerReferenceView: >" + hmerSizeThreshold + "hmer, refLoc: " + refLoc + " fullRef:");
             logger.info(printBases(fullRef));
+        }
+
+        // TEMP! test if actual refHaplotype needs collapsing to aid in finding interesting areas for testing
+        if ( needsCollapsing(refHaplotype.getBases(), hmerSizeThreshold, logger, debug) ) {
+            if ( debug )
+                logger.info("refHaplotype needs collapsing!");
         }
 
         collapse();
@@ -183,7 +189,7 @@ public class CollapsedLargeHmerReferenceView {
         int     dstOfs = 0;
         for  ( byte base : fullRef ) {
             if ( base == lastBase ) {
-                if ( ++baseSameCount > hmerSizeThreshold ) {
+                if ( ++baseSameCount >= hmerSizeThreshold ) {
                     // collapsing, do not store
                     fullToCollapsedLocationMap[srcOfs] = dstOfs - 1;
                 } else {
@@ -223,6 +229,7 @@ public class CollapsedLargeHmerReferenceView {
         if ( debug ) {
             logger.info("alignment.offset: " + refAlignement.getAlignmentOffset() + ", cigar: " + refAlignement.getCigar());
         }
+        uncollapseByRef(collapsedRef, fullRef);
     }
     
     private int toUncollapsedLocus(int locus) {
@@ -238,5 +245,113 @@ public class CollapsedLargeHmerReferenceView {
         sb.append(String.format("len: %d, bases: ", bases.length));
         sb.append(new String(bases));
         return sb.toString();
+    }
+
+    public byte[] uncollapseByRef(byte[] bases, byte[] ref) {
+
+        // use aligner to get CIGAR
+        SmithWatermanAlignment alignment = aligner.align(ref, bases, SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
+        if ( debug )
+            logger.info("alignment.offset: " + alignment.getAlignmentOffset() + ", cigar: " + alignment.getCigar());
+
+        // collect max length by walking the cigar and adding up delete operators (some of which may actually be replaced)
+        int     resultLength = bases.length;
+        for ( CigarElement c : alignment.getCigar() ) {
+            if (c.getOperator() == CigarOperator.D)
+                resultLength += c.getLength();
+        }
+        final byte[] result = new byte[resultLength];
+
+        // prepare offsets
+        int         basesOfs = alignment.getAlignmentOffset();
+        int         refOfs = 0;
+        int         resultOfs = 0;
+
+        // start walking on cigars and make adjustments
+        for ( CigarElement c : alignment.getCigar() ) {
+            if (c.getOperator() != CigarOperator.D) {
+                // not D - simple case
+                if (c.getOperator().consumesReadBases()) {
+                    System.arraycopy(bases, basesOfs, result, resultOfs, c.getLength());
+                    basesOfs += c.getLength();
+                    resultOfs += c.getLength();
+                }
+            } else {
+                // on ref, check if D has atleast threshold same hmers to the left and D.length to the right
+                // if so, this is a candidate for uncollapsing
+                byte        base = ref[refOfs];
+                if ( sameBase(ref, refOfs, base, hmerSizeThreshold + c.getLength()) ) {
+                    Arrays.fill(result, resultOfs, resultOfs + c.getLength(), base);
+                    resultOfs += c.getLength();
+                }
+            }
+            if (c.getOperator().consumesReferenceBases())
+                refOfs += c.getLength();
+        }
+
+        // return adjusted result
+        final byte[] finalResult = (result.length == resultOfs) ? result : Arrays.copyOf(result, resultOfs);
+
+        if ( debug ) {
+            logger.info("bases, ref, finalResult:");
+            logger.info(printBases(bases));
+            logger.info(printBases(ref));
+            logger.info(printBases(finalResult));
+        }
+
+        return finalResult;
+    }
+
+    public List<Haplotype> uncollapseByRef(final List<Haplotype> haplotypes) {
+
+        final List<Haplotype>       result = new LinkedList<>();
+        final Map<Locatable, byte[]> refMap = new LinkedHashMap<>();
+        Haplotype                   refHaplotype = null;
+
+        // uncollapse haplotypes
+        for ( Haplotype h : haplotypes )
+        {
+            // find ref for this location
+            byte[]      ref = refMap.get(h.getGenomeLocation());
+            if ( ref == null ) {
+                ref = getUncollapsedPartialRef(h.getGenomeLocation(), true);
+                refMap.put(h.getGenomeLocation(), ref);
+            }
+            byte[]      alignedBases = uncollapseByRef(h.getBases(), ref);
+            Haplotype   alignedHaplotype = new Haplotype(alignedBases, h.isReference());
+            alignedHaplotype.setScore(h.getScore());
+            alignedHaplotype.setGenomeLocation(getUncollapsedLoc(h.getGenomeLocation()));
+            alignedHaplotype.setEventMap(h.getEventMap());
+
+            // save refHaplotype?
+            if ( refHaplotype == null && alignedHaplotype.isReference() )
+                refHaplotype = alignedHaplotype;
+
+            result.add(alignedHaplotype);
+        }
+
+        // if we had a reference, generate cigar against it
+        if ( refHaplotype != null ) {
+            for ( Haplotype h : result ) {
+
+                SmithWatermanAlignment  alignment = aligner.align(refHaplotype.getBases(), h.getBases(), SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
+                h.setCigar(alignment.getCigar());
+            }
+        }
+
+        return result;
+    }
+
+
+    private boolean sameBase(byte[] bases, int ofs, byte base, int length)
+    {
+        // has enough bases?
+        if ( ofs + length > bases.length )
+            return false;
+        while ( length-- != 0 ) {
+            if (bases[ofs++] != base)
+                return false;
+        }
+        return true;
     }
 }
