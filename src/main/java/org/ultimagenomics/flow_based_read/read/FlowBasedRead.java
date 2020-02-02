@@ -95,6 +95,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         key = Arrays.copyOf(key, keyOfs);
         System.out.println("bases: " + new String(samRecord.getReadBases()));
         System.out.println("key" + Arrays.toString(key));
+        // WHY??
+        if ( isReverseStrand() )
+            reverse(key, key.length);
+        getKey2Base();
         flow_order = getFlow2Base(_flow_order, key.length);
 
        // initialize matrix
@@ -607,6 +611,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             throws IOException {
         DecimalFormat formatter = new DecimalFormat("0.0000", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
 
+        /*
         for (double[] row : flow_matrix) {
             for (int j = 0; j < row.length; j++) {
                 String s = formatter.format(row[j]);
@@ -616,7 +621,11 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             }
             oos.write("\n");
         }
+        */
 
+        for (int i = 0; i < key.length; i++)
+            oos.write(Integer.toString(key[i] % 10));
+        oos.write('\n');
         for (double[] row : flow_matrix) {
             for (int j = 0; j < row.length; j++) {
                 char c = (char)(33 + Math.round(-10.0*Math.log10(row[j])));
