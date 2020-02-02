@@ -16,6 +16,7 @@ import java.io.Serializable;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
@@ -49,6 +50,94 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         max_hmer = _max_hmer;
         this.samRecord = samRecord;
         forward_sequence = getForwardSequence();
+
+        if ( samRecord.hasAttribute("kr") )
+            readFlowMatrix(_flow_order);
+        else
+            readBaseMatrix(_flow_order);
+
+        validateSequence();
+    }
+
+    private void readBaseMatrix(String _flow_order) {
+
+       // generate key (base to flow space)
+        key = new byte[samRecord.getReadBases().length * 4];
+        int     keyOfs = 0;
+        byte[]  flow = _flow_order.getBytes();
+        int     flowOfs = 0;
+        int     flowLength = flow.length;
+        byte    lastBase = 0;
+        byte    lastBaseCount = 0;
+        for ( byte base : samRecord.getReadBases() ) {
+            if ( lastBase == base )
+                lastBaseCount++;
+            else {
+                // base has changed, emit
+                if ( lastBaseCount != 0 ) {
+                    key[keyOfs++] = lastBaseCount;
+                    lastBaseCount = 0;
+                }
+                if ( lastBase != 0 )
+                    flowOfs = (flowOfs + 1) % flowLength;
+
+                // lock into new flow
+                while ( flow[flowOfs] != base ) {
+                    key[keyOfs++] = 0;
+                    flowOfs = (flowOfs + 1) % flowLength;
+                }
+                lastBase = base;
+                lastBaseCount = 1;
+            }
+        }
+        if ( lastBaseCount != 0 )
+            key[keyOfs++] = lastBaseCount;
+        key = Arrays.copyOf(key, keyOfs);
+        System.out.println("bases: " + new String(samRecord.getReadBases()));
+        System.out.println("key" + Arrays.toString(key));
+        flow_order = getFlow2Base(_flow_order, key.length);
+
+       // initialize matrix
+        flow_matrix = new double[max_hmer+1][key.length];
+        for (int i = 0 ; i < max_hmer+1; i++) {
+            for (int j = 0 ; j < key.length; j++ ){
+                flow_matrix[i][j] = ERROR_PROB;
+            }
+        }
+
+        // access qual, convert to ultima representation
+        byte[]      quals = samRecord.getBaseQualities();
+        double[]    probs = new double[quals.length];
+        for ( int i = 0 ; i < quals.length ; i++ ) {
+            double q = quals[i];
+            double p = Math.pow(10, -q/10);
+            double ultima_p = 1 -  Math.sqrt(1-p);
+
+            probs[i] = ultima_p;
+        }
+
+        // access ti attribute (del/ins)
+        byte[]      ti = samRecord.getByteArrayAttribute("ti");
+
+        // apply key and qual/ti to matrix
+        int     qualOfs = 0;
+        for ( int i = 0 ; i < key.length ; i++ ) {
+            byte        run = key[i];
+            flow_matrix[run][i] = 1;
+            if ( run != 0 ) {
+                if ( quals[qualOfs] != 40 ) {
+                    if ( ti[qualOfs] == 0 )
+                        flow_matrix[run - 1][i] = probs[qualOfs];
+                    else
+                        flow_matrix[run + 1][i] = probs[qualOfs];
+                }
+                qualOfs++;
+            }
+
+        }
+    }
+
+    private void readFlowMatrix(String _flow_order) {
         key = getAttributeAsByteArray("kr");
         getKey2Base();
 
@@ -88,7 +177,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
 
         fillFlowMatrix( kh, kf, kd_probs);
-
         if (fbargs.symmetric_indels) {
             smoothIndels(key_kh);
         }
@@ -517,13 +605,26 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     public void writeMatrix(FileWriter oos)
             throws IOException {
-        for (double[] flowMatrix : flow_matrix)
-            for (int j = 0; j < flowMatrix.length; j++) {
-                DecimalFormat formatter = new DecimalFormat("0.0000", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
-                String s = formatter.format(flowMatrix[j]);
+        DecimalFormat formatter = new DecimalFormat("0.0000", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
+
+        for (double[] row : flow_matrix) {
+            for (int j = 0; j < row.length; j++) {
+                String s = formatter.format(row[j]);
+                 if ( j != 0 )
+                    oos.write(' ');
                 oos.write(s);
-                oos.write("\n");
             }
+            oos.write("\n");
+        }
+
+        for (double[] row : flow_matrix) {
+            for (int j = 0; j < row.length; j++) {
+                char c = (char)(33 + Math.round(-10.0*Math.log10(row[j])));
+                oos.write(c);
+            }
+            oos.write("\n");
+        }
+
     }
 
     public byte [] getFlowOrderArray() {
@@ -555,5 +656,21 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     public int getTrimmedEnd() {
         return getEnd() - trim_right_base;
     }
+
+    @Override
+    public void hardClipAttributes(int copyStart, int newLength)
+    {
+        // trim ti
+        if ( samRecord.hasAttribute("ti") ) {
+
+            final byte[]    ti = samRecord.getByteArrayAttribute("ti");
+            final byte[]    trimmedTi = Arrays.copyOfRange(ti, copyStart, copyStart + newLength);
+
+            samRecord.setAttribute("ti", trimmedTi);
+        }
+
+        super.hardClipAttributes(copyStart, newLength);
+    }
+
 }
 
