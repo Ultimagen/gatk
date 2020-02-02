@@ -750,16 +750,8 @@ public class SAMRecordToGATKReadAdapter implements GATKRead, Serializable {
     }
 
     @Override
-    public void hardClipAttributes(int copyStart, int newLength)
-    {
-        // trim ti
-        if ( samRecord.hasAttribute("ti") ) {
+    public void hardClipAttributes(int copyStart, int newLength) {
 
-            final byte[]    ti = samRecord.getByteArrayAttribute("ti");
-            final byte[]    trimmedTi = Arrays.copyOfRange(ti, copyStart, copyStart + newLength);
-
-            samRecord.setAttribute("ti", trimmedTi);
-        }
     }
 
     @Override
