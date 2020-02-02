@@ -15,13 +15,15 @@ public class test_flow_based_read {
     public static void main(String[] args) throws FileNotFoundException, IOException{
         System.out.println("Input file: " + args[0]);
         System.out.println("Output prefix: " + args[1]);
+        System.out.println("Flow order: " + args[2]);
         final SamReader reader = SamReaderFactory.makeDefault().open(new File(args[0]));
+        final String flowOrder = args[2];
         int count = 0 ;
         Iterator<SAMRecord> i;
         FileWriter fos;
         FlowBasedRead fbr = null;
         for (i = reader.iterator(), count=0; (i.hasNext()) && (count < 100); count++  ) {
-            fbr = new FlowBasedRead(i.next(),"GCAT", 9);
+            fbr = new FlowBasedRead(i.next(), flowOrder, 12);
             System.out.println(String.format("> Key length: %d, sequence length %d", fbr.totalKeyBases(), fbr.seqLength()));
 
             fbr.apply_alignment();
