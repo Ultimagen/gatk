@@ -750,6 +750,11 @@ public class SAMRecordToGATKReadAdapter implements GATKRead, Serializable {
     }
 
     @Override
+    public void hardClipAttributes(int copyStart, int newLength) {
+
+    }
+
+    @Override
     public SAMRecord convertToSAMRecord( final SAMFileHeader header ) {
         samRecord.setHeaderStrict(header);
         return samRecord;
