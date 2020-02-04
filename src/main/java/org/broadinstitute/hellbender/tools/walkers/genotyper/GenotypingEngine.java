@@ -133,7 +133,11 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
         }
 
         final AFCalculationResult AFresult = alleleFrequencyCalculator.calculate(reducedVC, defaultPloidy);
-        final OutputAlleleSubset outputAlternativeAlleles = calculateOutputAlleleSubset(AFresult, vc, givenAlleles);
+        OutputAlleleSubset outputAlternativeAlleles = calculateOutputAlleleSubset(AFresult, vc, givenAlleles);
+
+        // Additional filtering if Allele.UNSPECIFIED_ALTERNATIVE_ALLELE is present in the alleles.
+        // Here we assume diploidy and filter genotypes accordingly
+        outputAlternativeAlleles = calculateOutputAlleleSubsetWithSymbolic(AFresult, vc, givenAlleles, outputAlternativeAlleles);
 
         // note the math.abs is necessary because -10 * 0.0 => -0.0 which isn't nice
         final double log10Confidence =
@@ -259,6 +263,38 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
             }
         }
 
+        return new OutputAlleleSubset(outputAlleles,mleCounts,siteIsMonomorphic);
+    }
+
+
+    //outputAlternativeAlleles = calculateOutputAlleleSubsetWithSymbolic(AFresult, vc, givenAlleles, outputAlternativeAlleles);
+    /**
+     * Provided the exact mode computations it returns the appropriate subset of alleles that progress to genotyping.
+     * @param afCalculationResult the allele fraction calculation result.
+     * @param vc the variant context
+     * @return information about the alternative allele subsetting {@code null}.
+     */
+    private OutputAlleleSubset calculateOutputAlleleSubsetWithSymbolic(final AFCalculationResult afCalculationResult,
+                                                                       final VariantContext vc,
+                                                                       final List<VariantContext> givenAlleles,
+                                                                       final OutputAlleleSubset currentSubset) {
+
+
+        final List<Allele> outputAlleles = new ArrayList<>();
+        final List<Integer> mleCounts = new ArrayList<>();
+        boolean siteIsMonomorphic = true;
+
+        List<Allele> currentAlleles = currentSubset.alleles;
+        List<Integer> currentMleCounts = currentSubset.mleCounts;
+        boolean currentSiteIsMonomorphic = currentSubset.siteIsMonomorphic;
+
+        for (int i = 0 ; i < currentAlleles.size(); i++) {
+            outputAlleles.add(currentAlleles.get(i));
+            mleCounts.add(currentMleCounts.get(i));
+
+        }
+
+        siteIsMonomorphic = currentSiteIsMonomorphic;
         return new OutputAlleleSubset(outputAlleles,mleCounts,siteIsMonomorphic);
     }
 
