@@ -23,7 +23,7 @@ public class test_flow_based_read {
         FileWriter fos;
         FlowBasedRead fbr = null;
         for (i = reader.iterator(), count=0; (i.hasNext()) && (count < 100); count++  ) {
-            fbr = new FlowBasedRead(i.next(), flowOrder, 12);
+            fbr = new FlowBasedRead(i.next(), flowOrder, 13);
             System.out.println(String.format("> Key length: %d, sequence length %d", fbr.totalKeyBases(), fbr.seqLength()));
 
             fbr.apply_alignment();

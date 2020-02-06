@@ -82,7 +82,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         for ( int i = 0 ; i < quals.length ; i++ ) {
             double q = quals[i];
             double p = Math.pow(10, -q/10);
-            double ultima_p = Math.sqrt(1-p);
+            double ultima_p = 1.0 - Math.sqrt(1-p);
 
             probs[i] = ultima_p;
         }
@@ -102,7 +102,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
                     else
                         flow_matrix[run + 1][i] = probs[qualOfs];
                 }
-                qualOfs++;
+                qualOfs += run;
             }
 
         }
@@ -594,6 +594,11 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         int         basesOfs = 0;
         byte[]      quals = samRecord.getBaseQualities();
         byte[]      ti = samRecord.hasAttribute("ti") ? samRecord.getByteArrayAttribute("ti") : (new byte[key.length]);
+        if ( isReverseStrand() )
+        {
+            reverse(quals, quals.length);
+            reverse(ti, ti.length);
+        }
 
         for ( int col = 0 ; col < key.length ; col++ ) {
             oos.write("C,R,F,B,Bi,Q,ti\n");
@@ -603,10 +608,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             String Ti = (key[col] != 0) ? Integer.toString(ti[basesOfs]) : ".";
             for (int row = 0; row < flow_matrix.length; row++) {
                 String s = formatter.format(flow_matrix[row][col]);
-                oos.write(String.format("%d,%d,%d,%c,%s,%s,%s %s\n", col, row, key[col], base, bi, q, Ti, s));
+                oos.write(String.format("%d,%d,%d,%c,%s,%s,%s,%s %s\n", col, row, key[col], base, bi, q, Ti, isReverseStrand() ? "r" : ".", s));
             }
             if ( key[col] != 0 )
-                basesOfs++;
+                basesOfs +=  key[col];
             oos.write("\n");
         }
 
