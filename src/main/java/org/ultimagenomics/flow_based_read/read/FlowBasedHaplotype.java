@@ -65,7 +65,7 @@ public class FlowBasedHaplotype  extends Allele {
         return result;
     }
 
-    static private byte[] base2key(byte[] bases, String flow_order, int clipping){
+    static protected byte[] base2key(byte[] bases, String flow_order, int clipping){
         ArrayList<Byte> result = new ArrayList<>();
         byte[] flow_order_bytes = flow_order.getBytes();
         int loc = 0;
