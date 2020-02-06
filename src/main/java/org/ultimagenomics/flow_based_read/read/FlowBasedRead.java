@@ -62,40 +62,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private void readBaseMatrix(String _flow_order) {
 
        // generate key (base to flow space)
-        key = new byte[samRecord.getReadBases().length * 4];
-        int     keyOfs = 0;
-        byte[]  flow = _flow_order.getBytes();
-        int     flowOfs = 0;
-        int     flowLength = flow.length;
-        byte    lastBase = 0;
-        byte    lastBaseCount = 0;
-        for ( byte base : samRecord.getReadBases() ) {
-            if ( lastBase == base )
-                lastBaseCount++;
-            else {
-                // base has changed, emit
-                if ( lastBaseCount != 0 ) {
-                    key[keyOfs++] = lastBaseCount;
-                    lastBaseCount = 0;
-                }
-                if ( lastBase != 0 )
-                    flowOfs = (flowOfs + 1) % flowLength;
-
-                // lock into new flow
-                while ( flow[flowOfs] != base ) {
-                    key[keyOfs++] = 0;
-                    flowOfs = (flowOfs + 1) % flowLength;
-                }
-                lastBase = base;
-                lastBaseCount = 1;
-            }
-        }
-        if ( lastBaseCount != 0 )
-            key[keyOfs++] = lastBaseCount;
-        key = Arrays.copyOf(key, keyOfs);
-        System.out.println("bases: " + new String(samRecord.getReadBases()));
-        System.out.println("key" + Arrays.toString(key));
-        // WHY??
+        key = FlowBasedHaplotype.base2key(samRecord.getReadBases(), _flow_order, 1000);
         if ( isReverseStrand() )
             reverse(key, key.length);
         getKey2Base();
@@ -115,7 +82,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         for ( int i = 0 ; i < quals.length ; i++ ) {
             double q = quals[i];
             double p = Math.pow(10, -q/10);
-            double ultima_p = 1 -  Math.sqrt(1-p);
+            double ultima_p = Math.sqrt(1-p);
 
             probs[i] = ultima_p;
         }
@@ -612,20 +579,38 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         DecimalFormat formatter = new DecimalFormat("0.0000", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
 
         /*
+        int i = 0;
         for (double[] row : flow_matrix) {
+            oos.write(String.format("ROW %d\n", i));
             for (int j = 0; j < row.length; j++) {
                 String s = formatter.format(row[j]);
-                 if ( j != 0 )
-                    oos.write(' ');
-                oos.write(s);
+                oos.write(String.format("%d,%d,%d %s\n", i, j, key[i], s));
             }
             oos.write("\n");
+            i++;
         }
-        */
+         */
+        byte[]      bases = samRecord.getReadBases();
+        int         basesOfs = 0;
+        byte[]      quals = samRecord.getBaseQualities();
+        byte[]      ti = samRecord.hasAttribute("ti") ? samRecord.getByteArrayAttribute("ti") : (new byte[key.length]);
 
-        for (int i = 0; i < key.length; i++)
-            oos.write(Integer.toString(key[i] % 10));
-        oos.write('\n');
+        for ( int col = 0 ; col < key.length ; col++ ) {
+            oos.write("C,R,F,B,Bi,Q,ti\n");
+            byte base = (key[col] != 0) ? (basesOfs < bases.length ? bases[basesOfs] : (byte)'?') : (byte)'.';
+            String bi = (key[col] != 0) ? Integer.toString(basesOfs) : ".";
+            String q = (key[col] != 0) ? Integer.toString(quals[basesOfs]) : ".";
+            String Ti = (key[col] != 0) ? Integer.toString(ti[basesOfs]) : ".";
+            for (int row = 0; row < flow_matrix.length; row++) {
+                String s = formatter.format(flow_matrix[row][col]);
+                oos.write(String.format("%d,%d,%d,%c,%s,%s,%s %s\n", col, row, key[col], base, bi, q, Ti, s));
+            }
+            if ( key[col] != 0 )
+                basesOfs++;
+            oos.write("\n");
+        }
+
+        /*
         for (double[] row : flow_matrix) {
             for (int j = 0; j < row.length; j++) {
                 char c = (char)(33 + Math.round(-10.0*Math.log10(row[j])));
@@ -633,6 +618,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             }
             oos.write("\n");
         }
+         */
 
     }
 
