@@ -275,6 +275,7 @@ public final class AlleleFrequencyCalculator {
         List<Integer> genotypes = new IndexRange(0, glCalc.genotypeCount())
                 .filter(n->true )
                 .stream()
+                .filter(n->!glCalc.genotypeAlleleCountsAt(n).containsAllele(0))
                 .filter(n->glCalc.genotypeAlleleCountsAt(n).containsAllele(unspecifiedIndex))
                 .filter(n->glCalc.genotypeAlleleCountsAt(n).distinctAlleleCount()>1)
                 .collect(Collectors.toList());
