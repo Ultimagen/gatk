@@ -1,8 +1,6 @@
 package org.broadinstitute.hellbender.tools.walkers.genotyper.afcalc;
 
-import htsjdk.variant.variantcontext.Allele;
-import htsjdk.variant.variantcontext.Genotype;
-import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.variantcontext.*;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import org.apache.commons.math3.special.Gamma;
@@ -16,6 +14,7 @@ import org.broadinstitute.hellbender.utils.IndexRange;
 import org.broadinstitute.hellbender.utils.MathUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -229,5 +228,57 @@ public final class AlleleFrequencyCalculator {
             // allele counts are in the GenotypeLikelihoodCalculator format of {ref index, ref count, span del index, span del count}
             return new IndexRange(0, ploidy).mapToInteger(n -> glCalc.alleleCountsToIndex(new int[]{0, ploidy - n, spanDelIndex, n}));
         }
+    }
+
+
+    public VariantContext capSymbolicGenotypeFrequencies(int ploidy, VariantContext vc) {
+        int a = 1;
+        int n_samples = vc.getNSamples();
+
+        List<Integer> genotypes_fix = genotypeIndicesWithHetUnspecifiedAltAllele(ploidy, vc.getAlleles());
+        if (genotypes_fix.size()==0){
+            return vc;
+        }
+
+        VariantContextBuilder newVC = new VariantContextBuilder(vc);
+        ArrayList<Genotype> newGtC = new ArrayList<>();
+
+        for (int sn = 0 ; sn < n_samples; sn++) {
+            GenotypeBuilder newGt = new GenotypeBuilder(vc.getGenotype(sn));
+            int [] pls = vc.getGenotype(sn).getPL();
+            int maxVal = MathUtils.arrayMax(pls);
+            for (int idx = 0; idx < genotypes_fix.size(); idx++ ){
+                pls[genotypes_fix.get(idx)] = maxVal;
+            }
+            int minVal = MathUtils.arrayMin(pls);
+            for (int idx = 0 ; idx < pls.length; idx ++) {
+                pls[idx]-=minVal;
+            }
+            newGt.PL(pls);
+            newGtC.add(newGt.make());
+        }
+        newVC.genotypes(GenotypesContext.create(newGtC));
+
+        return newVC.make();
+    }
+
+
+    private static List<Integer> genotypeIndicesWithHetUnspecifiedAltAllele(final int ploidy, final List<Allele> alleles) {
+        final int alleleCount = alleles.size();
+        final boolean unspecifiedAllelePresent = alleles.contains(Allele.UNSPECIFIED_ALTERNATE_ALLELE);
+        if (!unspecifiedAllelePresent){
+            return new ArrayList<>();
+        }
+        final int unspecifiedIndex = alleles.indexOf(Allele.UNSPECIFIED_ALTERNATE_ALLELE);
+
+        final GenotypeLikelihoodCalculator glCalc = GL_CALCS.getInstance(ploidy, alleleCount);
+        List<Integer> genotypes = new IndexRange(0, glCalc.genotypeCount())
+                .filter(n->true )
+                .stream()
+                .filter(n->glCalc.genotypeAlleleCountsAt(n).containsAllele(unspecifiedIndex))
+                .filter(n->glCalc.genotypeAlleleCountsAt(n).distinctAlleleCount()>1)
+                .collect(Collectors.toList());
+        return genotypes;
+
     }
 }

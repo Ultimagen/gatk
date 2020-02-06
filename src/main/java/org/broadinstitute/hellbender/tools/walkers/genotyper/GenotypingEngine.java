@@ -132,6 +132,8 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
             reducedVC = new VariantContextBuilder(vc).alleles(allelesToKeep).genotypes(reducedGenotypes).make();
         }
 
+        reducedVC = alleleFrequencyCalculator.capSymbolicGenotypeFrequencies(defaultPloidy, reducedVC);
+
         final AFCalculationResult AFresult = alleleFrequencyCalculator.calculate(reducedVC, defaultPloidy);
         OutputAlleleSubset outputAlternativeAlleles = calculateOutputAlleleSubset(AFresult, vc, givenAlleles);
 
@@ -391,6 +393,7 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
         return conf >= configuration.genotypeArgs.STANDARD_CONFIDENCE_FOR_CALLING;
     }
 
+
     protected Map<String,Object> composeCallAttributes(final VariantContext vc, final List<Integer> alleleCountsofMLE,
                                                        final AFCalculationResult AFresult, final List<Allele> allAllelesToUse, final GenotypesContext genotypes) {
         final Map<String, Object> attributes = new LinkedHashMap<>();
@@ -443,4 +446,6 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
         Utils.nonNull(log10GenotypeLikelihoods, "the input likelihoods cannot be null");
         return alleleFrequencyCalculator.calculateSingleSampleBiallelicNonRefPosterior(log10GenotypeLikelihoods, true);
     }
+
 }
+
