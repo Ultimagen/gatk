@@ -78,6 +78,11 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         // access qual, convert to ultima representation
         byte[]      quals = samRecord.getBaseQualities();
+        byte[]      ti = samRecord.getByteArrayAttribute("ti");
+        if ( isReverseStrand() ) {
+            reverse(quals, quals.length);
+            reverse(ti, ti.length);
+        }
         double[]    probs = new double[quals.length];
         for ( int i = 0 ; i < quals.length ; i++ ) {
             double q = quals[i];
@@ -88,7 +93,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
 
         // access ti attribute (del/ins)
-        byte[]      ti = samRecord.getByteArrayAttribute("ti");
 
         // apply key and qual/ti to matrix
         int     qualOfs = 0;
