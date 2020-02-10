@@ -18,26 +18,36 @@ public class test_flow_based_read {
         System.out.println("Flow order: " + args[2]);
         final SamReader reader = SamReaderFactory.makeDefault().open(new File(args[0]));
         final String flowOrder = args[2];
+        final int limitCount = (args.length > 3) ? Integer.valueOf(args[3]) : 100;
+        System.out.println("limitCount: " + limitCount);
         int count = 0 ;
         Iterator<SAMRecord> i;
         FileWriter fos;
         FlowBasedRead fbr = null;
-        for (i = reader.iterator(), count=0; (i.hasNext()) && (count < 100); count++  ) {
+        for (i = reader.iterator(), count=0; (i.hasNext()) && (count < limitCount); count++  ) {
             fbr = new FlowBasedRead(i.next(), flowOrder, 13);
-            System.out.println(String.format("> Key length: %d, sequence length %d", fbr.totalKeyBases(), fbr.seqLength()));
+            if ( limitCount < 1000 )
+                System.out.println(String.format("> Key length: %d, sequence length %d", fbr.totalKeyBases(), fbr.seqLength()));
 
             fbr.apply_alignment();
-            System.out.println(String.format("< Key length: %d, sequence length %d", fbr.totalKeyBases(), fbr.seqLength()));
+            if ( limitCount < 1000 )
+                System.out.println(String.format("< Key length: %d, sequence length %d", fbr.totalKeyBases(), fbr.seqLength()));
             if (fbr.totalKeyBases()!=fbr.seqLength()) {
                 System.out.println("!@#@!$#%#%#%$@$@#!");
             }
-            fos = new FileWriter(args[1] + "." + Integer.toString(count) + ".key.txt");
-            fbr.writeKey(fos);
-            fos.close();
-            fos = new FileWriter(args[1] + "." + Integer.toString(count) + ".matrix.txt");
-            fbr.writeMatrix(fos);
-            fos.close();
+            if ( limitCount < 1000 ) {
+                fos = new FileWriter(args[1] + "." + Integer.toString(count) + ".key.txt");
+                fbr.writeKey(fos);
+                fos.close();
+                fos = new FileWriter(args[1] + "." + Integer.toString(count) + ".matrix.txt");
+                fbr.writeMatrix(fos);
+                fos.close();
+            } else if ( (count % 1000) == 0 ) {
+                System.out.println("record count: " + count);
+
+            }
 
         }
+        System.out.println("total records read: " + count);
     }
 }
