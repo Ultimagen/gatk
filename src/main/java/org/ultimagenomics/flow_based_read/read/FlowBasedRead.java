@@ -666,21 +666,5 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     public int getTrimmedEnd() {
         return getEnd() - trim_right_base;
     }
-
-    @Override
-    public void hardClipAttributes(int copyStart, int newLength)
-    {
-        // trim ti
-        if ( samRecord.hasAttribute("ti") ) {
-
-            final byte[]    ti = samRecord.getByteArrayAttribute("ti");
-            final byte[]    trimmedTi = Arrays.copyOfRange(ti, copyStart, copyStart + newLength);
-
-            samRecord.setAttribute("ti", trimmedTi);
-        }
-
-        super.hardClipAttributes(copyStart, newLength);
-    }
-
 }
 
