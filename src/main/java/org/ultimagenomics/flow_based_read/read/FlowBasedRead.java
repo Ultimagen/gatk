@@ -323,17 +323,23 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         }
 
-        int[] clip_left_pair = find_left_clipping();
-        int[] clip_right_pair = find_right_clipping();
-        int clip_left = clip_left_pair[0];
-        int left_hmer_clip = clip_left_pair[1];
-        int clip_right = clip_right_pair[0];
-        int right_hmer_clip = clip_right_pair[1];
+        if ( !isBaseFormat() ) {
+            int[] clip_left_pair = find_left_clipping();
+            int[] clip_right_pair = find_right_clipping();
+            int clip_left = clip_left_pair[0];
+            int left_hmer_clip = clip_left_pair[1];
+            int clip_right = clip_right_pair[0];
+            int right_hmer_clip = clip_right_pair[1];
 
-        apply_clipping(clip_left, left_hmer_clip, clip_right, right_hmer_clip);
+            apply_clipping(clip_left, left_hmer_clip, clip_right, right_hmer_clip);
+        }
 
         setDirection(Direction.REFERENCE);
 
+    }
+
+    private boolean isBaseFormat() {
+       return samRecord.hasAttribute("ti");
     }
 
     public void apply_base_clipping(int clip_left_base, int clip_right_base){
