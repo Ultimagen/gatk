@@ -25,7 +25,7 @@ public class test_flow_based_read {
         FileWriter fos;
         FlowBasedRead fbr = null;
         for (i = reader.iterator(), count=0; (i.hasNext()) && (count < limitCount); count++  ) {
-            fbr = new FlowBasedRead(i.next(), flowOrder, 13);
+            fbr = new FlowBasedRead(i.next(), flowOrder, 12);
             if ( limitCount < 1000 )
                 System.out.println(String.format("> Key length: %d, sequence length %d", fbr.totalKeyBases(), fbr.seqLength()));
 
