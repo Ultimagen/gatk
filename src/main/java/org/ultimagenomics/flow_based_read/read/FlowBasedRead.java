@@ -92,19 +92,17 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             probs[i] = ultima_p;
         }
 
-        // access ti attribute (del/ins)
-
         // apply key and qual/ti to matrix
         int     qualOfs = 0;
         for ( int i = 0 ; i < key.length ; i++ ) {
-            byte        run = key[i];
-            flow_matrix[run][i] = 1;
+            final byte        run = key[i];
+            if ( run <= max_hmer )
+                flow_matrix[run][i] = 1;
             if ( run != 0 ) {
                 if ( quals[qualOfs] != 40 ) {
-                    if ( ti[qualOfs] == 0 )
-                        flow_matrix[run - 1][i] = probs[qualOfs];
-                    else
-                        flow_matrix[run + 1][i] = probs[qualOfs];
+                    final int     run1 = (ti[qualOfs] == 0) ? (run - 1) : (run + 1);
+                    if ( run1 <= max_hmer )
+                        flow_matrix[run1][i] = probs[qualOfs];
                 }
                 qualOfs += run;
             }
@@ -323,16 +321,16 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         }
 
-        if ( !isBaseFormat() ) {
-            int[] clip_left_pair = find_left_clipping();
-            int[] clip_right_pair = find_right_clipping();
-            int clip_left = clip_left_pair[0];
-            int left_hmer_clip = clip_left_pair[1];
-            int clip_right = clip_right_pair[0];
-            int right_hmer_clip = clip_right_pair[1];
+        boolean isBase = isBaseFormat();
+        int[] basePair = {0, 0};
+        int[] clip_left_pair = !isBase ? find_left_clipping() : basePair;
+        int[] clip_right_pair = !isBase ? find_right_clipping() : basePair;
+        int clip_left = clip_left_pair[0];
+        int left_hmer_clip = clip_left_pair[1];
+        int clip_right = clip_right_pair[0];
+        int right_hmer_clip = clip_right_pair[1];
 
-            apply_clipping(clip_left, left_hmer_clip, clip_right, right_hmer_clip);
-        }
+        apply_clipping(clip_left, left_hmer_clip, clip_right, right_hmer_clip);
 
         setDirection(Direction.REFERENCE);
 
