@@ -2,6 +2,8 @@ package org.ultimagenomics.flow_based_read.read;
 
 import htsjdk.samtools.*;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.ultimagenomics.flow_based_read.utils.Direction;
 import htsjdk.samtools.util.SequenceUtil;
 import org.broadinstitute.hellbender.exceptions.GATKException;
@@ -10,9 +12,7 @@ import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
 import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
 
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.Serializable;
+import java.io.*;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Arrays;
@@ -39,6 +39,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private final int MINIMAL_READ_LENGTH = 10; // check if this is the right number
     private final double ERROR_PROB=1e-4;
     private final FlowBasedAlignmentArgumentCollection fbargs;
+    private final Logger logger = LogManager.getLogger(this.getClass());
 
     public FlowBasedRead(SAMRecord samRecord, String _flow_order, int _max_hmer) {
         this(samRecord, _flow_order, _max_hmer, new FlowBasedAlignmentArgumentCollection());
@@ -56,7 +57,27 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         else
             readBaseMatrix(_flow_order);
 
+        if ( logger.isDebugEnabled() ) {
+            logger.debug("cons: name: " + samRecord.getReadName()
+                    + " len: " + samRecord.getReadLength()
+                    + " loc: " + samRecord.getStart() + "-" + samRecord.getEnd()
+                    + " rev: " + isReverseStrand()
+                    + " cigar:" + samRecord.getCigarString());
+            logger.debug("     bases: " + new String(samRecord.getReadBases()));
+            logger.debug("       key: " + keyAsString(key));
+        }
+
         validateSequence();
+    }
+
+    static public String keyAsString(byte[] bytes)
+    {
+        StringBuilder   sb = new StringBuilder();
+
+        for ( byte b : bytes )
+            sb.append((char)((b < 10) ? ('0' + b) : ('A' + b - 10)));
+
+        return sb.toString();
     }
 
     private void readBaseMatrix(String _flow_order) {
@@ -67,6 +88,8 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             reverse(key, key.length);
         getKey2Base();
         flow_order = getFlow2Base(_flow_order, key.length);
+        if ( isReverseStrand() )
+            SequenceUtil.reverseComplement(flow_order);
 
        // initialize matrix
         flow_matrix = new double[max_hmer+1][key.length];
@@ -582,7 +605,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     }
 
-    public void writeMatrix(FileWriter oos)
+    public void writeMatrix(OutputStreamWriter oos)
             throws IOException {
         DecimalFormat formatter = new DecimalFormat("0.0000", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
 
@@ -601,7 +624,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         byte[]      bases = samRecord.getReadBases();
         int         basesOfs = 0;
         byte[]      quals = samRecord.getBaseQualities();
-        byte[]      ti = samRecord.hasAttribute("ti") ? samRecord.getByteArrayAttribute("ti") : (new byte[key.length]);
+        byte[]      ti = samRecord.hasAttribute("ti") ? samRecord.getByteArrayAttribute("ti") : (new byte[key.length*3]);
         if ( isReverseStrand() )
         {
             reverse(quals, quals.length);
@@ -635,12 +658,33 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     }
 
+    public void logMatrix(Logger logger, String msg) {
+
+        ByteArrayOutputStream   os = new ByteArrayOutputStream();
+        OutputStreamWriter      osw = new OutputStreamWriter(os);
+
+        logger.debug("logMatrix: " + msg + ", " + getName());
+
+        try {
+            writeMatrix(osw);
+            for ( String line : (new String(os.toByteArray())).split("\n") )
+                logger.debug(line);
+            osw.close();;
+        } catch (IOException e) {
+            e.printStackTrace();;
+        }
+    }
+
     public byte [] getFlowOrderArray() {
         return flow_order;
     }
 
     public int getKeyLength() {
         return key.length;
+    }
+
+    public byte[] getKey() {
+        return key;
     }
 
     public int totalKeyBases()  {
