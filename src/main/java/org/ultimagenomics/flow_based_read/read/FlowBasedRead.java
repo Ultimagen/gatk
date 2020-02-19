@@ -38,58 +38,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private final int MINIMAL_READ_LENGTH = 10; // check if this is the right number
     private final double ERROR_PROB=1e-4;
     private final FlowBasedAlignmentArgumentCollection fbargs;
-    public FlowBasedRead(SAMRecord samRecord, int _max_hmer) {
-        super(samRecord);
-        fbargs = new FlowBasedAlignmentArgumentCollection();
 
-        max_hmer = _max_hmer;
-        this.samRecord = samRecord;
-
-        forward_sequence = getForwardSequence();
-        key = getAttributeAsByteArray("kr");
-        getKey2Base();
-
-        flow_order = getFlow2Base(getAttributeAsString("KS"), key.length);
-        flow_matrix = new double[max_hmer+1][key.length];
-
-        // we fill all values in the matrix with non-zeros to not discard any read
-        for (int i = 0 ; i < max_hmer+1; i++) {
-            for (int j = 0 ; j < key.length; j++ ){
-                flow_matrix[i][j] = fbargs.filling_value;
-            }
-        }
-        byte [] kh = getAttributeAsByteArray( "kh" );
-        int [] kf = getAttributeAsIntArray("kf");
-        byte [] kd = getAttributeAsByteArray( "kd");
-
-        byte [] key_kh = key;
-        int [] key_kf = new int[key.length];
-        for ( int i = 0 ; i < key_kf.length ; i++)
-            key_kf[i] = i;
-        byte [] key_kd = new byte[key.length];
-
-        kh = ArrayUtils.addAll(kh, key_kh);
-        kf = ArrayUtils.addAll(kf, key_kf);
-        kd = ArrayUtils.addAll(kd, key_kd);
-
-        double [] kd_probs = phredToProb(kd);
-        clipProbs(kd_probs);
-
-        if (fbargs.remove_longer_than_one_indels) {
-            removeLongIndels( key_kh, kh, kf, kd_probs );
-        }
-
-        if (fbargs.remove_one_to_zero_probs) {
-            removeOneToZeroProbs(key_kh, kh, kf, kd_probs);
-        }
-
-        fillFlowMatrix( kh, kf, kd_probs);
-
-        if (fbargs.symmetric_indels) {
-            smoothIndels(key_kh);
-        }
-        validateSequence();
-    }
     public FlowBasedRead(SAMRecord samRecord, String _flow_order, int _max_hmer) {
         this(samRecord, _flow_order, _max_hmer, new FlowBasedAlignmentArgumentCollection());
     }
