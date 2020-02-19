@@ -14,6 +14,8 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     private static final String NUMBER_OF_POSSIBLE_PROBS = "flow-quantization-bins";
     private static final String FILLING_VALUE = "flow-fill-empty-bins-value";
     private static final String SYMMETRIC_INDELS = "flow-symmetric-indel-probs";
+    private static final String REPORT_INS_OR_DEL = "report-insertion-or-deletion";
+
 
     private static final double DEFAULT_RATIO_THRESHOLD = 0.003;
     private static final double DEFAULT_FILLING_VALUE = 0.001;
@@ -21,6 +23,7 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     private static final boolean DEFAULT_REMOVE_ONE_TO_ZERO = false;
     private static final boolean DEFAULT_SYMMETRIC_INDELS = false;
     private static final int DEFAULT_QUANTIZATION = 121;
+    private static final boolean DEFAULT_ONLY_INS_OR_DEL = false;
 
     @Advanced
     @Argument(fullName = PROBABILITY_RATIO_THRESHOLD_LONG_NAME, doc = "Lowest probability ratio to be used as an option", optional = true)
@@ -45,6 +48,10 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     @Advanced
     @Argument(fullName = SYMMETRIC_INDELS, doc = "Should indel probabilities be symmetric in flow", optional=true)
     public boolean symmetric_indels = DEFAULT_SYMMETRIC_INDELS;
+
+    @Advanced
+    @Argument(fullName = REPORT_INS_OR_DEL, doc = "Report either insertion or deletion, probability, not both", optional=true)
+    public boolean only_ins_or_del = DEFAULT_ONLY_INS_OR_DEL;
 
     public FlowBasedAlignmentArgumentCollection() {}
 }
