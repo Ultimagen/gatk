@@ -21,7 +21,7 @@ public class test_flow_based_read {
         FileWriter fos;
         FlowBasedRead fbr = null;
         for (i = reader.iterator(), count=0; (i.hasNext()) && (count < 100); count++  ) {
-            fbr = new FlowBasedRead(i.next(),9);
+            fbr = new FlowBasedRead(i.next(),"GCAT", 9);
             System.out.println(String.format("> Key length: %d, sequence length %d", fbr.totalKeyBases(), fbr.seqLength()));
 
             fbr.apply_alignment();
