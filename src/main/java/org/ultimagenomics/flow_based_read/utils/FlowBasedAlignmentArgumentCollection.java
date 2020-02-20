@@ -14,7 +14,7 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     private static final String NUMBER_OF_POSSIBLE_PROBS = "flow-quantization-bins";
     private static final String FILLING_VALUE = "flow-fill-empty-bins-value";
     private static final String SYMMETRIC_INDELS = "flow-symmetric-indel-probs";
-    private static final String REPORT_INS_OR_DEL = "report-insertion-or-deletion";
+    private static final String REPORT_INS_OR_DEL = "flow-report-insertion-or-deletion";
 
 
     private static final double DEFAULT_RATIO_THRESHOLD = 0.003;
