@@ -60,6 +60,17 @@ public class AlleleLikelihoodWriter<EVIDENCE extends Locatable, A extends Allele
                             }
                             output.write("\n");
                         }
+
+                        output.write(">>> Read->Haplotype in Full\n");
+                        for (int allele = 0; allele < likelihoods.sampleMatrix(s).numberOfAlleles(); allele++) {
+                            for (int read = 0; read < likelihoods.sampleMatrix(s).evidenceCount(); read++) {
+                                output.write(String.format("%04d\t%s\t%s\t%04d\t%s\n",
+                                        read, reads.get(read).getName(),
+                                        Double.toString(likelihoods.sampleMatrix(s).get(allele, read)),
+                                        allele, haplotypes.get(allele).toString()));
+                            }
+                            output.write("\n");
+                        }
                     }
                     output.flush();
                 }
