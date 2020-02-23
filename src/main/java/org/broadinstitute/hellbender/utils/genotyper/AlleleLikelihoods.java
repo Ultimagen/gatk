@@ -1242,7 +1242,7 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
         }
 
         public boolean isInformative() {
-            return confidence > LOG_10_INFORMATIVE_THRESHOLD;
+            return (likelihood == 0.0) || (confidence > LOG_10_INFORMATIVE_THRESHOLD);
         }
     }
 
