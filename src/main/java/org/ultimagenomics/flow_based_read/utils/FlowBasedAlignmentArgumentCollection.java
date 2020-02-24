@@ -2,6 +2,7 @@ package org.ultimagenomics.flow_based_read.utils;
 
 import org.broadinstitute.barclay.argparser.Advanced;
 import org.broadinstitute.barclay.argparser.Argument;
+import org.broadinstitute.barclay.argparser.ArgumentCollection;
 
 import java.io.Serializable;
 
@@ -15,7 +16,7 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     private static final String FILLING_VALUE = "flow-fill-empty-bins-value";
     private static final String SYMMETRIC_INDELS = "flow-symmetric-indel-probs";
     private static final String REPORT_INS_OR_DEL = "flow-report-insertion-or-deletion";
-
+    private static final String DISALLOW_LARGER_PROBS = "flow-disallow-probs-larger-than-call";
 
     private static final double DEFAULT_RATIO_THRESHOLD = 0.003;
     private static final double DEFAULT_FILLING_VALUE = 0.001;
@@ -24,7 +25,7 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     private static final boolean DEFAULT_SYMMETRIC_INDELS = false;
     private static final int DEFAULT_QUANTIZATION = 121;
     private static final boolean DEFAULT_ONLY_INS_OR_DEL = false;
-
+    private static final boolean DEFAULT_DISALLOW_LARGER_PROBS = false;
     @Advanced
     @Argument(fullName = PROBABILITY_RATIO_THRESHOLD_LONG_NAME, doc = "Lowest probability ratio to be used as an option", optional = true)
     public double probability_ratio_threshold = DEFAULT_RATIO_THRESHOLD;
@@ -53,5 +54,10 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     @Argument(fullName = REPORT_INS_OR_DEL, doc = "Report either insertion or deletion, probability, not both", optional=true)
     public boolean only_ins_or_del = DEFAULT_ONLY_INS_OR_DEL;
 
+    @Advanced
+    @Argument(fullName = DISALLOW_LARGER_PROBS, doc = "Cap probabilities of error to 1 relative to base call", optional=true)
+    public boolean disallow_larger_probs = DEFAULT_DISALLOW_LARGER_PROBS;
+
     public FlowBasedAlignmentArgumentCollection() {}
+
 }
