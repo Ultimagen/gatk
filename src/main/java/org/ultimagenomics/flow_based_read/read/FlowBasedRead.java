@@ -95,7 +95,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         flow_matrix = new double[max_hmer+1][key.length];
         for (int i = 0 ; i < max_hmer+1; i++) {
             for (int j = 0 ; j < key.length; j++ ){
-                flow_matrix[i][j] = ERROR_PROB;
+                flow_matrix[i][j] = fbargs.filling_value;;
             }
         }
 
