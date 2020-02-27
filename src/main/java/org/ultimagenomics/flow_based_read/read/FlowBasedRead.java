@@ -38,6 +38,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private int trim_right_base = 0 ;
     private final int MINIMAL_READ_LENGTH = 10; // check if this is the right number
     private final double ERROR_PROB=1e-4;
+    private final double MINIMAL_CALL_PROB = 0.1;
     private final FlowBasedAlignmentArgumentCollection fbargs;
     private final Logger logger = LogManager.getLogger(this.getClass());
 
@@ -120,12 +121,14 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         for ( int i = 0 ; i < key.length ; i++ ) {
             final byte        run = key[i];
             if ( run <= max_hmer )
-                flow_matrix[run][i] = 1 - probs[qualOfs];
+                flow_matrix[run][i] = Math.max(1 - probs[qualOfs],MINIMAL_CALL_PROB);
             if ( run != 0 ) {
                 if ( quals[qualOfs] != 40 ) {
                     final int     run1 = (ti[qualOfs] == 0) ? (run - 1) : (run + 1);
-                    if ( run1 <= max_hmer )
-                        flow_matrix[run1][i] = probs[qualOfs];
+                    if ( run1 <= max_hmer ) {
+                        flow_matrix[run1][i] = probs[qualOfs] / flow_matrix[run][i];
+                    }
+                    flow_matrix[run][i] /= flow_matrix[run][i]; // for comparison to the flow space - probabilities are normalized by the key's probability
                 }
                 qualOfs += run;
             }
