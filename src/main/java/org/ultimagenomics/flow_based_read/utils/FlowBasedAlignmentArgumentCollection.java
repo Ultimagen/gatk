@@ -17,6 +17,7 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     private static final String SYMMETRIC_INDELS = "flow-symmetric-indel-probs";
     private static final String REPORT_INS_OR_DEL = "flow-report-insertion-or-deletion";
     private static final String DISALLOW_LARGER_PROBS = "flow-disallow-probs-larger-than-call";
+    private static final String LUMP_PROBS = "flow-lump_probs";
 
     private static final double DEFAULT_RATIO_THRESHOLD = 0.003;
     private static final double DEFAULT_FILLING_VALUE = 0.001;
@@ -26,6 +27,8 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     private static final int DEFAULT_QUANTIZATION = 121;
     private static final boolean DEFAULT_ONLY_INS_OR_DEL = false;
     private static final boolean DEFAULT_DISALLOW_LARGER_PROBS = false;
+    private static final boolean DEFAULT_LUMP_PROBS = false;
+
     @Advanced
     @Argument(fullName = PROBABILITY_RATIO_THRESHOLD_LONG_NAME, doc = "Lowest probability ratio to be used as an option", optional = true)
     public double probability_ratio_threshold = DEFAULT_RATIO_THRESHOLD;
@@ -58,6 +61,9 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     @Argument(fullName = DISALLOW_LARGER_PROBS, doc = "Cap probabilities of error to 1 relative to base call", optional=true)
     public boolean disallow_larger_probs = DEFAULT_DISALLOW_LARGER_PROBS;
 
+    @Advanced
+    @Argument(fullName = LUMP_PROBS, doc = "Should all probabilities of insertion or deletion in the flow be combined together", optional=true)
+    public boolean lump_probs = DEFAULT_LUMP_PROBS;
     public FlowBasedAlignmentArgumentCollection() {}
 
 }
