@@ -120,7 +120,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         for ( int i = 0 ; i < key.length ; i++ ) {
             final byte        run = key[i];
             if ( run <= max_hmer )
-                flow_matrix[run][i] = 1;
+                flow_matrix[run][i] = 1 - probs[qualOfs];
             if ( run != 0 ) {
                 if ( quals[qualOfs] != 40 ) {
                     final int     run1 = (ti[qualOfs] == 0) ? (run - 1) : (run + 1);
