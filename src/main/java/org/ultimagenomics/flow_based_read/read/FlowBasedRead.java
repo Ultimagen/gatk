@@ -168,6 +168,8 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             removeLargeProbs(kd_probs);
         }
 
+        double [] old_kd_probs = ArrayUtils.clone(kd_probs);;
+
         if (fbargs.remove_longer_than_one_indels) {
             removeLongIndels( key_kh, kh, kf, kd_probs );
         }
@@ -177,6 +179,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
 
         fillFlowMatrix( kh, kf, kd_probs);
+
+        if ((fbargs.lump_probs) && (fbargs.remove_longer_than_one_indels)) {
+            lumpProbs(key_kh, kh, kf, old_kd_probs);
+        }
         if (fbargs.symmetric_indels) {
             smoothIndels(key_kh);
         }
@@ -186,6 +192,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         validateSequence();
     }
+
 
 
     public FlowBasedRead(FlowBasedRead other) {
@@ -271,9 +278,12 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
+
+
+
     private void quantizeProbs( byte [] kd_probs ) {
         int nQuants = fbargs.probability_quantization;
-        double bin_size = 60/nQuants;
+        double bin_size = 60/(float)nQuants;
         for ( int i = 0 ; i < kd_probs.length; i++) {
             if (kd_probs[i] <=0)
                 continue;
@@ -300,10 +310,22 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             if (( idx > 1 ) && ( idx < max_hmer) ) {
                 if ((flow_matrix[idx-1][i] > fbargs.filling_value) && (flow_matrix[idx+1][i] > fbargs.filling_value)) {
                     int fix_cell = flow_matrix[idx-1][i] > flow_matrix[idx+1][i] ? idx+1 : idx-1;
+                    int other_cell = flow_matrix[idx-1][i] > flow_matrix[idx+1][i] ? idx-1 : idx+1;
+                    if (fbargs.lump_probs) {
+                        flow_matrix[other_cell][i]+= flow_matrix[fix_cell][i];
+                    }
                     flow_matrix[fix_cell][i] = fbargs.filling_value;
                 }
             }
         }
+    }
+
+    private void lumpProbs(byte[] key_kh, byte[] kh, int[] kf, double[] old_kd_probs) {
+        for ( int i = 0 ; i < key_kh.length; i++) {
+
+
+        }
+
     }
 
     private void fillFlowMatrix(byte [] kh, int [] kf,
@@ -554,6 +576,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         return find_left_clipping(bases_clipped);
     }
 
+
     private int[] find_left_clipping(int bases_clipped){
         int[] result = new int[2];
         if (bases_clipped==0){
@@ -636,18 +659,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             throws IOException {
         DecimalFormat formatter = new DecimalFormat("0.0000", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
 
-        /*
-        int i = 0;
-        for (double[] row : flow_matrix) {
-            oos.write(String.format("ROW %d\n", i));
-            for (int j = 0; j < row.length; j++) {
-                String s = formatter.format(row[j]);
-                oos.write(String.format("%d,%d,%d %s\n", i, j, key[i], s));
-            }
-            oos.write("\n");
-            i++;
-        }
-         */
         byte[]      bases = samRecord.getReadBases();
         int         basesOfs = 0;
         byte[]      quals = samRecord.getBaseQualities();
@@ -672,16 +683,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
                 basesOfs +=  key[col];
             oos.write("\n");
         }
-
-        /*
-        for (double[] row : flow_matrix) {
-            for (int j = 0; j < row.length; j++) {
-                char c = (char)(33 + Math.round(-10.0*Math.log10(row[j])));
-                oos.write(c);
-            }
-            oos.write("\n");
-        }
-         */
 
     }
 
