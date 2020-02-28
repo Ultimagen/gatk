@@ -131,7 +131,9 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
                     if ( run1 <= max_hmer ) {
                         flow_matrix[run1][i] = probs[qualOfs] / flow_matrix[run][i];
                     }
-                    flow_matrix[run][i] /= flow_matrix[run][i]; // for comparison to the flow space - probabilities are normalized by the key's probability
+                    if (run <= max_hmer) {
+                        flow_matrix[run][i] /= flow_matrix[run][i]; // for comparison to the flow space - probabilities are normalized by the key's probability
+                    }
                 }
                 qualOfs += run;
             }
