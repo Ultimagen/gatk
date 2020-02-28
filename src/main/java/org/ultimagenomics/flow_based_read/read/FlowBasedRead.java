@@ -37,6 +37,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private int trim_left_base = 0 ;
     private int trim_right_base = 0 ;
     private final int MINIMAL_READ_LENGTH = 10; // check if this is the right number
+
     private final double ERROR_PROB=1e-4;
     private final double MINIMAL_CALL_PROB = 0.1;
     private final FlowBasedAlignmentArgumentCollection fbargs;
@@ -120,8 +121,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         int     qualOfs = 0;
         for ( int i = 0 ; i < key.length ; i++ ) {
             final byte        run = key[i];
-            if ( run <= max_hmer )
-                flow_matrix[run][i] = Math.max(1 - probs[qualOfs],MINIMAL_CALL_PROB);
+            if ( run <= max_hmer ) {
+                flow_matrix[run][i] = (run > 0) ? (1 - probs[qualOfs]) : 1;
+                flow_matrix[run][i] = Math.max(MINIMAL_CALL_PROB, flow_matrix[run][i]);
+            }
             if ( run != 0 ) {
                 if ( quals[qualOfs] != 40 ) {
                     final int     run1 = (ti[qualOfs] == 0) ? (run - 1) : (run + 1);
