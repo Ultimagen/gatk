@@ -189,7 +189,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         fillFlowMatrix( kh, kf, kd_probs);
 
         if ((fbargs.lump_probs) && (fbargs.remove_longer_than_one_indels)) {
-            lumpProbs(key_kh, kh, kf, old_kd_probs);
+            lumpProbs();
         }
         if (fbargs.symmetric_indels) {
             smoothIndels(key_kh);
@@ -230,6 +230,9 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         return max_hmer;
     }
 
+    public int getNFlows() {
+        return key.length;
+    }
     public Direction getDirection(){
         return direction;
     }
@@ -254,87 +257,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
-    private void clipProbs(double[] kd_probs) {
-        for ( int i = 0 ; i < kd_probs.length; i++ ){
-            if (kd_probs[i] < fbargs.probability_ratio_threshold) {
-                kd_probs[i] = fbargs.filling_value;
-            }
-        }
-    }
-
-    private void removeLargeProbs(double [] kd_probs) {
-        for (int i = 0 ; i < kd_probs.length; i++) {
-            if (kd_probs[i] > 1) {
-                kd_probs[i] = 1;
-            }
-        }
-    }
-
-    private void removeLongIndels(  byte [] key_kh, byte [] kh, int [] kf, double [] kd_probs ){
-        for ( int i = 0 ; i < kd_probs.length; i++ ) {
-            if (Math.abs(key_kh[kf[i]] - kh[i]) > 1 ){
-                kd_probs[i] = fbargs.filling_value;
-            }
-        }
-    }
-
-    private void removeOneToZeroProbs( byte [] key_kh, byte [] kh, int[] kf, double [] kd_probs) {
-        for ( int i = 0 ; i < kd_probs.length; i++ ) {
-            if (key_kh[kf[i]]==0 && kh[i]>0 ){
-                kd_probs[i] = fbargs.filling_value;
-            }
-        }
-    }
-
-
-
-
-    private void quantizeProbs( byte [] kd_probs ) {
-        int nQuants = fbargs.probability_quantization;
-        double bin_size = 60/(float)nQuants;
-        for ( int i = 0 ; i < kd_probs.length; i++) {
-            if (kd_probs[i] <=0)
-                continue;
-            else {
-                kd_probs[i] = (byte)(bin_size * (int)(kd_probs[i]/bin_size)+1);
-            }
-        }
-    }
-
-    private void smoothIndels( byte [] kr ) {
-        for ( int i = 0 ; i < kr.length; i++ ){
-            byte idx = kr[i];
-            if (( idx > 1 ) && ( idx < max_hmer) ) {
-                double tmp = (flow_matrix[idx - 1][i] + flow_matrix[idx + 1][i]) / 2;
-                flow_matrix[idx - 1][i] = tmp;
-                flow_matrix[idx + 1][i] = tmp;
-            }
-        }
-    }
-
-    private void reportInsOrDel( byte [] kr ) {
-        for ( int i = 0 ; i < kr.length; i++ ){
-            byte idx = kr[i];
-            if (( idx > 1 ) && ( idx < max_hmer) ) {
-                if ((flow_matrix[idx-1][i] > fbargs.filling_value) && (flow_matrix[idx+1][i] > fbargs.filling_value)) {
-                    int fix_cell = flow_matrix[idx-1][i] > flow_matrix[idx+1][i] ? idx+1 : idx-1;
-                    int other_cell = flow_matrix[idx-1][i] > flow_matrix[idx+1][i] ? idx-1 : idx+1;
-                    if (fbargs.lump_probs) {
-                        flow_matrix[other_cell][i]+= flow_matrix[fix_cell][i];
-                    }
-                    flow_matrix[fix_cell][i] = fbargs.filling_value;
-                }
-            }
-        }
-    }
-
-    private void lumpProbs(byte[] key_kh, byte[] kh, int[] kf, double[] old_kd_probs) {
-        for ( int i = 0 ; i < key_kh.length; i++) {
-
-
-        }
-
-    }
 
     private void fillFlowMatrix(byte [] kh, int [] kf,
                                 double [] kd_probs ) {
@@ -744,5 +666,104 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     public int getTrimmedEnd() {
         return getEnd() - trim_right_base;
     }
+
+    //functions that take care of simulating base format
+    private void clipProbs(double[] kd_probs) {
+        for ( int i = 0 ; i < kd_probs.length; i++ ){
+            if (kd_probs[i] < fbargs.probability_ratio_threshold) {
+                kd_probs[i] = fbargs.filling_value;
+            }
+        }
+    }
+
+    private void removeLargeProbs(double [] kd_probs) {
+        for (int i = 0 ; i < kd_probs.length; i++) {
+            if (kd_probs[i] > 1) {
+                kd_probs[i] = 1;
+            }
+        }
+    }
+
+    private void removeLongIndels(  byte [] key_kh, byte [] kh, int [] kf, double [] kd_probs ){
+        for ( int i = 0 ; i < kd_probs.length; i++ ) {
+            if (Math.abs(key_kh[kf[i]] - kh[i]) > 1 ){
+                kd_probs[i] = fbargs.filling_value;
+            }
+        }
+    }
+
+    private void removeOneToZeroProbs( byte [] key_kh, byte [] kh, int[] kf, double [] kd_probs) {
+        for ( int i = 0 ; i < kd_probs.length; i++ ) {
+            if (key_kh[kf[i]]==0 && kh[i]>0 ){
+                kd_probs[i] = fbargs.filling_value;
+            }
+        }
+    }
+
+
+
+
+    private void quantizeProbs( byte [] kd_probs ) {
+        int nQuants = fbargs.probability_quantization;
+        double bin_size = 60/(float)nQuants;
+        for ( int i = 0 ; i < kd_probs.length; i++) {
+            if (kd_probs[i] <=0)
+                continue;
+            else {
+                kd_probs[i] = (byte)(bin_size * (int)(kd_probs[i]/bin_size)+1);
+            }
+        }
+    }
+
+    private void smoothIndels( byte [] kr ) {
+        for ( int i = 0 ; i < kr.length; i++ ){
+            byte idx = kr[i];
+            if (( idx > 1 ) && ( idx < max_hmer) ) {
+                double tmp = (flow_matrix[idx - 1][i] + flow_matrix[idx + 1][i]) / 2;
+                flow_matrix[idx - 1][i] = tmp;
+                flow_matrix[idx + 1][i] = tmp;
+            }
+        }
+    }
+
+    private void reportInsOrDel( byte [] kr ) {
+        for ( int i = 0 ; i < kr.length; i++ ){
+            byte idx = kr[i];
+            if (( idx > 1 ) && ( idx < max_hmer) ) {
+                if ((flow_matrix[idx-1][i] > fbargs.filling_value) && (flow_matrix[idx+1][i] > fbargs.filling_value)) {
+                    int fix_cell = flow_matrix[idx-1][i] > flow_matrix[idx+1][i] ? idx+1 : idx-1;
+                    int other_cell = flow_matrix[idx-1][i] > flow_matrix[idx+1][i] ? idx-1 : idx+1;
+                    if (fbargs.lump_probs) {
+                        flow_matrix[other_cell][i]+= flow_matrix[fix_cell][i];
+                    }
+                    flow_matrix[fix_cell][i] = fbargs.filling_value;
+                }
+            }
+        }
+    }
+
+    private void lumpProbs() {
+
+        for (int i = 0; i < getMaxHmer(); i++) {
+            for (int j = 0 ; j < getNFlows(); j ++ ) {
+                int fkey = key[j];
+                if (flow_matrix[i][j]<=fbargs.filling_value) {
+                    continue;
+                } else {
+                    if ( (i - fkey) < -1 ){
+                        flow_matrix[fkey-1][j]+=flow_matrix[i][j];
+                        flow_matrix[i][j] = fbargs.filling_value;
+                    } else if ((i-fkey) > 1) {
+                        flow_matrix[fkey+1][j]+=flow_matrix[i][j];
+                        flow_matrix[i][j] = fbargs.filling_value;
+                    }
+
+                }
+
+            }
+        }
+
+    }
+
 }
 
