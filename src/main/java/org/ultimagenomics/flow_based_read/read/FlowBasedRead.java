@@ -171,7 +171,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         quantizeProbs(kd);
 
         double [] kd_probs = phredToProb(kd);
-        clipProbs(kd_probs);
         if (fbargs.disallow_larger_probs) {
             removeLargeProbs(kd_probs);
         }
@@ -188,9 +187,11 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         fillFlowMatrix( kh, kf, kd_probs);
 
-        if ((fbargs.lump_probs) && (fbargs.remove_longer_than_one_indels)) {
+        if ((fbargs.lump_probs)) {
             lumpProbs();
         }
+        clipProbs();
+
         if (fbargs.symmetric_indels) {
             smoothIndels(key_kh);
         }
@@ -668,10 +669,13 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     }
 
     //functions that take care of simulating base format
-    private void clipProbs(double[] kd_probs) {
-        for ( int i = 0 ; i < kd_probs.length; i++ ){
-            if (kd_probs[i] < fbargs.probability_ratio_threshold) {
-                kd_probs[i] = fbargs.filling_value;
+    private void clipProbs() {
+        for ( int i = 0 ; i < getMaxHmer(); i++ ) {
+            for ( int j =0; j < getNFlows(); j++) {
+                if ((flow_matrix[i][j] < fbargs.probability_ratio_threshold) &&
+                        (key[j]!=i)) {
+                    flow_matrix[i][j] = fbargs.filling_value;
+                }
             }
         }
     }
