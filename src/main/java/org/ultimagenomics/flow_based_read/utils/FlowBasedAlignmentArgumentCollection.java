@@ -17,7 +17,7 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     private static final String SYMMETRIC_INDELS = "flow-symmetric-indel-probs";
     private static final String REPORT_INS_OR_DEL = "flow-report-insertion-or-deletion";
     private static final String DISALLOW_LARGER_PROBS = "flow-disallow-probs-larger-than-call";
-    private static final String LUMP_PROBS = "flow-lump_probs";
+    private static final String LUMP_PROBS = "flow-lump-probs";
 
     private static final double DEFAULT_RATIO_THRESHOLD = 0.003;
     private static final double DEFAULT_FILLING_VALUE = 0.001;
