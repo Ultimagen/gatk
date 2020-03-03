@@ -737,9 +737,9 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
                 if ((flow_matrix[idx-1][i] > fbargs.filling_value) && (flow_matrix[idx+1][i] > fbargs.filling_value)) {
                     int fix_cell = flow_matrix[idx-1][i] > flow_matrix[idx+1][i] ? idx+1 : idx-1;
                     int other_cell = flow_matrix[idx-1][i] > flow_matrix[idx+1][i] ? idx-1 : idx+1;
-                    if (fbargs.lump_probs) {
-                        flow_matrix[other_cell][i]+= flow_matrix[fix_cell][i];
-                    }
+//                    if (fbargs.lump_probs) {
+//                       flow_matrix[other_cell][i]+= flow_matrix[fix_cell][i];
+//                    }
                     flow_matrix[fix_cell][i] = fbargs.filling_value;
                 }
             }
