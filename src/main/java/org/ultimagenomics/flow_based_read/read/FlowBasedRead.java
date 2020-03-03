@@ -112,7 +112,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         for ( int i = 0 ; i < quals.length ; i++ ) {
             double q = quals[i];
             double p = Math.pow(10, -q/10);
-            double ultima_p = 1.0 - Math.sqrt(1-p);
+            double ultima_p = p*2;
 
             probs[i] = ultima_p;
         }
