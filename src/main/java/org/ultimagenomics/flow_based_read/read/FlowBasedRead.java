@@ -121,9 +121,16 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         int     qualOfs = 0;
         for ( int i = 0 ; i < key.length ; i++ ) {
             final byte        run = key[i];
+
+            // the probability in the recalibration is not divided by two for hmers of length 1
+            if ( run == 1 ) {
+                probs[qualOfs] = probs[qualOfs]/2;
+            }
+
             if ( run <= max_hmer ) {
                 flow_matrix[run][i] = (run > 0) ? (1 - probs[qualOfs]) : 1;
                 flow_matrix[run][i] = Math.max(MINIMAL_CALL_PROB, flow_matrix[run][i]);
+
             }
             if ( run != 0 ) {
                 if ( quals[qualOfs] != 40 ) {
