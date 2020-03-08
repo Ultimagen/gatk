@@ -65,6 +65,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -791,7 +792,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
 
         final CalledHaplotypes calledHaplotypes = genotypingEngine.assignGenotypeLikelihoods(
-                refView == null ? haplotypes : refView.uncollapseByRef(haplotypes),
+                haplotypes,
                 readLikelihoods,
                 perSampleFilteredReadList,
                 assemblyResult.getFullReferenceWithPadding(),
@@ -803,6 +804,18 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                 hcArgs.maxMnpDistance,
                 readsHeader,
                 haplotypeBAMWriter.isPresent());
+
+        // uncollapse?
+        if ( calledHaplotypes.getCalledHaplotypes().size() != 0 && refView != null )
+        {
+            AtomicInteger       changeCount = new AtomicInteger();
+            List<Haplotype>     uncollapsedHaplotypes = refView.uncollapseByRef(calledHaplotypes.getCalledHaplotypes(), changeCount);
+
+            if ( changeCount.get() != 0 ) {
+                calledHaplotypes.getCalledHaplotypes().clear();
+                calledHaplotypes.getCalledHaplotypes().addAll(uncollapsedHaplotypes);
+            }
+        }
 
         if ( haplotypeBAMWriter.isPresent() ) {
             final Set<Haplotype> calledHaplotypeSet = new HashSet<>(calledHaplotypes.getCalledHaplotypes());
