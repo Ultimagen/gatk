@@ -48,12 +48,6 @@ public class CollapsedLargeHmerReferenceView {
             logger.info(printBases(fullRef));
         }
 
-        // TEMP! test if actual refHaplotype needs collapsing to aid in finding interesting areas for testing
-        if ( needsCollapsing(refHaplotype.getBases(), hmerSizeThreshold, logger, debug) ) {
-            if ( debug )
-                logger.info("refHaplotype needs collapsing!");
-        }
-
         collapse();
     }
 
@@ -224,11 +218,13 @@ public class CollapsedLargeHmerReferenceView {
         collapsedRefLoc = getCollapsedLoc(refLoc);
 
         // debug: save an alignement beteeen the two references. used for learnign and observation. can be removed
+        /*
         refAlignement = aligner.align(fullRef, collapsedRef, SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
         if ( debug ) {
             logger.info("alignment.offset: " + refAlignement.getAlignmentOffset() + ", cigar: " + refAlignement.getCigar());
         }
         uncollapseByRef(collapsedRef, fullRef);
+         */
     }
     
     private int toUncollapsedLocus(int locus) {
@@ -301,7 +297,7 @@ public class CollapsedLargeHmerReferenceView {
         return finalResult;
     }
 
-    public List<Haplotype> uncollapseByRef(final List<Haplotype> haplotypes) {
+    public List<Haplotype> uncollapseByRef(final Collection<Haplotype> haplotypes) {
 
         final List<Haplotype>       result = new LinkedList<>();
         final Map<Locatable, byte[]> refMap = new LinkedHashMap<>();
@@ -321,6 +317,11 @@ public class CollapsedLargeHmerReferenceView {
             alignedHaplotype.setScore(h.getScore());
             alignedHaplotype.setGenomeLocation(getUncollapsedLoc(h.getGenomeLocation()));
             alignedHaplotype.setEventMap(h.getEventMap());
+
+            int         loc = h.getGenomeLocation().getStart() - h.getAlignmentStartHapwrtRef();
+            int         unloc = toUncollapsedLocus(loc);
+            int         unstart = alignedHaplotype.getGenomeLocation().getStart() - unloc;
+            alignedHaplotype.setAlignmentStartHapwrtRef(unstart);
 
             // save refHaplotype?
             if ( refHaplotype == null && alignedHaplotype.isReference() )

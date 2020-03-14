@@ -716,6 +716,15 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                 readsHeader,
                 haplotypeBAMWriter.isPresent());
 
+        // uncollapse?
+        if ( calledHaplotypes.getCalledHaplotypes().size() != 0 && refView != null )
+        {
+            List<Haplotype>     uncollapsedHaplotypes = refView.uncollapseByRef(calledHaplotypes.getCalledHaplotypes());
+
+            calledHaplotypes.getCalledHaplotypes().clear();
+            calledHaplotypes.getCalledHaplotypes().addAll(uncollapsedHaplotypes);
+        }
+
         if ( haplotypeBAMWriter.isPresent() ) {
             final Set<Haplotype> calledHaplotypeSet = new HashSet<>(calledHaplotypes.getCalledHaplotypes());
             if ( hcArgs.disableOptimizations ) {

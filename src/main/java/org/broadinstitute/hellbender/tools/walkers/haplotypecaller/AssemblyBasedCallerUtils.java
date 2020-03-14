@@ -290,7 +290,7 @@ public final class AssemblyBasedCallerUtils {
                 : new PileupReadErrorCorrector(argumentCollection.assemblerArgs.pileupErrorCorrectionLogOdds, header);
 
         // estblish reference mapper, if needed
-        final CollapsedLargeHmerReferenceView     refView = (argumentCollection.ultimaAssemblyCollapseHKerSize > 0 && CollapsedLargeHmerReferenceView.needsCollapsing(fullReferenceWithPadding, argumentCollection.ultimaAssemblyCollapseHKerSize, logger, argumentCollection.assemblerArgs.debugAssembly))
+        final CollapsedLargeHmerReferenceView     refView = (argumentCollection.ultimaAssemblyCollapseHKerSize > 0 && CollapsedLargeHmerReferenceView.needsCollapsing(refHaplotype.getBases(), argumentCollection.ultimaAssemblyCollapseHKerSize, logger, argumentCollection.assemblerArgs.debugAssembly))
                                             ? new CollapsedLargeHmerReferenceView(argumentCollection.ultimaAssemblyCollapseHKerSize, fullReferenceWithPadding, paddedReferenceLoc, refHaplotype, region, logger, argumentCollection.assemblerArgs.debugAssembly)
                                             : null;
 
