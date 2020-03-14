@@ -50,12 +50,6 @@ public class CollapsedLargeHmerReferenceView {
             logger.info(printBases(fullRef));
         }
 
-        // TEMP! test if actual refHaplotype needs collapsing to aid in finding interesting areas for testing
-        if ( needsCollapsing(refHaplotype.getBases(), hmerSizeThreshold, logger, debug) ) {
-            if ( debug )
-                logger.info("refHaplotype needs collapsing!");
-        }
-
         collapse();
     }
 
@@ -226,11 +220,13 @@ public class CollapsedLargeHmerReferenceView {
         collapsedRefLoc = getCollapsedLoc(refLoc);
 
         // debug: save an alignement beteeen the two references. used for learnign and observation. can be removed
+        /*
         refAlignement = aligner.align(fullRef, collapsedRef, SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
         if ( debug ) {
             logger.info("alignment.offset: " + refAlignement.getAlignmentOffset() + ", cigar: " + refAlignement.getCigar());
         }
-        uncollapseByRef(collapsedRef, fullRef, new AtomicInteger());
+        uncollapseByRef(collapsedRef, fullRef);
+         */
     }
     
     private int toUncollapsedLocus(int locus) {
@@ -248,7 +244,7 @@ public class CollapsedLargeHmerReferenceView {
         return sb.toString();
     }
 
-    public byte[] uncollapseByRef(byte[] bases, byte[] ref, AtomicInteger changeCounter) {
+    public byte[] uncollapseByRef(byte[] bases, byte[] ref) {
 
         // use aligner to get CIGAR
         SmithWatermanAlignment alignment = aligner.align(ref, bases, SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
@@ -293,12 +289,7 @@ public class CollapsedLargeHmerReferenceView {
         // return adjusted result
         final byte[] finalResult = (result.length == resultOfs) ? result : Arrays.copyOf(result, resultOfs);
 
-        // look for a difference between the newly generated haplotype and the reference
-        boolean     isDiff = (Arrays.compare(ref, finalResult) != 0) && (Arrays.compare(bases, finalResult) != 0);
-        if ( isDiff )
-            changeCounter.incrementAndGet();
-
-        if ( debug || isDiff ) {
+        if ( debug ) {
             logger.info("bases, ref, finalResult:");
             logger.info(printBases(bases));
             logger.info(printBases(ref));
@@ -308,7 +299,7 @@ public class CollapsedLargeHmerReferenceView {
         return finalResult;
     }
 
-    public List<Haplotype> uncollapseByRef(final Collection<Haplotype> haplotypes, AtomicInteger changeCounter) {
+    public List<Haplotype> uncollapseByRef(final Collection<Haplotype> haplotypes) {
 
         final List<Haplotype>       result = new LinkedList<>();
         final Map<Locatable, byte[]> refMap = new LinkedHashMap<>();
@@ -323,11 +314,16 @@ public class CollapsedLargeHmerReferenceView {
                 ref = getUncollapsedPartialRef(h.getGenomeLocation(), true);
                 refMap.put(h.getGenomeLocation(), ref);
             }
-            byte[]      alignedBases = uncollapseByRef(h.getBases(), ref, changeCounter);
+            byte[]      alignedBases = uncollapseByRef(h.getBases(), ref);
             Haplotype   alignedHaplotype = new Haplotype(alignedBases, h.isReference());
             alignedHaplotype.setScore(h.getScore());
             alignedHaplotype.setGenomeLocation(getUncollapsedLoc(h.getGenomeLocation()));
             alignedHaplotype.setEventMap(h.getEventMap());
+
+            int         loc = h.getGenomeLocation().getStart() - h.getAlignmentStartHapwrtRef();
+            int         unloc = toUncollapsedLocus(loc);
+            int         unstart = alignedHaplotype.getGenomeLocation().getStart() - unloc;
+            alignedHaplotype.setAlignmentStartHapwrtRef(unstart);
 
             // save refHaplotype?
             if ( refHaplotype == null && alignedHaplotype.isReference() )
