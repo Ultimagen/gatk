@@ -738,12 +738,27 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                 haplotypeBAMWriter.isPresent());
 
         // uncollapse?
-        if ( calledHaplotypes.getCalledHaplotypes().size() != 0 && refView != null )
-        {
-            List<Haplotype>     uncollapsedHaplotypes = refView.uncollapseByRef(calledHaplotypes.getCalledHaplotypes());
+        if ( refView != null ) {
 
+            // calls
+            List<VariantContext>    uncollapsedCalls = refView.uncollapseByRef(calledHaplotypes.getCalls());
+            calledHaplotypes.getCalls().clear();
+            calledHaplotypes.getCalls().addAll(uncollapsedCalls);
+
+            // haplotypes
+            List<Haplotype> uncollapsedHaplotypes = refView.uncollapseByRef(calledHaplotypes.getCalledHaplotypes());
             calledHaplotypes.getCalledHaplotypes().clear();
             calledHaplotypes.getCalledHaplotypes().addAll(uncollapsedHaplotypes);
+            haplotypes = uncollapsedHaplotypes;
+
+            // reads
+            final int sampleCount = readLikelihoods.numberOfSamples();
+            for (int i = 0; i < sampleCount; i++) {
+                for (final GATKRead read : readLikelihoods.sampleEvidence(i)) {
+                    read.setPosition(refView.getUncollapsedLoc(read));
+                }
+            }
+
         }
 
         if ( haplotypeBAMWriter.isPresent() ) {
