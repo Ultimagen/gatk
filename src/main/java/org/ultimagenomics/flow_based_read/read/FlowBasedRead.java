@@ -85,13 +85,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private void readBaseMatrix(String _flow_order) {
 
        // generate key (base to flow space)
+        setDirection(Direction.REFERENCE);  // base is always in reference/alignment direction
         key = FlowBasedHaplotype.base2key(samRecord.getReadBases(), _flow_order, 1000);
-        if ( isReverseStrand() )
-            reverse(key, key.length);
         getKey2Base();
         flow_order = getFlow2Base(_flow_order, key.length);
-        if ( isReverseStrand() )
-            SequenceUtil.reverseComplement(flow_order);
 
        // initialize matrix
         flow_matrix = new double[max_hmer+1][key.length];
@@ -104,10 +101,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         // access qual, convert to ultima representation
         byte[]      quals = samRecord.getBaseQualities();
         byte[]      ti = samRecord.getByteArrayAttribute("ti");
-        if ( isReverseStrand() ) {
-            reverse(quals, quals.length);
-            reverse(ti, ti.length);
-        }
         double[]    probs = new double[quals.length];
         for ( int i = 0 ; i < quals.length ; i++ ) {
             double q = quals[i];
