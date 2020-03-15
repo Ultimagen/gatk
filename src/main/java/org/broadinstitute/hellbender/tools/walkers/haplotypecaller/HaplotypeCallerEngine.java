@@ -662,7 +662,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
 
         // evaluate each sample's reads against all haplotypes
-        final List<Haplotype> haplotypes = assemblyResult.getHaplotypeList();
+        List<Haplotype> haplotypes = assemblyResult.getHaplotypeList();
         final Map<String,List<GATKRead>> reads = AssemblyBasedCallerUtils.splitReadsBySample(samplesList, readsHeader, regionForGenotyping.getReads());
 
         // Calculate the likelihoods: CPU intensive part.
@@ -717,12 +717,27 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                 haplotypeBAMWriter.isPresent());
 
         // uncollapse?
-        if ( calledHaplotypes.getCalledHaplotypes().size() != 0 && refView != null )
-        {
-            List<Haplotype>     uncollapsedHaplotypes = refView.uncollapseByRef(calledHaplotypes.getCalledHaplotypes());
+        if ( refView != null ) {
 
+            // calls
+            List<VariantContext>    uncollapsedCalls = refView.uncollapseByRef(calledHaplotypes.getCalls());
+            calledHaplotypes.getCalls().clear();
+            calledHaplotypes.getCalls().addAll(uncollapsedCalls);
+
+            // haplotypes
+            List<Haplotype> uncollapsedHaplotypes = refView.uncollapseByRef(calledHaplotypes.getCalledHaplotypes());
             calledHaplotypes.getCalledHaplotypes().clear();
             calledHaplotypes.getCalledHaplotypes().addAll(uncollapsedHaplotypes);
+            haplotypes = uncollapsedHaplotypes;
+
+            // reads
+            final int sampleCount = readLikelihoods.numberOfSamples();
+            for (int i = 0; i < sampleCount; i++) {
+                for (final GATKRead read : readLikelihoods.sampleEvidence(i)) {
+                    read.setPosition(refView.getUncollapsedLoc(read));
+                }
+            }
+
         }
 
         if ( haplotypeBAMWriter.isPresent() ) {
