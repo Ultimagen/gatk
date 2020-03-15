@@ -4,6 +4,9 @@ import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.util.Locatable;
+import htsjdk.variant.variantcontext.Allele;
+import htsjdk.variant.variantcontext.GenotypesContext;
+import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.gatk.nativebindings.smithwaterman.SWOverhangStrategy;
 import org.broadinstitute.hellbender.engine.AssemblyRegion;
@@ -299,6 +302,39 @@ public class CollapsedLargeHmerReferenceView {
         return finalResult;
     }
 
+    public List<VariantContext> uncollapseByRef(List<VariantContext> calls) {
+
+        final List<VariantContext>  result = new LinkedList<>();
+
+        for ( VariantContext other : calls ) {
+
+            long        start = toUncollapsedLocus(other.getStart());
+            long        end = toUncollapsedLocus(other.getEnd());
+
+            VariantContext      vc = new MyVariantContext(other, start, end);
+
+            result.add(vc);
+        }
+
+        for ( VariantContext vc : calls )
+            logVariantContext(vc, "uncollapseByRef: >>");
+        for ( VariantContext vc : result )
+            logVariantContext(vc, "uncollapseByRef: <<");
+
+        return result;
+    }
+
+    public static class MyVariantContext extends VariantContext {
+
+        public static final long serialVersionUID = 1L;
+
+        public MyVariantContext(VariantContext other, long start, long end) {
+            super(other.getSource(), other.getID(), other.getContig(), start, end, other.getAlleles(), other.getGenotypes(), other.getLog10PError(), other.getFiltersMaybeNull(), other.getAttributes(),
+                    /*other.fullyDecoded*/ false,
+                    EnumSet.noneOf(VariantContext.Validation.class));
+        }
+    }
+
     public List<Haplotype> uncollapseByRef(final Collection<Haplotype> haplotypes) {
 
         final List<Haplotype>       result = new LinkedList<>();
@@ -341,6 +377,12 @@ public class CollapsedLargeHmerReferenceView {
             }
         }
 
+        for ( Haplotype h : haplotypes )
+            logHaplotype(h, "uncollapseByRef: >>");
+        for ( Haplotype h : result )
+            logHaplotype(h, "uncollapseByRef: <<");
+
+
         return result;
     }
 
@@ -355,5 +397,17 @@ public class CollapsedLargeHmerReferenceView {
                 return false;
         }
         return true;
+    }
+
+    private void logHaplotype(Haplotype h, String label) {
+        if ( debug ) {
+            logger.info(String.format("%s: %s %d %s %s", label, h.getGenomeLocation(), h.getAlignmentStartHapwrtRef(), h.getCigar(), h));
+        }
+    }
+
+    private void logVariantContext(VariantContext vc, String label) {
+        if ( debug ) {
+            logger.info(String.format("%s: %s", label, vc));
+        }
     }
 }
