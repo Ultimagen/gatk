@@ -214,20 +214,18 @@ public class CollapsedLargeHmerReferenceView {
         if ( debug ) {
             logger.info("after collapsing: ");
             logger.info(printBases(collapsedRef));
-            logger.info("collapsedToFullLocationMap: " + Arrays.toString(collapsedToFullLocationMap));
-            logger.info("fullToCollapsedLocationMap: " + Arrays.toString(fullToCollapsedLocationMap));
+            //logger.info("collapsedToFullLocationMap: " + Arrays.toString(collapsedToFullLocationMap));
+            //logger.info("fullToCollapsedLocationMap: " + Arrays.toString(fullToCollapsedLocationMap));
         }
 
         collapsedRefLoc = getCollapsedLoc(refLoc);
 
-        // debug: save an alignement beteeen the two references. used for learnign and observation. can be removed
-        /*
+        // debug: save an alignement beteeen the two references. used for learning and observation. can be removed
         refAlignement = aligner.align(fullRef, collapsedRef, SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
         if ( debug ) {
             logger.info("alignment.offset: " + refAlignement.getAlignmentOffset() + ", cigar: " + refAlignement.getCigar());
         }
         uncollapseByRef(collapsedRef, fullRef);
-         */
     }
     
     private int toUncollapsedLocus(int locus) {
