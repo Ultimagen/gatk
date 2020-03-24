@@ -170,8 +170,4 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     @Argument(fullName="ultima-flow-matrix-mods", doc="Modifications to perform on the read flow matrix. For now only supported mod is copy. Format is a list of src,dst,src,dst.... Operation is triggered when src is written. Example: 8,12,11,12", optional = true)
     public String ultimaFlowMatrixMods = null;
 
-    @Hidden
-    @Advanced
-    @Argument(fullName="ultima-uncollapse-order", doc="experimental", optional = true)
-    public String ultimaUncollapseOrder = null;
 }
