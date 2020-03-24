@@ -36,8 +36,8 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private boolean trimmed_to_haplotype = false;
     private int trim_left_base = 0 ;
     private int trim_right_base = 0 ;
-    private final int MINIMAL_READ_LENGTH = 10; // check if this is the right number
-
+    static private final int MINIMAL_READ_LENGTH = 10; // check if this is the right number
+    static private final int MAXIMAL_READ_LENGTH = 100;
     private final double ERROR_PROB=1e-4;
     private final double MINIMAL_CALL_PROB = 0.1;
     private final FlowBasedAlignmentArgumentCollection fbargs;
@@ -47,7 +47,11 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         this(samRecord, _flow_order, _max_hmer, new FlowBasedAlignmentArgumentCollection());
     }
 
+    static private String ultimaFlowMatrixMods = null;
+    static private int[] ultimaFlowMatrixModsInstructions = new int[MAXIMAL_READ_LENGTH];
+
     public FlowBasedRead(SAMRecord samRecord, String _flow_order, int _max_hmer, FlowBasedAlignmentArgumentCollection fbargs) {
+
         super(samRecord);
         this.fbargs = fbargs;
         max_hmer = _max_hmer;
@@ -265,7 +269,12 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             if (( kh[i] & 0xff )> max_hmer) {
                 continue;
             }
-            flow_matrix[kh[i] & 0xff][kf[i]] = kd_probs[i];
+            int     pos;
+            int     hmer;
+            flow_matrix[hmer = kh[i] & 0xff][pos = kf[i]] = kd_probs[i];
+
+            if ( ultimaFlowMatrixModsInstructions[hmer] != 0 )
+                flow_matrix[ultimaFlowMatrixModsInstructions[hmer]][pos] = kd_probs[i];
         }
 
     }
@@ -768,6 +777,15 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
 
     }
+    public static void setUltimaFlowMatrixMods(String list) {
+        if ( list != null )
+        {
+            String[]    toks = list.split(",");
+            for ( int i = 0 ; i < toks.length - 1 ; i += 2 )
+                ultimaFlowMatrixModsInstructions[Integer.parseInt(toks[i])] = Integer.parseInt(toks[i+1]);
+        }
+    }
+
 
 }
 
