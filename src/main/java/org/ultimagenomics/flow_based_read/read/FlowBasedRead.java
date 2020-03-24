@@ -41,13 +41,13 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private final double MINIMAL_CALL_PROB = 0.1;
     private final FlowBasedAlignmentArgumentCollection fbargs;
     private final Logger logger = LogManager.getLogger(this.getClass());
+    static private String ultimaFlowMatrixMods = null;
+    static private int[] ultimaFlowMatrixModsInstructions = new int[MAXIMAL_READ_LENGTH];
 
     public FlowBasedRead(SAMRecord samRecord, String _flowOrder, int _maxHmer) {
         this(samRecord, _flowOrder, _maxHmer, new FlowBasedAlignmentArgumentCollection());
     }
 
-    static private String ultimaFlowMatrixMods = null;
-    static private int[] ultimaFlowMatrixModsInstructions = new int[MAXIMAL_READ_LENGTH];
 
     public FlowBasedRead(FlowBasedRead other) {
         super(other.samRecord);
@@ -302,21 +302,12 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             } else {
                 flowMatrix[kh[i] & 0xff][kf[i]] = kd_probs[i];
             }
+            int     pos;
+            int     hmer;
+            flowMatrix[hmer = kh[i] & 0xff][pos = kf[i]] = kd_probs[i];
 
-            // normal matrix filling
-            int     pos = kf[i];
-            int     hmer = kh[i] & 0xff;
-            flowMatrix[hmer][pos] = Math.max(flowMatrix[hmer][pos], kd_probs[i]);
-
-            // mod instruction implementation
-            int hmer2 = ultimaFlowMatrixModsInstructions[hmer];
-            if ( hmer2 != 0 ) {
-                flowMatrix[hmer2][pos] = Math.max(flowMatrix[hmer2][pos], kd_probs[i]);
-
-                // if we are copying bacwards, zero out source
-                if ( hmer > hmer2 )
-                    flowMatrix[hmer][pos] = 0;
-            }
+            if ( ultimaFlowMatrixModsInstructions[hmer] != 0 )
+                flowMatrix[ultimaFlowMatrixModsInstructions[hmer]][pos] = kd_probs[i];
         }
 
     }
@@ -844,14 +835,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
 
     }
-    public static void setUltimaFlowMatrixMods(String list) {
-        if ( list != null )
-        {
-            String[]    toks = list.split(",");
-            for ( int i = 0 ; i < toks.length - 1 ; i += 2 )
-                ultimaFlowMatrixModsInstructions[Integer.parseInt(toks[i])] = Integer.parseInt(toks[i+1]);
-        }
-    }
 
 
     private void reportMaxNProbsHmer(byte [] key) {
@@ -881,6 +864,15 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
 
         return q.peek();
+    }
+
+    public static void setUltimaFlowMatrixMods(String list) {
+        if ( list != null )
+        {
+            String[]    toks = list.split(",");
+            for ( int i = 0 ; i < toks.length - 1 ; i += 2 )
+                ultimaFlowMatrixModsInstructions[Integer.parseInt(toks[i])] = Integer.parseInt(toks[i+1]);
+        }
     }
 
 }
