@@ -4,9 +4,8 @@ import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.util.Locatable;
-import htsjdk.variant.variantcontext.Allele;
-import htsjdk.variant.variantcontext.GenotypesContext;
-import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.variantcontext.*;
+import org.apache.commons.beanutils.BeanUtils;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.gatk.nativebindings.smithwaterman.SWOverhangStrategy;
 import org.broadinstitute.hellbender.engine.AssemblyRegion;
@@ -304,10 +303,20 @@ public class CollapsedLargeHmerReferenceView {
 
         for ( VariantContext other : calls ) {
 
+            // adjust locations
             long        start = toUncollapsedLocus(other.getStart());
             long        end = toUncollapsedLocus(other.getEnd());
 
-            VariantContext      vc = new MyVariantContext(other, start, end);
+            // retrieve true ref content
+            int         rangeStart = (int)(start - refLoc.getStart());
+            int         rangeSize = other.getEnd() - other.getStart() + 1;
+            byte[]      ref = Arrays.copyOfRange(fullRef, rangeStart + 1, rangeStart + rangeSize + 1);
+
+            // modify alleles, getnotype
+            List<Allele>        alleles = modifiedAlleles(other.getAlleles(), ref);
+            GenotypesContext    genotypes = modifiedGenotypes(other.getGenotypes(), alleles, ref);
+
+            VariantContext      vc = new MyVariantContext(other, start, end, alleles, genotypes);
 
             result.add(vc);
         }
@@ -320,12 +329,47 @@ public class CollapsedLargeHmerReferenceView {
         return result;
     }
 
+    private List<Allele> modifiedAlleles(List<Allele> otherAlleles, byte[] ref) {
+
+        // modify alleles
+        List<Allele>    alleles = new LinkedList<>();
+        Allele          refAllele = null;
+        for ( Allele otherAllele : otherAlleles ) {
+            if (otherAllele.isReference()) {
+
+                refAllele = Allele.create(ref, true);
+                alleles.add(refAllele);
+
+            } else
+                alleles.add(otherAllele);
+        }
+
+        return alleles;
+    }
+
+    private GenotypesContext modifiedGenotypes(GenotypesContext genotypes, List<Allele> otherAlleles, byte[] ref) {
+
+        GenotypesContext        modGC = GenotypesContext.create();
+
+        for ( Genotype genotype : genotypes ) {
+
+            // modify alleles
+            List<Allele>    alleles = modifiedAlleles(genotype.getAlleles(), ref);
+            Genotype        g = GenotypeBuilder.create(genotype.getSampleName(), alleles, genotype.getExtendedAttributes());
+
+            modGC.add(g);
+        }
+
+        return modGC;
+    }
+
     public static class MyVariantContext extends VariantContext {
 
         public static final long serialVersionUID = 1L;
 
-        public MyVariantContext(VariantContext other, long start, long end) {
-            super(other.getSource(), other.getID(), other.getContig(), start, end, other.getAlleles(), other.getGenotypes(), other.getLog10PError(), other.getFiltersMaybeNull(), other.getAttributes(),
+        public MyVariantContext(VariantContext other, long start, long end, List<Allele> alleles, GenotypesContext genotypes) {
+
+            super(other.getSource(), other.getID(), other.getContig(), start, end, alleles, genotypes, other.getLog10PError(), other.getFiltersMaybeNull(), other.getAttributes(),
                     /*other.fullyDecoded*/ false,
                     EnumSet.noneOf(VariantContext.Validation.class));
         }
