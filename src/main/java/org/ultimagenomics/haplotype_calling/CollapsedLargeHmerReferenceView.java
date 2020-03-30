@@ -299,6 +299,9 @@ public class CollapsedLargeHmerReferenceView {
         return finalResult;
     }
 
+    static boolean      NEW_MOD = true;
+    static int          NEW_MOD_1 = 0;
+
     public List<VariantContext> uncollapseByRef(List<VariantContext> calls) {
 
         final List<VariantContext>  result = new LinkedList<>();
@@ -309,18 +312,25 @@ public class CollapsedLargeHmerReferenceView {
             long        start = toUncollapsedLocus(other.getStart());
             long        end = toUncollapsedLocus(other.getEnd());
 
-            // retrieve true ref content
-            int         rangeStart = (int)(start - refLoc.getStart());
-            int         rangeSize = other.getEnd() - other.getStart() + 1;
-            byte[]      ref = Arrays.copyOfRange(fullRef, rangeStart + 1, rangeStart + rangeSize + 1);
+            if ( NEW_MOD ) {
+                // retrieve true ref content
+                int rangeStart = (int) (start - refLoc.getStart());
+                int rangeSize = other.getEnd() - other.getStart() + 1;
+                byte[] ref = Arrays.copyOfRange(fullRef, rangeStart + NEW_MOD_1, rangeStart + rangeSize + NEW_MOD_1);
 
-            // modify alleles, getnotype
-            List<Allele>        alleles = modifiedAlleles(other.getAlleles(), ref);
-            GenotypesContext    genotypes = modifiedGenotypes(other.getGenotypes(), alleles, ref);
+                // modify alleles, getnotype
+                List<Allele> alleles = modifiedAlleles(other.getAlleles(), ref);
+                GenotypesContext genotypes = modifiedGenotypes(other.getGenotypes(), alleles, ref);
 
-            VariantContext      vc = new MyVariantContext(other, start, end, alleles, genotypes);
+                VariantContext vc = new MyVariantContext(other, start, end, alleles, genotypes);
 
-            result.add(vc);
+                result.add(vc);
+            } else {
+                VariantContext vc = new MyVariantContext(other, start, end, other.getAlleles(), other.getGenotypes());
+
+                result.add(vc);
+
+            }
         }
 
         for ( VariantContext vc : calls )
