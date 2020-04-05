@@ -302,12 +302,14 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             } else {
                 flowMatrix[kh[i] & 0xff][kf[i]] = kd_probs[i];
             }
-            int     pos;
-            int     hmer;
-            flowMatrix[hmer = kh[i] & 0xff][pos = kf[i]] = kd_probs[i];
+            int     pos = kf[i];
+            int     hmer = kh[i] & 0xff;
+            flowMatrix[hmer][pos] = Math.max(flowMatrix[hmer][pos], kd_probs[i]);
 
-            if ( ultimaFlowMatrixModsInstructions[hmer] != 0 )
-                flowMatrix[ultimaFlowMatrixModsInstructions[hmer]][pos] = kd_probs[i];
+            int hmer2 = ultimaFlowMatrixModsInstructions[hmer];
+            if ( hmer2 != 0 ) {
+                flowMatrix[hmer2][pos] = Math.max(flowMatrix[hmer2][pos], kd_probs[i]);
+            }
         }
 
     }
