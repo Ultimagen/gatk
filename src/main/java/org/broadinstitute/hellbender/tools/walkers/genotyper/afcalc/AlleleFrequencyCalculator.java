@@ -4,6 +4,7 @@ import htsjdk.variant.variantcontext.*;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import org.apache.commons.math3.special.Gamma;
+import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.math3.util.MathArrays;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeAlleleCounts;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeCalculationArgumentCollection;
@@ -14,10 +15,12 @@ import org.broadinstitute.hellbender.utils.IndexRange;
 import org.broadinstitute.hellbender.utils.MathUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -263,23 +266,39 @@ public final class AlleleFrequencyCalculator {
     }
 
 
+    private static List<Allele> unspecifiedAlternateAlleles( final List<Allele> input_alleles) {
+        List<Allele> result = input_alleles.stream()
+                .filter(al -> al.isSymbolic())
+                .filter(al -> Pattern.matches("<[0-9]+>",al.getDisplayString()))
+                .collect(Collectors.toList());
+        return result;
+    }
+
     private static List<Integer> genotypeIndicesWithHetUnspecifiedAltAllele(final int ploidy, final List<Allele> alleles) {
         final int alleleCount = alleles.size();
-        final boolean unspecifiedAllelePresent = alleles.contains(Allele.UNSPECIFIED_ALTERNATE_ALLELE);
-        if (!unspecifiedAllelePresent){
+        final List<Allele> unspecifiedAlleles = unspecifiedAlternateAlleles(alleles);
+
+        if (unspecifiedAlleles.size() == 0) {
             return new ArrayList<>();
         }
-        final int unspecifiedIndex = alleles.indexOf(Allele.UNSPECIFIED_ALTERNATE_ALLELE);
 
+        List<Integer> unspecifiedIndeces = new ArrayList<>();
+        for (Allele al : unspecifiedAlleles) {
+            unspecifiedIndeces.add(alleles.indexOf(al));
+        }
         final GenotypeLikelihoodCalculator glCalc = GL_CALCS.getInstance(ploidy, alleleCount);
-        List<Integer> genotypes = new IndexRange(0, glCalc.genotypeCount())
-                .filter(n->true )
-                .stream()
-                .filter(n->!glCalc.genotypeAlleleCountsAt(n).containsAllele(0))
-                .filter(n->glCalc.genotypeAlleleCountsAt(n).containsAllele(unspecifiedIndex))
-                .filter(n->glCalc.genotypeAlleleCountsAt(n).distinctAlleleCount()>1)
-                .collect(Collectors.toList());
-        return genotypes;
 
+        List<Integer> allGenotypes = new ArrayList<>();
+        for (Integer idx : unspecifiedIndeces) {
+            List<Integer> genotypes = new IndexRange(0, glCalc.genotypeCount())
+                    .filter(n -> true)
+                    .stream()
+                    .filter(n -> !glCalc.genotypeAlleleCountsAt(n).containsAllele(0))
+                    .filter(n -> glCalc.genotypeAlleleCountsAt(n).containsAllele(idx))
+                    .filter(n -> glCalc.genotypeAlleleCountsAt(n).distinctAlleleCount() > 1)
+                    .collect(Collectors.toList());
+            allGenotypes = ListUtils.union(allGenotypes, genotypes);
+        }
+        return allGenotypes;
     }
 }
