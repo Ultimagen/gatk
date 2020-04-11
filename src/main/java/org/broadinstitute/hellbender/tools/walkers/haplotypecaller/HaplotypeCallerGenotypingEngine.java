@@ -198,12 +198,16 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
                 mergedAllelesListSizeBeforePossibleTrimming++;
             }
 
-            if ( readAlleleLikelihoods.containsAllele(Allele.UNSPECIFIED_ALTERNATE_ALLELE)) {
-                final List<Allele> alleleList = ListUtils.union(mergedVC.getAlleles(),
-                        Arrays.asList(Allele.UNSPECIFIED_ALTERNATE_ALLELE));
-                mergedVC = new VariantContextBuilder(mergedVC).alleles(alleleList).make();
-                mergedAllelesListSizeBeforePossibleTrimming++;
-            }
+
+            final List<Allele> tmpList = mergedVC.getAlleles();
+            List<Allele> additional_symbolic_alleles = readAlleleLikelihoods.alleles().stream()
+                                .filter(a -> a.isSymbolic())
+                                .filter(a -> !(tmpList.contains(a)))
+                               .collect(Collectors.toList());
+            final List<Allele> alleleList = ListUtils.union(mergedVC.getAlleles(), additional_symbolic_alleles);
+            mergedVC = new VariantContextBuilder(mergedVC).alleles(alleleList).make();
+            mergedAllelesListSizeBeforePossibleTrimming+=alleleList.size();
+
 
             final GenotypesContext genotypes = calculateGLsForThisEvent(readAlleleLikelihoods, mergedVC, noCallAlleles);
             final VariantContext call = calculateGenotypes(new VariantContextBuilder(mergedVC).genotypes(genotypes).make(), givenAlleles);

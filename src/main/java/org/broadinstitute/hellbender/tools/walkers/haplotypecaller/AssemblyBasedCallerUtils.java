@@ -664,9 +664,10 @@ public final class AssemblyBasedCallerUtils {
         final Set<Integer> equivalent_loci = new HashSet<>(possibleEquivalentAlleles.stream()
                 .map(v -> v.getStart())
                 .collect(Collectors.toList()));
-        final Set<LocationAndAlleles> equivalentLocationAndAlleles = new HashSet<>();
+        final Map<LocationAndAlleles, Integer> equivalentLocationAndAlleles = new HashMap<>();
+        int count = 0 ;
         for (VariantContext v : possibleEquivalentAlleles) {
-            equivalentLocationAndAlleles.add(new LocationAndAlleles(v.getStart(), v.getAlleles()));
+            equivalentLocationAndAlleles.put(new LocationAndAlleles(v.getStart(), v.getAlleles()), count++);
         }
 
         final Map<Allele, List<Haplotype>> result = new LinkedHashMap<>();
@@ -741,12 +742,14 @@ public final class AssemblyBasedCallerUtils {
                 // the genotyped locations
                 if (hasBeenAddedToAllele) {
                     continue;
-                } else if (equivalentLocationAndAlleles.contains(new LocationAndAlleles(spanningEvent.getStart(), spanningEvent.getAlleles()))){
 
-                    if (! result.containsKey(Allele.UNSPECIFIED_ALTERNATE_ALLELE)) {
-                        result.put(Allele.UNSPECIFIED_ALTERNATE_ALLELE, new ArrayList<>());
+                } else if (equivalentLocationAndAlleles.containsKey(new LocationAndAlleles(spanningEvent.getStart(), spanningEvent.getAlleles()))){
+                    int value = equivalentLocationAndAlleles.get(new LocationAndAlleles(spanningEvent.getStart(), spanningEvent.getAlleles()));
+                    Allele newAllele = Allele.create(String.format("<%d>", value).getBytes(), false);
+                    if (! result.containsKey(newAllele)) {
+                        result.put(newAllele, new ArrayList<>());
                     }
-                    result.get(Allele.UNSPECIFIED_ALTERNATE_ALLELE).add(h);
+                    result.get(newAllele).add(h);
                     hasBeenAddedToAllele = true;
                     break;
 
