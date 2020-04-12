@@ -171,10 +171,10 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
 
         if (!read.is_valid()) return Double.NEGATIVE_INFINITY;
 
-        int haplotype_start = ReadUtils.getReadCoordinateForReferenceCoordinate(haplotype.getStart(), haplotype.getCigar(),
-                read.getTrimmedStart(), null, false);
-        int haplotype_end = ReadUtils.getReadCoordinateForReferenceCoordinate(haplotype.getStart(), haplotype.getCigar(),
-                read.getTrimmedEnd(), null, false);
+        int haplotype_start = ReadUtils.getReadIndexForReferenceCoordinate(haplotype.getStart(), haplotype.getCigar(),
+                read.getTrimmedStart()).getLeft();
+        int haplotype_end = ReadUtils.getReadIndexForReferenceCoordinate(haplotype.getStart(), haplotype.getCigar(),
+                read.getTrimmedEnd()).getLeft();
 
         int left_clip = haplotype_start;
         int right_clip = haplotype.length()-haplotype_end-1;

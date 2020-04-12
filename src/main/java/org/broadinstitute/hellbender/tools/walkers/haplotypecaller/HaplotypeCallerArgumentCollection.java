@@ -209,9 +209,6 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
     @Argument(fullName= USE_FILTERED_READS_FOR_ANNOTATIONS_LONG_NAME, doc = "Use the contamination-filtered read maps for the purposes of annotating variants", optional=true)
     public boolean useFilteredReadMapForAnnotations = false;
 
-    @Argument(fullName = CORRECT_OVERLAPPING_BASE_QUALITIES_LONG_NAME)
-    public boolean doNotCorrectOverlappingBaseQualities = false;
-
     @Advanced
     @Hidden
     @Argument(fullName = "avoid-strand-bias-in-active-region")
