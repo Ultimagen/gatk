@@ -99,7 +99,7 @@ public abstract class AS_StrandBiasTestProbabilistic extends StrandBiasTest impl
                                                final AlleleLikelihoods<GATKRead, Allele> likelihoods ) {
 
         //for allele-specific annotations we only call from HC and we only use likelihoods
-        if ( likelihoods == null || !likelihoods.hasFilledLikelihoods()) {
+        if ( likelihoods == null) {
             return Collections.emptyMap();
         }
         // calculate the annotation from the likelihoods
@@ -231,12 +231,6 @@ public abstract class AS_StrandBiasTestProbabilistic extends StrandBiasTest impl
         return Collections.emptyMap();
     }
 
-    @Override
-    //Allele-specific annotations cannot be called from walkers other than HaplotypeCaller
-    protected Map<String, Object> calculateAnnotationFromStratifiedContexts(final Map<String, List<PileupElement>> stratifiedContexts,
-                                                                            final VariantContext vc){
-        return new HashMap<>();
-    }
 
     public static String rawValueAsString(int[][] table) {
         return table[0][0]+","+table[0][1]+ PRINT_DELIM +table[1][0]+","+table[1][1];
