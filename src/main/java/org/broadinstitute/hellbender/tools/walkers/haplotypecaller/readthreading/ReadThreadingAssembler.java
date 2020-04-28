@@ -677,7 +677,7 @@ public final class ReadThreadingAssembler {
         rtgraph.setThreadingStartOnlyAtExistingVertex(!recoverDanglingBranches);
 
         // add the reference sequence to the graph
-        rtgraph.addSequence("ref", refHaplotype.getBases(), true, false);
+        rtgraph.addSequence("ref", refHaplotype.getBases(), 1, true, false);
 
         // Next pull kmers out of every read and throw them on the graph
         for( final GATKRead read : reads ) {
