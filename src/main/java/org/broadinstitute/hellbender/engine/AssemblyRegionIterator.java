@@ -180,7 +180,7 @@ public class AssemblyRegionIterator implements Iterator<AssemblyRegion> {
     private void fillNextAssemblyRegionWithReads( final AssemblyRegion region ) {
         // First we need to check the previous region for reads that also belong in this region
         if ( previousRegionReads != null ) {
-            for ( final GATKRead previousRegionRead : previousRegionReads ) {
+            for ( final GATKRead previousRegionRead : sortOnStart(previousRegionReads) ) {
                 if ( region.getPaddedSpan().overlaps(previousRegionRead) ) {
                     region.add(previousRegionRead);
                 }
@@ -210,6 +210,18 @@ public class AssemblyRegionIterator implements Iterator<AssemblyRegion> {
                 region.add(nextRead);
             }
         }
+    }
+
+    private List<GATKRead> sortOnStart(List<GATKRead> reads) {
+        List<GATKRead>      newList = new LinkedList<>(reads);
+        newList.sort(new Comparator<GATKRead>() {
+            @Override
+            public int compare(GATKRead o1, GATKRead o2) {
+                return o1.getStart() - o2.getStart();
+            }
+        });
+
+        return newList;
     }
 
     @Override
