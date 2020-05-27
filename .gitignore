@@ -39,5 +39,9 @@ funcotator_tmp
 #JENV local file
 .java-version
 
-testdata/
 .run/
+testdata/scripts/output
+testdata/iscripts/data
+testdata/cases
+testdata/ref
+testdata/scripts/.ipynb_checkpoints/
