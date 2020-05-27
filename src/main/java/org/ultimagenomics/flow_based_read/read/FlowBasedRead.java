@@ -23,14 +23,14 @@ import java.util.Locale;
 public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRead, FlowBasedReadInterface, Serializable {
 
     private static final long serialVersionUID = 42L;
-    private GATKRead read = null;
+    GATKRead read = null;
     private SAMRecord samRecord;
-    private byte[] forward_sequence;
+    private byte[] forwardSequence;
     private byte[] key;
     private int [] flow2base;
-    private int max_hmer;
-    private byte[] flow_order;
-    private double[][] flow_matrix;
+    private int maxHmer;
+    private byte[] flowOrder;
+    private double[][] flowMatrix;
     private boolean valid_key;
     private Direction direction = Direction.SYNTHESIS;
     private boolean trimmed_to_haplotype = false;
@@ -43,21 +43,21 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private final FlowBasedAlignmentArgumentCollection fbargs;
     private final Logger logger = LogManager.getLogger(this.getClass());
 
-    public FlowBasedRead(SAMRecord samRecord, String _flow_order, int _max_hmer) {
-        this(samRecord, _flow_order, _max_hmer, new FlowBasedAlignmentArgumentCollection());
+    public FlowBasedRead(SAMRecord samRecord, String _flowOrder, int _maxHmer) {
+        this(samRecord, _flowOrder, _maxHmer, new FlowBasedAlignmentArgumentCollection());
     }
 
-    public FlowBasedRead(SAMRecord samRecord, String _flow_order, int _max_hmer, FlowBasedAlignmentArgumentCollection fbargs) {
+    public FlowBasedRead(SAMRecord samRecord, String _flowOrder, int _maxHmer, FlowBasedAlignmentArgumentCollection fbargs) {
         super(samRecord);
         this.fbargs = fbargs;
-        max_hmer = _max_hmer;
+        maxHmer = _maxHmer;
         this.samRecord = samRecord;
-        forward_sequence = getForwardSequence();
+        forwardSequence = getForwardSequence();
 
         if ( samRecord.hasAttribute("kr") )
-            readFlowMatrix(_flow_order);
+            readFlowMatrix(_flowOrder);
         else
-            readBaseMatrix(_flow_order);
+            readBaseMatrix(_flowOrder);
 
         if ( logger.isDebugEnabled() ) {
             logger.debug("cons: name: " + samRecord.getReadName()
@@ -82,19 +82,19 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         return sb.toString();
     }
 
-    private void readBaseMatrix(String _flow_order) {
+    private void readBaseMatrix(String _flowOrder) {
 
        // generate key (base to flow space)
         setDirection(Direction.REFERENCE);  // base is always in reference/alignment direction
-        key = FlowBasedHaplotype.base2key(samRecord.getReadBases(), _flow_order, 1000);
+        key = FlowBasedHaplotype.base2key(samRecord.getReadBases(), _flowOrder, 1000);
         getKey2Base();
-        flow_order = getFlow2Base(_flow_order, key.length);
+        flowOrder = getFlow2Base(_flowOrder, key.length);
 
        // initialize matrix
-        flow_matrix = new double[max_hmer+1][key.length];
-        for (int i = 0 ; i < max_hmer+1; i++) {
+        flowMatrix = new double[maxHmer+1][key.length];
+        for (int i = 0 ; i < maxHmer+1; i++) {
             for (int j = 0 ; j < key.length; j++ ){
-                flow_matrix[i][j] = fbargs.filling_value;;
+                flowMatrix[i][j] = fbargs.filling_value;;
             }
         }
 
@@ -120,19 +120,19 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
                 probs[qualOfs] = probs[qualOfs]/2;
             }
 
-            if ( run <= max_hmer ) {
-                flow_matrix[run][i] = (run > 0) ? (1 - probs[qualOfs]) : 1;
-                flow_matrix[run][i] = Math.max(MINIMAL_CALL_PROB, flow_matrix[run][i]);
+            if ( run <= maxHmer ) {
+                flowMatrix[run][i] = (run > 0) ? (1 - probs[qualOfs]) : 1;
+                flowMatrix[run][i] = Math.max(MINIMAL_CALL_PROB, flowMatrix[run][i]);
 
             }
             if ( run != 0 ) {
                 if ( quals[qualOfs] != 40 ) {
                     final int     run1 = (ti[qualOfs] == 0) ? (run - 1) : (run + 1);
-                    if (( run1 <= max_hmer ) && (run <= max_hmer)){
-                        flow_matrix[run1][i] = probs[qualOfs] / flow_matrix[run][i];
+                    if (( run1 <= maxHmer ) && (run <= maxHmer)){
+                        flowMatrix[run1][i] = probs[qualOfs] / flowMatrix[run][i];
                     }
-                    if (run <= max_hmer) {
-                        flow_matrix[run][i] /= flow_matrix[run][i]; // for comparison to the flow space - probabilities are normalized by the key's probability
+                    if (run <= maxHmer) {
+                        flowMatrix[run][i] /= flowMatrix[run][i]; // for comparison to the flow space - probabilities are normalized by the key's probability
                     }
                 }
                 qualOfs += run;
@@ -141,16 +141,16 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
-    private void readFlowMatrix(String _flow_order) {
+    private void readFlowMatrix(String _flowOrder) {
         key = getAttributeAsByteArray("kr");
         getKey2Base();
 
-        flow_order = getFlow2Base(_flow_order, key.length);
+        flowOrder = getFlow2Base(_flowOrder, key.length);
 
-        flow_matrix = new double[max_hmer+1][key.length];
-        for (int i = 0 ; i < max_hmer+1; i++) {
+        flowMatrix = new double[maxHmer+1][key.length];
+        for (int i = 0 ; i < maxHmer+1; i++) {
             for (int j = 0 ; j < key.length; j++ ){
-                flow_matrix[i][j] = fbargs.filling_value;
+                flowMatrix[i][j] = fbargs.filling_value;
             }
         }
 
@@ -174,8 +174,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         if (fbargs.disallow_larger_probs) {
             removeLargeProbs(kd_probs);
         }
-
-        double [] old_kd_probs = ArrayUtils.clone(kd_probs);;
 
         if (fbargs.remove_longer_than_one_indels) {
             removeLongIndels( key_kh, kh, kf, kd_probs );
@@ -206,29 +204,29 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     public FlowBasedRead(FlowBasedRead other) {
         super(other.samRecord);
-        forward_sequence = other.forward_sequence.clone();
+        forwardSequence = other.forwardSequence.clone();
         key = other.key.clone();
         flow2base = other.flow2base.clone();
-        flow_order = other.flow_order.clone();
-        flow_matrix = other.flow_matrix.clone();
+        flowOrder = other.flowOrder.clone();
+        flowMatrix = other.flowMatrix.clone();
         valid_key = other.valid_key;
         direction = other.direction;
-        max_hmer = other.max_hmer;
+        maxHmer = other.maxHmer;
         fbargs = other.fbargs;
     }
 
-    public FlowBasedRead(GATKRead read, String flow_order, int _max_hmer, FlowBasedAlignmentArgumentCollection fbargs) {
-        this(read.convertToSAMRecord(null), flow_order, _max_hmer, fbargs);
+    public FlowBasedRead(GATKRead read, String flowOrder, int _maxHmer, FlowBasedAlignmentArgumentCollection fbargs) {
+        this(read.convertToSAMRecord(null), flowOrder, _maxHmer, fbargs);
         this.read = read;
 
     }
 
     public String getFlowOrder() {
-        return new String(Arrays.copyOfRange(flow_order, 0, Math.min(4,flow_order.length)));
+        return new String(Arrays.copyOfRange(flowOrder, 0, Math.min(4,flowOrder.length)));
     }
 
     public int getMaxHmer() {
-        return max_hmer;
+        return maxHmer;
     }
 
     public int getNFlows() {
@@ -241,7 +239,8 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private double[] phredToProb(byte [] kq) {
         double [] result = new double[kq.length];
         for (int i = 0 ; i < kq.length; i++ ) {
-            result[i] = Math.pow(10, ((double)-kq[i])/10);
+            //disallow probabilities below filling_value
+            result[i] = Math.max(Math.pow(10, ((double)-kq[i])/10), fbargs.filling_value);
         }
         return result;
     }
@@ -262,10 +261,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private void fillFlowMatrix(byte [] kh, int [] kf,
                                 double [] kd_probs ) {
         for ( int i = 0 ; i < kh.length; i++ ) {
-            if (( kh[i] & 0xff )> max_hmer) {
-                continue;
+            if (( kh[i] & 0xff )> maxHmer) {
+                flowMatrix[maxHmer][kf[i]]=1;
             }
-            flow_matrix[kh[i] & 0xff][kf[i]] = kd_probs[i];
+            flowMatrix[kh[i] & 0xff][kf[i]] = kd_probs[i];
         }
 
     }
@@ -299,7 +298,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     private void validateSequence(){
         for (byte b : key) {
-            if (b > max_hmer - 1) {
+            if (b > maxHmer - 1) {
                 valid_key = false;
             }
         }
@@ -311,7 +310,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     }
 
     public double getProb(int flow, int hmer) {
-        return flow_matrix[Math.min(hmer, max_hmer)][flow];
+        return flowMatrix[Math.min(hmer, maxHmer)][flow];
     }
 
     public void apply_alignment(){
@@ -320,7 +319,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             flipMatrix();
             reverse(key, key.length);
             getKey2Base();
-            SequenceUtil.reverseComplement(flow_order);
+            SequenceUtil.reverseComplement(flowOrder);
 
         }
 
@@ -395,20 +394,20 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         key = Arrays.copyOfRange(key, clip_left, original_length - clip_right);
         getKey2Base();
-        flow_order = Arrays.copyOfRange(flow_order, clip_left, original_length - clip_right);
+        flowOrder = Arrays.copyOfRange(flowOrder, clip_left, original_length - clip_right);
 
-        double [][] new_flow_matrix = new double[flow_matrix.length][original_length - clip_left - clip_right] ;
-        for ( int i = 0 ; i < new_flow_matrix.length; i++) {
-            new_flow_matrix[i] = Arrays.copyOfRange(flow_matrix[i], clip_left, original_length - clip_right);
+        double [][] new_flowMatrix = new double[flowMatrix.length][original_length - clip_left - clip_right] ;
+        for ( int i = 0 ; i < new_flowMatrix.length; i++) {
+            new_flowMatrix[i] = Arrays.copyOfRange(flowMatrix[i], clip_left, original_length - clip_right);
         }
 
-        flow_matrix = new_flow_matrix;
+        flowMatrix = new_flowMatrix;
         if (shift_left) {
-            shiftColumnUp(flow_matrix, 0, left_hmer_clip);
+            shiftColumnUp(flowMatrix, 0, left_hmer_clip);
         }
 
         if (shift_right) {
-            shiftColumnUp(flow_matrix, flow_matrix[0].length-1, right_hmer_clip);
+            shiftColumnUp(flowMatrix, flowMatrix[0].length-1, right_hmer_clip);
         }
 
     }
@@ -449,7 +448,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
 
     private void flipMatrix() {
-        for ( int i = 0 ; i < flow_matrix.length; i++) reverse(flow_matrix[i], flow_matrix[i].length);
+        for ( int i = 0 ; i < flowMatrix.length; i++) reverse(flowMatrix[i], flowMatrix[i].length);
     }
 
     private void shiftColumnUp(double[][] matrix, int colnum, int shift) {
@@ -483,10 +482,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         return result;
     }
 
-    private byte[] getFlow2Base(String flow_order, int expected_length) {
+    private byte[] getFlow2Base(String flowOrder, int expected_length) {
         byte[] result = new byte[expected_length] ;
         for ( int i = 0; i < result.length; i++ ) {
-            result[i] = (byte)flow_order.charAt(i%flow_order.length());
+            result[i] = (byte)flowOrder.charAt(i%flowOrder.length());
         }
         return result;
     }
@@ -606,8 +605,8 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             String bi = (key[col] != 0) ? Integer.toString(basesOfs) : ".";
             String q = (key[col] != 0) ? Integer.toString(quals[basesOfs]) : ".";
             String Ti = (key[col] != 0) ? Integer.toString(ti[basesOfs]) : ".";
-            for (int row = 0; row < flow_matrix.length; row++) {
-                String s = formatter.format(flow_matrix[row][col]);
+            for (int row = 0; row < flowMatrix.length; row++) {
+                String s = formatter.format(flowMatrix[row][col]);
                 oos.write(String.format("%d,%d,%d,%c,%s,%s,%s,%s %s\n", col, row, key[col], base, bi, q, Ti, isReverseStrand() ? "r" : ".", s));
             }
             if ( key[col] != 0 )
@@ -635,7 +634,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     }
 
     public byte [] getFlowOrderArray() {
-        return flow_order;
+        return flowOrder;
     }
 
     public int getKeyLength() {
@@ -655,7 +654,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     }
 
     public int seqLength(){
-        return forward_sequence.length;
+        return forwardSequence.length;
     }
     public boolean isTrimmed_to_haplotype() {
         return trimmed_to_haplotype;
@@ -672,9 +671,9 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private void clipProbs() {
         for ( int i = 0 ; i < getMaxHmer(); i++ ) {
             for ( int j =0; j < getNFlows(); j++) {
-                if ((flow_matrix[i][j] < fbargs.probability_ratio_threshold) &&
+                if ((flowMatrix[i][j] < fbargs.probability_ratio_threshold) &&
                         (key[j]!=i)) {
-                    flow_matrix[i][j] = fbargs.filling_value;
+                    flowMatrix[i][j] = fbargs.filling_value;
                 }
             }
         }
@@ -722,10 +721,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private void smoothIndels( byte [] kr ) {
         for ( int i = 0 ; i < kr.length; i++ ){
             byte idx = kr[i];
-            if (( idx > 1 ) && ( idx < max_hmer) ) {
-                double tmp = (flow_matrix[idx - 1][i] + flow_matrix[idx + 1][i]) / 2;
-                flow_matrix[idx - 1][i] = tmp;
-                flow_matrix[idx + 1][i] = tmp;
+            if (( idx > 1 ) && ( idx < maxHmer) ) {
+                double tmp = (flowMatrix[idx - 1][i] + flowMatrix[idx + 1][i]) / 2;
+                flowMatrix[idx - 1][i] = tmp;
+                flowMatrix[idx + 1][i] = tmp;
             }
         }
     }
@@ -733,14 +732,14 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private void reportInsOrDel( byte [] kr ) {
         for ( int i = 0 ; i < kr.length; i++ ){
             byte idx = kr[i];
-            if (( idx > 1 ) && ( idx < max_hmer) ) {
-                if ((flow_matrix[idx-1][i] > fbargs.filling_value) && (flow_matrix[idx+1][i] > fbargs.filling_value)) {
-                    int fix_cell = flow_matrix[idx-1][i] > flow_matrix[idx+1][i] ? idx+1 : idx-1;
-                    int other_cell = flow_matrix[idx-1][i] > flow_matrix[idx+1][i] ? idx-1 : idx+1;
+            if (( idx > 1 ) && ( idx < maxHmer) ) {
+                if ((flowMatrix[idx-1][i] > fbargs.filling_value) && (flowMatrix[idx+1][i] > fbargs.filling_value)) {
+                    int fix_cell = flowMatrix[idx-1][i] > flowMatrix[idx+1][i] ? idx+1 : idx-1;
+                    int other_cell = flowMatrix[idx-1][i] > flowMatrix[idx+1][i] ? idx-1 : idx+1;
 //                    if (fbargs.lump_probs) {
-//                       flow_matrix[other_cell][i]+= flow_matrix[fix_cell][i];
+//                       flowMatrix[other_cell][i]+= flowMatrix[fix_cell][i];
 //                    }
-                    flow_matrix[fix_cell][i] = fbargs.filling_value;
+                    flowMatrix[fix_cell][i] = fbargs.filling_value;
                 }
             }
         }
@@ -751,15 +750,15 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         for (int i = 0; i < getMaxHmer(); i++) {
             for (int j = 0 ; j < getNFlows(); j ++ ) {
                 int fkey = key[j];
-                if (flow_matrix[i][j]<=fbargs.filling_value) {
+                if (flowMatrix[i][j]<=fbargs.filling_value) {
                     continue;
                 } else {
                     if ( (i - fkey) < -1 ){
-                        flow_matrix[fkey-1][j]+=flow_matrix[i][j];
-                        flow_matrix[i][j] = fbargs.filling_value;
+                        flowMatrix[fkey-1][j]+=flowMatrix[i][j];
+                        flowMatrix[i][j] = fbargs.filling_value;
                     } else if ((i-fkey) > 1) {
-                        flow_matrix[fkey+1][j]+=flow_matrix[i][j];
-                        flow_matrix[i][j] = fbargs.filling_value;
+                        flowMatrix[fkey+1][j]+=flowMatrix[i][j];
+                        flowMatrix[i][j] = fbargs.filling_value;
                     }
 
                 }
