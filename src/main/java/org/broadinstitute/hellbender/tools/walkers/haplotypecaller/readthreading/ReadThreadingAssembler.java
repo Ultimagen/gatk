@@ -164,11 +164,14 @@ public final class ReadThreadingAssembler {
 
         final List<AbstractReadThreadingGraph> nonRefRTGraphs = new LinkedList<>();
         final List<SeqGraph> nonRefSeqGraphs = new LinkedList<>();
+        if ( refView != null )
+            logger.debug("starting runLocalAssembly with refView: " + refView);
         final AssemblyResultSet resultSet = new AssemblyResultSet();
         resultSet.setRegionForGenotyping(assemblyRegion);
         resultSet.setFullReferenceWithPadding(fullReferenceWithPadding);
         resultSet.setPaddedReferenceLoc(refLoc);
-        final SimpleInterval activeRegionExtendedLocation = assemblyRegion.getPaddedSpan();
+        final SimpleInterval activeRegionExtendedLocation = (refView == null) ? assemblyRegion.getPaddedSpan()
+                                                                : refView.getCollapsedLoc(assemblyRegion.getPaddedSpan());
         refHaplotype.setGenomeLocation(activeRegionExtendedLocation);
         resultSet.add(refHaplotype);
         // either follow the old method for building graphs and then assembling or assemble and haplotype call before expanding kmers
