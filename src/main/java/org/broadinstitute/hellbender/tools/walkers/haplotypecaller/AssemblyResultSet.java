@@ -72,9 +72,12 @@ public final class AssemblyResultSet {
      *
      * @return never {@code null}, a new trimmed assembly result set.
      */
-    public AssemblyResultSet trimTo(final AssemblyRegion trimmedAssemblyRegion) {
+    public AssemblyResultSet trimTo(final AssemblyRegion trimmedAssemblyRegion, LHWRefView refView) {
 
-        final Map<Haplotype,Haplotype> originalByTrimmedHaplotypes = calculateOriginalByTrimmedHaplotypes(trimmedAssemblyRegion.getPaddedSpan());
+        Locatable                span = trimmedAssemblyRegion.getPaddedSpan();
+        if ( refView != null )
+            span = refView.getCollapsedLoc(span);
+        final Map<Haplotype,Haplotype> originalByTrimmedHaplotypes = calculateOriginalByTrimmedHaplotypes(span);
         if (refHaplotype == null) {
             throw new IllegalStateException("refHaplotype is null");
         }
