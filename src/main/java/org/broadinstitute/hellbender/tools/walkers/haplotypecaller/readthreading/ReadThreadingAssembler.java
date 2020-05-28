@@ -167,7 +167,8 @@ public final class ReadThreadingAssembler {
         resultSet.setRegionForGenotyping(assemblyRegion);
         resultSet.setFullReferenceWithPadding(fullReferenceWithPadding);
         resultSet.setPaddedReferenceLoc(refLoc);
-        final SimpleInterval activeRegionExtendedLocation = assemblyRegion.getPaddedSpan();
+        final SimpleInterval activeRegionExtendedLocation = (refView == null) ? assemblyRegion.getPaddedSpan()
+                                                                : refView.getCollapsedLoc(assemblyRegion.getPaddedSpan());
         refHaplotype.setGenomeLocation(activeRegionExtendedLocation);
         resultSet.add(refHaplotype);
         resultSet.setRefView(refView);

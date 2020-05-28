@@ -75,6 +75,8 @@ public final class AssemblyResultSet {
     public AssemblyResultSet trimTo(final AssemblyRegion trimmedAssemblyRegion, LHWRefView refView) {
 
         Locatable                span = trimmedAssemblyRegion.getPaddedSpan();
+        if ( refView != null )
+            span = refView.getCollapsedLoc(span);
         final Map<Haplotype,Haplotype> originalByTrimmedHaplotypes = calculateOriginalByTrimmedHaplotypes(span);
         if (refHaplotype == null) {
             throw new IllegalStateException("refHaplotype is null");
