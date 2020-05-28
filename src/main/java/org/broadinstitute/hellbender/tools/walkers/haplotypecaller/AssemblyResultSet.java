@@ -13,7 +13,7 @@ import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.haplotype.EventMap;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.param.ParamUtils;
-import org.ultimagenomics.haplotype_calling.CollapsedLargeHmerReferenceView;
+import org.ultimagenomics.haplotype_calling.LHWRefView;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -48,7 +48,7 @@ public final class AssemblyResultSet {
     private OptionalInt lastMaxMnpDistanceUsed = OptionalInt.empty();
     private boolean debug;
     private static final Logger logger = LogManager.getLogger(AssemblyResultSet.class);
-    private CollapsedLargeHmerReferenceView refView;
+    private LHWRefView refView;
 
     /**
      * Constructs a new empty assembly result set.
@@ -546,11 +546,11 @@ public final class AssemblyResultSet {
         this.debug = debug;
     }
 
-    public CollapsedLargeHmerReferenceView getRefView() {
+    public LHWRefView getRefView() {
         return refView;
     }
 
-    public void setRefView(CollapsedLargeHmerReferenceView refView) {
+    public void setRefView(LHWRefView refView) {
         this.refView = refView;
     }
 }
