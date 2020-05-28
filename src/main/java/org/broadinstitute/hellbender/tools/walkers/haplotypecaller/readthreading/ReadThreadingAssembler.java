@@ -37,7 +37,7 @@ import org.broadinstitute.hellbender.utils.read.CigarUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import java.util.stream.Collectors;
-import org.ultimagenomics.haplotype_calling.CollapsedLargeHmerReferenceView;
+import org.ultimagenomics.haplotype_calling.LHWRefView;
 
 import java.io.File;
 import java.io.IOException;
@@ -147,7 +147,7 @@ public final class ReadThreadingAssembler {
                                               final SAMFileHeader header,
                                               final SmithWatermanAligner aligner,
                                               final List<GATKRead> reads,
-                                              final CollapsedLargeHmerReferenceView refView) {
+                                              final LHWRefView refView) {
         Utils.nonNull(assemblyRegion, "Assembly engine cannot be used with a null AssemblyRegion.");
         Utils.nonNull(assemblyRegion.getPaddedSpan(), "Active region must have an extended location.");
         Utils.nonNull(refHaplotype, "Reference haplotype cannot be null.");

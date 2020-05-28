@@ -38,7 +38,7 @@ import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.ultimagenomics.flow_based_read.alignment.FlowBasedAlignmentEngine;
 import org.ultimagenomics.flow_based_read.tests.AlleleLikelihoodWriter;
 import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
-import org.ultimagenomics.haplotype_calling.CollapsedLargeHmerReferenceView;
+import org.ultimagenomics.haplotype_calling.LHWRefView;
 
 import java.io.File;
 import java.util.*;
@@ -291,8 +291,8 @@ public final class AssemblyBasedCallerUtils {
                 : new PileupReadErrorCorrector(argumentCollection.assemblerArgs.pileupErrorCorrectionLogOdds, header);
 
         // estblish reference mapper, if needed
-        final CollapsedLargeHmerReferenceView     refView = (argumentCollection.ultimaAssemblyCollapseHKerSize > 0 && CollapsedLargeHmerReferenceView.needsCollapsing(refHaplotype.getBases(), argumentCollection.ultimaAssemblyCollapseHKerSize, logger, argumentCollection.assemblerArgs.debugAssembly))
-                                            ? new CollapsedLargeHmerReferenceView(argumentCollection.ultimaAssemblyCollapseHKerSize, fullReferenceWithPadding, paddedReferenceLoc, refHaplotype, region, logger, argumentCollection.assemblerArgs.debugAssembly)
+        final LHWRefView refView = (argumentCollection.ultimaAssemblyCollapseHKerSize > 0 && LHWRefView.needsCollapsing(refHaplotype.getBases(), argumentCollection.ultimaAssemblyCollapseHKerSize, logger, argumentCollection.assemblerArgs.debugAssembly))
+                                            ? new LHWRefView(argumentCollection.ultimaAssemblyCollapseHKerSize, fullReferenceWithPadding, paddedReferenceLoc, refHaplotype, region, logger, argumentCollection.assemblerArgs.debugAssembly)
                                             : null;
 
         try {
