@@ -18,7 +18,7 @@ import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAlignment;
 
 import java.util.*;
 
-public class CollapsedLargeHmerReferenceView {
+public class LHWRefView {
 
     private int             hmerSizeThreshold;
     private byte[]          fullRef;
@@ -35,7 +35,7 @@ public class CollapsedLargeHmerReferenceView {
     private SmithWatermanAligner aligner = SmithWatermanAligner.getAligner(SmithWatermanAligner.Implementation.JAVA);
     SmithWatermanAlignment refAlignement;
 
-    public CollapsedLargeHmerReferenceView(final int hmerSizeThreshold, final byte[] fullRef, final Locatable refLoc, Haplotype refHaplotype, final AssemblyRegion region, final Logger logger, final boolean debug) {
+    public LHWRefView(final int hmerSizeThreshold, final byte[] fullRef, final Locatable refLoc, Haplotype refHaplotype, final AssemblyRegion region, final Logger logger, final boolean debug) {
 
         this.hmerSizeThreshold = hmerSizeThreshold;
         this.fullRef = fullRef;
@@ -46,7 +46,7 @@ public class CollapsedLargeHmerReferenceView {
         this.debug = debug;
 
         if ( debug ) {
-            logger.info("CollapsedLargeHmerReferenceView: >" + hmerSizeThreshold + "hmer, refLoc: " + refLoc + " fullRef:");
+            logger.info("LHWRefView: >" + hmerSizeThreshold + "hmer, refLoc: " + refLoc + " fullRef:");
             logger.info(printBases(fullRef));
         }
 
