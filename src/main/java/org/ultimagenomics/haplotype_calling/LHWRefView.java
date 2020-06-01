@@ -27,6 +27,7 @@ public class LHWRefView {
     private AssemblyRegion  region;
     private Logger          logger;
     private boolean         debug;
+    private byte[]          fullQuals;
 
     private byte[]          collapsedRef;
     private int[]           fullToCollapsedLocationMap;
@@ -34,8 +35,9 @@ public class LHWRefView {
     private Locatable       collapsedRefLoc;
     private SmithWatermanAligner aligner = SmithWatermanAligner.getAligner(SmithWatermanAligner.Implementation.JAVA);
     SmithWatermanAlignment refAlignement;
+    private byte[]          collapsedQuals;
 
-    public LHWRefView(final int hmerSizeThreshold, final byte[] fullRef, final Locatable refLoc, Haplotype refHaplotype, final AssemblyRegion region, final Logger logger, final boolean debug) {
+    public LHWRefView(final int hmerSizeThreshold, final byte[] fullRef, final Locatable refLoc, Haplotype refHaplotype, final AssemblyRegion region, final Logger logger, final boolean debug, byte[] fullQuals) {
 
         this.hmerSizeThreshold = hmerSizeThreshold;
         this.fullRef = fullRef;
@@ -44,6 +46,7 @@ public class LHWRefView {
         this.region = region;
         this.logger = logger;
         this.debug = debug;
+        this.fullQuals = fullQuals;
 
         if ( debug ) {
             logger.info("LHWRefView: >" + hmerSizeThreshold + "hmer, refLoc: " + refLoc + " fullRef:");
@@ -164,10 +167,60 @@ public class LHWRefView {
     public List<GATKRead> getCollapsedReads(final AssemblyRegion region) {
         Utils.nonNull(collapsedRef);
 
-        final List<GATKRead>      reads = region.getReads();
-        for ( GATKRead read : reads )
-            read.setPosition(getCollapsedLoc(read));
+        List<GATKRead>      reads = new LinkedList<>();
+        for ( GATKRead read : region.getReads() )
+        {
+            reads.add(read);
+            if (read.getUGOrgLoc() != null )
+                continue;
+
+            Locatable       loc = new SimpleInterval(read);
+            Locatable       cLoc = getCollapsedLoc(read);
+            byte[]          bases = read.getBasesNoCopy();
+            boolean         readNeedsCollapsing = needsCollapsing(bases, hmerSizeThreshold, logger, debug);
+
+            if ( debug )
+                logger.info(String.format("Read %s %s %c %s -> %s", read.getName(), read.getCigar(),
+                                                    readNeedsCollapsing ? 'C' : 'N',
+                                                    loc, cLoc));
+            if ( readNeedsCollapsing ) {
+                byte[]          quals = read.getBaseQualitiesNoCopy();
+                LHWRefView      assist = new LHWRefView(hmerSizeThreshold, read.getBases(), null, null, null, logger, debug, quals);
+                byte[]          cBases = assist.collapsedRef;
+                byte[]          cQuals = assist.collapsedQuals;
+
+                if ( debug ) {
+                    logger.info(printBases(bases));
+                    logger.info(printBases(quals));
+                    logger.info(printBases(cBases));
+                    logger.info(printBases(cQuals));
+                }
+
+                // DK!!! Big Hack!
+                // instead of adjusting the Cigar, the number of bases is kept, leaving a wrong cigar, but
+                // at least with the right length.
+                // Also - Qualities seems to be always 40 - why?
+                byte[]          cBases1 = extendByteArray(cBases, bases.length, (byte)'N');
+                byte[]          cQuals1 = extendByteArray(cQuals, quals.length, (byte)40);
+                read.setUGOrgBases(bases);
+                read.setUGOrgQuals(quals);
+                read.setBases(cBases1);
+                read.setBaseQualities(cQuals1);
+            }
+            read.setUGOrgPosition(loc);
+            read.setPosition(cLoc);
+        }
+
         return reads;
+    }
+
+    private byte[] extendByteArray(byte[] src, int len, byte fillValue) {
+
+        byte[]          dst = new byte[len];
+        System.arraycopy(src, 0, dst, 0, src.length);
+        Arrays.fill(dst, src.length, len, fillValue);
+
+        return dst;
     }
 
     private void collapse() {
@@ -176,6 +229,10 @@ public class LHWRefView {
         collapsedRef = new byte[fullRef.length];
         fullToCollapsedLocationMap = new int[fullRef.length];
         collapsedToFullLocationMap = new int[fullRef.length];
+        if ( fullQuals != null )
+            collapsedQuals = new byte[fullRef.length];
+        else
+            collapsedQuals = null;
 
         // loop while trimming
         byte    lastBase = 0;
@@ -191,6 +248,8 @@ public class LHWRefView {
                     // stable but under threshold, store
                     fullToCollapsedLocationMap[srcOfs] = dstOfs;
                     collapsedToFullLocationMap[dstOfs] = srcOfs;
+                    if ( fullQuals != null )
+                        collapsedQuals[dstOfs] = fullQuals[srcOfs];
                     collapsedRef[dstOfs++] = base;
                 }
             } else {
@@ -199,6 +258,8 @@ public class LHWRefView {
                 baseSameCount = 0;
                 fullToCollapsedLocationMap[srcOfs] = dstOfs;
                 collapsedToFullLocationMap[dstOfs] = srcOfs;
+                if ( fullQuals != null )
+                    collapsedQuals[dstOfs] = fullQuals[srcOfs];
                 collapsedRef[dstOfs++] = base;
             }
             srcOfs++;
@@ -209,6 +270,8 @@ public class LHWRefView {
         // do we really need the array to be the right size?
         collapsedRef = Arrays.copyOf(collapsedRef, dstOfs);
         collapsedToFullLocationMap = Arrays.copyOf(collapsedToFullLocationMap, dstOfs);
+        if ( collapsedQuals != null )
+            collapsedQuals = Arrays.copyOf(collapsedQuals, dstOfs);
 
         if ( debug ) {
             logger.info("after collapsing: ");
@@ -217,14 +280,17 @@ public class LHWRefView {
             //logger.info("fullToCollapsedLocationMap: " + Arrays.toString(fullToCollapsedLocationMap));
         }
 
-        collapsedRefLoc = getCollapsedLoc(refLoc);
+        if ( refLoc != null )
+            collapsedRefLoc = getCollapsedLoc(refLoc);
 
         // debug: save an alignement beteeen the two references. used for learning and observation. can be removed
+        /*
         refAlignement = aligner.align(fullRef, collapsedRef, SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
         if ( debug ) {
             logger.info("alignment.offset: " + refAlignement.getAlignmentOffset() + ", cigar: " + refAlignement.getCigar());
         }
         uncollapseByRef(collapsedRef, fullRef);
+         */
     }
     
     private int toUncollapsedLocus(int locus) {
