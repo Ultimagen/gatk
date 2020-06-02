@@ -159,13 +159,13 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         byte [] kh = getAttributeAsByteArray( "kh" );
         int [] kf = getAttributeAsIntArray("kf");
-        byte [] kd = getAttributeAsByteArray( "kd");
+        int [] kd = getAttributeAsIntArray( "kd");
 
         byte [] key_kh = key;
         int [] key_kf = new int[key.length];
         for ( int i = 0 ; i < key_kf.length ; i++)
             key_kf[i] = i;
-        byte [] key_kd = new byte[key.length];
+        int [] key_kd = new int[key.length];
 
         kh = ArrayUtils.addAll(kh, key_kh);
         kf = ArrayUtils.addAll(kf, key_kf);
@@ -239,11 +239,11 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         return direction;
     }
 
-    private double[] phredToProb(byte [] kq) {
+    private double[] phredToProb(int [] kq) {
         double [] result = new double[kq.length];
         for (int i = 0 ; i < kq.length; i++ ) {
             //disallow probabilities below filling_value
-            result[i] = Math.max(Math.pow(10, ((double)-kq[i])/10), fbargs.filling_value);
+            result[i] = Math.max(Math.pow(10, ((double)-kq[i])/fbargs.probability_scaling_factor), fbargs.filling_value);
         }
         return result;
     }
@@ -723,14 +723,14 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
 
 
-    private void quantizeProbs( byte [] kd_probs ) {
+    private void quantizeProbs( int [] kd_probs ) {
         int nQuants = fbargs.probability_quantization;
-        double bin_size = 60/(float)nQuants;
+        double bin_size = 6*fbargs.probability_scaling_factor/(float)nQuants;
         for ( int i = 0 ; i < kd_probs.length; i++) {
             if (kd_probs[i] <=0)
                 continue;
             else {
-                kd_probs[i] = (byte)(bin_size * (int)(kd_probs[i]/bin_size)+1);
+                kd_probs[i] = (int)(bin_size * (int)(kd_probs[i]/bin_size)+1);
             }
         }
     }
