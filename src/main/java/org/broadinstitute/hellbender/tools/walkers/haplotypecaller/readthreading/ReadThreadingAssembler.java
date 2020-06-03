@@ -5,6 +5,7 @@ import com.google.common.collect.Lists;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMFileHeader;
+import htsjdk.variant.variantcontext.Allele;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.gatk.nativebindings.smithwaterman.SWOverhangStrategy;
@@ -51,6 +52,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 
@@ -413,7 +416,7 @@ public final class ReadThreadingAssembler {
             // HERE we want to preserve the signal that assembly failed completely so in this case we don't add anything to the empty list
             if (!returnHaplotypes.isEmpty() && !returnHaplotypes.contains(refHaplotype)) {
                 returnHaplotypes.add(refHaplotype);
-//                refHaplotype.contigs = getRefHaplotypesContigs(refHaplotype,returnHaplotypes);
+                refHaplotype.contigs = getRefHaplotypesContigs(refHaplotype,returnHaplotypes);
             }
 
             assemblyResult.setDiscoveredHaplotypes(returnHaplotypes);
@@ -438,38 +441,38 @@ public final class ReadThreadingAssembler {
     }
 
 
-//    private List<? extends Allele> getRefHaplotypesContigs(final Haplotype refHaplotype, final Set<Haplotype> returnHaplotypes) {
-//        List<Allele> contigs = new ArrayList<>();
-//        String refString = refHaplotype.toString();
-//
-//        Map<Haplotype,? extends Allele> candidateHaplotypesToNextContig = returnHaplotypes.stream().collect(toMap(Function.identity(), h -> h.contigs.get(0)));
-//
-//        while (refString.length() > 0) {
-//            final String startString = refString;
-//            final Set<? extends Allele> contigsWithGoodStart = candidateHaplotypesToNextContig
-//                    .values()
-//                    .stream()
-//                    .filter(c -> startString.startsWith(c.getBaseString()))
-//                    .collect(Collectors.toSet());
-//
-//            if(contigsWithGoodStart.size() > 1) {
-//                logger.warn("Found more than one contig candidate to create the reference haplotype for position " + refHaplotype.getLocation().toString() + ". Results may be inaccurate here.");
-//                contigs.addAll(returnHaplotypes);
-//                return contigs;
-//            }
-//            if (contigsWithGoodStart.isEmpty()) {
-//                logger.warn("couldn't find contigs to continue reference haplotype for position " + refHaplotype.getLocation().toString());
-//                return contigs;
-//            }
-//            final Allele contig = contigsWithGoodStart.iterator().next();
-//            contigs.add(contig);
-//            refString = refString.substring(contig.toString().length());
-//            candidateHaplotypesToNextContig = returnHaplotypes.stream()
-//                    .filter(h -> h.contigs.contains(contig) && h.contigs.indexOf(contig) < h.contigs.size() - 1)
-//                    .collect(Collectors.toMap(Function.identity(), h -> h.contigs.get(1 + h.contigs.indexOf(contig))));
-//        }
-//        return contigs;
-//    }
+    private List<? extends Allele> getRefHaplotypesContigs(final Haplotype refHaplotype, final Set<Haplotype> returnHaplotypes) {
+        List<Allele> contigs = new ArrayList<>();
+        String refString = refHaplotype.toString();
+
+        Map<Haplotype,? extends Allele> candidateHaplotypesToNextContig = returnHaplotypes.stream().collect(Collectors.toMap(Function.identity(), h -> h.contigs.get(0)));
+
+        while (refString.length() > 0) {
+            final String startString = refString;
+            final Set<? extends Allele> contigsWithGoodStart = candidateHaplotypesToNextContig
+                    .values()
+                    .stream()
+                    .filter(c -> startString.startsWith(c.getBaseString()))
+                    .collect(Collectors.toSet());
+
+            if(contigsWithGoodStart.size() > 1) {
+                logger.warn("Found more than one contig candidate to create the reference haplotype for position " + refHaplotype.getLocation().toString() + ". Results may be inaccurate here.");
+                contigs.addAll(returnHaplotypes);
+                return contigs;
+            }
+            if (contigsWithGoodStart.isEmpty()) {
+                logger.warn("couldn't find contigs to continue reference haplotype for position " + refHaplotype.getLocation().toString());
+                return contigs;
+            }
+            final Allele contig = contigsWithGoodStart.iterator().next();
+            contigs.add(contig);
+            refString = refString.substring(contig.toString().length());
+            candidateHaplotypesToNextContig = returnHaplotypes.stream()
+                    .filter(h -> h.contigs.contains(contig) && h.contigs.indexOf(contig) < h.contigs.size() - 1)
+                    .collect(Collectors.toMap(Function.identity(), h -> h.contigs.get(1 + h.contigs.indexOf(contig))));
+        }
+        return contigs;
+    }
 
     private <E extends BaseEdge, V extends BaseVertex> List<BaseVertexBackedAllele<V>> getContigs(final KBestHaplotype<V, E> kBestHaplotype) {
 
