@@ -4,6 +4,7 @@ import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMSequenceDictionary;
 import htsjdk.samtools.reference.ReferenceSequenceFile;
 import htsjdk.samtools.util.CloserUtil;
+import htsjdk.samtools.util.CollectionUtil;
 import htsjdk.samtools.util.RuntimeIOException;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
@@ -38,9 +39,9 @@ import org.broadinstitute.hellbender.tools.walkers.annotator.StandardHCAnnotatio
 import org.broadinstitute.hellbender.tools.walkers.annotator.StrandBiasBySample;
 import org.broadinstitute.hellbender.tools.walkers.annotator.StrandOddsRatio;
 import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine;
-import org.broadinstitute.hellbender.tools.walkers.genotyper.MinimalGenotypingEngine;
-import org.broadinstitute.hellbender.tools.walkers.genotyper.OutputMode;
-import org.broadinstitute.hellbender.tools.walkers.genotyper.StandardCallerArgumentCollection;
+import org.broadinstitute.hellbender.tools.walkers.genotyper.*;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.InverseAllele;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.JoinedContigs;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.readthreading.ReadThreadingAssembler;
 import org.broadinstitute.hellbender.transformers.IUPACReadTransformer;
 import org.broadinstitute.hellbender.transformers.ReadTransformer;
@@ -52,9 +53,7 @@ import org.broadinstitute.hellbender.utils.activityprofile.ActivityProfileState;
 import org.broadinstitute.hellbender.utils.downsampling.AlleleBiasedDownsamplingUtils;
 import org.broadinstitute.hellbender.utils.dragstr.DragstrParamUtils;
 import org.broadinstitute.hellbender.utils.dragstr.DragstrParams;
-import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
-import org.broadinstitute.hellbender.utils.genotyper.IndexedSampleList;
-import org.broadinstitute.hellbender.utils.genotyper.SampleList;
+import org.broadinstitute.hellbender.utils.genotyper.*;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.haplotype.HaplotypeBAMWriter;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
@@ -746,9 +745,9 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                 writer -> writer.writeAlleleLikelihoods(readLikelihoods));
 
 
-//        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsBoth = subsetHaplotypesByContigs(readLikelihoods);
-//        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsForward = subsetHaplotypesByContigs(subsetLikelihoodsByStrand(subsettedReadLikelihoodsBoth,StrandsToUse.FORWARD));
-//        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsReverse = subsetHaplotypesByContigs(subsetLikelihoodsByStrand(subsettedReadLikelihoodsBoth.subsetToAlleles(subsettedReadLikelihoodsForward.alleles()),StrandsToUse.REVERSE));
+        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsBoth = subsetHaplotypesByContigs(readLikelihoods);
+        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsForward = subsetHaplotypesByContigs(subsetLikelihoodsByStrand(subsettedReadLikelihoodsBoth,StrandsToUse.FORWARD));
+        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsReverse = subsetHaplotypesByContigs(subsetLikelihoodsByStrand(subsettedReadLikelihoodsBoth.subsetToAlleles(subsettedReadLikelihoodsForward.alleles()),StrandsToUse.REVERSE));
 
         final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal = readLikelihoods;
 
@@ -839,71 +838,71 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         return readLikelihoods.subsetLikelihoodsToReads(strandsToUse::useRead);
     };
 
-//    static private Set<Allele> getJoinedContigs(final Haplotype haplotype){
-//        Set<Allele> joinedContigs = new HashSet<>();
-//        //noinspection ResultOfMethodCallIgnored
-//        haplotype.contigs.stream().reduce((a, b) -> {
-//            joinedContigs.add(new JoinedContigs(a, b));
-//            return b;
-//        });
-//        return joinedContigs;
-//    }
-//    private AlleleLikelihoods<GATKRead, Haplotype> subsetHaplotypesByContigs(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods ){
-//
-//        boolean removedHaplotype = true;
-//        AlleleLikelihoods<GATKRead, Haplotype> currentReadLikelihoods = readLikelihoods;
-//        while (removedHaplotype) {
-//        // build map from contig to haplotype
-//            final Map<Allele, List<Haplotype>> contigHaplotypeMap = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
-//            currentReadLikelihoods.alleles()
-//                    .forEach(h -> getJoinedContigs(h).forEach(
-//                            jh -> contigHaplotypeMap.get(jh).add(h))
-//                    );
-//
-//            final List<Haplotype> eventualAlleles = new ArrayList<>(currentReadLikelihoods.alleles());
-//            if (eventualAlleles.stream().noneMatch(Allele::isReference)) {
-//                throw new IllegalStateException("Reference haplotype must always remain!");
-//            }
-//            // repeat until no change.
-//            removedHaplotype = false;
-//
-//            //find contigs that only have the reference haplotypes and remove them.
-//            final List<Allele> refOnlyContigs = contigHaplotypeMap.keySet().stream().filter(c -> contigHaplotypeMap.get(c).stream().anyMatch(Allele::isReference)).collect(Collectors.toList());
-//            refOnlyContigs.forEach(contigHaplotypeMap::remove);
-//
-//            // find contigs that have all the haplotypes in them and remove them.
-//            final List<Allele> allHapContigs = contigHaplotypeMap.keySet().stream().filter(c -> contigHaplotypeMap.get(c).containsAll(eventualAlleles)).collect(Collectors.toList());
-//            allHapContigs.forEach(contigHaplotypeMap::remove);
-//
-//            //find contigs that have no haplotypes in them and remove them.
-//            final List<Allele> noHapContigs = contigHaplotypeMap.keySet().stream().filter(c -> contigHaplotypeMap.get(c).isEmpty()).collect(Collectors.toList());
-//            noHapContigs.forEach(contigHaplotypeMap::remove);
-//
-//            final List<Allele> allAlleles = new ArrayList<>(contigHaplotypeMap.keySet());
-//
-//            final AlleleLikelihoods<GATKRead, Haplotype> finalCurrentReadLikelihoods = currentReadLikelihoods;
-//            final List<Integer> collectedRPLs = allAlleles.stream().map(c -> getContigLikelihood(finalCurrentReadLikelihoods, c)).collect(Collectors.toList());
-//            final Integer worstRPL = collectedRPLs.stream().max(Integer::compareTo).orElse(Integer.MIN_VALUE);
-//
-//            final int THRESHOLD = -30;
-//            //THRESHOLD is a constant...needs to become a parameter
-//            if (worstRPL > THRESHOLD) {
-//                final Allele badContig = allAlleles.get(collectedRPLs.indexOf(worstRPL));
-//
-//                final ArrayList<Haplotype> haplotypesWithContig = new ArrayList<>(contigHaplotypeMap.get(badContig));
-//                haplotypesWithContig.removeIf(Allele::isReference);
-//
-//                removedHaplotype = eventualAlleles.removeAll(haplotypesWithContig);
-//                if (eventualAlleles.stream().noneMatch(Allele::isReference)) {
-//                    throw new IllegalStateException("Reference haplotype must always remain!");
-//                }
-//                //subset to remaining haplotypes:
-//                currentReadLikelihoods = currentReadLikelihoods.subsetToAlleles(eventualAlleles);
-//            }
-//        }
-//
-//        return currentReadLikelihoods;
-//    }
+    static private Set<Allele> getJoinedContigs(final Haplotype haplotype){
+        Set<Allele> joinedContigs = new HashSet<>();
+        //noinspection ResultOfMethodCallIgnored
+        haplotype.contigs.stream().reduce((a, b) -> {
+            joinedContigs.add(new JoinedContigs(a, b));
+            return b;
+        });
+        return joinedContigs;
+    }
+    private AlleleLikelihoods<GATKRead, Haplotype> subsetHaplotypesByContigs(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods ){
+
+        boolean removedHaplotype = true;
+        AlleleLikelihoods<GATKRead, Haplotype> currentReadLikelihoods = readLikelihoods;
+        while (removedHaplotype) {
+        // build map from contig to haplotype
+            final Map<Allele, List<Haplotype>> contigHaplotypeMap = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
+            currentReadLikelihoods.alleles()
+                    .forEach(h -> getJoinedContigs(h).forEach(
+                            jh -> contigHaplotypeMap.get(jh).add(h))
+                    );
+
+            final List<Haplotype> eventualAlleles = new ArrayList<>(currentReadLikelihoods.alleles());
+            if (eventualAlleles.stream().noneMatch(Allele::isReference)) {
+                throw new IllegalStateException("Reference haplotype must always remain!");
+            }
+            // repeat until no change.
+            removedHaplotype = false;
+
+            //find contigs that only have the reference haplotypes and remove them.
+            final List<Allele> refOnlyContigs = contigHaplotypeMap.keySet().stream().filter(c -> contigHaplotypeMap.get(c).stream().anyMatch(Allele::isReference)).collect(Collectors.toList());
+            refOnlyContigs.forEach(contigHaplotypeMap::remove);
+
+            // find contigs that have all the haplotypes in them and remove them.
+            final List<Allele> allHapContigs = contigHaplotypeMap.keySet().stream().filter(c -> contigHaplotypeMap.get(c).containsAll(eventualAlleles)).collect(Collectors.toList());
+            allHapContigs.forEach(contigHaplotypeMap::remove);
+
+            //find contigs that have no haplotypes in them and remove them.
+            final List<Allele> noHapContigs = contigHaplotypeMap.keySet().stream().filter(c -> contigHaplotypeMap.get(c).isEmpty()).collect(Collectors.toList());
+            noHapContigs.forEach(contigHaplotypeMap::remove);
+
+            final List<Allele> allAlleles = new ArrayList<>(contigHaplotypeMap.keySet());
+
+            final AlleleLikelihoods<GATKRead, Haplotype> finalCurrentReadLikelihoods = currentReadLikelihoods;
+            final List<Integer> collectedRPLs = allAlleles.stream().map(c -> getContigLikelihood(finalCurrentReadLikelihoods, c)).collect(Collectors.toList());
+            final Integer worstRPL = collectedRPLs.stream().max(Integer::compareTo).orElse(Integer.MIN_VALUE);
+
+            final int THRESHOLD = -30;
+            //THRESHOLD is a constant...needs to become a parameter
+            if (worstRPL > THRESHOLD) {
+                final Allele badContig = allAlleles.get(collectedRPLs.indexOf(worstRPL));
+
+                final ArrayList<Haplotype> haplotypesWithContig = new ArrayList<>(contigHaplotypeMap.get(badContig));
+                haplotypesWithContig.removeIf(Allele::isReference);
+
+                removedHaplotype = eventualAlleles.removeAll(haplotypesWithContig);
+                if (eventualAlleles.stream().noneMatch(Allele::isReference)) {
+                    throw new IllegalStateException("Reference haplotype must always remain!");
+                }
+                //subset to remaining haplotypes:
+                currentReadLikelihoods = currentReadLikelihoods.subsetToAlleles(eventualAlleles);
+            }
+        }
+
+        return currentReadLikelihoods;
+    }
 
     private enum StrandsToUse {
         FORWARD(true),
@@ -920,31 +919,31 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
     }
 
-//    private int getContigLikelihood(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods, final Allele contig) {
-//        Map<Allele,List<Haplotype>> contigHaplotypeMap = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
-//
-//        final Allele notContig = InverseAllele.of(contig);
-//
-//        readLikelihoods.alleles().stream().filter(h -> getJoinedContigs(h).contains(contig)).forEach(contigHaplotypeMap.get(contig)::add);
-//        readLikelihoods.alleles().stream().filter(h -> !getJoinedContigs(h).contains(contig)).forEach(contigHaplotypeMap.get(notContig)::add);
-//
-//        final AlleleLikelihoods<GATKRead, Allele> contigLikelihoods = readLikelihoods.marginalize(contigHaplotypeMap);
-//        // iterate over contigs and see what their qual is.
-//
-//        GenotypingData<Allele> genotypingData = new GenotypingData<>(genotypingEngine.getPloidyModel(), contigLikelihoods);
-//
-//        IndependentSampleGenotypesModel genotypesModel = new IndependentSampleGenotypesModel();
-//
-//        AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(contig, notContig));
-//
-//        final GenotypingLikelihoods<Allele> genotypingLikelihoods = genotypesModel.calculateLikelihoods(alleleList, genotypingData);
-//
-//        final int[] asPL = genotypingLikelihoods.sampleLikelihoods(0).getAsPLs();
-//        final int retVal;
-//        retVal = Math.min(asPL[1], asPL[0]) - asPL[2]; // if this is "large", reject the contig.
-//        return retVal;
-//    }
-//
+    private int getContigLikelihood(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods, final Allele contig) {
+        Map<Allele,List<Haplotype>> contigHaplotypeMap = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
+
+        final Allele notContig = InverseAllele.of(contig);
+
+        readLikelihoods.alleles().stream().filter(h -> getJoinedContigs(h).contains(contig)).forEach(contigHaplotypeMap.get(contig)::add);
+        readLikelihoods.alleles().stream().filter(h -> !getJoinedContigs(h).contains(contig)).forEach(contigHaplotypeMap.get(notContig)::add);
+
+        final AlleleLikelihoods<GATKRead, Allele> contigLikelihoods = readLikelihoods.marginalize(contigHaplotypeMap);
+        // iterate over contigs and see what their qual is.
+
+        GenotypingData<Allele> genotypingData = new GenotypingData<>(genotypingEngine.getPloidyModel(), contigLikelihoods);
+
+        IndependentSampleGenotypesModel genotypesModel = new IndependentSampleGenotypesModel();
+
+        AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(contig, notContig));
+
+        final GenotypingLikelihoods<Allele> genotypingLikelihoods = genotypesModel.calculateLikelihoods(alleleList, genotypingData);
+
+        final int[] asPL = genotypingLikelihoods.sampleLikelihoods(0).getAsPLs();
+        final int retVal;
+        retVal = Math.min(asPL[1], asPL[0]) - asPL[2]; // if this is "large", reject the contig.
+        return retVal;
+    }
+
 
     private boolean containsCalls(final CalledHaplotypes calledHaplotypes) {
         return calledHaplotypes.getCalls().stream()
