@@ -16,6 +16,7 @@ import org.broadinstitute.hellbender.utils.read.ReadUtils;
 
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 //import java.util.List;
 
 public final class Haplotype extends Allele {
@@ -33,7 +34,7 @@ public final class Haplotype extends Allele {
     private Cigar cigar;
     private int alignmentStartHapwrtRef;
     private double score = Double.NaN;
-//    public List<? extends Allele> contigs = null;
+    public List<? extends Allele> contigs = null;
 
     /**
      * Main constructor
@@ -125,7 +126,7 @@ public final class Haplotype extends Allele {
         ret.setScore(score);
         ret.setAlignmentStartHapwrtRef(newStart + getAlignmentStartHapwrtRef());
         //TODO: need to trim this down as well.
-//        ret.contigs=contigs;
+        ret.contigs=contigs;
         return ret;
     }
 
