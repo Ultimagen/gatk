@@ -67,17 +67,19 @@ public class LHWRefView {
         }
 
         // check if has at least one sequence of stable bases larger than threshold
+        int         baseIndex = 0;
         for  ( byte base : bases ) {
             if ( base == lastBase ) {
-                if ( ++baseSameCount > hmerSizeThreshold ) {
+                if ( ++baseSameCount >= hmerSizeThreshold ) {
                     if ( debug )
-                        logger.info("will collapse. found a stable sequence of at least " + baseSameCount + " of " + Character.toString((char)lastBase));
+                        logger.info("will collapse. found a stable sequence of at least " + (baseSameCount+1) + " of " + Character.toString((char)lastBase));
                     return true;
                 }
             } else {
                 lastBase = base;
                 baseSameCount = 0;
             }
+            baseIndex++;
         }
 
         if ( debug )
