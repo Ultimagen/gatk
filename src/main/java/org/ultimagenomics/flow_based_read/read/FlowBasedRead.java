@@ -1,22 +1,27 @@
 package org.ultimagenomics.flow_based_read.read;
 
-import htsjdk.samtools.*;
+import htsjdk.samtools.CigarElement;
+import htsjdk.samtools.CigarOperator;
+import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.util.SequenceUtil;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.broadinstitute.hellbender.utils.read.CigarUtils;
-import org.ultimagenomics.flow_based_read.utils.Direction;
-import htsjdk.samtools.util.SequenceUtil;
 import org.broadinstitute.hellbender.exceptions.GATKException;
+import org.broadinstitute.hellbender.utils.read.CigarUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
+import org.ultimagenomics.flow_based_read.utils.Direction;
 import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
 
 import java.io.*;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.PriorityQueue;
 
 public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRead, FlowBasedReadInterface, Serializable {
 
@@ -43,6 +48,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private final Logger logger = LogManager.getLogger(this.getClass());
     static private String ultimaFlowMatrixMods = null;
     static private int[] ultimaFlowMatrixModsInstructions = new int[MAXIMAL_MAXHMER];
+
+    private final int LEFT_BOUNDARY = -1;
+    private final int RIGHT_BOUNDARY = 1;
+    private final int UNCLIPPED = 0;
 
     public FlowBasedRead(SAMRecord samRecord, String _flowOrder, int _maxHmer) {
         this(samRecord, _flowOrder, _maxHmer, new FlowBasedAlignmentArgumentCollection());
@@ -77,8 +86,13 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         if ( samRecord.hasAttribute("kr") )
             readFlowMatrix(_flowOrder);
-        else
-            readBaseMatrix(_flowOrder);
+        else {
+            if (samRecord.hasAttribute("ti")) {
+                readBaseMatrixRecal(_flowOrder);
+            } else if (samRecord.hasAttribute("tp")) {
+                readBaseMatrixProb(_flowOrder);
+            }
+        }
 
         //Spread boundary flow probabilities when the read is unclipped
         //in this case the value of the hmer is uncertain
@@ -134,7 +148,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         return sb.toString();
     }
 
-    private void readBaseMatrix(String _flowOrder) {
+    private void readBaseMatrixRecal(String _flowOrder) {
 
        // generate key (base to flow space)
         setDirection(Direction.REFERENCE);  // base is always in reference/alignment direction
@@ -152,7 +166,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         // access qual, convert to ultima representation
         byte[]      quals = samRecord.getBaseQualities();
-        byte[]      ti = samRecord.getByteArrayAttribute("ti");
+        byte[]      ti = samRecord.getUnsignedByteArrayAttribute("ti");
         double[]    probs = new double[quals.length];
         for ( int i = 0 ; i < quals.length ; i++ ) {
             double q = quals[i];
@@ -192,6 +206,90 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         }
     }
+
+    private void readBaseMatrixProb(String _flowOrder) {
+
+        // generate key (base to flow space)
+        setDirection(Direction.REFERENCE);  // base is always in reference/alignment direction
+        key = FlowBasedHaplotype.base2key(samRecord.getReadBases(), _flowOrder, 1000);
+        getKey2Base();
+        flowOrder = getFlow2Base(_flowOrder, key.length);
+
+        // initialize matrix
+        flowMatrix = new double[maxHmer+1][key.length];
+        for (int i = 0 ; i < maxHmer+1; i++) {
+            for (int j = 0 ; j < key.length; j++ ){
+                flowMatrix[i][j] = fbargs.filling_value;;
+            }
+        }
+
+        // access qual, convert to ultima representation
+        byte[]      quals = samRecord.getBaseQualities();
+        byte[]      tp = samRecord.getSignedByteArrayAttribute("tp");
+        double[]    probs = new double[quals.length];
+        for ( int i = 0 ; i < quals.length ; i++ ) {
+            double q = quals[i];
+            double p = Math.pow(10, -q/10);
+            double ultima_p = p*2;
+
+            probs[i] = ultima_p;
+        }
+
+        // apply key and qual/tp to matrix
+        int     qualOfs = 0;
+        for ( int i = 0 ; i < key.length ; i++ ) {
+            final byte        run = key[i];
+
+            if ( i == 0 ) {
+                parseSingleHmer(probs, quals, tp, i, run, qualOfs, LEFT_BOUNDARY);
+            } else if ( i == key.length - 1 ) {
+                parseSingleHmer(probs, quals, tp, i, run, qualOfs, RIGHT_BOUNDARY);
+            } else {
+                parseSingleHmer(probs, quals, tp, i, run, qualOfs, UNCLIPPED);
+            }
+
+
+            // the probability in the recalibration is not divided by two for hmers of length 1
+            if ( run == 1 ) {
+                probs[qualOfs] = probs[qualOfs]/2;
+            }
+
+            if ( run <= maxHmer ) {
+                flowMatrix[run][i] = (run > 0) ? (1 - probs[qualOfs]) : 1;
+                flowMatrix[run][i] = Math.max(MINIMAL_CALL_PROB, flowMatrix[run][i]);
+
+            }
+            if ( run != 0 ) {
+                if ( quals[qualOfs] != 40 ) {
+                    final int     run1 = (tp[qualOfs] == 0) ? (run - 1) : (run + 1);
+                    if (( run1 <= maxHmer ) && (run <= maxHmer)){
+                        flowMatrix[run1][i] = probs[qualOfs] / flowMatrix[run][i];
+                    }
+                    if (run <= maxHmer) {
+                        flowMatrix[run][i] /= flowMatrix[run][i]; // for comparison to the flow space - probabilities are normalized by the key's probability
+                    }
+                }
+                qualOfs += run;
+            }
+
+        }
+    }
+
+
+    private void parseSingleHmer(double[] probs, byte[] quals, byte[] tp, int flowIdx,
+                                 byte flowCall, int qualOfs, int boundaryType){
+        int lastPos = -999;
+        for (int i = qualOfs ; i < qualOfs+flowCall; i++) {
+            if (tp[i+qualOfs]!=0) {
+                if (flowMatrix[flowIdx][flowCall + tp[i]] != fbargs.filling_value) {
+                    flowMatrix[flowIdx][flowCall + tp[i]] = probs[i];
+                } else {
+                    flowMatrix[flowIdx][flowCall + tp[i]] += probs[i];
+                }
+            }
+        }
+    }
+
 
     private void readFlowMatrix(String _flowOrder) {
         key = getAttributeAsByteArray("kr");
