@@ -262,6 +262,14 @@ public class LHWRefView {
                 collapsedToFullLocationMap[dstOfs] = srcOfs;
                 if ( fullQuals != null )
                     collapsedQuals[dstOfs] = fullQuals[srcOfs];
+
+                // just coming out of collapsing?
+                if ( dstOfs > 0 && ((collapsedToFullLocationMap[dstOfs - 1] + 1) != collapsedToFullLocationMap[dstOfs]) ) {
+                    // attribute the second half of the collapsed area to end of the original area
+                    for ( int n = 1 ; n <= (hmerSizeThreshold / 2) ; n++ )
+                        collapsedToFullLocationMap[dstOfs - n] = collapsedToFullLocationMap[dstOfs] - n;
+                }
+
                 collapsedRef[dstOfs++] = base;
             }
             srcOfs++;
