@@ -21,6 +21,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     private static final long serialVersionUID = 42L;
     GATKRead read = null;
+
     private SAMRecord samRecord;
     private byte[] forwardSequence;
     private byte[] key;
@@ -155,8 +156,8 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
 
         byte [] kh = getAttributeAsByteArray( "kh" );
-        int [] kf = getAttributeAsIntArray("kf");
-        int [] kd = getAttributeAsIntArray( "kd");
+        int [] kf = getAttributeAsIntArray("kf", false);
+        int [] kd = getAttributeAsIntArray( "kd", true);
 
         byte [] key_kh = key;
         int [] key_kf = new int[key.length];
@@ -287,16 +288,18 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     }
 
-    private int[] getAttributeAsIntArray(String attributeName) {
+    private int[] getAttributeAsIntArray(String attributeName, boolean isSigned) {
         ReadUtils.assertAttributeNameIsLegal(attributeName);
         Object attributeValue = this.samRecord.getAttribute(attributeName);
+
         if (attributeValue == null) {
             return null;
         } else if (attributeValue instanceof byte[]) {
             byte[] tmp = (byte[]) attributeValue;
             int[] ret = new int[tmp.length];
             for (int i = 0; i < ret.length; i++)
-                ret[i] = tmp[i] & 0xff; //converting signed byte to unsigned
+                if (!isSigned) ret[i] = tmp[i]&0xff;
+                else ret[i]=tmp[i]; //converting signed byte to unsigned
             return Arrays.copyOf(ret, ret.length);
         } else if ((attributeValue instanceof int[])) {
             int[] ret = (int[]) attributeValue;
@@ -731,7 +734,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             if (kd_probs[i] <=0)
                 continue;
             else {
-                kd_probs[i] = (int)(bin_size * (int)(kd_probs[i]/bin_size)+1);
+                kd_probs[i] = (byte)(bin_size * (byte)(kd_probs[i]/bin_size)+1);
             }
         }
     }
