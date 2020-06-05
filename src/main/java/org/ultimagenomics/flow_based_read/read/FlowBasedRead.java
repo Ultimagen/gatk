@@ -15,10 +15,7 @@ import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollec
 import java.io.*;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 
 public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRead, FlowBasedReadInterface, Serializable {
 
@@ -198,6 +195,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
         if (fbargs.only_ins_or_del) {
             reportInsOrDel(key_kh);
+        }
+
+        if ((fbargs.retainMaxNProbs)){
+            reportMaxNProbsHmer(key_kh);
         }
 
         validateSequence();
@@ -790,6 +791,35 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
+
+    private void reportMaxNProbsHmer(byte [] key) {
+        double [] tmpContainer = new double[maxHmer];
+        for (int i = 0 ; i < key.length;i++){
+
+            for (int j = 0 ; j < tmpContainer.length; j++) {
+                tmpContainer[j] = flowMatrix[j][i];
+            }
+            int k = (key[i]+1)/2;
+            double kth_highest = findKthLargest(tmpContainer, k+1);
+            for (int j = 0 ; j < maxHmer; j++)
+                if (flowMatrix[j][i] < kth_highest)
+                    flowMatrix[j][i] = fbargs.filling_value;
+        }
+
+    }
+
+    private double findKthLargest(double[] nums, int k) {
+        PriorityQueue<Double> q = new PriorityQueue<Double>(k);
+        for(double i: nums){
+            q.offer(i);
+
+            if(q.size()>k){
+                q.poll();
+            }
+        }
+
+        return q.peek();
+    }
 
 }
 
