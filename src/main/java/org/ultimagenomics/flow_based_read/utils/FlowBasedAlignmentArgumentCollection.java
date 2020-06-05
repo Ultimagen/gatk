@@ -19,6 +19,7 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     private static final String DISALLOW_LARGER_PROBS = "flow-disallow-probs-larger-than-call";
     private static final String LUMP_PROBS = "flow-lump-probs";
     private static final String PROB_SF = "flow-probability-scaling-factor";
+    private static final String RETAIN_MAX_N_PROBS_BASE = "flow-retain-max-n-probs-base-format";
 
     private static final double DEFAULT_RATIO_THRESHOLD = 0.003;
     private static final double DEFAULT_FILLING_VALUE = 0.001;
@@ -29,6 +30,7 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     private static final boolean DEFAULT_ONLY_INS_OR_DEL = false;
     private static final boolean DEFAULT_DISALLOW_LARGER_PROBS = false;
     private static final boolean DEFAULT_LUMP_PROBS = false;
+    private static final boolean DEFAULT_RETAIN_MAX_N_PROBS = false;
     private static final int DEFAULT_PROB_SCALING_FACTOR = 10;
 
     @Advanced
@@ -66,6 +68,10 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     @Advanced
     @Argument(fullName = LUMP_PROBS, doc = "Should all probabilities of insertion or deletion in the flow be combined together", optional=true)
     public boolean lump_probs = DEFAULT_LUMP_PROBS;
+
+    @Advanced
+    @Argument(fullName = RETAIN_MAX_N_PROBS_BASE, doc = "Keep only hmer/2 probabilities (like in base format)", optional=true)
+    public boolean retainMaxNProbs = DEFAULT_RETAIN_MAX_N_PROBS;
 
     @Advanced
     @Argument(fullName = PROB_SF, doc = "probability scaling factor for (phred=10)", optional=true)
