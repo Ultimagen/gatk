@@ -220,6 +220,10 @@ public final class ReadThreadingAssembler {
 
         // add assembled alt haplotypes to the {@code resultSet}
         findBestPaths(nonRefSeqGraphs, assemblyResultBySeqGraph, refHaplotype, refLoc, activeRegionExtendedLocation, resultSet, aligner);
+
+        for (Haplotype h: resultSet.getHaplotypeList())
+            if (h.contigs==null)
+                continue;
     }
 
     /**
@@ -400,8 +404,14 @@ public final class ReadThreadingAssembler {
             // the first returned by any finder.
             // HERE we want to preserve the signal that assembly failed completely so in this case we don't add anything to the empty list
             if (!returnHaplotypes.isEmpty() && !returnHaplotypes.contains(refHaplotype)) {
-                returnHaplotypes.add(refHaplotype);
                 refHaplotype.contigs = getRefHaplotypesContigs(refHaplotype,returnHaplotypes);
+                returnHaplotypes.add(refHaplotype);
+
+            }
+
+            for (Haplotype h: resultSet.getHaplotypeList()) {
+                if (h.isReference() && (h.contigs==null))
+                    h.contigs = getRefHaplotypesContigs(h, returnHaplotypes);
             }
 
             assemblyResult.setDiscoveredHaplotypes(returnHaplotypes);
@@ -422,6 +432,7 @@ public final class ReadThreadingAssembler {
                 }
             }
         }
+
         return new ArrayList<>(returnHaplotypes);
     }
 
