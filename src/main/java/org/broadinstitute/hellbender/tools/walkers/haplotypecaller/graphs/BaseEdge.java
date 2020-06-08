@@ -77,7 +77,7 @@ public class BaseEdge {
      * @return the multiplicity value that should be used for pruning
      */
     public int getPruningMultiplicity() {
-            return Math.min(forwardMultiplicity, reverseMultiplicity);
+            return getMultiplicity();
     }
 
     /**
