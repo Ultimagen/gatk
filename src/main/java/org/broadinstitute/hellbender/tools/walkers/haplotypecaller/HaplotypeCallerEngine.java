@@ -700,10 +700,10 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
 
         final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsBoth = subsetHaplotypesByContigs(readLikelihoods);
-        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsForward = subsetHaplotypesByContigs(subsetLikelihoodsByStrand(subsettedReadLikelihoodsBoth,StrandsToUse.FORWARD));
-        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsReverse = subsetHaplotypesByContigs(subsetLikelihoodsByStrand(subsettedReadLikelihoodsBoth.subsetToAlleles(subsettedReadLikelihoodsForward.alleles()),StrandsToUse.REVERSE));
+        //final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsForward = subsetHaplotypesByContigs(subsetLikelihoodsByStrand(subsettedReadLikelihoodsBoth,StrandsToUse.FORWARD));
+        //final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsReverse = subsetHaplotypesByContigs(subsetLikelihoodsByStrand(subsettedReadLikelihoodsBoth.subsetToAlleles(subsettedReadLikelihoodsForward.alleles()),StrandsToUse.REVERSE));
 
-        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal = readLikelihoods;
+        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal = subsettedReadLikelihoodsBoth;
 
         if (assemblyDebugOutStream != null) {
             assemblyDebugOutStream.println("\nThere were " + subsettedReadLikelihoodsFinal.alleles().size() + " haplotypes found after subsetting by contigs. Here they are:");
