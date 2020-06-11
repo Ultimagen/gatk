@@ -406,7 +406,8 @@ public abstract class BaseGraph<V extends BaseVertex, E extends BaseEdge> extend
         }
 
         for( final V v : vertexSet() ) {
-            graphWriter.println(String.format("\t%s [label=\"%s\",shape=box]", v.toString(), new String(getAdditionalSequence(v)) + v.getAdditionalInfo()));
+            graphWriter.println(String.format("\t%s [label=\"%s (%d) %s\",shape=box]", v.toString(),
+                    new String(getAdditionalSequence(v)), v.hashCode(),v.getAdditionalInfo()) );
         }
 
         getExtraGraphFileLines().forEach(graphWriter::println);
