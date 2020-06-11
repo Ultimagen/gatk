@@ -5,6 +5,7 @@ import htsjdk.variant.variantcontext.Allele;
 public class JoinedContigs extends Allele {
     final static public long serialVersionUID = 1L;
 
+
     private final Allele allele1;
     private final Allele allele2;
 
@@ -22,6 +23,14 @@ public class JoinedContigs extends Allele {
     @Override
     public boolean isSymbolic() {
         return true;
+    }
+
+    public Allele getAllele1() {
+        return allele1;
+    }
+
+    public Allele getAllele2() {
+        return allele2;
     }
 
     @Override
