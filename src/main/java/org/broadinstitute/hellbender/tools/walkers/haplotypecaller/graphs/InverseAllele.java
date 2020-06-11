@@ -40,6 +40,9 @@ public class InverseAllele extends Allele {
         if (this == o) {
             return true;
         }
+        if (!(o instanceof InverseAllele) )
+            return false;
+
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
