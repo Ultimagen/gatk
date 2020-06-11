@@ -3,42 +3,23 @@ package org.broadinstitute.hellbender.tools.walkers.haplotypecaller;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMSequenceDictionary;
 import htsjdk.samtools.reference.ReferenceSequenceFile;
-import htsjdk.samtools.util.CloserUtil;
 import htsjdk.samtools.util.CollectionUtil;
 import htsjdk.samtools.util.RuntimeIOException;
-import htsjdk.variant.variantcontext.Allele;
-import htsjdk.variant.variantcontext.Genotype;
-import htsjdk.variant.variantcontext.GenotypeBuilder;
-import htsjdk.variant.variantcontext.GenotypesContext;
-import htsjdk.variant.variantcontext.VariantContext;
-import htsjdk.variant.variantcontext.VariantContextBuilder;
+import htsjdk.variant.variantcontext.*;
 import htsjdk.variant.variantcontext.writer.Options;
 import htsjdk.variant.variantcontext.writer.VariantContextWriter;
 import htsjdk.variant.vcf.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.argparser.CommandLineException;
-import org.broadinstitute.hellbender.engine.AlignmentContext;
-import org.broadinstitute.hellbender.engine.AssemblyRegion;
-import org.broadinstitute.hellbender.engine.AssemblyRegionEvaluator;
-import org.broadinstitute.hellbender.engine.FeatureContext;
-import org.broadinstitute.hellbender.engine.ReferenceContext;
+import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.engine.filters.MappingQualityReadFilter;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.engine.filters.ReadFilterLibrary;
 import org.broadinstitute.hellbender.engine.filters.WellformedReadFilter;
 import org.broadinstitute.hellbender.engine.spark.AssemblyRegionArgumentCollection;
 import org.broadinstitute.hellbender.exceptions.UserException;
-import org.broadinstitute.hellbender.tools.walkers.annotator.Annotation;
-import org.broadinstitute.hellbender.tools.walkers.annotator.ChromosomeCounts;
-import org.broadinstitute.hellbender.tools.walkers.annotator.FisherStrand;
-import org.broadinstitute.hellbender.tools.walkers.annotator.QualByDepth;
-import org.broadinstitute.hellbender.tools.walkers.annotator.RMSMappingQuality;
-import org.broadinstitute.hellbender.tools.walkers.annotator.StandardAnnotation;
-import org.broadinstitute.hellbender.tools.walkers.annotator.StandardHCAnnotation;
-import org.broadinstitute.hellbender.tools.walkers.annotator.StrandBiasBySample;
-import org.broadinstitute.hellbender.tools.walkers.annotator.StrandOddsRatio;
-import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine;
+import org.broadinstitute.hellbender.tools.walkers.annotator.*;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.*;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.InverseAllele;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.JoinedContigs;
@@ -72,6 +53,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.broadinstitute.hellbender.utils.activityprofile.ActivityProfileState.Type.HIGH_QUALITY_SOFT_CLIPS;
 import static org.broadinstitute.hellbender.utils.activityprofile.ActivityProfileState.Type.NONE;
@@ -847,6 +829,8 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         });
         return joinedContigs;
     }
+
+
     private AlleleLikelihoods<GATKRead, Haplotype> subsetHaplotypesByContigs(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods ){
 
         boolean removedHaplotype = true;
@@ -859,6 +843,35 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                             jh -> contigHaplotypeMap.get(jh).add(h))
                     );
 
+            JoinedContigs jca;
+            JoinedContigs jca0 = null;
+            JoinedContigs jca1 = null;
+            JoinedContigs jca2 = null;
+
+            for (Haplotype h:currentReadLikelihoods.alleles()) {
+                final String id1 = "G";
+                final String id2 = "AATGGTAGTTCTAAGTTTTTGAGAAATCTCCAAACTAATTTACAT";
+                final String id1_1 = "GG";
+                final String id1_2 = "AG";
+
+                Set<Allele> jc = getJoinedContigs(h);
+                for (Allele a : jc) {
+                    jca = (JoinedContigs)a;
+//                    logger.debug(String.format("%s->%s", jca.getAllele1().getBaseString(), jca.getAllele2().getBaseString()));
+                    if ((jca.getAllele1().getBaseString().equals(id1)) && (jca.getAllele2().getBaseString().equals(id2))){
+                        jca0 = jca;
+                    }
+                    if ((jca.getAllele1().getBaseString().equals(id1_1)) && (jca.getAllele2().getBaseString().equals(id2))){
+                        jca1 = jca;
+                    }
+                    if ((jca.getAllele1().getBaseString().equals(id1_2)) && (jca.getAllele2().getBaseString().equals(id2))){
+                        jca2 = jca;
+                    }
+                }
+            }
+
+
+
             final List<Haplotype> eventualAlleles = new ArrayList<>(currentReadLikelihoods.alleles());
             if (eventualAlleles.stream().noneMatch(Allele::isReference)) {
                 throw new IllegalStateException("Reference haplotype must always remain!");
@@ -870,24 +883,63 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             final List<Allele> refOnlyContigs = contigHaplotypeMap.keySet().stream().filter(c -> contigHaplotypeMap.get(c).stream().anyMatch(Allele::isReference)).collect(Collectors.toList());
             refOnlyContigs.forEach(contigHaplotypeMap::remove);
 
+
+            boolean isContained;
+            String state;
+            isContained = isContigIn(contigHaplotypeMap, jca0);
+            state = new String("refOnlyContigs");
+            if (isContained){
+                logger.debug(String.format("%s contained after %s", jca0.toString(), state));
+            } else if (jca0!=null) {
+                logger.debug(String.format("%s NOT CONTAINED after %s", jca0.toString(), state));
+            }
+
+
             // find contigs that have all the haplotypes in them and remove them.
             final List<Allele> allHapContigs = contigHaplotypeMap.keySet().stream().filter(c -> contigHaplotypeMap.get(c).containsAll(eventualAlleles)).collect(Collectors.toList());
             allHapContigs.forEach(contigHaplotypeMap::remove);
 
+            isContained = isContigIn(contigHaplotypeMap, jca0);
+            state = new String("allHapContigs");
+            if (isContained){
+                logger.debug(String.format("%s contained after %s", jca0.toString(), state));
+            }else if (jca0!=null) {
+                logger.debug(String.format("%s NOT CONTAINED after %s", jca0.toString(), state));
+            }
+
             //find contigs that have no haplotypes in them and remove them.
             final List<Allele> noHapContigs = contigHaplotypeMap.keySet().stream().filter(c -> contigHaplotypeMap.get(c).isEmpty()).collect(Collectors.toList());
             noHapContigs.forEach(contigHaplotypeMap::remove);
+            isContained = isContigIn(contigHaplotypeMap, jca0);
+            state = new String("noHapContigs");
+            if (isContained){
+                logger.debug(String.format("%s contained after %s", jca0.toString(), state));
+            } else if (jca0!=null){
+                logger.debug(String.format("%s NOT CONTAINED after %s", jca0.toString(), state));
+            }
 
             final List<Allele> allAlleles = new ArrayList<>(contigHaplotypeMap.keySet());
 
             final AlleleLikelihoods<GATKRead, Haplotype> finalCurrentReadLikelihoods = currentReadLikelihoods;
-            final List<Integer> collectedRPLs = allAlleles.stream().map(c -> getContigLikelihood(finalCurrentReadLikelihoods, c)).collect(Collectors.toList());
-            final Integer worstRPL = collectedRPLs.stream().max(Integer::compareTo).orElse(Integer.MIN_VALUE);
+            final List<AlleleLikelihoods<GATKRead, Allele>> contigLikelihoods =
+                    allAlleles.stream().map(c -> getContigLikelihoodMatrix(finalCurrentReadLikelihoods, c)).collect(Collectors.toList());
 
-            final int THRESHOLD = -30;
+            final List<Integer> collectedRPLs = IntStream.range(0, allAlleles.size()).mapToObj( i -> getContigLikelihood(contigLikelihoods.get(i), allAlleles.get(i))).collect(Collectors.toList());
+            final List<Double> collectedSORs = IntStream.range(0, allAlleles.size()).mapToObj( i -> getContigSOR(contigLikelihoods.get(i), allAlleles.get(i))).collect(Collectors.toList());
+
+
+
+//            if (jca0!=null) {
+//                logger.debug(String.format("%s has a likelihood of %d", jca0.toString(), getContigLikelihood(contigLikelihoods.get(allAlleles.indexOf(jca0)))));
+//               logger.debug(String.format("%s has a likelihood of %d", jca1.toString(), getContigLikelihood(contigLikelihoods.get(allAlleles.indexOf(jca1)))));
+//                logger.debug(String.format("%s has a likelihood of %d", jca2.toString(), getContigLikelihood(contigLikelihoods.get(allAlleles.indexOf(jca2)))));
+//
+//            }
+
+            Allele badContig = identifyBadContig(collectedRPLs, collectedSORs, allAlleles);
+
             //THRESHOLD is a constant...needs to become a parameter
-            if (worstRPL > THRESHOLD) {
-                final Allele badContig = allAlleles.get(collectedRPLs.indexOf(worstRPL));
+            if (badContig != null){
 
                 final ArrayList<Haplotype> haplotypesWithContig = new ArrayList<>(contigHaplotypeMap.get(badContig));
                 haplotypesWithContig.removeIf(Allele::isReference);
@@ -902,6 +954,27 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
 
         return currentReadLikelihoods;
+    }
+
+    private Allele identifyBadContig(final List<Integer> collectedRPLs,final List<Double> collectedSORs, List<Allele> alleles) {
+        final Integer worstRPL = collectedRPLs.stream().max(Integer::compareTo).orElse(Integer.MIN_VALUE);
+        final Double worstSOR = collectedSORs.stream().max(Double::compareTo).orElse(0.0);
+        final int THRESHOLD = -30;
+        final double SOR_THRESHOLD = 3;
+
+        int argmin=-1;
+        if (worstRPL > THRESHOLD )
+            argmin = collectedRPLs.indexOf(worstRPL);
+        else if (worstSOR > SOR_THRESHOLD )
+            argmin = collectedSORs.indexOf(worstSOR);
+        if (argmin >= 0 )
+            return alleles.get(argmin);
+        else
+            return null;
+    }
+
+    private boolean isContigIn(final Map<Allele, List<Haplotype>> map, JoinedContigs jca){
+        return map.containsKey(jca);
     }
 
     private enum StrandsToUse {
@@ -919,15 +992,25 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
     }
 
-    private int getContigLikelihood(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods, final Allele contig) {
+    private AlleleLikelihoods<GATKRead, Allele> getContigLikelihoodMatrix(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods, final Allele contig){
         Map<Allele,List<Haplotype>> contigHaplotypeMap = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
 
         final Allele notContig = InverseAllele.of(contig);
+        List<Allele> tmp = new ArrayList<>(1);
+        tmp.add(contig);
+
 
         readLikelihoods.alleles().stream().filter(h -> getJoinedContigs(h).contains(contig)).forEach(contigHaplotypeMap.get(contig)::add);
         readLikelihoods.alleles().stream().filter(h -> !getJoinedContigs(h).contains(contig)).forEach(contigHaplotypeMap.get(notContig)::add);
 
         final AlleleLikelihoods<GATKRead, Allele> contigLikelihoods = readLikelihoods.marginalize(contigHaplotypeMap);
+        return contigLikelihoods;
+    }
+
+
+    private int getContigLikelihood(final AlleleLikelihoods<GATKRead, Allele> contigLikelihoods, Allele contig) {
+        final Allele notContig = InverseAllele.of(contig);
+
         // iterate over contigs and see what their qual is.
 
         GenotypingData<Allele> genotypingData = new GenotypingData<>(genotypingEngine.getPloidyModel(), contigLikelihoods);
@@ -944,6 +1027,10 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         return retVal;
     }
 
+    private double getContigSOR(final AlleleLikelihoods<GATKRead, Allele> contigLikelihoods, Allele contig) {
+        final Allele notContig = InverseAllele.of(contig);
+        return StrandOddsRatio.calculateSOR(StrandOddsRatio.getContingencyTable(contigLikelihoods, notContig, Arrays.asList(contig), 1));
+    }
 
     private boolean containsCalls(final CalledHaplotypes calledHaplotypes) {
         return calledHaplotypes.getCalls().stream()
