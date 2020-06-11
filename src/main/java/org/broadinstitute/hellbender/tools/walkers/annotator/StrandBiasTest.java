@@ -6,9 +6,9 @@ import htsjdk.variant.variantcontext.GenotypesContext;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.exceptions.GATKException;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.InverseAllele;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
-import org.broadinstitute.hellbender.utils.pileup.PileupElement;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 
@@ -121,7 +121,20 @@ public abstract class StrandBiasTest extends InfoFieldAnnotation {
     public static int[][] getContingencyTable( final AlleleLikelihoods<GATKRead, Allele> likelihoods,
                                                final VariantContext vc,
                                                final int minCount) {
-        return getContingencyTable(likelihoods, vc, minCount, likelihoods.samples());
+        if( likelihoods == null || vc == null) {
+            return null;
+        }
+        final Allele ref = vc.getReference();
+        final List<Allele> allAlts = vc.getAlternateAlleles();
+
+        return getContingencyTable(likelihoods, ref, allAlts, minCount);
+    }
+
+    public static int[][] getContingencyTable( final AlleleLikelihoods<GATKRead, Allele> likelihoods,
+                                               final Allele ref,
+                                               final List<Allele> alts,
+                                               final int minCount) {
+        return getContingencyTable(likelihoods, ref, alts, minCount, likelihoods.samples());
     }
 
     /**
@@ -141,6 +154,15 @@ public abstract class StrandBiasTest extends InfoFieldAnnotation {
 
         final Allele ref = vc.getReference();
         final List<Allele> allAlts = vc.getAlternateAlleles();
+        return getContingencyTable(likelihoods, ref, allAlts, minCount, samples);
+    }
+
+    private static int[][] getContingencyTable( final AlleleLikelihoods<GATKRead, Allele> likelihoods,
+                                               final Allele ref,
+                                               final List<Allele> allAlts,
+                                               final int minCount,
+                                               final Collection<String> samples) {
+
 
         final int[][] table = new int[ARRAY_DIM][ARRAY_DIM];
         for (final String sample : samples) {
@@ -156,9 +178,10 @@ public abstract class StrandBiasTest extends InfoFieldAnnotation {
         return table;
     }
 
+
     /**
      * Helper method to copy the per-sample table to the main table
-     *
+     *fi
      * @param perSampleTable   per-sample table (single dimension)
      * @param mainTable        main table (two dimensions)
      */
@@ -170,7 +193,7 @@ public abstract class StrandBiasTest extends InfoFieldAnnotation {
     }
 
     private static void updateTable(final int[] table, final Allele allele, final GATKRead read, final Allele ref, final List<Allele> allAlts) {
-        final boolean matchesRef = allele.equals(ref, true);
+        final boolean matchesRef = (ref instanceof  InverseAllele) ? (ref).equals(allele) : allele.equals(ref, true);
         final boolean matchesAnyAlt = allAlts.contains(allele);
 
         if ( matchesRef || matchesAnyAlt ) {
