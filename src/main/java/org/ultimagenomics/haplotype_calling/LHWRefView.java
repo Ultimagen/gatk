@@ -5,7 +5,6 @@ import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.util.Locatable;
 import htsjdk.variant.variantcontext.*;
-import org.apache.commons.beanutils.BeanUtils;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.gatk.nativebindings.smithwaterman.SWOverhangStrategy;
 import org.broadinstitute.hellbender.engine.AssemblyRegion;
@@ -373,10 +372,7 @@ public class LHWRefView {
         return finalResult;
     }
 
-    static boolean      NEW_MOD = true;
-    static int          NEW_MOD_1 = 0;
-
-    public List<VariantContext> uncollapseByRef(List<VariantContext> calls) {
+    public List<VariantContext> uncollapseCallsByRef(List<VariantContext> calls) {
 
         final List<VariantContext>  result = new LinkedList<>();
 
@@ -386,25 +382,18 @@ public class LHWRefView {
             long        start = toUncollapsedLocus(other.getStart());
             long        end = toUncollapsedLocus(other.getEnd());
 
-            if ( NEW_MOD ) {
-                // retrieve true ref content
-                int rangeStart = (int) (start - refLoc.getStart());
-                int rangeSize = other.getEnd() - other.getStart() + 1;
-                byte[] ref = Arrays.copyOfRange(fullRef, rangeStart + NEW_MOD_1, rangeStart + rangeSize + NEW_MOD_1);
+            // retrieve true ref content
+            int rangeStart = (int) (start - refLoc.getStart());
+            int rangeSize = other.getEnd() - other.getStart() + 1;
+            byte[] ref = Arrays.copyOfRange(fullRef, rangeStart + 1, rangeStart + rangeSize + 1);
 
-                // modify alleles, getnotype
-                List<Allele> alleles = modifiedAlleles(other.getAlleles(), ref);
-                GenotypesContext genotypes = modifiedGenotypes(other.getGenotypes(), alleles, ref);
+            // modify alleles, getnotype
+            List<Allele> alleles = replaceRefInAlleles(other.getAlleles(), ref);
+            GenotypesContext genotypes = replaceRefInGenotypes(other.getGenotypes(), ref);
 
-                VariantContext vc = new MyVariantContext(other, start, end, alleles, genotypes);
+            VariantContext vc = new MyVariantContext(other, start, end, alleles, genotypes);
 
-                result.add(vc);
-            } else {
-                VariantContext vc = new MyVariantContext(other, start, end, other.getAlleles(), other.getGenotypes());
-
-                result.add(vc);
-
-            }
+            result.add(vc);
         }
 
         for ( VariantContext vc : calls )
@@ -415,53 +404,7 @@ public class LHWRefView {
         return result;
     }
 
-    private List<Allele> modifiedAlleles(List<Allele> otherAlleles, byte[] ref) {
-
-        // modify alleles
-        List<Allele>    alleles = new LinkedList<>();
-        Allele          refAllele = null;
-        for ( Allele otherAllele : otherAlleles ) {
-            if (otherAllele.isReference()) {
-
-                refAllele = Allele.create(ref, true);
-                alleles.add(refAllele);
-
-            } else
-                alleles.add(otherAllele);
-        }
-
-        return alleles;
-    }
-
-    private GenotypesContext modifiedGenotypes(GenotypesContext genotypes, List<Allele> otherAlleles, byte[] ref) {
-
-        GenotypesContext        modGC = GenotypesContext.create();
-
-        for ( Genotype genotype : genotypes ) {
-
-            // modify alleles
-            List<Allele>    alleles = modifiedAlleles(genotype.getAlleles(), ref);
-            Genotype        g = GenotypeBuilder.create(genotype.getSampleName(), alleles, genotype.getExtendedAttributes());
-
-            modGC.add(g);
-        }
-
-        return modGC;
-    }
-
-    public static class MyVariantContext extends VariantContext {
-
-        public static final long serialVersionUID = 1L;
-
-        public MyVariantContext(VariantContext other, long start, long end, List<Allele> alleles, GenotypesContext genotypes) {
-
-            super(other.getSource(), other.getID(), other.getContig(), start, end, alleles, genotypes, other.getLog10PError(), other.getFiltersMaybeNull(), other.getAttributes(),
-                    /*other.fullyDecoded*/ false,
-                    EnumSet.noneOf(VariantContext.Validation.class));
-        }
-    }
-
-    public List<Haplotype> uncollapseByRef(final Collection<Haplotype> haplotypes) {
+    public List<Haplotype> uncollapseHaplotypesByRef(final Collection<Haplotype> haplotypes) {
 
         final List<Haplotype>       result = new LinkedList<>();
         final Map<Locatable, byte[]> refMap = new LinkedHashMap<>();
@@ -512,6 +455,52 @@ public class LHWRefView {
         return result;
     }
 
+
+    private List<Allele> replaceRefInAlleles(List<Allele> otherAlleles, byte[] ref) {
+
+        // modify alleles
+        List<Allele>    alleles = new LinkedList<>();
+        Allele          refAllele = null;
+        for ( Allele otherAllele : otherAlleles ) {
+            if (otherAllele.isReference()) {
+
+                refAllele = Allele.create(ref, true);
+                alleles.add(refAllele);
+
+            } else
+                alleles.add(otherAllele);
+        }
+
+        return alleles;
+    }
+
+    private GenotypesContext replaceRefInGenotypes(GenotypesContext genotypes, byte[] ref) {
+
+        GenotypesContext        modGC = GenotypesContext.create();
+
+        for ( Genotype genotype : genotypes ) {
+
+            // modify alleles
+            List<Allele>    alleles = replaceRefInAlleles(genotype.getAlleles(), ref);
+            Genotype        g = GenotypeBuilder.create(genotype.getSampleName(), alleles, genotype.getExtendedAttributes());
+
+            modGC.add(g);
+        }
+
+        return modGC;
+    }
+
+    public static class MyVariantContext extends VariantContext {
+
+        public static final long serialVersionUID = 1L;
+
+        public MyVariantContext(VariantContext other, long start, long end, List<Allele> alleles, GenotypesContext genotypes) {
+
+            super(other.getSource(), other.getID(), other.getContig(), start, end, alleles, genotypes, other.getLog10PError(), other.getFiltersMaybeNull(), other.getAttributes(),
+                    /*other.fullyDecoded*/ false,
+                    EnumSet.noneOf(VariantContext.Validation.class));
+        }
+    }
 
     private boolean sameBase(byte[] bases, int ofs, byte base, int length)
     {
