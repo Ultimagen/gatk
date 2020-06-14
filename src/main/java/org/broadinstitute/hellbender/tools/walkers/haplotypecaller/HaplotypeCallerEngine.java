@@ -678,12 +678,6 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         List<Haplotype> haplotypes = assemblyResult.getHaplotypeList();
         final Map<String,List<GATKRead>> reads = AssemblyBasedCallerUtils.splitReadsBySample(samplesList, readsHeader, regionForGenotyping.getReads());
 
-        // uncollapse haplotypes
-        List<Haplotype> uncollapsedAllHaplotypes = haplotypes;
-        if ( refView != null ) {
-            uncollapsedAllHaplotypes = refView.uncollapseHaplotypesByRef(haplotypes);
-        }
-
         // Calculate the likelihoods: CPU intensive part.
         final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods =
                 likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads);
