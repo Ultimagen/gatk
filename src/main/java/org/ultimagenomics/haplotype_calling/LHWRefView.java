@@ -16,10 +16,12 @@ import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAlignment;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class LHWRefView {
 
     private int             hmerSizeThreshold;
+
     private byte[]          fullRef;
     private Locatable       refLoc;
     private Haplotype       refHaplotype;
@@ -317,7 +319,7 @@ public class LHWRefView {
         return sb.toString();
     }
 
-    public byte[] uncollapseByRef(byte[] bases, byte[] ref) {
+    public byte[] uncollapseByRef(byte[] bases, byte[] ref, AtomicInteger offsetResult) {
 
         // use aligner to get CIGAR
         SmithWatermanAlignment alignment = aligner.align(ref, bases, SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
@@ -369,6 +371,10 @@ public class LHWRefView {
             logger.info(printBases(finalResult));
         }
 
+        // return offset?
+        if ( offsetResult != null )
+            offsetResult.set(alignment.getAlignmentOffset());
+
         return finalResult;
     }
 
@@ -404,7 +410,7 @@ public class LHWRefView {
         return result;
     }
 
-    public List<Haplotype> uncollapseHaplotypesByRef(final Collection<Haplotype> haplotypes) {
+    public List<Haplotype> uncollapseHaplotypesByRef(final Collection<Haplotype> haplotypes, boolean log) {
 
         final List<Haplotype>       result = new LinkedList<>();
         final Map<Locatable, byte[]> refMap = new LinkedHashMap<>();
@@ -413,22 +419,24 @@ public class LHWRefView {
         // uncollapse haplotypes
         for ( Haplotype h : haplotypes )
         {
-            // find ref for this location
-            byte[]      ref = refMap.get(h.getGenomeLocation());
-            if ( ref == null ) {
-                ref = getUncollapsedPartialRef(h.getGenomeLocation(), true);
-                refMap.put(h.getGenomeLocation(), ref);
-            }
-            byte[]      alignedBases = uncollapseByRef(h.getBases(), ref);
-            Haplotype   alignedHaplotype = new Haplotype(alignedBases, h.isReference());
-            alignedHaplotype.setScore(h.getScore());
-            alignedHaplotype.setGenomeLocation(getUncollapsedLoc(h.getGenomeLocation()));
-            alignedHaplotype.setEventMap(h.getEventMap());
+            // by default
+            Haplotype   alignedHaplotype = h;
 
-            int         loc = h.getGenomeLocation().getStart() - h.getAlignmentStartHapwrtRef();
-            int         unloc = toUncollapsedLocus(loc);
-            int         unstart = alignedHaplotype.getGenomeLocation().getStart() - unloc;
-            alignedHaplotype.setAlignmentStartHapwrtRef(unstart);
+            if ( !h.isReference() ) {
+                // find ref for this location
+                byte[] ref = refMap.get(h.getGenomeLocation());
+                if (ref == null) {
+                    ref = getUncollapsedPartialRef(h.getGenomeLocation(), true);
+                    refMap.put(h.getGenomeLocation(), ref);
+                }
+                AtomicInteger       offset = new AtomicInteger();
+                byte[] alignedBases = uncollapseByRef(h.getBases(), ref, offset);
+                alignedHaplotype = new Haplotype(alignedBases, h.isReference());
+                alignedHaplotype.setScore(h.getScore());
+                alignedHaplotype.setGenomeLocation(getUncollapsedLoc(h.getGenomeLocation()));
+                alignedHaplotype.setEventMap(h.getEventMap());
+                alignedHaplotype.setAlignmentStartHapwrtRef(offset.get());
+            }
 
             // save refHaplotype?
             if ( refHaplotype == null && alignedHaplotype.isReference() )
@@ -440,16 +448,20 @@ public class LHWRefView {
         // if we had a reference, generate cigar against it
         if ( refHaplotype != null ) {
             for ( Haplotype h : result ) {
-
-                SmithWatermanAlignment  alignment = aligner.align(refHaplotype.getBases(), h.getBases(), SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
-                h.setCigar(alignment.getCigar());
+                if ( h != refHaplotype ) {
+                    SmithWatermanAlignment  alignment = aligner.align(refHaplotype.getBases(), h.getBases(), SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
+                    h.setCigar(alignment.getCigar());
+                    h.setAlignmentStartHapwrtRef(alignment.getAlignmentOffset() + refHaplotype.getAlignmentStartHapwrtRef());
+                }
             }
         }
 
-        for ( Haplotype h : haplotypes )
-            logHaplotype(h, "uncollapseByRef: >>");
-        for ( Haplotype h : result )
-            logHaplotype(h, "uncollapseByRef: <<");
+        if ( log ) {
+            for (Haplotype h : haplotypes)
+                logHaplotype(h, "COL");
+            for (Haplotype h : result)
+                logHaplotype(h, "UNCOL");
+        }
 
 
         return result;
@@ -514,9 +526,23 @@ public class LHWRefView {
         return true;
     }
 
+    private static int logHaplotype_i = 0;
     private void logHaplotype(Haplotype h, String label) {
         if ( debug ) {
-            logger.info(String.format("%s: %s %d %s %s", label, h.getGenomeLocation(), h.getAlignmentStartHapwrtRef(), h.getCigar(), h));
+            String      name = label + "_" + (logHaplotype_i++);
+            String      contig = h.getGenomeLocation().getContig();
+            int         start = h.getGenomeLocation().getStart();
+            String      cigar = h.getCigar() != null ? h.getCigar().toString() : "?";
+            String      bases = h.getDisplayString();
+
+            byte[]      q = new byte[bases.length()];
+            Arrays.fill(q, (byte)40);
+            String      quals = new String(q);
+
+            String      line = String.format("%s\t0\t%s\t%d\t60\t%s\t*\t0\t0\t%s\t%s\tRG:Z:%s",
+                                                    name, contig, start, cigar, bases, quals, label);
+
+            logger.info(String.format("==SAM==\t%s", line));
         }
     }
 
@@ -525,4 +551,13 @@ public class LHWRefView {
             logger.info(String.format("%s: %s", label, vc));
         }
     }
+
+    public byte[] getFullRef() {
+        return fullRef;
+    }
+
+    public Locatable getRefLoc() {
+        return refLoc;
+    }
+
 }
