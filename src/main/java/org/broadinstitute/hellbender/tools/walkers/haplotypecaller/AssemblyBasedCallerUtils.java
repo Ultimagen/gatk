@@ -298,6 +298,16 @@ public final class AssemblyBasedCallerUtils {
             logger.debug("deploying refView on " + paddedReferenceLoc + ", region: " + region);
 
         try {
+            /*
+            AssemblyResultSet assemblyResultSet = assemblyEngine.runLocalAssembly(
+                    region,
+                    refHaplotype,
+                    fullReferenceWithPadding,
+                    paddedReferenceLoc,
+                    readErrorCorrector,
+                    header, aligner,
+                    refView);
+             */
             AssemblyResultSet assemblyResultSet = assemblyEngine.runLocalAssembly(
                     region,
                     refHaplotype,
