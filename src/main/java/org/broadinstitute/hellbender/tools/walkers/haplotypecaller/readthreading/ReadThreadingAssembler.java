@@ -421,9 +421,10 @@ public final class ReadThreadingAssembler {
                     h.contigs = getRefHaplotypesContigs(h, returnHaplotypes);
             }
 
+
             // uncollapse haplotypes now?
             if ( resultSet != null && resultSet.getRefView() != null ) {
-                returnHaplotypes = new LinkedHashSet<>(resultSet.getRefView().uncollapseHaplotypesByRef(resultSet.getHaplotypeList(), true, true));
+                returnHaplotypes = new LinkedHashSet<>(resultSet.getRefView().uncollapseHaplotypesByRef(resultSet.getHaplotypeList(), true));
                 resultSet.replaceAllHaplotypes(returnHaplotypes);
             }
 
