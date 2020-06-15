@@ -293,17 +293,44 @@ public class LHWRefView {
 
         if ( refLoc != null )
             collapsedRefLoc = getCollapsedLoc(refLoc);
-
-        // debug: save an alignement beteeen the two references. used for learning and observation. can be removed
-        /*
-        refAlignement = aligner.align(fullRef, collapsedRef, SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
-        if ( debug ) {
-            logger.info("alignment.offset: " + refAlignement.getAlignmentOffset() + ", cigar: " + refAlignement.getCigar());
-        }
-        uncollapseByRef(collapsedRef, fullRef);
-         */
     }
-    
+
+    private byte[] collapseBases(byte[] fullBases) {
+
+        // collapsed sequence would not be longer than full sequence
+        byte[]          collapsedBases = new byte[fullBases.length];
+
+        // loop while trimming
+        byte    lastBase = 0;
+        int     baseSameCount = 0;
+        int     srcOfs = 0;
+        int     dstOfs = 0;
+        for  ( byte base : fullBases ) {
+            if ( base == lastBase ) {
+                if ( ++baseSameCount >= hmerSizeThreshold ) {
+                    // collapsing, do not store
+                } else {
+                    // stable but under threshold, store
+                    collapsedBases[dstOfs++] = base;
+                }
+            } else {
+                // unstable, simply store
+                lastBase = base;
+                baseSameCount = 0;
+
+                collapsedBases[dstOfs++] = base;
+            }
+            srcOfs++;
+        }
+
+        // adjust size of collapsedBases
+        // not very efficient as it allocates copies the data.
+        // do we really need the array to be the right size?
+        collapsedBases = Arrays.copyOf(collapsedBases, dstOfs);
+
+        return collapsedBases;
+    }
+
     private int toUncollapsedLocus(int locus) {
         return refLoc.getStart() + collapsedToFullLocationMap[locus - refLoc.getStart()];
     }
@@ -431,6 +458,7 @@ public class LHWRefView {
                 }
                 AtomicInteger       offset = new AtomicInteger();
                 byte[] alignedBases = uncollapseByRef(h.getBases(), ref, offset);
+                alignedBases = collapseBases(alignedBases);
                 alignedHaplotype = new Haplotype(alignedBases, h.isReference());
                 alignedHaplotype.setScore(h.getScore());
                 alignedHaplotype.setGenomeLocation(getUncollapsedLoc(h.getGenomeLocation()));
