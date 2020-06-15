@@ -239,6 +239,7 @@ public final class AssemblyResultSet {
      * @return {@code true} if the assembly result set has been modified as a result of this call.
      */
     public boolean add(final Haplotype h) {
+
         Utils.nonNull(h, "input haplotype cannot be null");
         Utils.nonNull(h.getGenomeLocation(), "haplotype genomeLocation cannot be null");
         if (haplotypes.contains(h)) {
@@ -555,5 +556,12 @@ public final class AssemblyResultSet {
 
     public void setRefView(LHWRefView refView) {
         this.refView = refView;
+    }
+
+    public void replaceAllHaplotypes(Set<Haplotype> list) {
+        haplotypes.clear();;
+        refHaplotype = null;
+        for ( Haplotype h : list )
+            add(h);
     }
 }
