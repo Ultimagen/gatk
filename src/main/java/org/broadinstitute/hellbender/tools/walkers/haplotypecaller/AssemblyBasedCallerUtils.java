@@ -296,6 +296,7 @@ public final class AssemblyBasedCallerUtils {
                                             : null;
 
         try {
+            /*
             AssemblyResultSet assemblyResultSet = assemblyEngine.runLocalAssembly(
                     region,
                     (refView == null) ? refHaplotype : refView.getCollapsedRefHaplotype(region.getPaddedSpan()),
@@ -303,7 +304,15 @@ public final class AssemblyBasedCallerUtils {
                     (refView == null) ? paddedReferenceLoc : refView.getCollapsedLoc(paddedReferenceLoc),
                     readErrorCorrector,
                     header, aligner,
-                    (refView == null) ? null : refView.getCollapsedReads(region),
+                    refView);
+             */
+            AssemblyResultSet assemblyResultSet = assemblyEngine.runLocalAssembly(
+                    region,
+                    refHaplotype,
+                    fullReferenceWithPadding,
+                    paddedReferenceLoc,
+                    readErrorCorrector,
+                    header, aligner,
                     refView);
             assemblyResultSet.setRefView(refView);
 
