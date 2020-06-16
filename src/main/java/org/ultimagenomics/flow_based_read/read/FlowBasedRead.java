@@ -239,12 +239,13 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             }
             double totalErrorProb = 0;
 
-            for (int k=0; k < maxHmer; i++ ){
+            for (int k=0; k < maxHmer; k++ ){
                 totalErrorProb += flowMatrix[k][i];
             }
             double callProb = Math.max(MINIMAL_CALL_PROB, 1-totalErrorProb);
             // the probability in the recalibration is not divided by two for hmers of length 1
-            flowMatrix[run][i] = callProb;
+            flowMatrix[Math.min(run, maxHmer)][i] = callProb;
+            qualOfs+=run;
         }
     }
 
@@ -252,11 +253,12 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private void parseSingleHmer(double[] probs, byte[] tp, int flowIdx,
                                  byte flowCall, int qualOfs){
         for (int i = qualOfs ; i < qualOfs+flowCall; i++) {
-            if (tp[i+qualOfs]!=0) {
-                if (flowMatrix[flowCall + tp[i]][flowIdx] == fbargs.filling_value) {
-                    flowMatrix[flowCall + tp[i]][flowIdx] = probs[i];
+            if (tp[i]!=0) {
+                int loc = Math.min(flowCall+tp[i], maxHmer);
+                if (flowMatrix[loc][flowIdx] == fbargs.filling_value) {
+                    flowMatrix[loc][flowIdx] = probs[i];
                 } else {
-                    flowMatrix[flowCall + tp[i]][flowIdx] += probs[i];
+                    flowMatrix[loc][flowIdx] += probs[i];
                 }
             }
         }
@@ -462,7 +464,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     }
 
     private boolean isBaseFormat() {
-       return samRecord.hasAttribute("ti");
+       return samRecord.hasAttribute("ti") || samRecord.hasAttribute("tp");
     }
 
     public void apply_base_clipping(int clip_left_base, int clip_right_base){
