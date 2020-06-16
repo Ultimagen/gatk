@@ -771,10 +771,24 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         while (removedHaplotype) {
         // build map from contig to haplotype
             final Map<Allele, List<Haplotype>> contigHaplotypeMap = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
+
             currentReadLikelihoods.alleles()
                     .forEach(h -> getJoinedContigs(h).forEach(
                             jh -> contigHaplotypeMap.get(jh).add(h))
                     );
+
+
+            logger.debug("CHM::printout start");
+            for (Allele jc: contigHaplotypeMap.keySet()) {
+                logger.debug("CHM::contig block ---> ");
+                for (Allele h: contigHaplotypeMap.get(jc)){
+                    logger.debug(String.format("CHM:: %s->%s: %s", ((JoinedContigs)jc).getAllele1().getBaseString(),
+                            ((JoinedContigs)jc).getAllele2().getBaseString(), h.getBaseString()));
+                }
+                logger.debug("CHM::contig block ---< ");
+
+            }
+            logger.debug("CHM::printout end");
 
             JoinedContigs jca;
             JoinedContigs jca0 = null;
@@ -854,20 +868,14 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             final List<Allele> allAlleles = new ArrayList<>(contigHaplotypeMap.keySet());
 
             final AlleleLikelihoods<GATKRead, Haplotype> finalCurrentReadLikelihoods = currentReadLikelihoods;
+            logger.debug("GCL::start");
             final List<AlleleLikelihoods<GATKRead, Allele>> contigLikelihoods =
                     allAlleles.stream().map(c -> getContigLikelihoodMatrix(finalCurrentReadLikelihoods, c)).collect(Collectors.toList());
 
             final List<Integer> collectedRPLs = IntStream.range(0, allAlleles.size()).mapToObj( i -> getContigLikelihood(contigLikelihoods.get(i), allAlleles.get(i))).collect(Collectors.toList());
             final List<Double> collectedSORs = IntStream.range(0, allAlleles.size()).mapToObj( i -> getContigSOR(contigLikelihoods.get(i), allAlleles.get(i))).collect(Collectors.toList());
+            logger.debug("GCL::end");
 
-
-
-//            if (jca0!=null) {
-//                logger.debug(String.format("%s has a likelihood of %d", jca0.toString(), getContigLikelihood(contigLikelihoods.get(allAlleles.indexOf(jca0)))));
-//               logger.debug(String.format("%s has a likelihood of %d", jca1.toString(), getContigLikelihood(contigLikelihoods.get(allAlleles.indexOf(jca1)))));
-//                logger.debug(String.format("%s has a likelihood of %d", jca2.toString(), getContigLikelihood(contigLikelihoods.get(allAlleles.indexOf(jca2)))));
-//
-//            }
 
             Allele badContig = identifyBadContig(collectedRPLs, collectedSORs, allAlleles);
 
@@ -937,6 +945,8 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         readLikelihoods.alleles().stream().filter(h -> !getJoinedContigs(h).contains(contig)).forEach(contigHaplotypeMap.get(notContig)::add);
 
         final AlleleLikelihoods<GATKRead, Allele> contigLikelihoods = readLikelihoods.marginalize(contigHaplotypeMap);
+        logger.debug(String.format("GCLM: %s -> %s %d %d", ((JoinedContigs)contig).getAllele1().getBaseString(),
+                ((JoinedContigs)contig).getAllele2().getBaseString(), contigHaplotypeMap.get(contig).size(), contigHaplotypeMap.get(notContig).size()));
         return contigLikelihoods;
     }
 
@@ -957,7 +967,10 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         final int[] asPL = genotypingLikelihoods.sampleLikelihoods(0).getAsPLs();
         final int retVal;
         retVal = Math.min(asPL[1], asPL[0]) - asPL[2]; // if this is "large", reject the contig.
+        logger.debug(String.format("GCL:: %s->%s: %d %d %d", ((JoinedContigs)contig).getAllele1().getBaseString(),
+                ((JoinedContigs)contig).getAllele2().getBaseString(), asPL[0], asPL[1], asPL[2]));
         return retVal;
+
     }
 
     private double getContigSOR(final AlleleLikelihoods<GATKRead, Allele> contigLikelihoods, Allele contig) {
