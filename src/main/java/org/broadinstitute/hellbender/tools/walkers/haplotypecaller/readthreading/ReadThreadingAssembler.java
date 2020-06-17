@@ -423,7 +423,7 @@ public final class ReadThreadingAssembler {
 
             // uncollapse haplotypes now?
             if ( resultSet != null && resultSet.getRefView() != null ) {
-                returnHaplotypes = new LinkedHashSet<>(resultSet.getRefView().uncollapseHaplotypesByRef(resultSet.getHaplotypeList(), true));
+                returnHaplotypes = new LinkedHashSet<>(resultSet.getRefView().uncollapseHaplotypesByRef(resultSet.getHaplotypeList(), true, true));
                 resultSet.replaceAllHaplotypes(returnHaplotypes);
             }
 

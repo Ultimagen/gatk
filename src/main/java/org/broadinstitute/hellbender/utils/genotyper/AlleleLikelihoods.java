@@ -814,7 +814,10 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
                     throw new IllegalArgumentException("missing old allele " + oldAllele + " in likelihood collection ");
                 }
                 if (oldToNewAlleleIndexMap[oldAlleleIndex] != MISSING_INDEX) {
-                    throw new IllegalArgumentException("collision: two new alleles make reference to the same old allele");
+                    // DK: PATCH: uncollapsed haplotypes might result in identicals. ignore this for now
+                    //throw new IllegalArgumentException("collision: two new alleles make reference to the same old allele");
+                    logger.warn("ignored! - collision: two new alleles make reference to the same old allele");
+                    continue;
                 }
                 oldToNewAlleleIndexMap[oldAlleleIndex] = newIndex;
             }
@@ -1204,6 +1207,10 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
             }
         }
         return result;
+    }
+
+    public void changeAlleles(List<A> newAlleles) {
+        alleles = new IndexedAlleleList<>(newAlleles);
     }
 
     /**
