@@ -437,11 +437,18 @@ public class LHWRefView {
         return result;
     }
 
-    public List<Haplotype> uncollapseHaplotypesByRef(final Collection<Haplotype> haplotypes, boolean log) {
+    public List<Haplotype> uncollapseHaplotypesByRef(final Collection<Haplotype> haplotypes, boolean log, boolean limit) {
 
         final List<Haplotype>       result = new LinkedList<>();
         final Map<Locatable, byte[]> refMap = new LinkedHashMap<>();
         Haplotype                   refHaplotype = null;
+
+        // locate reference haplotype, if exists
+        for ( Haplotype h : haplotypes )
+            if ( h.isReference() ) {
+                refHaplotype = h;
+                break;
+            }
 
         // uncollapse haplotypes
         for ( Haplotype h : haplotypes )
@@ -450,6 +457,7 @@ public class LHWRefView {
             Haplotype   alignedHaplotype = h;
 
             if ( !h.isReference() ) {
+
                 // find ref for this location
                 byte[] ref = refMap.get(h.getGenomeLocation());
                 if (ref == null) {
@@ -458,17 +466,14 @@ public class LHWRefView {
                 }
                 AtomicInteger       offset = new AtomicInteger();
                 byte[] alignedBases = uncollapseByRef(h.getBases(), ref, offset);
-                alignedBases = collapseBases(alignedBases);
+                if ( limit )
+                    alignedBases = collapseBases(alignedBases);
                 alignedHaplotype = new Haplotype(alignedBases, h.isReference());
                 alignedHaplotype.setScore(h.getScore());
                 alignedHaplotype.setGenomeLocation(getUncollapsedLoc(h.getGenomeLocation()));
                 alignedHaplotype.setEventMap(h.getEventMap());
                 alignedHaplotype.setAlignmentStartHapwrtRef(offset.get());
             }
-
-            // save refHaplotype?
-            if ( refHaplotype == null && alignedHaplotype.isReference() )
-                refHaplotype = alignedHaplotype;
 
             result.add(alignedHaplotype);
         }
