@@ -709,12 +709,12 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         final Map<GATKRead, GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(subsettedReadLikelihoodsFinal, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner);
         subsettedReadLikelihoodsFinal.changeEvidence(readRealignments);
 
-        // DEBUG - make generated haplotypes and uncollapsed versions of them print out to log
-        /*
-        if ( refView != null )
-            refView.uncollapseHaplotypesByRef(haplotypes, true);
 
-         */
+        if ( refView != null ) {
+            haplotypes = refView.uncollapseHaplotypesByRef(haplotypes, true, false);
+            readLikelihoods.changeAlleles(haplotypes);
+        }
+
 
         // Note: we used to subset down at this point to only the "best" haplotypes in all samples for genotyping, but there
         //  was a bad interaction between that selection and the marginalization that happens over each event when computing
@@ -735,32 +735,6 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                 hcArgs.maxMnpDistance,
                 readsHeader,
                 haplotypeBAMWriter.isPresent());
-
-        // uncollapse?
-        /*
-        if ( refView != null ) {
-
-            // calls
-            List<VariantContext>    uncollapsedCalls = refView.uncollapseCallsByRef(calledHaplotypes.getCalls());
-            calledHaplotypes.getCalls().clear();
-            calledHaplotypes.getCalls().addAll(uncollapsedCalls);
-
-            // haplotypes
-            List<Haplotype> uncollapsedCalledHaplotypes = refView.uncollapseHaplotypesByRef(calledHaplotypes.getCalledHaplotypes(), false);
-            calledHaplotypes.getCalledHaplotypes().clear();
-            calledHaplotypes.getCalledHaplotypes().addAll(uncollapsedCalledHaplotypes);
-            haplotypes = uncollapsedCalledHaplotypes;
-
-            // reads
-            final int sampleCount = readLikelihoods.numberOfSamples();
-            for (int i = 0; i < sampleCount; i++) {
-                for (final GATKRead read : readLikelihoods.sampleEvidence(i)) {
-                    read.setPosition(refView.getUncollapsedLoc(read));
-                }
-            }
-
-        }
-         */
 
         if ( haplotypeBAMWriter.isPresent() ) {
             final Set<Haplotype> calledHaplotypeSet = new HashSet<>(calledHaplotypes.getCalledHaplotypes());
