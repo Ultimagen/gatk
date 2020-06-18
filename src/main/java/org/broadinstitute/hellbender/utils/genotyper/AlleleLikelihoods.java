@@ -829,7 +829,7 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
                 if (oldToNewAlleleIndexMap[oldAlleleIndex] != MISSING_INDEX) {
                     // DK: PATCH: uncollapsed haplotypes might result in identicals. ignore this for now
                     //throw new IllegalArgumentException("collision: two new alleles make reference to the same old allele");
-                    logger.warn("ignored! - collision: two new alleles make reference to the same old allele");
+                    logger.debug("ignored! - collision: two new alleles make reference to the same old allele");
                     continue;
                 }
                 oldToNewAlleleIndexMap[oldAlleleIndex] = newIndex;
