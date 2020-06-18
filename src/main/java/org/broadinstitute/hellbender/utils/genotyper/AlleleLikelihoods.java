@@ -33,7 +33,6 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToDoubleFunction;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -48,7 +47,7 @@ import java.util.stream.IntStream;
  */
 public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> implements SampleList, AlleleList<A> {
 
-    public static final double LOG_10_INFORMATIVE_THRESHOLD = 0.02;
+    public static final double LOG_10_INFORMATIVE_THRESHOLD = 0.1;
     public static final double NATURAL_LOG_INFORMATIVE_THRESHOLD = MathUtils.log10ToLog(LOG_10_INFORMATIVE_THRESHOLD);
     private static final Logger logger = LogManager.getLogger(AlleleLikelihoods.class);
 
