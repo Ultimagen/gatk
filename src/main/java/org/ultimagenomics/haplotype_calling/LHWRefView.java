@@ -470,7 +470,7 @@ public class LHWRefView {
                     alignedBases = collapseBases(alignedBases);
                 alignedHaplotype = new Haplotype(alignedBases, h.isReference());
                 alignedHaplotype.setScore(h.getScore());
-                alignedHaplotype.setGenomeLocation(getUncollapsedLoc(h.getGenomeLocation()));
+                alignedHaplotype.setGenomeLocation(h.getGenomeLocation());
                 alignedHaplotype.setEventMap(h.getEventMap());
                 alignedHaplotype.setAlignmentStartHapwrtRef(offset.get());
             }
