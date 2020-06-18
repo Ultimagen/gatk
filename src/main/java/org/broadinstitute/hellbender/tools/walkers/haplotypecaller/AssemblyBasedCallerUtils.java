@@ -293,6 +293,8 @@ public final class AssemblyBasedCallerUtils {
         final LHWRefView refView = (argumentCollection.ultimaAssemblyCollapseHKerSize > 0 && LHWRefView.needsCollapsing(refHaplotype.getBases(), argumentCollection.ultimaAssemblyCollapseHKerSize, logger, argumentCollection.assemblerArgs.debugAssembly))
                                             ? new LHWRefView(argumentCollection.ultimaAssemblyCollapseHKerSize, fullReferenceWithPadding, paddedReferenceLoc, refHaplotype, region, logger, argumentCollection.assemblerArgs.debugAssembly, null)
                                             : null;
+        if ( refView != null )
+            logger.debug("deploying refView on " + paddedReferenceLoc + ", region: " + region);
 
         try {
             /*
