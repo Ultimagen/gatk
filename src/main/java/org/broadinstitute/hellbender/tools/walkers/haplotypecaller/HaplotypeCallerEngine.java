@@ -974,8 +974,37 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
     }
 
     private double getContigSOR(final AlleleLikelihoods<GATKRead, Allele> contigLikelihoods, Allele contig) {
+        if (contig instanceof JoinedContigs) {
+            if (((JoinedContigs) contig).getAllele1().getBaseString().equals("TT")){
+                if (((JoinedContigs) contig).getAllele2().getBaseString().equals("GAAATTATTTGCATTTACCTACTACACAAATTCCGAAGGC") ){
+                    int a = 1;
+                    for (final String sample : contigLikelihoods.samples()) {
+                        List<AlleleLikelihoods<GATKRead, Allele>.BestAllele> reads = contigLikelihoods.bestAllelesBreakingTies(sample).stream()
+                                .filter(ba -> ba.isInformative())
+                                .collect(Collectors.toList());
+                        for (AlleleLikelihoods<GATKRead, Allele>.BestAllele ba: reads ){
+                            if (ba.allele instanceof InverseAllele ){
+                                continue;
+                            } else {
+                                logger.debug(String.format("SOR:: Informative: %s, %b",
+                                        (ba.evidence).getName(),
+                                        (ba.evidence).isReverseStrand()));
+                            }
+
+                        }
+                    }
+
+                }
+            }
+        }
+
         final Allele notContig = InverseAllele.of(contig);
-        return StrandOddsRatio.calculateSOR(StrandOddsRatio.getContingencyTable(contigLikelihoods, notContig, Arrays.asList(contig), 1));
+        int [][] contingency_table = StrandOddsRatio.getContingencyTable(contigLikelihoods, notContig, Arrays.asList(contig), 1);
+        double sor = StrandOddsRatio.calculateSOR(contingency_table);
+        logger.debug(String.format("GCS:: %s->%s: %f (%d %d %d %d)", ((JoinedContigs)contig).getAllele1().getBaseString(),
+                ((JoinedContigs)contig).getAllele2().getBaseString(), sor, contingency_table[0][0], contingency_table[0][1], contingency_table[1][0], contingency_table[1][1]));
+        return sor;
+
     }
 
     private boolean containsCalls(final CalledHaplotypes calledHaplotypes) {

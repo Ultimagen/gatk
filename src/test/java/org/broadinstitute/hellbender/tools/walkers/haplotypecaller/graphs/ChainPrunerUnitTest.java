@@ -204,13 +204,13 @@ public final class ChainPrunerUnitTest extends GATKBaseTest {
             final SeqGraph graph = new SeqGraph(20);
 
             graph.addVertices(source, A, B, C, D, sink);
-            graph.addEdges(() -> new BaseEdge(true, goodMultiplicity), source, A, B, C, sink);
-            graph.addEdges(() -> new BaseEdge(false, badMultiplicity), A, D, C);
-            graph.addEdges(() -> new BaseEdge(false, badMultiplicity), D, B);
+            graph.addEdges(() -> new BaseEdge(true, goodMultiplicity/2, goodMultiplicity/2), source, A, B, C, sink);
+            graph.addEdges(() -> new BaseEdge(false, badMultiplicity/2, badMultiplicity/2), A, D, C);
+            graph.addEdges(() -> new BaseEdge(false, badMultiplicity/2, badMultiplicity/2), D, B);
 
             if (variantPresent) {
                 graph.addVertices(E);
-                graph.addEdges(() -> new BaseEdge(false, variantMultiplicity), A, E, C);
+                graph.addEdges(() -> new BaseEdge(false, variantMultiplicity/2, variantMultiplicity/2), A, E, C);
             }
 
             final ChainPruner<SeqVertex, BaseEdge> pruner = new AdaptiveChainPruner<>(0.01, 2.0,
@@ -249,15 +249,15 @@ public final class ChainPrunerUnitTest extends GATKBaseTest {
             final SeqGraph graph = new SeqGraph(20);
 
             graph.addVertices(source, A, B, C, D, E, F, G, sink);
-            graph.addEdges(() -> new BaseEdge(true, goodMultiplicity), source, A, B, C, sink);
-            graph.addEdges(() -> new BaseEdge(false, badMultiplicity), A, D);
-            graph.addEdges(() -> new BaseEdge(false, badMultiplicity), D, F, E);
-            graph.addEdges(() -> new BaseEdge(false, badMultiplicity), D, G, E);
-            graph.addEdges(() -> new BaseEdge(false, badMultiplicity), E, C);
+            graph.addEdges(() -> new BaseEdge(true, goodMultiplicity/2, goodMultiplicity/2), source, A, B, C, sink);
+            graph.addEdges(() -> new BaseEdge(false, badMultiplicity/2, badMultiplicity/2), A, D);
+            graph.addEdges(() -> new BaseEdge(false, badMultiplicity/2, badMultiplicity/2), D, F, E);
+            graph.addEdges(() -> new BaseEdge(false, badMultiplicity/2, badMultiplicity/2), D, G, E);
+            graph.addEdges(() -> new BaseEdge(false, badMultiplicity/2, badMultiplicity/2), E, C);
 
             if (variantPresent) {
                 graph.addVertices(H);
-                graph.addEdges(() -> new BaseEdge(false, variantMultiplicity), A, H, C);
+                graph.addEdges(() -> new BaseEdge(false, variantMultiplicity/2, variantMultiplicity/2), A, H, C);
             }
 
             final ChainPruner<SeqVertex, BaseEdge> pruner = new AdaptiveChainPruner<>(0.01, ReadThreadingAssemblerArgumentCollection.DEFAULT_PRUNING_LOG_ODDS_THRESHOLD,
