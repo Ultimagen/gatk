@@ -405,50 +405,30 @@ public class LHWRefView {
         return finalResult;
     }
 
-    public List<VariantContext> uncollapseCallsByRef(List<VariantContext> calls) {
-
-        final List<VariantContext>  result = new LinkedList<>();
-
-        for ( VariantContext other : calls ) {
-
-            // adjust locations
-            long        start = toUncollapsedLocus(other.getStart());
-            long        end = toUncollapsedLocus(other.getEnd());
-
-            // retrieve true ref content
-            int rangeStart = (int) (start - refLoc.getStart());
-            int rangeSize = other.getEnd() - other.getStart() + 1;
-            byte[] ref = Arrays.copyOfRange(fullRef, rangeStart + 1, rangeStart + rangeSize + 1);
-
-            // modify alleles, getnotype
-            List<Allele> alleles = replaceRefInAlleles(other.getAlleles(), ref);
-            GenotypesContext genotypes = replaceRefInGenotypes(other.getGenotypes(), ref);
-
-            VariantContext vc = new MyVariantContext(other, start, end, alleles, genotypes);
-
-            result.add(vc);
-        }
-
-        for ( VariantContext vc : calls )
-            logVariantContext(vc, "uncollapseByRef: >>");
-        for ( VariantContext vc : result )
-            logVariantContext(vc, "uncollapseByRef: <<");
-
-        return result;
-    }
-
     public List<Haplotype> uncollapseHaplotypesByRef(final Collection<Haplotype> haplotypes, boolean log, boolean limit) {
+
+        if ( limit )
+            return new LinkedList<>(haplotypes);
 
         final List<Haplotype>       result = new LinkedList<>();
         final Map<Locatable, byte[]> refMap = new LinkedHashMap<>();
         Haplotype                   refHaplotype = null;
 
         // locate reference haplotype, if exists
-        for ( Haplotype h : haplotypes )
-            if ( h.isReference() ) {
+        int     minStart = Integer.MAX_VALUE, maxEnd = Integer.MIN_VALUE;
+        String  contig = null;
+        for ( Haplotype h : haplotypes ) {
+            if (h.isReference() && (refHaplotype == null)) {
                 refHaplotype = h;
-                break;
             }
+            minStart = Math.min(minStart, h.getGenomeLocation().getStart());
+            maxEnd = Math.max(minStart, h.getGenomeLocation().getEnd());
+            contig = h.getGenomeLocation().getContig();
+        }
+        if ( debug )
+            logger.info(String.format("haplotypes: %d, limit: %b, range: %s:%d-%d",
+                            haplotypes.size(), limit,
+                            contig, minStart, maxEnd));
 
         // uncollapse haplotypes
         for ( Haplotype h : haplotypes )
