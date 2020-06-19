@@ -305,9 +305,11 @@ public class LHWRefView {
         int     baseSameCount = 0;
         int     srcOfs = 0;
         int     dstOfs = 0;
+        boolean firstHomopolymer = true;
         for  ( byte base : fullBases ) {
             if ( base == lastBase ) {
-                if ( ++baseSameCount >= hmerSizeThreshold ) {
+                baseSameCount++;
+                if ( !firstHomopolymer && (baseSameCount >= hmerSizeThreshold) ) {
                     // collapsing, do not store
                 } else {
                     // stable but under threshold, store
@@ -315,6 +317,8 @@ public class LHWRefView {
                 }
             } else {
                 // unstable, simply store
+                if ( lastBase != 0 )
+                    firstHomopolymer = false;
                 lastBase = base;
                 baseSameCount = 0;
 
@@ -376,12 +380,28 @@ public class LHWRefView {
                     resultOfs += c.getLength();
                 }
             } else {
+                /*
                 // on ref, check if D has atleast threshold same hmers to the left and D.length to the right
                 // if so, this is a candidate for uncollapsing
                 byte        base = ref[refOfs];
                 if ( sameBase(ref, refOfs, base, hmerSizeThreshold + c.getLength()) ) {
                     Arrays.fill(result, resultOfs, resultOfs + c.getLength(), base);
                     resultOfs += c.getLength();
+                }
+                 */
+
+                // check for a delete at the end of an hmer size or at the end
+                if ( onHomoPolymer(ref, refOfs - hmerSizeThreshold, ref[refOfs], hmerSizeThreshold, 1) ) {
+                    // fill with base until end of jomopolymer on the ref
+                    byte        base = ref[refOfs];
+                    for ( int size = 0 ; (size < c.getLength()) && (ref[refOfs + size] == base) ; size++ )
+                        result[resultOfs++] = base;
+
+                } else if ( onHomoPolymer(ref, refOfs + c.getLength(), ref[refOfs + c.getLength() - 1], hmerSizeThreshold, -1) ) {
+                    // fill with base until start of jomopolymer on the ref
+                    byte        base = ref[refOfs + c.getLength() - 1];
+                    for ( int size = 0 ; (size < c.getLength()) && (ref[refOfs + c.getLength() - 1 - size] == base) ; size++ )
+                        result[resultOfs++] = base;
                 }
             }
             if (c.getOperator().consumesReferenceBases())
@@ -461,13 +481,14 @@ public class LHWRefView {
                 // find ref for this location
                 byte[] ref = refMap.get(h.getGenomeLocation());
                 if (ref == null) {
-                    ref = getUncollapsedPartialRef(h.getGenomeLocation(), true);
+                    ref = getUncollapsedPartialRef(h.getGenomeLocation(), false);
                     refMap.put(h.getGenomeLocation(), ref);
                 }
                 AtomicInteger       offset = new AtomicInteger();
                 byte[] alignedBases = uncollapseByRef(h.getBases(), ref, offset);
+                byte[] orgAlignedBases = alignedBases;
                 if ( limit )
-                    alignedBases = collapseBases(alignedBases);
+                    alignedBases = collapseBases(orgAlignedBases);
                 alignedHaplotype = new Haplotype(alignedBases, h.isReference());
                 alignedHaplotype.setScore(h.getScore());
                 alignedHaplotype.setGenomeLocation(h.getGenomeLocation());
@@ -547,16 +568,29 @@ public class LHWRefView {
         }
     }
 
+    private boolean onHomoPolymer(byte[] bases, int ofs, byte base, int length, int direction)
+    {
+        for ( int tick = 0 ; tick < hmerSizeThreshold ; tick++ ) {
+            if ( sameBase(bases, ofs + tick, base, length) )
+                return true;
+        }
+        return false;
+    }
+
     private boolean sameBase(byte[] bases, int ofs, byte base, int length)
     {
-        // has enough bases?
-        if ( ofs + length > bases.length )
-            return false;
-        while ( length-- != 0 ) {
-            if (bases[ofs++] != base)
+        try {
+            // has enough bases?
+            if (ofs + length > bases.length)
                 return false;
+            while (length-- != 0) {
+                if (bases[ofs++] != base)
+                    return false;
+            }
+            return true;
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return false;
         }
-        return true;
     }
 
     private static int logHaplotype_i = 0;
