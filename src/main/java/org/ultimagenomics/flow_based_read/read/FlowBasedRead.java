@@ -4,6 +4,7 @@ import htsjdk.samtools.*;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.broadinstitute.hellbender.utils.read.CigarUtils;
 import org.ultimagenomics.flow_based_read.utils.Direction;
 import htsjdk.samtools.util.SequenceUtil;
 import org.broadinstitute.hellbender.exceptions.GATKException;
@@ -48,6 +49,25 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     static private String ultimaFlowMatrixMods = null;
     static private int[] ultimaFlowMatrixModsInstructions = new int[MAXIMAL_READ_LENGTH];
 
+    public FlowBasedRead(FlowBasedRead other) {
+        super(other.samRecord);
+        forwardSequence = other.forwardSequence.clone();
+        key = other.key.clone();
+        flow2base = other.flow2base.clone();
+        flowOrder = other.flowOrder.clone();
+        flowMatrix = other.flowMatrix.clone();
+        valid_key = other.valid_key;
+        direction = other.direction;
+        maxHmer = other.maxHmer;
+        fbargs = other.fbargs;
+    }
+
+    public FlowBasedRead(GATKRead read, String flowOrder, int _maxHmer, FlowBasedAlignmentArgumentCollection fbargs) {
+        this(read.convertToSAMRecord(null), flowOrder, _maxHmer, fbargs);
+        this.read = read;
+
+    }
+
     public FlowBasedRead(SAMRecord samRecord, String _flowOrder, int _maxHmer, FlowBasedAlignmentArgumentCollection fbargs) {
         super(samRecord);
         this.fbargs = fbargs;
@@ -60,6 +80,17 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         else
             readBaseMatrix(_flowOrder);
 
+        //Spread boundary flow probabilities when the read is unclipped
+        //in this case the value of the hmer is uncertain
+        if (CigarUtils.countLeftHardClippedBases(samRecord.getCigar()) == 0){
+            _spreadFlowProbs(findFirstNonZero(key));
+        }
+        if (CigarUtils.countRightHardClippedBases(samRecord.getCigar()) == 0){
+            _spreadFlowProbs(findLastNonZero(key));
+        }
+
+
+
         if ( logger.isDebugEnabled() ) {
             logger.debug("cons: name: " + samRecord.getReadName()
                     + " len: " + samRecord.getReadLength()
@@ -71,6 +102,27 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
 
         validateSequence();
+    }
+
+    //since the last unclipped flow is uncertain (we give high probabilities to
+    //also hmers higher than the called hmer)
+    private void _spreadFlowProbs(int flowToSpread) {
+        if (flowToSpread<0) //boundary case when all the key is zero
+            return;
+
+        int call = key[flowToSpread];
+        if (call==0){
+            throw new GATKException.ShouldNeverReachHereException("Boundary key value should not be zero for the spreading");
+        }
+
+        int numberToFill = maxHmer - call+1;
+        double total = 0;
+        for (int i = call; i < maxHmer+1; i++)
+            total += flowMatrix[i][flowToSpread];
+        double fillProb = Math.max(total / numberToFill, fbargs.filling_value);
+        for (int i = call; i < maxHmer+1; i++){
+            flowMatrix[i][flowToSpread] = fillProb;
+        }
     }
 
     static public String keyAsString(byte[] bytes)
@@ -205,26 +257,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         validateSequence();
     }
 
-
-
-    public FlowBasedRead(FlowBasedRead other) {
-        super(other.samRecord);
-        forwardSequence = other.forwardSequence.clone();
-        key = other.key.clone();
-        flow2base = other.flow2base.clone();
-        flowOrder = other.flowOrder.clone();
-        flowMatrix = other.flowMatrix.clone();
-        valid_key = other.valid_key;
-        direction = other.direction;
-        maxHmer = other.maxHmer;
-        fbargs = other.fbargs;
-    }
-
-    public FlowBasedRead(GATKRead read, String flowOrder, int _maxHmer, FlowBasedAlignmentArgumentCollection fbargs) {
-        this(read.convertToSAMRecord(null), flowOrder, _maxHmer, fbargs);
-        this.read = read;
-
-    }
 
     public String getFlowOrder() {
         return new String(Arrays.copyOfRange(flowOrder, 0, Math.min(4,flowOrder.length)));
@@ -472,6 +504,28 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     private void flipMatrix() {
         for ( int i = 0 ; i < flowMatrix.length; i++) reverse(flowMatrix[i], flowMatrix[i].length);
+    }
+
+    private int findFirstNonZero(final byte[] array){
+        int result = -1;
+        for (int i = 0 ; i < array.length; i++){
+            if (array[i]!=0) {
+                result = i;
+                break;
+            }
+        }
+        return result;
+    }
+
+    private int findLastNonZero(final byte[] array){
+        int result = -1;
+        for (int i = array.length-1 ; i >= 0; i--){
+            if (array[i]!=0) {
+                result = i;
+                break;
+            }
+        }
+        return result;
     }
 
     private void shiftColumnUp(double[][] matrix, int colnum, int shift) {
