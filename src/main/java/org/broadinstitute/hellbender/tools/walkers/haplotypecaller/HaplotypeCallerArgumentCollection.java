@@ -27,6 +27,7 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
     public static final String OUTPUT_BLOCK_LOWER_BOUNDS = "floor-blocks";
 
 
+
     @ArgumentCollection
     public StandardCallerArgumentCollection standardArgs = new StandardCallerArgumentCollection();
 
@@ -168,5 +169,29 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
     @Hidden
     @Argument(fullName = "avoid-strand-bias-in-active-region")
     public boolean STRATIFICATION_FOR_ACTIVE_REGION = false;
+
+
+    public final String FILTER_CONTIGS = "flow-filter-contigs";
+    public final String FILTER_CONTIGS_QUAL_THRESHOLD = "flow-filter-contigs-qual-threshold";
+    public final String FILTER_CONTIGS_SOR_THRESHOLD = "flow-filter-contigs-sor-threshold";
+
+    public final float PREFILTER_QUAL_THRESHOLD = 30;
+    public final float PREFILTER_SOR_THRESHOLD = 3;
+
+    @Advanced
+    @Hidden
+    @Argument(fullName = FILTER_CONTIGS, doc = "pre-filter contigs before genotyping", optional=true)
+    public boolean filter_contigs=false;
+
+    @Advanced
+    @Hidden
+    @Argument(fullName = FILTER_CONTIGS_QUAL_THRESHOLD, doc = "Threshold for prefiltering contigs on quality", optional=true)
+    public float prefilter_qual_threshold=PREFILTER_QUAL_THRESHOLD;
+
+    @Advanced
+    @Hidden
+    @Argument(fullName = FILTER_CONTIGS_SOR_THRESHOLD, doc = "Threshold for prefiltering contigs on SOR", optional=true)
+    public float prefilter_sor_threshold=PREFILTER_SOR_THRESHOLD;
+
 
 }

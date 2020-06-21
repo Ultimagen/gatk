@@ -671,16 +671,19 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         alleleLikelihoodWriter.ifPresent(
                 writer -> writer.writeAlleleLikelihoods(readLikelihoods));
 
+        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
+        if (hcArgs.filter_contigs) {
+            final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsBoth = subsetHaplotypesByContigs(readLikelihoods, hcArgs);
+            subsettedReadLikelihoodsFinal = subsettedReadLikelihoodsBoth;
+            if (assemblyDebugOutStream != null) {
+                assemblyDebugOutStream.println("\nThere were " + subsettedReadLikelihoodsFinal.alleles().size() + " haplotypes found after subsetting by contigs. Here they are:");
+                subsettedReadLikelihoodsFinal.alleles().stream().map(Haplotype::toString).sorted().forEach(assemblyDebugOutStream::println);
+                //final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsForward = subsetHaplotypesByContigs(subsetLikelihoodsByStrand(subsettedReadLikelihoodsBoth,StrandsToUse.FORWARD));
+                //final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsReverse = subsetHaplotypesByContigs(subsetLikelihoodsByStrand(subsettedReadLikelihoodsBoth.subsetToAlleles(subsettedReadLikelihoodsForward.alleles()),StrandsToUse.REVERSE));
 
-        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsBoth = subsetHaplotypesByContigs(readLikelihoods);
-        //final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsForward = subsetHaplotypesByContigs(subsetLikelihoodsByStrand(subsettedReadLikelihoodsBoth,StrandsToUse.FORWARD));
-        //final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsReverse = subsetHaplotypesByContigs(subsetLikelihoodsByStrand(subsettedReadLikelihoodsBoth.subsetToAlleles(subsettedReadLikelihoodsForward.alleles()),StrandsToUse.REVERSE));
-
-        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal = subsettedReadLikelihoodsBoth;
-
-        if (assemblyDebugOutStream != null) {
-            assemblyDebugOutStream.println("\nThere were " + subsettedReadLikelihoodsFinal.alleles().size() + " haplotypes found after subsetting by contigs. Here they are:");
-            subsettedReadLikelihoodsFinal.alleles().stream().map(Haplotype::toString).sorted().forEach(assemblyDebugOutStream::println);
+            }
+        } else {
+            subsettedReadLikelihoodsFinal = readLikelihoods;
         }
 
         // Realign reads to their best haplotype.
@@ -764,7 +767,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
     }
 
 
-    private AlleleLikelihoods<GATKRead, Haplotype> subsetHaplotypesByContigs(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods ){
+    private AlleleLikelihoods<GATKRead, Haplotype> subsetHaplotypesByContigs(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods, HaplotypeCallerArgumentCollection hcargs ){
 
         boolean removedHaplotype = true;
         AlleleLikelihoods<GATKRead, Haplotype> currentReadLikelihoods = readLikelihoods;
@@ -877,7 +880,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             logger.debug("GCL::end");
 
 
-            Allele badContig = identifyBadContig(collectedRPLs, collectedSORs, allAlleles);
+            Allele badContig = identifyBadContig(collectedRPLs, collectedSORs, allAlleles, hcargs.prefilter_qual_threshold, hcargs.prefilter_sor_threshold);
 
             //THRESHOLD is a constant...needs to become a parameter
             if (badContig != null){
@@ -897,11 +900,11 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         return currentReadLikelihoods;
     }
 
-    private Allele identifyBadContig(final List<Integer> collectedRPLs,final List<Double> collectedSORs, List<Allele> alleles) {
+    private Allele identifyBadContig(final List<Integer> collectedRPLs,final List<Double> collectedSORs, List<Allele> alleles, double qual_threshold, double sor_threshold) {
         final Integer worstRPL = collectedRPLs.stream().max(Integer::compareTo).orElse(Integer.MIN_VALUE);
         final Double worstSOR = collectedSORs.stream().max(Double::compareTo).orElse(0.0);
-        final int THRESHOLD = -30;
-        final double SOR_THRESHOLD = 3;
+        final double THRESHOLD = -1 * qual_threshold;
+        final double SOR_THRESHOLD = sor_threshold;
 
         int argmin=-1;
         if (worstRPL > THRESHOLD )
