@@ -22,7 +22,6 @@ public class test_flow_based_read {
 
         if (args.length > 4 && args[4].equals("simulate")) {
             fbargs.probability_ratio_threshold = 0.01;
-//            fbargs.remove_longer_than_one_indels = true;
             fbargs.lump_probs = true;
             fbargs.only_ins_or_del = true;
             fbargs.remove_one_to_zero_probs = true;
