@@ -380,15 +380,18 @@ public class LHWRefView {
                     resultOfs += c.getLength();
                 }
             } else {
-                /*
-                // on ref, check if D has atleast threshold same hmers to the left and D.length to the right
-                // if so, this is a candidate for uncollapsing
-                byte        base = ref[refOfs];
-                if ( sameBase(ref, refOfs, base, hmerSizeThreshold + c.getLength()) ) {
-                    Arrays.fill(result, resultOfs, resultOfs + c.getLength(), base);
-                    resultOfs += c.getLength();
+
+                // check if the incoming bases contain a homopolymer
+                if ( c.getLength() <= 1 ) {
+                    int pad = 0;
+                    int chkPad = 1;
+                    byte[] fwdSlice = Arrays.copyOfRange(bases, basesOfs, Math.min(basesOfs + hmerSizeThreshold + pad, bases.length));
+                    byte[] bckSlice = Arrays.copyOfRange(bases, Math.max(0, basesOfs - hmerSizeThreshold - pad), basesOfs);
+                    if (!needsCollapsing(fwdSlice, hmerSizeThreshold - chkPad, logger, debug) &&
+                            !needsCollapsing(bckSlice, hmerSizeThreshold - chkPad, logger, debug))
+                        continue;
                 }
-                 */
+
 
                 // check for a delete at the end of an hmer size or at the end
                 if ( onHomoPolymer(ref, refOfs - hmerSizeThreshold, ref[refOfs], hmerSizeThreshold, 1) ) {
@@ -511,10 +514,12 @@ public class LHWRefView {
         }
 
         if ( log ) {
+            int         i = 0;
             for (Haplotype h : haplotypes)
-                logHaplotype(h, "COL");
+                logHaplotype(h, "COL_" + (limit ? "P1_" : "P2_"), i++);
+            i = 0;
             for (Haplotype h : result)
-                logHaplotype(h, "UNCOL");
+                logHaplotype(h, "UNCOL_" + (limit ? "P1_" : "P2_"), i++);
         }
 
 
@@ -594,13 +599,15 @@ public class LHWRefView {
     }
 
     private static int logHaplotype_i = 0;
-    private void logHaplotype(Haplotype h, String label) {
+    private void logHaplotype(Haplotype h, String label, int i) {
         if ( debug ) {
-            String      name = label + "_" + (logHaplotype_i++);
+            String      name = label + "_" + (logHaplotype_i++) + "_" + i;
             String      contig = h.getGenomeLocation().getContig();
             int         start = h.getGenomeLocation().getStart();
             String      cigar = h.getCigar() != null ? h.getCigar().toString() : "?";
             String      bases = h.getDisplayString();
+            if ( h.isReference() )
+                name += "_REF";
 
             byte[]      q = new byte[bases.length()];
             Arrays.fill(q, (byte)40);
