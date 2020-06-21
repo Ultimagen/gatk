@@ -93,7 +93,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
 
 
-
         if ( logger.isDebugEnabled() ) {
             logger.debug("cons: name: " + samRecord.getReadName()
                     + " len: " + samRecord.getReadLength()
@@ -452,6 +451,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             shiftColumnUp(flowMatrix, flowMatrix[0].length-1, right_hmer_clip);
         }
 
+        //Spread boundary flow probabilities for the boundary hmers of the read
+        //in this case the value of the genome hmer is uncertain
+        _spreadFlowProbs(findFirstNonZero(key));
+        _spreadFlowProbs(findLastNonZero(key));
     }
 
     private void reverse(int []a, int n)
