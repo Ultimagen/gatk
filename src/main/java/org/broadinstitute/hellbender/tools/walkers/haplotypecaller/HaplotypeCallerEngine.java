@@ -683,6 +683,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
             }
         } else {
+            logger.debug("Not filtering contigs");
             subsettedReadLikelihoodsFinal = readLikelihoods;
         }
 
@@ -793,35 +794,6 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             }
             logger.debug("CHM::printout end");
 
-            JoinedContigs jca;
-            JoinedContigs jca0 = null;
-            JoinedContigs jca1 = null;
-            JoinedContigs jca2 = null;
-
-            for (Haplotype h:currentReadLikelihoods.alleles()) {
-                final String id1 = "G";
-                final String id2 = "AATGGTAGTTCTAAGTTTTTGAGAAATCTCCAAACTAATTTACAT";
-                final String id1_1 = "GG";
-                final String id1_2 = "AG";
-
-                Set<Allele> jc = getJoinedContigs(h);
-                for (Allele a : jc) {
-                    jca = (JoinedContigs)a;
-//                    logger.debug(String.format("%s->%s", jca.getAllele1().getBaseString(), jca.getAllele2().getBaseString()));
-                    if ((jca.getAllele1().getBaseString().equals(id1)) && (jca.getAllele2().getBaseString().equals(id2))){
-                        jca0 = jca;
-                    }
-                    if ((jca.getAllele1().getBaseString().equals(id1_1)) && (jca.getAllele2().getBaseString().equals(id2))){
-                        jca1 = jca;
-                    }
-                    if ((jca.getAllele1().getBaseString().equals(id1_2)) && (jca.getAllele2().getBaseString().equals(id2))){
-                        jca2 = jca;
-                    }
-                }
-            }
-
-
-
             final List<Haplotype> eventualAlleles = new ArrayList<>(currentReadLikelihoods.alleles());
             if (eventualAlleles.stream().noneMatch(Allele::isReference)) {
                 throw new IllegalStateException("Reference haplotype must always remain!");
@@ -832,41 +804,31 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             //find contigs that only have the reference haplotypes and remove them.
             final List<Allele> refOnlyContigs = contigHaplotypeMap.keySet().stream().filter(c -> contigHaplotypeMap.get(c).stream().anyMatch(Allele::isReference)).collect(Collectors.toList());
             refOnlyContigs.forEach(contigHaplotypeMap::remove);
-
-
-            boolean isContained;
-            String state;
-            isContained = isContigIn(contigHaplotypeMap, jca0);
-            state = new String("refOnlyContigs");
-            if (isContained){
-                logger.debug(String.format("%s contained after %s", jca0.toString(), state));
-            } else if (jca0!=null) {
-                logger.debug(String.format("%s NOT CONTAINED after %s", jca0.toString(), state));
+            logger.debug("----- ROC start ");
+            for (Allele al: refOnlyContigs) {
+                logger.debug(String.format("ROC:: %s", (al).toString()));
             }
-
+            logger.debug("----- ROC end");
 
             // find contigs that have all the haplotypes in them and remove them.
             final List<Allele> allHapContigs = contigHaplotypeMap.keySet().stream().filter(c -> contigHaplotypeMap.get(c).containsAll(eventualAlleles)).collect(Collectors.toList());
             allHapContigs.forEach(contigHaplotypeMap::remove);
 
-            isContained = isContigIn(contigHaplotypeMap, jca0);
-            state = new String("allHapContigs");
-            if (isContained){
-                logger.debug(String.format("%s contained after %s", jca0.toString(), state));
-            }else if (jca0!=null) {
-                logger.debug(String.format("%s NOT CONTAINED after %s", jca0.toString(), state));
+            logger.debug("----- AHC start ----");
+            for (Allele al: allHapContigs) {
+                logger.debug(String.format("AHC:: %s", (al).toString()));
             }
+            logger.debug("----- AHC end -----");
+
 
             //find contigs that have no haplotypes in them and remove them.
             final List<Allele> noHapContigs = contigHaplotypeMap.keySet().stream().filter(c -> contigHaplotypeMap.get(c).isEmpty()).collect(Collectors.toList());
             noHapContigs.forEach(contigHaplotypeMap::remove);
-            isContained = isContigIn(contigHaplotypeMap, jca0);
-            state = new String("noHapContigs");
-            if (isContained){
-                logger.debug(String.format("%s contained after %s", jca0.toString(), state));
-            } else if (jca0!=null){
-                logger.debug(String.format("%s NOT CONTAINED after %s", jca0.toString(), state));
+            logger.debug("----- NHC start ----");
+            for (Allele al: noHapContigs) {
+                logger.debug(String.format("NHC:: %s", (al.toString())));
             }
+            logger.debug("----- NHC end -----");
 
             final List<Allele> allAlleles = new ArrayList<>(contigHaplotypeMap.keySet());
 
@@ -978,8 +940,10 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
     private double getContigSOR(final AlleleLikelihoods<GATKRead, Allele> contigLikelihoods, Allele contig) {
         if (contig instanceof JoinedContigs) {
-            if (((JoinedContigs) contig).getAllele1().getBaseString().equals("TT")){
-                if (((JoinedContigs) contig).getAllele2().getBaseString().equals("GAAATTATTTGCATTTACCTACTACACAAATTCCGAAGGC") ){
+            if (((JoinedContigs) contig).getAllele1().getBaseString().equals("T")){
+                if (((JoinedContigs) contig).getAllele2().getBaseString().equals("GTGTGTG") ){
+                    logger.debug("SOR:: ---START---");
+
                     int a = 1;
                     for (final String sample : contigLikelihoods.samples()) {
                         List<AlleleLikelihoods<GATKRead, Allele>.BestAllele> reads = contigLikelihoods.bestAllelesBreakingTies(sample).stream()
@@ -996,10 +960,11 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
                         }
                     }
-
+                    logger.debug("SOR::---END---");
                 }
             }
         }
+
 
         final Allele notContig = InverseAllele.of(contig);
         int [][] contingency_table = StrandOddsRatio.getContingencyTable(contigLikelihoods, notContig, Arrays.asList(contig), 1);
