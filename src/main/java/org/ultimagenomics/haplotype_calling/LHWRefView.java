@@ -382,29 +382,27 @@ public class LHWRefView {
             } else {
 
                 // check if the incoming bases contain a homopolymer
-                if ( c.getLength() <= 1 ) {
-                    int pad = 0;
-                    int chkPad = 1;
-                    byte[] fwdSlice = Arrays.copyOfRange(bases, basesOfs, Math.min(basesOfs + hmerSizeThreshold + pad, bases.length));
-                    byte[] bckSlice = Arrays.copyOfRange(bases, Math.max(0, basesOfs - hmerSizeThreshold - pad), basesOfs);
-                    if (!needsCollapsing(fwdSlice, hmerSizeThreshold - chkPad, logger, debug) &&
-                            !needsCollapsing(bckSlice, hmerSizeThreshold - chkPad, logger, debug))
-                        continue;
-                }
+                int pad = 0;
+                int chkPad = 1;
+                byte[] fwdSlice = Arrays.copyOfRange(bases, basesOfs, Math.min(basesOfs + hmerSizeThreshold + pad, bases.length));
+                byte[] bckSlice = Arrays.copyOfRange(bases, Math.max(0, basesOfs - hmerSizeThreshold - pad), basesOfs);
+                if ( needsCollapsing(fwdSlice, hmerSizeThreshold - chkPad, logger, debug) ||
+                        needsCollapsing(bckSlice, hmerSizeThreshold - chkPad, logger, debug) ) {
 
 
-                // check for a delete at the end of an hmer size or at the end
-                if ( onHomoPolymer(ref, refOfs - hmerSizeThreshold, ref[refOfs], hmerSizeThreshold, 1) ) {
-                    // fill with base until end of jomopolymer on the ref
-                    byte        base = ref[refOfs];
-                    for ( int size = 0 ; (size < c.getLength()) && (ref[refOfs + size] == base) ; size++ )
-                        result[resultOfs++] = base;
+                    // check for a delete at the end of an hmer size or at the end
+                    if (onHomoPolymer(ref, refOfs - hmerSizeThreshold, ref[refOfs], hmerSizeThreshold, 1)) {
+                        // fill with base until end of jomopolymer on the ref
+                        byte base = ref[refOfs];
+                        for (int size = 0; (size < c.getLength()) && (ref[refOfs + size] == base); size++)
+                            result[resultOfs++] = base;
 
-                } else if ( onHomoPolymer(ref, refOfs + c.getLength(), ref[refOfs + c.getLength() - 1], hmerSizeThreshold, -1) ) {
-                    // fill with base until start of jomopolymer on the ref
-                    byte        base = ref[refOfs + c.getLength() - 1];
-                    for ( int size = 0 ; (size < c.getLength()) && (ref[refOfs + c.getLength() - 1 - size] == base) ; size++ )
-                        result[resultOfs++] = base;
+                    } else if (onHomoPolymer(ref, refOfs + c.getLength(), ref[refOfs + c.getLength() - 1], hmerSizeThreshold, -1)) {
+                        // fill with base until start of jomopolymer on the ref
+                        byte base = ref[refOfs + c.getLength() - 1];
+                        for (int size = 0; (size < c.getLength()) && (ref[refOfs + c.getLength() - 1 - size] == base); size++)
+                            result[resultOfs++] = base;
+                    }
                 }
             }
             if (c.getOperator().consumesReferenceBases())
