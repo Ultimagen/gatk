@@ -672,8 +672,14 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                 writer -> writer.writeAlleleLikelihoods(readLikelihoods));
 
         final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
-        if (hcArgs.filter_contigs) {
-            final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsBoth = subsetHaplotypesByContigs(readLikelihoods, hcArgs);
+        if (hcArgs.filterContigs) {
+            logger.debug("SHC:: filter contigs - start");
+            AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsBoth = subsetHaplotypesByContigs(readLikelihoods, hcArgs);
+            logger.debug("SHC:: filter contigs - end");
+            logger.debug("SHC:: filter ref contigs - start");
+            subsettedReadLikelihoodsBoth = subsetHaplotypesByRefContigs(subsettedReadLikelihoodsBoth, hcArgs);
+            logger.debug("SHC:: filter ref contigs - end");
+
             subsettedReadLikelihoodsFinal = subsettedReadLikelihoodsBoth;
             if (assemblyDebugOutStream != null) {
                 assemblyDebugOutStream.println("\nThere were " + subsettedReadLikelihoodsFinal.alleles().size() + " haplotypes found after subsetting by contigs. Here they are:");
@@ -768,7 +774,18 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
     }
 
 
-    private AlleleLikelihoods<GATKRead, Haplotype> subsetHaplotypesByContigs(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods, HaplotypeCallerArgumentCollection hcargs ){
+    private AlleleLikelihoods<GATKRead, Haplotype> subsetHaplotypesByContigs(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods,
+                                                                             HaplotypeCallerArgumentCollection hcargs) {
+        return subsetHaplotypesByContigs(readLikelihoods, hcargs, true);
+    }
+
+    private AlleleLikelihoods<GATKRead, Haplotype> subsetHaplotypesByRefContigs(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods,
+                                                                             HaplotypeCallerArgumentCollection hcargs) {
+        return subsetHaplotypesByContigs(readLikelihoods, hcargs, false);
+    }
+
+    private AlleleLikelihoods<GATKRead, Haplotype> subsetHaplotypesByContigs(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods,
+                                                                         HaplotypeCallerArgumentCollection hcargs, boolean keepRef ){
 
         boolean removedHaplotype = true;
         AlleleLikelihoods<GATKRead, Haplotype> currentReadLikelihoods = readLikelihoods;
@@ -802,13 +819,15 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             removedHaplotype = false;
 
             //find contigs that only have the reference haplotypes and remove them.
-            final List<Allele> refOnlyContigs = contigHaplotypeMap.keySet().stream().filter(c -> contigHaplotypeMap.get(c).stream().anyMatch(Allele::isReference)).collect(Collectors.toList());
-            refOnlyContigs.forEach(contigHaplotypeMap::remove);
-            logger.debug("----- ROC start ");
-            for (Allele al: refOnlyContigs) {
-                logger.debug(String.format("ROC:: %s", (al).toString()));
+            if (keepRef) {
+                final List<Allele> refOnlyContigs = contigHaplotypeMap.keySet().stream().filter(c -> contigHaplotypeMap.get(c).stream().anyMatch(Allele::isReference)).collect(Collectors.toList());
+                refOnlyContigs.forEach(contigHaplotypeMap::remove);
+                logger.debug("----- ROC start ");
+                for (Allele al : refOnlyContigs) {
+                    logger.debug(String.format("ROC:: %s", (al).toString()));
+                }
+                logger.debug("----- ROC end");
             }
-            logger.debug("----- ROC end");
 
             // find contigs that have all the haplotypes in them and remove them.
             final List<Allele> allHapContigs = contigHaplotypeMap.keySet().stream().filter(c -> contigHaplotypeMap.get(c).containsAll(eventualAlleles)).collect(Collectors.toList());
@@ -841,12 +860,17 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             final List<Double> collectedSORs = IntStream.range(0, allAlleles.size()).mapToObj( i -> getContigSOR(contigLikelihoods.get(i), allAlleles.get(i))).collect(Collectors.toList());
             logger.debug("GCL::end");
 
+            final Allele badContig;
+            if (keepRef) {
+                badContig = identifyBadContig(collectedRPLs, collectedSORs, allAlleles, hcargs.prefilterQualThreshold, hcargs.prefilterSorThreshold);
+            } else {
+                badContig = identifyBadContig(collectedRPLs, collectedSORs, allAlleles, hcargs.refPrefilterQualThreshold, hcargs.prefilterSorThreshold);
+            }
 
-            Allele badContig = identifyBadContig(collectedRPLs, collectedSORs, allAlleles, hcargs.prefilter_qual_threshold, hcargs.prefilter_sor_threshold);
-
-            //THRESHOLD is a constant...needs to become a parameter
             if (badContig != null){
-
+                logger.debug(String.format("SHC:: Removing %s (%d) -> (%d)", badContig.toString(),
+                        ((JoinedContigs)badContig).getAllele1().hashCode(),
+                        ((JoinedContigs)badContig).getAllele2().hashCode()));
                 final ArrayList<Haplotype> haplotypesWithContig = new ArrayList<>(contigHaplotypeMap.get(badContig));
                 haplotypesWithContig.removeIf(Allele::isReference);
 
@@ -869,18 +893,20 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         final double SOR_THRESHOLD = sor_threshold;
 
         int argmin=-1;
-        if (worstRPL > THRESHOLD )
+        if (worstRPL > THRESHOLD ) {
             argmin = collectedRPLs.indexOf(worstRPL);
-        else if (worstSOR > SOR_THRESHOLD )
+            logger.debug(String.format("SHC:: WorstRPL: %d", worstRPL));
+        }
+        else if (worstSOR > SOR_THRESHOLD ) {
             argmin = collectedSORs.indexOf(worstSOR);
-        if (argmin >= 0 )
-            return alleles.get(argmin);
-        else
-            return null;
-    }
+            logger.debug(String.format("SHC:: WorstSOR: %f", worstSOR));
 
-    private boolean isContigIn(final Map<Allele, List<Haplotype>> map, JoinedContigs jca){
-        return map.containsKey(jca);
+        }
+        if (argmin >= 0 ) {
+            logger.debug(String.format("SHC:: %d", argmin));
+            return alleles.get(argmin);
+        } else
+            return null;
     }
 
     private enum StrandsToUse {
