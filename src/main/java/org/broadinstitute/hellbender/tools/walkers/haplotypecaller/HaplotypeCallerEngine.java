@@ -704,6 +704,11 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         final List<Haplotype> haplotypes = assemblyResult.getHaplotypeList();
         final Map<String,List<GATKRead>> reads = AssemblyBasedCallerUtils.splitReadsBySample(samplesList, readsHeader, regionForGenotyping.getReads());
 
+        for (String sn: reads.keySet()) {
+            for (GATKRead rd : reads.get(sn)) {
+                logger.debug(String.format("PRECOMPUTE:: %s", rd.getName()));
+            }
+        }
         if (HaplotypeCallerGenotypingDebugger.isEnabled()) {
             HaplotypeCallerGenotypingDebugger.println("\nUnclipped Haplotypes("+haplotypes.size()+"):");
             for (Haplotype haplotype : untrimmedAssemblyResult.getHaplotypeList()) {
@@ -722,6 +727,12 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         // Calculate the likelihoods: CPU intensive part.
         final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods =
                 likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads);
+
+        for (String sn: reads.keySet()) {
+            for (GATKRead rd : reads.get(sn)) {
+                logger.debug(String.format("POSTCOMPUTE:: %s", rd.getName()));
+            }
+        }
 
         alleleLikelihoodWriter.ifPresent(
                 writer -> writer.writeAlleleLikelihoods(readLikelihoods));
@@ -1033,8 +1044,8 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
     private double getContigSOR(final AlleleLikelihoods<GATKRead, Allele> contigLikelihoods, Allele contig) {
         if (contig instanceof JoinedContigs) {
-            if (((JoinedContigs) contig).getAllele1().getBaseString().equals("T")){
-                if (((JoinedContigs) contig).getAllele2().getBaseString().equals("GTGTGTG") ){
+            if (((JoinedContigs) contig).getAllele1().getBaseString().equals("GCTTGCCCGG")){
+                if (((JoinedContigs) contig).getAllele2().getBaseString().equals("CAGCCACTCCCAGAGCC") ){
                     logger.debug("SOR:: ---START---");
 
                     int a = 1;
@@ -1052,6 +1063,19 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                             }
 
                         }
+                        reads = contigLikelihoods.bestAllelesBreakingTies(sample).stream()
+                                .collect(Collectors.toList());
+                        for (AlleleLikelihoods<GATKRead, Allele>.BestAllele ba: reads ){
+                            if (ba.allele instanceof InverseAllele ){
+                                continue;
+                            } else {
+                                logger.debug(String.format("SOR:: general: %s, %f",
+                                        (ba.evidence).getName(),
+                                        ba.confidence));
+                            }
+
+                        }
+
                     }
                     logger.debug("SOR::---END---");
                 }
