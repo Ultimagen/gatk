@@ -975,46 +975,6 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
     }
 
     private double getContigSOR(final AlleleLikelihoods<GATKRead, Allele> contigLikelihoods, Allele contig) {
-        if (contig instanceof JoinedContigs) {
-            if (((JoinedContigs) contig).getAllele1().getBaseString().equals("GCTTGCCCGG")){
-                if (((JoinedContigs) contig).getAllele2().getBaseString().equals("CAGCCACTCCCAGAGCC") ){
-                    logger.debug("SOR:: ---START---");
-
-                    int a = 1;
-                    for (final String sample : contigLikelihoods.samples()) {
-                        List<AlleleLikelihoods<GATKRead, Allele>.BestAllele> reads = contigLikelihoods.bestAllelesBreakingTies(sample).stream()
-                                .filter(ba -> ba.isInformative())
-                                .collect(Collectors.toList());
-                        for (AlleleLikelihoods<GATKRead, Allele>.BestAllele ba: reads ){
-                            if (ba.allele instanceof InverseAllele ){
-                                continue;
-                            } else {
-                                logger.debug(String.format("SOR:: Informative: %s, %b",
-                                        (ba.evidence).getName(),
-                                        (ba.evidence).isReverseStrand()));
-                            }
-
-                        }
-                        reads = contigLikelihoods.bestAllelesBreakingTies(sample).stream()
-                                .collect(Collectors.toList());
-                        for (AlleleLikelihoods<GATKRead, Allele>.BestAllele ba: reads ){
-                            if (ba.allele instanceof InverseAllele ){
-                                continue;
-                            } else {
-                                logger.debug(String.format("SOR:: general: %s, %f",
-                                        (ba.evidence).getName(),
-                                        ba.confidence));
-                            }
-
-                        }
-
-                    }
-                    logger.debug("SOR::---END---");
-                }
-            }
-        }
-
-
         final Allele notContig = InverseAllele.of(contig);
         int [][] contingency_table = StrandOddsRatio.getContingencyTable(contigLikelihoods, notContig, Arrays.asList(contig), 1);
         double sor = StrandOddsRatio.calculateSOR(contingency_table);
