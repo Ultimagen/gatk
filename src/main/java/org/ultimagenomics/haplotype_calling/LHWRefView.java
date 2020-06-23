@@ -394,13 +394,13 @@ public class LHWRefView {
                     if (onHomoPolymer(ref, refOfs - hmerSizeThreshold, ref[refOfs], hmerSizeThreshold, 1)) {
                         // fill with base until end of jomopolymer on the ref
                         byte base = ref[refOfs];
-                        for (int size = 0; (size < c.getLength()) && (ref[refOfs + size] == base); size++)
+                        for (int size = 0; (size < c.getLength()) /*&& (ref[refOfs + size] == base)*/; size++)
                             result[resultOfs++] = base;
 
                     } else if (onHomoPolymer(ref, refOfs + c.getLength(), ref[refOfs + c.getLength() - 1], hmerSizeThreshold, -1)) {
                         // fill with base until start of jomopolymer on the ref
                         byte base = ref[refOfs + c.getLength() - 1];
-                        for (int size = 0; (size < c.getLength()) && (ref[refOfs + c.getLength() - 1 - size] == base); size++)
+                        for (int size = 0; (size < c.getLength()) /*&& (ref[refOfs + c.getLength() - 1 - size] == base)*/; size++)
                             result[resultOfs++] = base;
                     }
                 }
