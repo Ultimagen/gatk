@@ -4,6 +4,7 @@ import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.util.Locatable;
+import htsjdk.samtools.util.SequenceUtil;
 import htsjdk.variant.variantcontext.*;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.gatk.nativebindings.smithwaterman.SWOverhangStrategy;
@@ -63,8 +64,8 @@ public class LHWRefView {
         int     baseSameCount = 0;
 
         if ( debug ) {
-            logger.info("checking for >" + hmerSizeThreshold + "hmer in:");
-            logger.info(printBases(bases));
+            logger.debug("checking for >" + hmerSizeThreshold + "hmer in:");
+            logger.debug(printBases(bases));
         }
 
         // check if has at least one sequence of stable bases larger than threshold
@@ -73,7 +74,7 @@ public class LHWRefView {
             if ( base == lastBase ) {
                 if ( ++baseSameCount >= hmerSizeThreshold ) {
                     if ( debug )
-                        logger.info("will collapse. found a stable sequence of at least " + (baseSameCount+1) + " of " + Character.toString((char)lastBase));
+                        logger.debug("will collapse. found a stable sequence of at least " + (baseSameCount+1) + " of " + Character.toString((char)lastBase));
                     return true;
                 }
             } else {
@@ -84,7 +85,7 @@ public class LHWRefView {
         }
 
         if ( debug )
-            logger.info("will not ollapse");
+            logger.debug("will not collapse");
         return false;
     }
 
@@ -350,7 +351,16 @@ public class LHWRefView {
         return sb.toString();
     }
 
-    public byte[] uncollapseByRef(byte[] bases, byte[] ref, AtomicInteger offsetResult) {
+    public byte[] uncollapseByRef(byte[] bases, byte[] ref, AtomicInteger offsetResult, boolean rev) {
+
+        if ( rev ) {
+            byte[]      basesRev = Arrays.copyOf(bases, bases.length);
+            byte[]      refRev = Arrays.copyOf(ref, ref.length);
+            SequenceUtil.reverseComplement(basesRev);
+            SequenceUtil.reverseComplement(refRev);
+            bases = basesRev;
+            ref = refRev;
+        }
 
         // use aligner to get CIGAR
         SmithWatermanAlignment alignment = aligner.align(ref, bases, SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
@@ -412,7 +422,14 @@ public class LHWRefView {
         // return adjusted result
         final byte[] finalResult = (result.length == resultOfs) ? result : Arrays.copyOf(result, resultOfs);
 
+        if ( rev )
+            SequenceUtil.reverseComplement(finalResult);
+
         if ( debug ) {
+            if ( rev ) {
+                SequenceUtil.reverseComplement(bases);
+                SequenceUtil.reverseComplement(ref);
+            }
             logger.info("bases, ref, finalResult:");
             logger.info(printBases(bases));
             logger.info(printBases(ref));
@@ -486,7 +503,11 @@ public class LHWRefView {
                     refMap.put(h.getGenomeLocation(), ref);
                 }
                 AtomicInteger       offset = new AtomicInteger();
-                byte[] alignedBases = uncollapseByRef(h.getBases(), ref, offset);
+                byte[] alignedBases = uncollapseByRef(h.getBases(), ref, offset, false);
+                byte[] alignedBases1 = uncollapseByRef(h.getBases(), ref, offset, true);
+                if ( alignedBases1.length > alignedBases.length )
+                    alignedBases = alignedBases1;
+
                 byte[] orgAlignedBases = alignedBases;
                 if ( limit )
                     alignedBases = collapseBases(orgAlignedBases);
