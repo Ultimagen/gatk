@@ -13,6 +13,7 @@ import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.utils.MathUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.downsampling.AlleleBiasedDownsamplingUtils;
+import org.broadinstitute.hellbender.utils.read.GATKRead;
 
 import java.util.*;
 import java.util.function.Function;
@@ -1346,6 +1347,14 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
             final int[] indexesToRemove = IntStream.range(0, numberOfEvidence)
                     .filter(i -> maximumLikelihoodOverAllAlleles(sampleIndex, i) < log10MinTrueLikelihood.applyAsDouble(sampleEvidence.get(i)))
                     .toArray();
+
+            for (int i = 0; i < indexesToRemove.length; i++){
+                logger.debug(String.format("FILTER_READ:: %s", ((GATKRead) sampleEvidence.get(indexesToRemove[i])).getName()));
+            }
+            if (indexesToRemove.length==0){
+                logger.debug("FILTER_READ:: no reads filtered");
+            }
+
             removeEvidenceByIndex(s, indexesToRemove);
         }
     }
