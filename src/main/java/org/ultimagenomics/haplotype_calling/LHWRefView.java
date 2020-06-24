@@ -1,18 +1,15 @@
 package org.ultimagenomics.haplotype_calling;
 
-import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.util.Locatable;
 import htsjdk.samtools.util.SequenceUtil;
-import htsjdk.variant.variantcontext.*;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.gatk.nativebindings.smithwaterman.SWOverhangStrategy;
 import org.broadinstitute.hellbender.engine.AssemblyRegion;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
-import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAlignment;
 
@@ -21,41 +18,27 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class LHWRefView {
 
-    private int             hmerSizeThreshold;
+    final private int             hmerSizeThreshold;
 
-    private byte[]          fullRef;
-    private Locatable       refLoc;
-    private Haplotype       refHaplotype;
-    private AssemblyRegion  region;
-    private Logger          logger;
-    private boolean         debug;
-    private byte[]          fullQuals;
+    final private byte[]          fullRef;
+    final private Locatable       refLoc;
+    final private Logger          logger;
+    final private boolean         debug;
 
-    private byte[]          collapsedRef;
-    private int[]           fullToCollapsedLocationMap;
-    private int[]           collapsedToFullLocationMap;
-    private Locatable       collapsedRefLoc;
-    private SmithWatermanAligner aligner = SmithWatermanAligner.getAligner(SmithWatermanAligner.Implementation.JAVA);
-    SmithWatermanAlignment refAlignement;
-    private byte[]          collapsedQuals;
+    private SmithWatermanAligner  aligner = SmithWatermanAligner.getAligner(SmithWatermanAligner.Implementation.JAVA);
 
-    public LHWRefView(final int hmerSizeThreshold, final byte[] fullRef, final Locatable refLoc, Haplotype refHaplotype, final AssemblyRegion region, final Logger logger, final boolean debug, byte[] fullQuals) {
+    public LHWRefView(final int hmerSizeThreshold, final byte[] fullRef, final Locatable refLoc, final Logger logger, final boolean debug, byte[] fullQuals) {
 
         this.hmerSizeThreshold = hmerSizeThreshold;
         this.fullRef = fullRef;
         this.refLoc = refLoc;
-        this.refHaplotype = refHaplotype;
-        this.region = region;
         this.logger = logger;
         this.debug = debug;
-        this.fullQuals = fullQuals;
 
         if ( debug ) {
             logger.info("LHWRefView: >" + hmerSizeThreshold + "hmer, refLoc: " + refLoc + " fullRef:");
-            logger.info(printBases(fullRef));
+            logger.info(basesAsString(fullRef));
         }
-
-        collapse();
     }
 
     public static boolean needsCollapsing(byte[] bases, int hmerSizeThreshold, final Logger logger, final boolean debug) {
@@ -65,7 +48,7 @@ public class LHWRefView {
 
         if ( debug ) {
             logger.debug("checking for >" + hmerSizeThreshold + "hmer in:");
-            logger.debug(printBases(bases));
+            logger.debug(basesAsString(bases));
         }
 
         // check if has at least one sequence of stable bases larger than threshold
@@ -89,211 +72,74 @@ public class LHWRefView {
         return false;
     }
 
-    public byte[] getCollapsedFullRef() {
-        Utils.nonNull(collapsedRef);
-        return collapsedRef;
-    }
+    public List<Haplotype> uncollapseHaplotypesByRef(final Collection<Haplotype> haplotypes, boolean log, boolean limit) {
 
-    public SimpleInterval getCollapsedLoc(final Locatable loc) {
-        Utils.nonNull(collapsedRef);
-        SimpleInterval  cLoc =  new SimpleInterval(loc.getContig(), toCollapsedLocus(loc.getStart()), toCollapsedLocus(loc.getEnd()));
+        final List<Haplotype>       result = new LinkedList<>();
+        final Map<Locatable, byte[]> refMap = new LinkedHashMap<>();
+        Haplotype                   refHaplotype = null;
 
-        if ( debug )
-            logger.info("getCollapsedLoc: " + loc + " -> " + cLoc);
+        // locate reference haplotype, if exists
+        for ( Haplotype h : haplotypes )
+            if ( h.isReference() ) {
+                refHaplotype = h;
+                break;
+            }
 
-        return cLoc;
-    }
-
-    public SimpleInterval getUncollapsedLoc(final Locatable loc) {
-        Utils.nonNull(collapsedRef);
-        SimpleInterval  ucLoc =  new SimpleInterval(loc.getContig(), toUncollapsedLocus(loc.getStart()), toUncollapsedLocus(loc.getEnd()));
-
-        if ( debug )
-            logger.info("getUncollapsedLoc: " + loc + " -> " + ucLoc);
-
-        return ucLoc;
-    }
-
-    public byte[] getCollapsedPartialRef(final Locatable loc) {
-        Utils.nonNull(collapsedRef);
-
-        Locatable   cLoc = getCollapsedLoc(loc);
-        int         cOfs = cLoc.getStart() - refLoc.getStart();
-        int         size = cLoc.getLengthOnReference();
-        byte[]      bases =  Arrays.copyOfRange(collapsedRef, cOfs, cOfs + size);
-
-        if ( debug ) {
-            logger.info("getCollapsedPartialRef: cOfs: " + cOfs + ", size: " + size + ", bases:");
-            logger.info(printBases(bases));
-        }
-
-        return bases;
-    }
-
-    public byte[] getUncollapsedPartialRef(final Locatable loc, boolean uncollapseLoc) {
-        Utils.nonNull(collapsedRef);
-
-        Locatable   ucLoc = uncollapseLoc ? getUncollapsedLoc(loc) : loc;
-        int         ucOfs = ucLoc.getStart() - refLoc.getStart();
-        int         size = ucLoc.getLengthOnReference();
-        byte[]      bases =  Arrays.copyOfRange(fullRef, ucOfs, ucOfs + size);
-
-        if ( debug ) {
-            logger.info("getUncollapsedPartialRef: cOfs: " + ucOfs + ", size: " + size + ", bases:");
-            logger.info(printBases(bases));
-        }
-
-        return bases;
-    }
-
-    public Haplotype getCollapsedRefHaplotype(final Locatable loc) {
-        Utils.nonNull(collapsedRef);
-
-        // calc start/end and bases in collapsed space
-        Locatable       activeRegion = getCollapsedLoc(loc);
-        byte[]          refBases = getCollapsedPartialRef(loc);
-
-        final Haplotype viewHaplotype = new Haplotype(refBases, true);
-        viewHaplotype.setAlignmentStartHapwrtRef(activeRegion.getStart() - refLoc.getStart());
-        final Cigar c = new Cigar();
-        c.add(new CigarElement(viewHaplotype.getBases().length, CigarOperator.M));
-        viewHaplotype.setCigar(c);
-
-        if ( debug ) {
-            logger.info("getCollapsedRefHaplotype: viewHaplotype: " + viewHaplotype);
-            logger.info("getCollapsedRefHaplotype: refHaplotype:  " + refHaplotype);
-        }
-        return viewHaplotype;
-    }
-
-    static final boolean HARD_COLLAPSE_READS = true;
-
-    public List<GATKRead> getCollapsedReads(final AssemblyRegion region) {
-        Utils.nonNull(collapsedRef);
-
-        List<GATKRead>      reads = new LinkedList<>();
-        for ( GATKRead read : region.getReads() )
+        // uncollapse haplotypes
+        for ( Haplotype h : haplotypes )
         {
-            reads.add(read);
-            if (read.getUGOrgLoc() != null )
-                continue;
+            // by default
+            Haplotype   alignedHaplotype = h;
 
-            Locatable       loc = new SimpleInterval(read);
-            Locatable       cLoc = getCollapsedLoc(read);
-            byte[]          bases = read.getBasesNoCopy();
-            boolean         readNeedsCollapsing = needsCollapsing(bases, hmerSizeThreshold, logger, debug);
+            if ( !h.isReference() ) {
 
-            if ( debug )
-                logger.info(String.format("Read %s %s %c %s -> %s", read.getName(), read.getCigar(),
-                                                    readNeedsCollapsing ? 'C' : 'N',
-                                                    loc, cLoc));
-            if ( readNeedsCollapsing ) {
-                byte[]          quals = read.getBaseQualitiesNoCopy();
-                LHWRefView      assist = new LHWRefView(hmerSizeThreshold, read.getBases(), null, null, null, logger, debug, quals);
-                byte[]          cBases = assist.collapsedRef;
-                byte[]          cQuals = assist.collapsedQuals;
-
-                if ( debug ) {
-                    logger.info(printBases(bases));
-                    logger.info(printBases(quals));
-                    logger.info(printBases(cBases));
-                    logger.info(printBases(cQuals));
+                // find ref for this location
+                byte[] ref = refMap.get(h.getGenomeLocation());
+                if (ref == null) {
+                    ref = uncollapsedPartialRef(h.getGenomeLocation());
+                    refMap.put(h.getGenomeLocation(), ref);
                 }
+                AtomicInteger       offset = new AtomicInteger();
+                byte[] alignedBases = uncollapseByRef(h.getBases(), ref, offset, false);
+                byte[] alignedBases1 = uncollapseByRef(h.getBases(), ref, offset, true);
+                if ( alignedBases1.length > alignedBases.length )
+                    alignedBases = alignedBases1;
 
-                // DK!!! Big Hack!
-                // instead of adjusting the Cigar, the number of bases is kept, leaving a wrong cigar, but
-                // at least with the right length.
-                // Also - Qualities seems to be always 40 - why?
-                byte[]          cBases1 = extendByteArray(cBases, bases.length, (byte)'N');
-                byte[]          cQuals1 = extendByteArray(cQuals, quals.length, (byte)40);
-                read.setUGOrgBases(bases);
-                read.setUGOrgQuals(quals);
-                read.setBases(cBases1);
-                read.setBaseQualities(cQuals1);
+                byte[] orgAlignedBases = alignedBases;
+                if ( limit )
+                    alignedBases = collapseBases(orgAlignedBases);
+                alignedHaplotype = new Haplotype(alignedBases, h.isReference());
+                alignedHaplotype.setScore(h.getScore());
+                alignedHaplotype.setGenomeLocation(h.getGenomeLocation());
+                alignedHaplotype.setEventMap(h.getEventMap());
+                alignedHaplotype.setAlignmentStartHapwrtRef(offset.get());
             }
-            read.setUGOrgPosition(loc);
-            read.setPosition(cLoc);
+
+            result.add(alignedHaplotype);
         }
 
-        return reads;
-    }
-
-    private byte[] extendByteArray(byte[] src, int len, byte fillValue) {
-
-        byte[]          dst = new byte[len];
-        System.arraycopy(src, 0, dst, 0, src.length);
-        Arrays.fill(dst, src.length, len, fillValue);
-
-        return dst;
-    }
-
-    private void collapse() {
-
-        // collapsed sequence would not be longer than full sequence
-        collapsedRef = new byte[fullRef.length];
-        fullToCollapsedLocationMap = new int[fullRef.length];
-        collapsedToFullLocationMap = new int[fullRef.length];
-        if ( fullQuals != null )
-            collapsedQuals = new byte[fullRef.length];
-        else
-            collapsedQuals = null;
-
-        // loop while trimming
-        byte    lastBase = 0;
-        int     baseSameCount = 0;
-        int     srcOfs = 0;
-        int     dstOfs = 0;
-        for  ( byte base : fullRef ) {
-            if ( base == lastBase ) {
-                if ( ++baseSameCount >= hmerSizeThreshold ) {
-                    // collapsing, do not store
-                    fullToCollapsedLocationMap[srcOfs] = dstOfs - 1;
-                } else {
-                    // stable but under threshold, store
-                    fullToCollapsedLocationMap[srcOfs] = dstOfs;
-                    collapsedToFullLocationMap[dstOfs] = srcOfs;
-                    if ( fullQuals != null )
-                        collapsedQuals[dstOfs] = fullQuals[srcOfs];
-                    collapsedRef[dstOfs++] = base;
+        // if we had a reference, generate cigar against it
+        if ( refHaplotype != null ) {
+            for ( Haplotype h : result ) {
+                if ( h != refHaplotype ) {
+                    SmithWatermanAlignment  alignment = aligner.align(refHaplotype.getBases(), h.getBases(), SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
+                    h.setCigar(alignment.getCigar());
+                    h.setAlignmentStartHapwrtRef(alignment.getAlignmentOffset() + refHaplotype.getAlignmentStartHapwrtRef());
                 }
-            } else {
-                // unstable, simply store
-                lastBase = base;
-                baseSameCount = 0;
-                fullToCollapsedLocationMap[srcOfs] = dstOfs;
-                collapsedToFullLocationMap[dstOfs] = srcOfs;
-                if ( fullQuals != null )
-                    collapsedQuals[dstOfs] = fullQuals[srcOfs];
-
-                // just coming out of collapsing?
-                if ( dstOfs > 0 && ((collapsedToFullLocationMap[dstOfs - 1] + 1) != collapsedToFullLocationMap[dstOfs]) ) {
-                    // attribute the second half of the collapsed area to end of the original area
-                    for ( int n = 1 ; n <= (hmerSizeThreshold / 2) ; n++ )
-                        collapsedToFullLocationMap[dstOfs - n] = collapsedToFullLocationMap[dstOfs] - n;
-                }
-
-                collapsedRef[dstOfs++] = base;
             }
-            srcOfs++;
         }
 
-        // adjust size of collapsedRef
-        // not very efficient as it allocates copies the data.
-        // do we really need the array to be the right size?
-        collapsedRef = Arrays.copyOf(collapsedRef, dstOfs);
-        collapsedToFullLocationMap = Arrays.copyOf(collapsedToFullLocationMap, dstOfs);
-        if ( collapsedQuals != null )
-            collapsedQuals = Arrays.copyOf(collapsedQuals, dstOfs);
-
-        if ( debug ) {
-            logger.info("after collapsing: ");
-            logger.info(printBases(collapsedRef));
-            //logger.info("collapsedToFullLocationMap: " + Arrays.toString(collapsedToFullLocationMap));
-            //logger.info("fullToCollapsedLocationMap: " + Arrays.toString(fullToCollapsedLocationMap));
+        if ( log ) {
+            int         i = 0;
+            for (Haplotype h : haplotypes)
+                logHaplotype(h, "COL_" + (limit ? "P1_" : "P2_"), i++);
+            i = 0;
+            for (Haplotype h : result)
+                logHaplotype(h, "UNCOL_" + (limit ? "P1_" : "P2_"), i++);
         }
 
-        if ( refLoc != null )
-            collapsedRefLoc = getCollapsedLoc(refLoc);
+
+        return result;
     }
 
     private byte[] collapseBases(byte[] fullBases) {
@@ -336,22 +182,27 @@ public class LHWRefView {
         return collapsedBases;
     }
 
-    private int toUncollapsedLocus(int locus) {
-        return refLoc.getStart() + collapsedToFullLocationMap[locus - refLoc.getStart()];
+    private byte[] uncollapsedPartialRef(final Locatable ucLoc) {
+
+        int         ucOfs = ucLoc.getStart() - refLoc.getStart();
+        int         size = ucLoc.getLengthOnReference();
+        byte[]      bases =  Arrays.copyOfRange(fullRef, ucOfs, ucOfs + size);
+
+        if ( debug ) {
+            logger.info("uncollapsedPartialRef: cOfs: " + ucOfs + ", size: " + size + ", bases:");
+            logger.info(basesAsString(bases));
+        }
+
+        return bases;
     }
 
-    private int toCollapsedLocus(int locus) {
-        return refLoc.getStart() + fullToCollapsedLocationMap[locus - refLoc.getStart()];
-    }
+    private byte[] uncollapseByRef(byte[] bases, byte[] ref, AtomicInteger offsetResult, boolean rev) {
 
-    private static String printBases(byte[] bases) {
-        StringBuilder   sb = new StringBuilder();
-        sb.append(String.format("len: %d, bases: ", bases.length));
-        sb.append(new String(bases));
-        return sb.toString();
-    }
-
-    public byte[] uncollapseByRef(byte[] bases, byte[] ref, AtomicInteger offsetResult, boolean rev) {
+        if ( debug ) {
+            logger.info("bases, ref, finalResult:");
+            logger.info(basesAsString(bases));
+            logger.info(basesAsString(ref));
+        }
 
         if ( rev ) {
             byte[]      basesRev = Arrays.copyOf(bases, bases.length);
@@ -426,14 +277,7 @@ public class LHWRefView {
             SequenceUtil.reverseComplement(finalResult);
 
         if ( debug ) {
-            if ( rev ) {
-                SequenceUtil.reverseComplement(bases);
-                SequenceUtil.reverseComplement(ref);
-            }
-            logger.info("bases, ref, finalResult:");
-            logger.info(printBases(bases));
-            logger.info(printBases(ref));
-            logger.info(printBases(finalResult));
+            logger.info(basesAsString(finalResult));
         }
 
         // return offset?
@@ -441,155 +285,6 @@ public class LHWRefView {
             offsetResult.set(alignment.getAlignmentOffset());
 
         return finalResult;
-    }
-
-    public List<VariantContext> uncollapseCallsByRef(List<VariantContext> calls) {
-
-        final List<VariantContext>  result = new LinkedList<>();
-
-        for ( VariantContext other : calls ) {
-
-            // adjust locations
-            long        start = toUncollapsedLocus(other.getStart());
-            long        end = toUncollapsedLocus(other.getEnd());
-
-            // retrieve true ref content
-            int rangeStart = (int) (start - refLoc.getStart());
-            int rangeSize = other.getEnd() - other.getStart() + 1;
-            byte[] ref = Arrays.copyOfRange(fullRef, rangeStart + 1, rangeStart + rangeSize + 1);
-
-            // modify alleles, getnotype
-            List<Allele> alleles = replaceRefInAlleles(other.getAlleles(), ref);
-            GenotypesContext genotypes = replaceRefInGenotypes(other.getGenotypes(), ref);
-
-            VariantContext vc = new MyVariantContext(other, start, end, alleles, genotypes);
-
-            result.add(vc);
-        }
-
-        for ( VariantContext vc : calls )
-            logVariantContext(vc, "uncollapseByRef: >>");
-        for ( VariantContext vc : result )
-            logVariantContext(vc, "uncollapseByRef: <<");
-
-        return result;
-    }
-
-    public List<Haplotype> uncollapseHaplotypesByRef(final Collection<Haplotype> haplotypes, boolean log, boolean limit) {
-
-        final List<Haplotype>       result = new LinkedList<>();
-        final Map<Locatable, byte[]> refMap = new LinkedHashMap<>();
-        Haplotype                   refHaplotype = null;
-
-        // locate reference haplotype, if exists
-        for ( Haplotype h : haplotypes )
-            if ( h.isReference() ) {
-                refHaplotype = h;
-                break;
-            }
-
-        // uncollapse haplotypes
-        for ( Haplotype h : haplotypes )
-        {
-            // by default
-            Haplotype   alignedHaplotype = h;
-
-            if ( !h.isReference() ) {
-
-                // find ref for this location
-                byte[] ref = refMap.get(h.getGenomeLocation());
-                if (ref == null) {
-                    ref = getUncollapsedPartialRef(h.getGenomeLocation(), false);
-                    refMap.put(h.getGenomeLocation(), ref);
-                }
-                AtomicInteger       offset = new AtomicInteger();
-                byte[] alignedBases = uncollapseByRef(h.getBases(), ref, offset, false);
-                byte[] alignedBases1 = uncollapseByRef(h.getBases(), ref, offset, true);
-                if ( alignedBases1.length > alignedBases.length )
-                    alignedBases = alignedBases1;
-
-                byte[] orgAlignedBases = alignedBases;
-                if ( limit )
-                    alignedBases = collapseBases(orgAlignedBases);
-                alignedHaplotype = new Haplotype(alignedBases, h.isReference());
-                alignedHaplotype.setScore(h.getScore());
-                alignedHaplotype.setGenomeLocation(h.getGenomeLocation());
-                alignedHaplotype.setEventMap(h.getEventMap());
-                alignedHaplotype.setAlignmentStartHapwrtRef(offset.get());
-            }
-
-            result.add(alignedHaplotype);
-        }
-
-        // if we had a reference, generate cigar against it
-        if ( refHaplotype != null ) {
-            for ( Haplotype h : result ) {
-                if ( h != refHaplotype ) {
-                    SmithWatermanAlignment  alignment = aligner.align(refHaplotype.getBases(), h.getBases(), SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
-                    h.setCigar(alignment.getCigar());
-                    h.setAlignmentStartHapwrtRef(alignment.getAlignmentOffset() + refHaplotype.getAlignmentStartHapwrtRef());
-                }
-            }
-        }
-
-        if ( log ) {
-            int         i = 0;
-            for (Haplotype h : haplotypes)
-                logHaplotype(h, "COL_" + (limit ? "P1_" : "P2_"), i++);
-            i = 0;
-            for (Haplotype h : result)
-                logHaplotype(h, "UNCOL_" + (limit ? "P1_" : "P2_"), i++);
-        }
-
-
-        return result;
-    }
-
-
-    private List<Allele> replaceRefInAlleles(List<Allele> otherAlleles, byte[] ref) {
-
-        // modify alleles
-        List<Allele>    alleles = new LinkedList<>();
-        Allele          refAllele = null;
-        for ( Allele otherAllele : otherAlleles ) {
-            if (otherAllele.isReference()) {
-
-                refAllele = Allele.create(ref, true);
-                alleles.add(refAllele);
-
-            } else
-                alleles.add(otherAllele);
-        }
-
-        return alleles;
-    }
-
-    private GenotypesContext replaceRefInGenotypes(GenotypesContext genotypes, byte[] ref) {
-
-        GenotypesContext        modGC = GenotypesContext.create();
-
-        for ( Genotype genotype : genotypes ) {
-
-            // modify alleles
-            List<Allele>    alleles = replaceRefInAlleles(genotype.getAlleles(), ref);
-            Genotype        g = GenotypeBuilder.create(genotype.getSampleName(), alleles, genotype.getExtendedAttributes());
-
-            modGC.add(g);
-        }
-
-        return modGC;
-    }
-
-    public static class MyVariantContext extends VariantContext {
-
-        public static final long serialVersionUID = 1L;
-
-        public MyVariantContext(VariantContext other, long start, long end, List<Allele> alleles, GenotypesContext genotypes) {
-
-            super(other.getSource(), other.getID(), other.getContig(), start, end, alleles, genotypes, other.getLog10PError(), other.getFiltersMaybeNull(), other.getAttributes(),
-                    /*other.fullyDecoded*/ false,
-                    EnumSet.noneOf(VariantContext.Validation.class));
-        }
     }
 
     private boolean onHomoPolymer(byte[] bases, int ofs, byte base, int length, int direction)
@@ -639,18 +334,11 @@ public class LHWRefView {
         }
     }
 
-    private void logVariantContext(VariantContext vc, String label) {
-        if ( debug ) {
-            logger.info(String.format("%s: %s", label, vc));
-        }
-    }
-
-    public byte[] getFullRef() {
-        return fullRef;
-    }
-
-    public Locatable getRefLoc() {
-        return refLoc;
+    private static String basesAsString(byte[] bases) {
+        StringBuilder   sb = new StringBuilder();
+        sb.append(String.format("len: %d, bases: ", bases.length));
+        sb.append(new String(bases));
+        return sb.toString();
     }
 
 }
