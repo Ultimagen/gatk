@@ -826,26 +826,4 @@ public class SAMRecordToGATKReadAdapter implements GATKRead, Serializable {
     public void setTransientAttribute(Object key, Object value) {
         samRecord.setTransientAttribute(key, value);
     }
-
-    /*
-    UG Area
-     */
-    private byte[] ugOrgBases;
-    private byte[] ugOrgQuals;
-    private Locatable ugOrgLoc;
-
-    public void setUGOrgBases(byte[] bases) {
-        this.ugOrgBases = bases;
-    }
-    public void setUGOrgQuals(byte[] quals) {
-        this.ugOrgQuals = quals;
-    }
-    public void setUGOrgPosition(Locatable loc) {
-        this.ugOrgLoc = loc;
-    }
-    public Locatable getUGOrgLoc() {
-        return this.ugOrgLoc;
-    }
-
-
 }

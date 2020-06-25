@@ -828,9 +828,5 @@ public interface GATKRead extends Locatable {
     }
 
     void hardClipAttributes(int copyStart, int newLength);
-    void setUGOrgBases(byte[] bases);
-    void setUGOrgQuals(byte[] quals);
-    void setUGOrgPosition(Locatable loc);
-    Locatable getUGOrgLoc();
 }
 
