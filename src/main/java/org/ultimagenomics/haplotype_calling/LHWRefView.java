@@ -25,7 +25,7 @@ public class LHWRefView {
     final private Logger          logger;
     final private boolean         debug;
 
-    private SmithWatermanAligner  aligner = SmithWatermanAligner.getAligner(SmithWatermanAligner.Implementation.JAVA);
+    private SmithWatermanAligner  aligner = SmithWatermanAligner.getAligner(SmithWatermanAligner.Implementation.FASTEST_AVAILABLE);
 
     public LHWRefView(final int hmerSizeThreshold, final byte[] fullRef, final Locatable refLoc, final Logger logger, final boolean debug, byte[] fullQuals) {
 
