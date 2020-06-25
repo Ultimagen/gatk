@@ -20,7 +20,10 @@ import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEng
 import org.broadinstitute.hellbender.tools.walkers.genotyper.*;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
-import org.broadinstitute.hellbender.utils.genotyper.*;
+import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
+import org.broadinstitute.hellbender.utils.genotyper.AlleleList;
+import org.broadinstitute.hellbender.utils.genotyper.IndexedAlleleList;
+import org.broadinstitute.hellbender.utils.genotyper.SampleList;
 import org.broadinstitute.hellbender.utils.haplotype.EventMap;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.logging.OneShotLogger;
@@ -29,7 +32,6 @@ import org.broadinstitute.hellbender.utils.param.ParamUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.reference.ReferenceBases;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
-import spire.math.All;
 
 import java.util.*;
 import java.util.function.BiPredicate;
@@ -40,8 +42,7 @@ import java.util.stream.Collectors;
  */
 public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCallerArgumentCollection> {
 
-    public static final int ALLELE_EXTENSION = 2;
-    private static final int MAX_SAME_ALLELE_DIST = 30;
+    private static final int MAX_SAME_ALLELE_DIST = 5;
     private static final Logger logger = LogManager.getLogger(HaplotypeCallerGenotypingEngine.class);
     private static final OneShotLogger DRAGENConaminationWarning = new OneShotLogger(logger);
 
@@ -151,7 +152,6 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
         exclusivePairs = HaplotypeAlleleMatrix.filterExclusivePairsByDistance(exclusivePairs, MAX_SAME_ALLELE_DIST);
         exclusivePairs = coocurrence.filterSameUpToHmerPairs(exclusivePairs, refLoc.getStart());
         Map<LocationAndAlleles, Set<LocationAndAlleles>> exclusivePairMap = HaplotypeAlleleMatrix.getExclusiveAlleleMap(exclusivePairs);
-//        System.out.println(String.format("%d Exclusive pairs", exclusivePairs.size()));
 
 
         // Walk along each position in the key set and create each event to be outputted
@@ -178,8 +178,11 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
 
             final List<VariantContext> eventsAtThisLoc = AssemblyBasedCallerUtils.getVariantContextsFromActiveHaplotypes(loc,
                     haplotypes, !hcArgs.disableSpanningEventGenotyping);
+
+            //Adding all variants in the area that are possibly equivalent allele up to hmer indel
             final List<VariantContext> possibleEquivalents = getPossibleEquivalents(loc, eventsAtThisLoc,
                     exclusivePairMap, haplotypes);
+
             final List<VariantContext> eventsAtThisLocWithSpanDelsReplaced = replaceSpanDels(eventsAtThisLoc,
                     Allele.create(ref[loc - refLoc.getStart()], true), loc);
 
