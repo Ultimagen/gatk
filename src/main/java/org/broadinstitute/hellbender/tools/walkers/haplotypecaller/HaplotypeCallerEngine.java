@@ -663,20 +663,9 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         final List<Haplotype> haplotypes = assemblyResult.getHaplotypeList();
         final Map<String,List<GATKRead>> reads = AssemblyBasedCallerUtils.splitReadsBySample(samplesList, readsHeader, regionForGenotyping.getReads());
 
-        for (String sn: reads.keySet()) {
-            for (GATKRead rd : reads.get(sn)) {
-                logger.debug(String.format("PRECOMPUTE:: %s", rd.getName()));
-            }
-        }
         // Calculate the likelihoods: CPU intensive part.
         final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods =
                 likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads);
-
-        for (String sn: reads.keySet()) {
-            for (GATKRead rd : reads.get(sn)) {
-                logger.debug(String.format("POSTCOMPUTE:: %s", rd.getName()));
-            }
-        }
 
         alleleLikelihoodWriter.ifPresent(
                 writer -> writer.writeAlleleLikelihoods(readLikelihoods));
@@ -694,8 +683,6 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             if (assemblyDebugOutStream != null) {
                 assemblyDebugOutStream.println("\nThere were " + subsettedReadLikelihoodsFinal.alleles().size() + " haplotypes found after subsetting by contigs. Here they are:");
                 subsettedReadLikelihoodsFinal.alleles().stream().map(Haplotype::toString).sorted().forEach(assemblyDebugOutStream::println);
-                //final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsForward = subsetHaplotypesByContigs(subsetLikelihoodsByStrand(subsettedReadLikelihoodsBoth,StrandsToUse.FORWARD));
-                //final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsReverse = subsetHaplotypesByContigs(subsetLikelihoodsByStrand(subsettedReadLikelihoodsBoth.subsetToAlleles(subsettedReadLikelihoodsForward.alleles()),StrandsToUse.REVERSE));
 
             }
         } else {
@@ -768,10 +755,6 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                     .collect(Collectors.toList());
         }
     }
-
-    private AlleleLikelihoods<GATKRead, Haplotype> subsetLikelihoodsByStrand(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods, final StrandsToUse strandsToUse) {
-        return readLikelihoods.subsetLikelihoodsToReads(strandsToUse::useRead);
-    };
 
     static private Set<Allele> getJoinedContigs(final Haplotype haplotype){
         Set<Allele> joinedContigs = new HashSet<>();
