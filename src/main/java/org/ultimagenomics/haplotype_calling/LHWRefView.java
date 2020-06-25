@@ -251,7 +251,7 @@ public class LHWRefView {
                         needsCollapsing(bckSlice, hmerSizeThreshold - chkPad, logger, debug) ) {
 
 
-                    // check for a delete at the end of an hmer size or at the end
+                    // check for a delete at the end of an hmer or at the beginning
                     if (onHomoPolymer(ref, refOfs - hmerSizeThreshold, ref[refOfs], hmerSizeThreshold, 1)) {
                         // fill with base until end of jomopolymer on the ref
                         byte base = ref[refOfs];
