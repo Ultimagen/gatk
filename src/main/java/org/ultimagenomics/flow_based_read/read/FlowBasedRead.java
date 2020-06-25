@@ -36,13 +36,13 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private int trim_left_base = 0 ;
     private int trim_right_base = 0 ;
     static private final int MINIMAL_READ_LENGTH = 10; // check if this is the right number
-    static private final int MAXIMAL_READ_LENGTH = 100;
+    static private final int MAXIMAL_MAXHMER = 100;
     private final double ERROR_PROB=1e-4;
     private final double MINIMAL_CALL_PROB = 0.1;
     private final FlowBasedAlignmentArgumentCollection fbargs;
     private final Logger logger = LogManager.getLogger(this.getClass());
     static private String ultimaFlowMatrixMods = null;
-    static private int[] ultimaFlowMatrixModsInstructions = new int[MAXIMAL_READ_LENGTH];
+    static private int[] ultimaFlowMatrixModsInstructions = new int[MAXIMAL_MAXHMER];
 
     public FlowBasedRead(SAMRecord samRecord, String _flowOrder, int _maxHmer) {
         this(samRecord, _flowOrder, _maxHmer, new FlowBasedAlignmentArgumentCollection());
