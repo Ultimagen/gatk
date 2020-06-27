@@ -254,7 +254,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
                                  byte flowCall, int qualOfs){
         for (int i = qualOfs ; i < qualOfs+flowCall; i++) {
             if (tp[i]!=0) {
-                int loc = Math.min(flowCall+tp[i], maxHmer);
+                int loc = Math.max(Math.min(flowCall+tp[i], maxHmer),0);
                 if (flowMatrix[loc][flowIdx] == fbargs.filling_value) {
                     flowMatrix[loc][flowIdx] = probs[i];
                 } else {
