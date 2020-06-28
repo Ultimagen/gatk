@@ -369,15 +369,14 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private void fillFlowMatrix(byte [] kh, int [] kf,
                                 double [] kd_probs ) {
         for ( int i = 0 ; i < kh.length; i++ ) {
-            if (( kh[i] & 0xff )> maxHmer) {
-                flowMatrix[maxHmer][kf[i]]=1;
-            } else {
-                flowMatrix[kh[i] & 0xff][kf[i]] = kd_probs[i];
-            }
             // normal matrix filling
             int     pos = kf[i];
             int     hmer = kh[i] & 0xff;
-            flowMatrix[hmer][pos] = Math.max(flowMatrix[hmer][pos], kd_probs[i]);
+            if (hmer > maxHmer){
+                flowMatrix[maxHmer][pos] = Math.max(flowMatrix[maxHmer][pos], kd_probs[i]);
+            } else {
+                flowMatrix[hmer][pos] = Math.max(flowMatrix[hmer][pos], kd_probs[i]);
+            }
 
             // mod instruction implementation
             int hmer2 = ultimaFlowMatrixModsInstructions[hmer];
