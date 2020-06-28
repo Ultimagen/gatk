@@ -15,7 +15,6 @@ import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAlignment;
 
 import java.util.*;
-import java.util.stream.StreamSupport;
 
 public class CollapsedLargeHmerReferenceView {
 
