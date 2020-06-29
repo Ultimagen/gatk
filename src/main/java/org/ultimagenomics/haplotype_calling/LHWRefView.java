@@ -113,6 +113,7 @@ public class LHWRefView {
                 alignedHaplotype.setGenomeLocation(h.getGenomeLocation());
                 alignedHaplotype.setEventMap(h.getEventMap());
                 alignedHaplotype.setAlignmentStartHapwrtRef(offset.get());
+                alignedHaplotype.contigs = h.contigs;
             }
 
             result.add(alignedHaplotype);
