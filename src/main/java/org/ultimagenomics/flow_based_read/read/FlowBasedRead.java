@@ -163,7 +163,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         // access qual, convert to ultima representation
         byte[]      quals = samRecord.getBaseQualities();
-        byte[]      ti = samRecord.getUnsignedByteArrayAttribute("ti");
+        byte[]      ti = samRecord.getByteArrayAttribute("ti");
         double[]    probs = new double[quals.length];
         for ( int i = 0 ; i < quals.length ; i++ ) {
             double q = quals[i];
