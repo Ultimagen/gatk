@@ -657,13 +657,22 @@ public final class AssemblyBasedCallerUtils {
                                                                   final List<VariantContext> possibleEquivalentAlleles,
                                                                   final List<Haplotype> haplotypes) {
 
-        final Set<Integer> equivalent_loci = new HashSet<>(possibleEquivalentAlleles.stream()
+        final Set<Integer> equivalent_loci;
+        if (possibleEquivalentAlleles!=null)
+            equivalent_loci = new HashSet<>(possibleEquivalentAlleles.stream()
                 .map(v -> v.getStart())
                 .collect(Collectors.toList()));
+        else{
+            equivalent_loci=new HashSet<>();
+        }
+
         final Map<LocationAndAlleles, Integer> equivalentLocationAndAlleles = new HashMap<>();
         int count = 0 ;
-        for (VariantContext v : possibleEquivalentAlleles) {
-            equivalentLocationAndAlleles.put(new LocationAndAlleles(v.getStart(), v.getAlleles()), count++);
+
+        if (possibleEquivalentAlleles!=null) {
+            for (VariantContext v : possibleEquivalentAlleles) {
+                equivalentLocationAndAlleles.put(new LocationAndAlleles(v.getStart(), v.getAlleles()), count++);
+            }
         }
 
         final Map<Allele, List<Haplotype>> result = new LinkedHashMap<>();
