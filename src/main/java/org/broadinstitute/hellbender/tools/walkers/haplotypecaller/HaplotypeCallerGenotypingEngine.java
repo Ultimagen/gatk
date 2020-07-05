@@ -418,7 +418,6 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
         Utils.validateArg(allelesToKeep!=null, "alleles to keep is null");
         Utils.validateArg(!allelesToKeep.contains(null), "alleles to keep contains null elements");
         Utils.validateArg(allelesToKeep.stream().anyMatch(Allele::isReference), "alleles to keep doesn't contain reference allele!");
-        Utils.validateArg(inputVC.getAlleles().containsAll(allelesToKeep), "alleles to keep is not a subset of input VC alleles");
         if(inputVC.getAlleles().size() == allelesToKeep.size()) return inputVC;
 
         final VariantContextBuilder vcb = new VariantContextBuilder(inputVC);
