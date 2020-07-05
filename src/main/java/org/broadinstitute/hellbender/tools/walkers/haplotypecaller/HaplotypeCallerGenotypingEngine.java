@@ -147,11 +147,16 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
         //Later addition (Jukebox) - looking for variants that seem to be the same up to hmer indel, yet are placed on different locations.
         //These variants should be actually placed on the same location and their haplotypes should map to each other and not necessarily
         //to the reference
-        final HaplotypeAlleleMatrix coocurrence = new HaplotypeAlleleMatrix(haplotypes);
-        List<Pair<LocationAndAlleles, LocationAndAlleles>> exclusivePairs = coocurrence.nonCoOcurringVariants();
-        exclusivePairs = HaplotypeAlleleMatrix.filterExclusivePairsByDistance(exclusivePairs, MAX_SAME_ALLELE_DIST);
-        exclusivePairs = coocurrence.filterSameUpToHmerPairs(exclusivePairs, refLoc.getStart());
-        Map<LocationAndAlleles, Set<LocationAndAlleles>> exclusivePairMap = HaplotypeAlleleMatrix.getExclusiveAlleleMap(exclusivePairs);
+
+        List<Pair<LocationAndAlleles, LocationAndAlleles>> exclusivePairs=null;
+        Map<LocationAndAlleles, Set<LocationAndAlleles>> exclusivePairMap=null;
+        if (hcArgs.filterContigs) {
+            final HaplotypeAlleleMatrix coocurrence = new HaplotypeAlleleMatrix(haplotypes);
+            exclusivePairs = coocurrence.nonCoOcurringVariants();
+            exclusivePairs = HaplotypeAlleleMatrix.filterExclusivePairsByDistance(exclusivePairs, MAX_SAME_ALLELE_DIST);
+            exclusivePairs = coocurrence.filterSameUpToHmerPairs(exclusivePairs, refLoc.getStart());
+            exclusivePairMap = HaplotypeAlleleMatrix.getExclusiveAlleleMap(exclusivePairs);
+        }
 
 
         // Walk along each position in the key set and create each event to be outputted
@@ -179,9 +184,12 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
             final List<VariantContext> eventsAtThisLoc = AssemblyBasedCallerUtils.getVariantContextsFromActiveHaplotypes(loc,
                     haplotypes, !hcArgs.disableSpanningEventGenotyping);
 
-            //Adding all variants in the area that are possibly equivalent allele up to hmer indel
-            final List<VariantContext> possibleEquivalents = getPossibleEquivalents(loc, eventsAtThisLoc,
-                    exclusivePairMap, haplotypes);
+            List<VariantContext> possibleEquivalents = null;
+            if (hcArgs.filterContigs) {
+                //Adding all variants in the area that are possibly equivalent allele up to hmer indel
+                possibleEquivalents = getPossibleEquivalents(loc, eventsAtThisLoc,
+                        exclusivePairMap, haplotypes);
+            }
 
             final List<VariantContext> eventsAtThisLocWithSpanDelsReplaced = replaceSpanDels(eventsAtThisLoc,
                     Allele.create(ref[loc - refLoc.getStart()], true), loc);
@@ -193,6 +201,7 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
             }
             
             int mergedAllelesListSizeBeforePossibleTrimming = mergedVC.getAlleles().size();
+
             final Map<Allele, List<Haplotype>> alleleMapper = AssemblyBasedCallerUtils.createAlleleMapper(mergedVC, loc,
                     possibleEquivalents, haplotypes, !hcArgs.disableSpanningEventGenotyping);
 
@@ -490,7 +499,6 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
         Utils.validateArg(allelesToKeep!=null, "alleles to keep is null");
         Utils.validateArg(!allelesToKeep.contains(null), "alleles to keep contains null elements");
         Utils.validateArg(allelesToKeep.stream().anyMatch(Allele::isReference), "alleles to keep doesn't contain reference allele!");
-        Utils.validateArg(inputVC.getAlleles().containsAll(allelesToKeep), "alleles to keep is not a subset of input VC alleles");
         if(inputVC.getAlleles().size() == allelesToKeep.size()) return inputVC;
 
         final VariantContextBuilder vcb = new VariantContextBuilder(inputVC);
