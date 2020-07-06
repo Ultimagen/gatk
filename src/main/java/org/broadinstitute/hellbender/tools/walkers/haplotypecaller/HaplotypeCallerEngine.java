@@ -715,14 +715,6 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             readLikelihoods.changeAlleles(haplotypes);
         }
 
-
-
-        if ( refView != null ) {
-            haplotypes = refView.uncollapseHaplotypesByRef(haplotypes, true, false);
-            readLikelihoods.changeAlleles(haplotypes);
-        }
-
-
         // Note: we used to subset down at this point to only the "best" haplotypes in all samples for genotyping, but there
         //  was a bad interaction between that selection and the marginalization that happens over each event when computing
         //  GLs.  In particular, for samples that are heterozygous non-reference (B/C) the marginalization for B treats the
