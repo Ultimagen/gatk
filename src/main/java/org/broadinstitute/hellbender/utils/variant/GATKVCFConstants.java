@@ -140,6 +140,9 @@ public final class GATKVCFConstants {
     // M2-specific FORMAT keys
     public static final String ALLELE_FRACTION_KEY =                "AF";
 
+    // Collapse keys
+    public static final String EXT_COLLAPSED_KEY =                  "XC";
+
     //FILTERS
     /* Note that many filters used throughout GATK (most notably in VariantRecalibration) are dynamic,
        their names (or descriptions) depend on some threshold.  Those filters are not included here
