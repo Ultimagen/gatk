@@ -220,6 +220,8 @@ public class HaplotypeBAMWriter implements AutoCloseable {
         if (callableRegion != null) {
             record.setAttribute(AssemblyBasedCallerUtils.CALLABLE_REGION_TAG, callableRegion.toString());
         }
+        if (haplotype.isCollapsed())
+            record.setAttribute(AssemblyBasedCallerUtils.EXT_COLLAPSED_TAG, "1");
 
         output.add(new SAMRecordToGATKReadAdapter(record));
     }
