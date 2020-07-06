@@ -10,6 +10,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.exceptions.GATKException;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyBasedCallerUtils;
 import org.broadinstitute.hellbender.utils.BaseUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.param.ParamUtils;
@@ -160,7 +161,12 @@ public final class EventMap extends TreeMap<Integer, VariantContext> {
                         }
                         final Allele refAllele = Allele.create(Arrays.copyOfRange(ref, refPos + start, refPos + end + 1), true);
                         final Allele altAllele = Allele.create(Arrays.copyOfRange(alignment, alignmentPos + start, alignmentPos + end + 1), false);
-                        proposedEvents.add(new VariantContextBuilder(sourceNameToAdd, refLoc.getContig(), refLoc.getStart() + refPos + start, refLoc.getStart() + refPos + end, Arrays.asList(refAllele, altAllele)).make());
+                        VariantContext      vc;
+                        proposedEvents.add(vc = new VariantContextBuilder(sourceNameToAdd, refLoc.getContig(), refLoc.getStart() + refPos + start, refLoc.getStart() + refPos + end, Arrays.asList(refAllele, altAllele)).make());
+                        if ( haplotype.isCollapsed() ) {
+
+                            vc.getCommonInfo().putAttribute(AssemblyBasedCallerUtils.EXT_COLLAPSED_TAG, "1");
+                        }
                     }
 
                     // move refPos and alignmentPos forward to the end of this cigar element

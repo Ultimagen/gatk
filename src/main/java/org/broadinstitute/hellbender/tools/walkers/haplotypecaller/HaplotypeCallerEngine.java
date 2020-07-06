@@ -450,6 +450,12 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         // where the filters are used.  For example, in emitting all sites the lowQual field is used
         headerInfo.add(GATKVCFHeaderLines.getFilterLine(GATKVCFConstants.LOW_QUAL_FILTER_NAME));
 
+        if ( hcArgs.ultimaAssemblyCollapseHKerSize > 0 ) {
+            headerInfo.add(GATKVCFHeaderLines.getFilterLine(GATKVCFConstants.EXT_COLLAPSED_KEY));
+            headerInfo.add(GATKVCFHeaderLines.getInfoLine(GATKVCFConstants.EXT_COLLAPSED_KEY));
+        }
+
+
         if ( emitReferenceConfidence() ) {
             headerInfo.addAll(referenceConfidenceModel.getVCFHeaderLines());
         }
