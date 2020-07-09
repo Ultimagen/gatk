@@ -103,9 +103,6 @@ public class GATKVCFHeaderLines {
         addFilterLine(new VCFFilterHeaderLine(SITE_LEVEL_FILTERS, "There are no allele specific filters that apply to this allele. Only site level filters apply."));
         addFilterLine(new VCFFilterHeaderLine(LOW_HET_FILTER_NAME, "All low heteroplasmy sites are filtered when at least x low het sites pass all other filters"));
 
-        // ultima
-        addFilterLine(new VCFFilterHeaderLine(EXT_COLLAPSED_KEY,"Indicates collapsing took place"));
-
         addFormatLine(new VCFFormatHeaderLine(ALLELE_BALANCE_KEY, 1, VCFHeaderLineType.Float, "Allele balance for each het genotype"));
         addFormatLine(new VCFFormatHeaderLine(MAPPING_QUALITY_ZERO_BY_SAMPLE_KEY, 1, VCFHeaderLineType.Integer, "Number of Mapping Quality Zero Reads per sample"));
         addFormatLine(new VCFFormatHeaderLine(STRAND_COUNT_BY_SAMPLE_KEY, VCFHeaderLineCount.UNBOUNDED, VCFHeaderLineType.Integer, "Number of reads on the forward and reverse strand supporting each allele (including reference)"));
