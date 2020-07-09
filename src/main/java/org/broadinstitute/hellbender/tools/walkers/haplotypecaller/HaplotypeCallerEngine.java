@@ -451,7 +451,6 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         headerInfo.add(GATKVCFHeaderLines.getFilterLine(GATKVCFConstants.LOW_QUAL_FILTER_NAME));
 
         if ( hcArgs.ultimaAssemblyCollapseHKerSize > 0 ) {
-            headerInfo.add(GATKVCFHeaderLines.getFilterLine(GATKVCFConstants.EXT_COLLAPSED_KEY));
             headerInfo.add(GATKVCFHeaderLines.getInfoLine(GATKVCFConstants.EXT_COLLAPSED_KEY));
         }
 
