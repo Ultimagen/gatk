@@ -450,6 +450,11 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         // where the filters are used.  For example, in emitting all sites the lowQual field is used
         headerInfo.add(GATKVCFHeaderLines.getFilterLine(GATKVCFConstants.LOW_QUAL_FILTER_NAME));
 
+        if ( hcArgs.ultimaAssemblyCollapseHKerSize > 0 ) {
+            headerInfo.add(GATKVCFHeaderLines.getInfoLine(GATKVCFConstants.EXT_COLLAPSED_KEY));
+        }
+
+
         if ( emitReferenceConfidence() ) {
             headerInfo.addAll(referenceConfidenceModel.getVCFHeaderLines());
         }
@@ -714,14 +719,6 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             haplotypes = refView.uncollapseHaplotypesByRef(haplotypes, true, false);
             readLikelihoods.changeAlleles(haplotypes);
         }
-
-
-
-        if ( refView != null ) {
-            haplotypes = refView.uncollapseHaplotypesByRef(haplotypes, true, false);
-            readLikelihoods.changeAlleles(haplotypes);
-        }
-
 
         // Note: we used to subset down at this point to only the "best" haplotypes in all samples for genotyping, but there
         //  was a bad interaction between that selection and the marginalization that happens over each event when computing

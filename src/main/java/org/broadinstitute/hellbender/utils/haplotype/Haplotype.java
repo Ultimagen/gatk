@@ -36,6 +36,8 @@ public final class Haplotype extends Allele {
     private double score = Double.NaN;
     public List<? extends Allele> contigs = null;
 
+    private boolean isCollapsed;
+
     /**
      * Main constructor
      *
@@ -263,4 +265,14 @@ public final class Haplotype extends Allele {
     public Locatable getGenomeLocation() {
         return genomeLocation;
     }
+
+    public boolean isCollapsed() {
+        return isCollapsed;
+    }
+
+    public void setCollapsed(boolean collapsed) {
+        this.isCollapsed = collapsed;
+    }
+
+
 }

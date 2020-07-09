@@ -14,6 +14,7 @@ import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAlignment;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class LHWRefView {
@@ -100,10 +101,14 @@ public class LHWRefView {
                     refMap.put(h.getGenomeLocation(), ref);
                 }
                 AtomicInteger       offset = new AtomicInteger();
-                byte[] alignedBases = uncollapseByRef(h.getBases(), ref, offset, false);
-                byte[] alignedBases1 = uncollapseByRef(h.getBases(), ref, offset, true);
-                if ( alignedBases1.length > alignedBases.length )
+                AtomicBoolean       didCollapse = new AtomicBoolean(false);
+                AtomicBoolean       didCollapseRev = new AtomicBoolean(false);
+                byte[] alignedBases = uncollapseByRef(h.getBases(), ref, offset, false, didCollapse);
+                byte[] alignedBases1 = uncollapseByRef(h.getBases(), ref, offset, true, didCollapseRev);
+                if ( alignedBases1.length > alignedBases.length ) {
                     alignedBases = alignedBases1;
+                    didCollapse.set(didCollapseRev.get());
+                }
 
                 byte[] orgAlignedBases = alignedBases;
                 if ( limit )
@@ -114,6 +119,7 @@ public class LHWRefView {
                 alignedHaplotype.setEventMap(h.getEventMap());
                 alignedHaplotype.setAlignmentStartHapwrtRef(offset.get());
                 alignedHaplotype.contigs = h.contigs;
+                alignedHaplotype.setCollapsed(didCollapse.get());
             }
 
             result.add(alignedHaplotype);
@@ -197,7 +203,7 @@ public class LHWRefView {
         return bases;
     }
 
-    private byte[] uncollapseByRef(byte[] bases, byte[] ref, AtomicInteger offsetResult, boolean rev) {
+    private byte[] uncollapseByRef(byte[] bases, byte[] ref, AtomicInteger offsetResult, boolean rev, AtomicBoolean didCollapse) {
 
         if ( debug ) {
             logger.info("bases, ref, finalResult:");
@@ -258,12 +264,14 @@ public class LHWRefView {
                         byte base = ref[refOfs];
                         for (int size = 0; (size < c.getLength()) /*&& (ref[refOfs + size] == base)*/; size++)
                             result[resultOfs++] = base;
+                        didCollapse.set(true);
 
                     } else if (onHomoPolymer(ref, refOfs + c.getLength(), ref[refOfs + c.getLength() - 1], hmerSizeThreshold, -1)) {
                         // fill with base until start of jomopolymer on the ref
                         byte base = ref[refOfs + c.getLength() - 1];
                         for (int size = 0; (size < c.getLength()) /*&& (ref[refOfs + c.getLength() - 1 - size] == base)*/; size++)
                             result[resultOfs++] = base;
+                        didCollapse.set(true);
                     }
                 }
             }
