@@ -698,7 +698,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             return referenceModelForNoVariation(region, false, VCpriors);
         }
 
-        final AssemblyResultSet assemblyResult = untrimmedAssemblyResult.trimTo(trimmingResult.getVariantRegion(), refView);
+        final AssemblyResultSet assemblyResult = untrimmedAssemblyResult.trimTo(trimmingResult.getVariantRegion());
 
         final AssemblyRegion regionForGenotyping = assemblyResult.getRegionForGenotyping();
         final List<GATKRead> readStubs = regionForGenotyping.getReads().stream()
@@ -737,7 +737,6 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
 
         // evaluate each sample's reads against all haplotypes
-        List<Haplotype> haplotypes = assemblyResult.getHaplotypeList();
         final Map<String,List<GATKRead>> reads = AssemblyBasedCallerUtils.splitReadsBySample(samplesList, readsHeader, regionForGenotyping.getReads());
 
         // uncollapse haplotypes
@@ -768,6 +767,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         alleleLikelihoodWriter.ifPresent(
                 writer -> writer.writeAlleleLikelihoods(readLikelihoods));
 
+
         final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
         if (hcArgs.filterContigs) {
             logger.debug("SHC:: filter contigs - start");
@@ -792,12 +792,13 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         final SWParameters readToHaplotypeSWParameters = hcArgs.getReadToHaplotypeSWParameters();
         final Map<GATKRead, GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(subsettedReadLikelihoodsFinal, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner, readToHaplotypeSWParameters);
         subsettedReadLikelihoodsFinal.changeEvidence(readRealignments);
-
+        List<Haplotype> haplotypes = subsettedReadLikelihoodsFinal.alleles();
 
         if ( refView != null ) {
             haplotypes = refView.uncollapseHaplotypesByRef(haplotypes, true, false);
-            readLikelihoods.changeAlleles(haplotypes);
+            subsettedReadLikelihoodsFinal.changeAlleles(haplotypes);
         }
+
 
         // Note: we used to subset down at this point to only the "best" haplotypes in all samples for genotyping, but there
         //  was a bad interaction between that selection and the marginalization that happens over each event when computing
@@ -819,7 +820,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
         final CalledHaplotypes calledHaplotypes = genotypingEngine.assignGenotypeLikelihoods(
                 haplotypes,
-                readLikelihoods,
+                subsettedReadLikelihoodsFinal,
                 perSampleFilteredReadList,
                 assemblyResult.getFullReferenceWithPadding(),
                 assemblyResult.getPaddedReferenceLoc(),
