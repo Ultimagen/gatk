@@ -6,7 +6,6 @@ import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.spark.util.CollectionsUtils;
 import org.broadinstitute.hellbender.engine.AssemblyRegion;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.readthreading.AbstractReadThreadingGraph;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
@@ -72,7 +71,7 @@ public final class AssemblyResultSet {
      *
      * @return never {@code null}, a new trimmed assembly result set.
      */
-    public AssemblyResultSet trimTo(final AssemblyRegion trimmedAssemblyRegion, LHWRefView refView) {
+    public AssemblyResultSet trimTo(final AssemblyRegion trimmedAssemblyRegion) {
 
         Locatable                span = trimmedAssemblyRegion.getPaddedSpan();
         final Map<Haplotype,Haplotype> originalByTrimmedHaplotypes = calculateOriginalByTrimmedHaplotypes(span);
