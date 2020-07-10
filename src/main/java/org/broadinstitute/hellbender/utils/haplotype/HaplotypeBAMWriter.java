@@ -58,6 +58,11 @@ public class HaplotypeBAMWriter implements AutoCloseable {
          * With this option, haplotypes will not be included in the output bam.
          */
         NO_HAPLOTYPES
+
+        /**
+         * Same as CALLED_HAPLOTYPES, but without reads
+         */
+        CALLED_HAPLOTYPES_NO_READS
     }
 
     /**
@@ -133,7 +138,7 @@ public class HaplotypeBAMWriter implements AutoCloseable {
         Utils.nonNull(readLikelihoods, "readLikelihoods cannot be null");
         Utils.nonNull(bestHaplotypes, "bestHaplotypes cannot be null");
 
-        if (writerType.equals(WriterType.CALLED_HAPLOTYPES)){
+        if (writerType.equals(WriterType.CALLED_HAPLOTYPES) || writerType.equals(WriterType.CALLED_HAPLOTYPES_NO_READS)){
             if (calledHaplotypes.isEmpty()){
                 return;
             }
@@ -143,10 +148,12 @@ public class HaplotypeBAMWriter implements AutoCloseable {
             writeHaplotypesAsReads(haplotypes, new LinkedHashSet<>(bestHaplotypes), paddedReferenceLoc, callableRegion);
         }
 
-        final int sampleCount = readLikelihoods.numberOfSamples();
-        for (int i = 0; i < sampleCount; i++) {
-            for (final GATKRead read : readLikelihoods.sampleEvidence(i)) {
-                writeReadAgainstHaplotype(read);
+        if ( !writerType.equals(WriterType.CALLED_HAPLOTYPES_NO_READS) ) {
+            final int sampleCount = readLikelihoods.numberOfSamples();
+            for (int i = 0; i < sampleCount; i++) {
+                for (final GATKRead read : readLikelihoods.sampleEvidence(i)) {
+                    writeReadAgainstHaplotype(read);
+                }
             }
         }
     }
