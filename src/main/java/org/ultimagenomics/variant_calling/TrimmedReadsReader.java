@@ -1,0 +1,79 @@
+package org.ultimagenomics.variant_calling;
+
+import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SAMRecordIterator;
+import htsjdk.samtools.SamReader;
+import htsjdk.samtools.SamReaderFactory;
+import htsjdk.samtools.util.Locatable;
+import org.broadinstitute.hellbender.utils.SimpleInterval;
+import org.broadinstitute.hellbender.utils.read.GATKRead;
+import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
+import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
+import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
+
+import java.util.*;
+import java.util.function.Consumer;
+
+public class TrimmedReadsReader {
+
+    private SamReader               samReader;
+    private Map<String, Integer>    readGroupMaxClass = new LinkedHashMap<>();
+    private Map<String, String>     readGroupFlowOrder = new LinkedHashMap<>();
+    private FlowBasedAlignmentArgumentCollection fbArgs = new FlowBasedAlignmentArgumentCollection();
+
+
+
+    public TrimmedReadsReader(HaplotypeBasedVariantRecallerArgumentCollection vrArgs) {
+
+        samReader = SamReaderFactory.makeDefault().referenceSequence(vrArgs.REFERENCE_FASTA).open(vrArgs.READS_BAM_FILE);
+    }
+
+    public Collection<FlowBasedRead>  getReads(Locatable loc) {
+
+        List<FlowBasedRead>     reads = new LinkedList<>();
+        SAMRecordIterator       iter = samReader.query(loc.getContig(), loc.getStart(), loc.getEnd(), false);
+        while ( iter.hasNext() ) {
+            SAMRecord       record = iter.next();
+            String          readGroup = record.getReadGroup().getId();
+            GATKRead        gatkRead = new SAMRecordToGATKReadAdapter(record);
+
+            int             maxClass = getMaxClass(readGroup);
+            String          flowOrder = getFlowOrder(readGroup);
+            FlowBasedRead   fbr = new FlowBasedRead(gatkRead, flowOrder, maxClass, fbArgs);
+            fbr.apply_alignment();
+
+            int read_start = fbr.getStart();
+            int read_end = fbr.getEnd();
+            int diff_left = loc.getStart() - read_start;
+            int diff_right = read_end - loc.getEnd();
+            fbr.apply_base_clipping(Math.max(0, diff_left), Math.max(diff_right, 0));
+
+            reads.add(fbr);
+        }
+        iter.close();
+
+        return reads;
+    }
+
+    private synchronized int getMaxClass(String rg) {
+
+        Integer     v = readGroupMaxClass.get(rg);
+
+        if ( v == null ) {
+            String mc_string = samReader.getFileHeader().getReadGroup(rg).getAttribute("mc");
+            if ( mc_string == null ) {
+                v = 12;
+            } else {
+                v = Integer.parseInt(mc_string);
+            }
+            readGroupMaxClass.put(rg, v);
+            readGroupFlowOrder.put(rg, samReader.getFileHeader().getReadGroup(rg).getFlowOrder());
+        }
+
+        return v;
+    }
+
+    private String getFlowOrder(String rg) {
+        return readGroupFlowOrder.get(rg);
+    }
+}

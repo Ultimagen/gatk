@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Set of arguments for the {@link HaplotypeCallerEngine}
+ * Set of arguments for the {@link HaplotypeBasedVariantRecaller}
  */
 public class HaplotypeBasedVariantRecallerArgumentCollection implements Serializable{
     private static final long serialVersionUID = 1L;
@@ -29,19 +29,31 @@ public class HaplotypeBasedVariantRecallerArgumentCollection implements Serializ
     /**
      *  This argument specifies a VCF file with Alleles to be recalled
      **/
-    @Argument(fullName = "alleles-file-vcf", shortName = "alleles-file", doc = "VCF file containing alleles", optional = false)
+    @Argument(fullName = "alleles-file-vcf", shortName = "alleles", doc = "VCF file containing alleles", optional = false)
     public File ALLELE_VCF_FILE = null;
 
     /**
      *  This argument specifies a BAM file with Reads to recall from
      **/
-    @Argument(fullName = "reads-file-bam", shortName = "reads-file", doc = "BAM file containing reads", optional = false)
+    @Argument(fullName = "reads-file-bam", shortName = "reads", doc = "BAM file containing reads", optional = false)
     public File READS_BAM_FILE = null;
 
     /**
      *  This argument specifies a BAM file with Haplotypes to limit reads on
      **/
-    @Argument(fullName = "haplotypes-file-bam", shortName = "haplotypes-file", doc = "BAM file containing haplotypes", optional = false)
+    @Argument(fullName = "haplotypes-file-bam", shortName = "haplotypes", doc = "BAM file containing haplotypes", optional = false)
     public File HAPLOTYPES_BAM_FILE = null;
+
+    /**
+     *  This argument specifies a CSV to be filled with likelihood matrix data
+     **/
+    @Argument(fullName = "matrix-file-csv", shortName = "likelihood", doc = "CSV file to be filled with likelihood matrix data", optional = false)
+    public File MATRIX_CSV_FILE = null;
+
+    /**
+     *  This argument specifies FASTA reference
+     **/
+    @Argument(fullName = "reference-fasta", shortName = "ref", doc = "FASTA reference", optional = false)
+    public File REFERENCE_FASTA = null;
 
 }
