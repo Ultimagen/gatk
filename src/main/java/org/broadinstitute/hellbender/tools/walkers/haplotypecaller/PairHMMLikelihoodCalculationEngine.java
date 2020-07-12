@@ -173,7 +173,8 @@ public final class PairHMMLikelihoodCalculationEngine implements ReadLikelihoodC
     @Override
     public AlleleLikelihoods<GATKRead, Haplotype> computeReadLikelihoods( final AssemblyResultSet assemblyResultSet,
                                                                           final SampleList samples,
-                                                                          final Map<String, List<GATKRead>> perSampleReadList) {
+                                                                          final Map<String, List<GATKRead>> perSampleReadList,
+                                                                          boolean filterPoorly) {
         Utils.nonNull(assemblyResultSet, "assemblyResultSet is null");
         Utils.nonNull(samples, "samples is null");
         Utils.nonNull(perSampleReadList, "perSampleReadList is null");
