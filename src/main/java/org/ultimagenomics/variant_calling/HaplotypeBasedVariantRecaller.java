@@ -1,6 +1,7 @@
 package org.ultimagenomics.variant_calling;
 
-import htsjdk.samtools.SAMSequenceDictionary;
+import htsjdk.samtools.*;
+import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.variantcontext.writer.VariantContextWriter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -18,6 +19,7 @@ import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEng
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerEngine;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.ReferenceConfidenceMode;
 import org.broadinstitute.hellbender.utils.fasta.CachingIndexedFastaSequenceFile;
+import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
 
 import java.util.Collection;
 import java.util.List;
@@ -66,5 +68,28 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
     @Override
     public void traverse() {
         logger.info("traverse() called");
+        logger.info("Alleles VCF: " + vrArgs.ALLELE_VCF_FILE);
+        logger.info("Reads BAM: " + vrArgs.READS_BAM_FILE);
+        logger.info("Haplotypes BAM: " + vrArgs.HAPLOTYPES_BAM_FILE);
+        logger.info("Matrix CSV: " + vrArgs.MATRIX_CSV_FILE);
+
+        // DK TMP, scan Haplotypes file
+        // walk regions defined by haploype groups
+        final FeatureDataSource<VariantContext> dataSource = new FeatureDataSource<VariantContext>(
+                vrArgs.ALLELE_VCF_FILE.getAbsolutePath(), null, 0, VariantContext.class);
+        final HaplotypeRegionWalker regionWalker = new HaplotypeRegionWalker(vrArgs);
+        final TrimmedReadsReader readsReader = new TrimmedReadsReader(vrArgs);
+        regionWalker.forEach(loc -> {
+            logger.info("loc: " + loc);
+
+            // get reads overlapping haplotype
+            Collection<FlowBasedRead>       reads = readsReader.getReads(loc);
+            reads.forEach(read -> logger.info("read: " + read));
+
+            // loop on variants
+            for ( final VariantContext vc : dataSource.queryAndPrefetch(loc) ) {
+                logger.info("vc: " + vc);
+            }
+        });
     }
 }
