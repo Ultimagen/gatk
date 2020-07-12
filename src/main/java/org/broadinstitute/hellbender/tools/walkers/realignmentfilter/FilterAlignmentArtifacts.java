@@ -218,7 +218,7 @@ public class FilterAlignmentArtifacts extends MultiVariantWalkerGroupedOnStart {
 
             final Map<String,List<GATKRead>> reads = AssemblyBasedCallerUtils.splitReadsBySample(samplesList, bamHeader, regionForGenotyping.getReads());
 
-            final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods = likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult,samplesList,reads);
+            final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods = likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult,samplesList,reads,true);
             readLikelihoods.switchToNaturalLog();
             final SWParameters readToHaplotypeSWParameters = MTAC.getReadToHaplotypeSWParameters();
             final Map<GATKRead,GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(readLikelihoods, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), smithWatermanAligner, readToHaplotypeSWParameters);
