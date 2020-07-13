@@ -6,9 +6,6 @@ import htsjdk.samtools.util.Locatable;
 import htsjdk.samtools.util.SequenceUtil;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.gatk.nativebindings.smithwaterman.SWOverhangStrategy;
-import org.broadinstitute.hellbender.engine.AssemblyRegion;
-import org.broadinstitute.hellbender.utils.SimpleInterval;
-import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAlignment;
@@ -26,7 +23,7 @@ public class LHWRefView {
     final private Logger          logger;
     final private boolean         debug;
 
-    private SmithWatermanAligner  aligner = SmithWatermanAligner.getAligner(SmithWatermanAligner.Implementation.FASTEST_AVAILABLE);
+    static private SmithWatermanAligner  aligner = SmithWatermanAligner.getAligner(SmithWatermanAligner.Implementation.FASTEST_AVAILABLE);
 
     public LHWRefView(final int hmerSizeThreshold, final byte[] fullRef, final Locatable refLoc, final Logger logger, final boolean debug, byte[] fullQuals) {
 
