@@ -151,7 +151,7 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                     hcArgs.maxMnpDistance,
                     readsHeader,
                     false);
-            resultWriter.add(loc, genotypeLikelihoods, variants);
+            resultWriter.add(loc, genotypeLikelihoods, variants, assemblyResult);
         });
 
         resultWriter.close();
