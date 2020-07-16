@@ -69,7 +69,7 @@ public class test_haplotype_matching {
         FlowBasedAlignmentEngine fbe = new FlowBasedAlignmentEngine(new FlowBasedAlignmentArgumentCollection(), -5, 0.02);
 
         final AlleleLikelihoods<GATKRead, Haplotype> haplotypeReadLikelihoods =
-                fbe.computeReadLikelihoods(haplotypes, reads);
+                fbe.computeReadLikelihoods(haplotypes, reads, true);
 
     }
 }

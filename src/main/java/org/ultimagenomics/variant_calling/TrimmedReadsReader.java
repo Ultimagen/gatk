@@ -1,9 +1,6 @@
 package org.ultimagenomics.variant_calling;
 
-import htsjdk.samtools.SAMRecord;
-import htsjdk.samtools.SAMRecordIterator;
-import htsjdk.samtools.SamReader;
-import htsjdk.samtools.SamReaderFactory;
+import htsjdk.samtools.*;
 import htsjdk.samtools.util.Locatable;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
@@ -20,8 +17,6 @@ public class TrimmedReadsReader {
     private Map<String, Integer>    readGroupMaxClass = new LinkedHashMap<>();
     private Map<String, String>     readGroupFlowOrder = new LinkedHashMap<>();
     private FlowBasedAlignmentArgumentCollection fbArgs = new FlowBasedAlignmentArgumentCollection();
-
-
 
     public TrimmedReadsReader(HaplotypeBasedVariantRecallerArgumentCollection vrArgs) {
 
@@ -75,5 +70,9 @@ public class TrimmedReadsReader {
 
     private String getFlowOrder(String rg) {
         return readGroupFlowOrder.get(rg);
+    }
+
+    public SAMFileHeader getHeader() {
+        return samReader.getFileHeader();
     }
 }
