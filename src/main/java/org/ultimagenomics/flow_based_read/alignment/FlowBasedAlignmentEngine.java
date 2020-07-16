@@ -38,7 +38,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
     @Override
     public AlleleLikelihoods<GATKRead, Haplotype> computeReadLikelihoods(AssemblyResultSet assemblyResultSet,
                                                              SampleList samples,
-                                                             Map<String, List<GATKRead>> perSampleReadList) {
+                                                             Map<String, List<GATKRead>> perSampleReadList, boolean filterPoorly) {
         Utils.nonNull(assemblyResultSet, "assemblyResultSet is null");
         Utils.nonNull(samples, "samples is null");
         Utils.nonNull(perSampleReadList, "perSampleReadList is null");
@@ -56,7 +56,8 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
 
 
         result.normalizeLikelihoods(log10globalReadMismappingRate);
-        result.filterPoorlyModeledEvidence(log10MinTrueLikelihood(expectedErrorRatePerBase));
+        if ( filterPoorly )
+            result.filterPoorlyModeledEvidence(log10MinTrueLikelihood(expectedErrorRatePerBase));
 
         return result;
     }
@@ -139,7 +140,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
 
     //This function is for testing purposes only
     public AlleleLikelihoods<GATKRead, Haplotype> computeReadLikelihoods(
-            final List<Haplotype> haplotypeList, final List<GATKRead> reads) {
+            final List<Haplotype> haplotypeList, final List<GATKRead> reads, boolean filterPoorly) {
 
 
         final AlleleList<Haplotype> haplotypes = new IndexedAlleleList<>(haplotypeList);
@@ -158,7 +159,8 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         }
 
         result.normalizeLikelihoods(log10globalReadMismappingRate);
-        result.filterPoorlyModeledEvidence(log10MinTrueLikelihood(expectedErrorRatePerBase));
+        if ( filterPoorly )
+            result.filterPoorlyModeledEvidence(log10MinTrueLikelihood(expectedErrorRatePerBase));
 
         return result;
     }
