@@ -20,6 +20,7 @@ public class HaplotypeRegionWalker {
 
     private SamReader       samReader;
     private List<Haplotype> walkerHaplotypes = new LinkedList<>();
+    private boolean         reusePreviousResults = false;
 
     HaplotypeRegionWalker(HaplotypeBasedVariantRecallerArgumentCollection vrArgs) {
 
@@ -30,7 +31,9 @@ public class HaplotypeRegionWalker {
         Objects.requireNonNull(action);
 
         // use last results? (note that this can be problematic if a vc is inside two haplotype areas)
-        if ( (walkerHaplotypes.size() != 0) && walkerHaplotypes.get(0).getGenomeLocation().contains(queryLoc) ) {
+        if ( reusePreviousResults
+                && (walkerHaplotypes.size() != 0)
+                && walkerHaplotypes.get(0).getGenomeLocation().contains(queryLoc) ) {
             action.accept(walkerHaplotypes);
         } else {
 

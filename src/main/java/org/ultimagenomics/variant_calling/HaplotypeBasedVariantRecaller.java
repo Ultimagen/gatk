@@ -1,47 +1,25 @@
 package org.ultimagenomics.variant_calling;
 
 import htsjdk.samtools.*;
-import htsjdk.samtools.util.Locatable;
 import htsjdk.variant.variantcontext.Allele;
-import htsjdk.variant.variantcontext.GenotypesContext;
 import htsjdk.variant.variantcontext.VariantContext;
-import htsjdk.variant.variantcontext.VariantContextBuilder;
-import htsjdk.variant.variantcontext.writer.VariantContextWriter;
-import org.apache.commons.collections4.ListUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.ArgumentCollection;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
 import org.broadinstitute.barclay.help.DocumentedFeature;
-import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
-import org.broadinstitute.hellbender.cmdline.argumentcollections.ReferenceInputArgumentCollection;
 import org.broadinstitute.hellbender.cmdline.programgroups.ShortVariantDiscoveryProgramGroup;
 import org.broadinstitute.hellbender.engine.*;
-import org.broadinstitute.hellbender.engine.filters.ReadFilter;
-import org.broadinstitute.hellbender.tools.walkers.annotator.Annotation;
-import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.*;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
-import org.broadinstitute.hellbender.utils.Utils;
-import org.broadinstitute.hellbender.utils.fasta.CachingIndexedFastaSequenceFile;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.genotyper.IndexedSampleList;
 import org.broadinstitute.hellbender.utils.genotyper.SampleList;
-import org.broadinstitute.hellbender.utils.haplotype.EventMap;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
-import org.broadinstitute.hellbender.utils.param.ParamUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
-import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
-import org.ultimagenomics.flow_based_read.alignment.FlowBasedAlignmentEngine;
 import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.PrintStream;
 import java.util.*;
-import java.util.stream.Collectors;
 
 
 /**
@@ -99,7 +77,7 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
         final SampleList samplesList = new IndexedSampleList(Arrays.asList(sampleNames));
         final HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samplesList, !hcArgs.doNotRunPhysicalPhasing);
         final ReferenceDataSource             reference = ReferenceDataSource.of(vrArgs.REFERENCE_FASTA.toPath());
-        final VariantCallerResultWriter       resultWriter = new VariantCallerResultWriter(vrArgs.MATRIX_CSV_FILE);
+        final VariantRecallerResultWriter resultWriter = new VariantRecallerResultWriter(vrArgs.MATRIX_CSV_FILE);
         final FeatureDataSource<VariantContext> dataSource = new FeatureDataSource<VariantContext>(
                 vrArgs.ALLELE_VCF_FILE.getAbsolutePath(), null, 0, VariantContext.class);
         final HaplotypeRegionWalker regionWalker = new HaplotypeRegionWalker(vrArgs);
