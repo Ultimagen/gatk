@@ -56,4 +56,9 @@ public class HaplotypeBasedVariantRecallerArgumentCollection implements Serializ
     @Argument(fullName = "reference-fasta", doc = "FASTA reference", optional = false)
     public File REFERENCE_FASTA = null;
 
+    /**
+     *  This argument specifies region to work on
+     **/
+    @Argument(fullName = "region-loc", doc = "Region to work on", optional = false)
+    public String REGION_LOC = null;
 }

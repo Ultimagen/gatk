@@ -25,6 +25,7 @@ import java.util.stream.Stream;
 public class VariantCallerResultWriter {
     PrintWriter     pw;
     boolean         first = true;
+    boolean         debugFormat = false;
 
     public VariantCallerResultWriter(File file) {
         try {
@@ -48,12 +49,14 @@ public class VariantCallerResultWriter {
         });
 
         // print location (as a separator)
-        if ( first )
-            first = false;
-        else
-            pw.println("");
-        pw.println("loc: " + loc);
-        pw.println("ref: " + new String(assemblyResult.getFullReferenceWithPadding()));
+        if ( debugFormat ) {
+            if (first)
+                first = false;
+            else
+                pw.println("");
+            pw.println("loc: " + loc);
+            pw.println("ref: " + new String(assemblyResult.getFullReferenceWithPadding()));
+        }
 
         // loop on result
         genotypeLikelihoods.forEach((startPos, likelihoods) -> {
@@ -62,35 +65,50 @@ public class VariantCallerResultWriter {
             VariantContext      vc = vcStartPos.get(startPos);
             if ( vc != null ) {
 
-                pw.println("");
-                pw.println("variant: " + vc.getContig() + ":" + vc.getStart());
-                pw.println("variant-info: " + vc);
+                if ( debugFormat ) {
+                    pw.println("");
+                    pw.println("variant: " + vc.getContig() + ":" + vc.getStart());
+                    pw.println("variant-info: " + vc);
 
-                // reads
-                pw.println("");
-                pw.println("reads: " + likelihoods.evidenceCount());
-                likelihoods.sampleEvidence(0).forEach(read -> {
-                    pw.println("read: " + read);
-                });
+                    // reads
+                    pw.println("");
+                    pw.println("reads: " + likelihoods.evidenceCount());
+                    likelihoods.sampleEvidence(0).forEach(read -> {
+                        pw.println("read: " + read);
+                    });
 
-                // alleles
-                pw.println("");
-                pw.println("alleles: " + likelihoods.alleles().size());
-                likelihoods.alleles().forEach(allele -> {
-                    pw.println("allele: " + allele);
-                });
+                    // alleles
+                    pw.println("");
+                    pw.println("alleles: " + likelihoods.alleles().size());
+                    likelihoods.alleles().forEach(allele -> {
+                        pw.println("allele: " + allele);
+                    });
+                } else {
+                    pw.print("#" + vc.getContig() + ":" + vc.getStart());
+                    likelihoods.alleles().forEach(allele -> {
+                        pw.print(" " + allele);
+                    });
+                    pw.println("");
+                }
 
                 // matrix
-                pw.println("");
-                pw.println("matrix:");
+                if ( debugFormat ) {
+                    pw.println("");
+                    pw.println("matrix:");
+                }
                 LikelihoodMatrix<GATKRead, Allele> matrix = likelihoods.sampleMatrix(0);
-                double[] values = new double[matrix.evidenceCount()];
-                for (int alleleIndex = 0; alleleIndex < matrix.numberOfAlleles(); alleleIndex++) {
+                double[][] values = new double[matrix.numberOfAlleles()][matrix.evidenceCount()];
+                for (int alleleIndex = 0; alleleIndex < matrix.numberOfAlleles(); alleleIndex++)
+                    matrix.copyAlleleLikelihoods(alleleIndex, values[alleleIndex], 0);
+                double[] lineValues = new double[matrix.numberOfAlleles()];
+                for ( int evidenceIndex = 0; evidenceIndex < matrix.evidenceCount() ; evidenceIndex++ ) {
 
-                    matrix.copyAlleleLikelihoods(alleleIndex, values, 0);
-                    String line = StringUtils.join(ArrayUtils.toObject(values), ",");
+                    for (int alleleIndex = 0; alleleIndex < matrix.numberOfAlleles(); alleleIndex++)
+                        lineValues[alleleIndex] = values[alleleIndex][evidenceIndex];
 
-                    pw.println(line);
+                    String line = StringUtils.join(ArrayUtils.toObject(lineValues), " ");
+
+                    pw.println(matrix.evidence().get(evidenceIndex).getName() + " " + line);
                 }
             }
         });
