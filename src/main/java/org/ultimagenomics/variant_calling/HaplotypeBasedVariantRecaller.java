@@ -81,6 +81,8 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
 
     private static final Logger logger = LogManager.getLogger(HaplotypeBasedVariantRecaller.class);
 
+    private final String    SAMPLE_NAME_DEFAULT = "sm1";
+
     @ArgumentCollection
     private HaplotypeBasedVariantRecallerArgumentCollection vrArgs = new HaplotypeBasedVariantRecallerArgumentCollection();
 
@@ -88,71 +90,73 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
     private final HaplotypeCallerArgumentCollection hcArgs = new HaplotypeCallerArgumentCollection();
 
 
-    private ReadLikelihoodCalculationEngine likelihoodCalculationEngine = null;
-
     @Override
     public void traverse() {
-        logger.info("traverse() called");
-        logger.info("Alleles VCF: " + vrArgs.ALLELE_VCF_FILE);
-        logger.info("Reads BAM: " + vrArgs.READS_BAM_FILE);
-        logger.info("Haplotypes BAM: " + vrArgs.HAPLOTYPES_BAM_FILE);
-        logger.info("Matrix CSV: " + vrArgs.MATRIX_CSV_FILE);
 
         // inits
-        likelihoodCalculationEngine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(hcArgs.likelihoodArgs, hcArgs.fbargs);
-        String[] sampleNames = {"sm1"};
-        SampleList samplesList = new IndexedSampleList(Arrays.asList(sampleNames));
-        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samplesList, !hcArgs.doNotRunPhysicalPhasing);
-        ReferenceDataSource             reference = ReferenceDataSource.of(vrArgs.REFERENCE_FASTA.toPath());
-        VariantCallerResultWriter       resultWriter = new VariantCallerResultWriter(vrArgs.MATRIX_CSV_FILE);
-
-        // walk regions defined by haploype groups
+        final ReadLikelihoodCalculationEngine likelihoodCalculationEngine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(hcArgs.likelihoodArgs, hcArgs.fbargs);
+        final String[] sampleNames = {SAMPLE_NAME_DEFAULT};
+        final SampleList samplesList = new IndexedSampleList(Arrays.asList(sampleNames));
+        final HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samplesList, !hcArgs.doNotRunPhysicalPhasing);
+        final ReferenceDataSource             reference = ReferenceDataSource.of(vrArgs.REFERENCE_FASTA.toPath());
+        final VariantCallerResultWriter       resultWriter = new VariantCallerResultWriter(vrArgs.MATRIX_CSV_FILE);
         final FeatureDataSource<VariantContext> dataSource = new FeatureDataSource<VariantContext>(
                 vrArgs.ALLELE_VCF_FILE.getAbsolutePath(), null, 0, VariantContext.class);
         final HaplotypeRegionWalker regionWalker = new HaplotypeRegionWalker(vrArgs);
         final TrimmedReadsReader readsReader = new TrimmedReadsReader(vrArgs);
-        regionWalker.forEach(haplotypes -> {
 
-            // get reads overlapping haplotype, get variants
-            SimpleInterval  loc = new SimpleInterval(haplotypes.get(0).getGenomeLocation());
-            Collection<FlowBasedRead> reads = readsReader.getReads(loc);
-            List<VariantContext> variants = dataSource.queryAndPrefetch(loc);
-            logger.info(String.format("%s: %d haplotypes, %d reads, %d variants",
-                    loc.toString(), haplotypes.size(), reads.size(), variants.size()));
+        // walk regions, as defined by argument
+        for ( String regionStr : vrArgs.REGION_LOC.split(",") ) {
+            SimpleInterval      region = new SimpleInterval(regionStr);
 
-            // prepare assembly result
-            AssemblyResultSet assemblyResult = new AssemblyResultSet();
-            haplotypes.forEach(haplotype -> assemblyResult.add(haplotype));
-            Map<String, List<GATKRead>> perSampleReadList = new LinkedHashMap<>();
-            List<GATKRead> gtakReads = new LinkedList<>();
-            reads.forEach(flowBasedRead -> gtakReads.add(flowBasedRead));
-            perSampleReadList.put(sampleNames[0], gtakReads);
-            assemblyResult.setPaddedReferenceLoc(loc);
-            assemblyResult.setFullReferenceWithPadding(reference.queryAndPrefetch(loc).getBases());
+            dataSource.query(region).forEachRemaining(vc -> {
 
-            // computer likelihood
-            AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods = likelihoodCalculationEngine.computeReadLikelihoods(
-                    assemblyResult, samplesList, perSampleReadList, false);
+                // walk haplotype (groups) under this variant
+                SimpleInterval      vcLoc = new SimpleInterval(vc.getContig(), vc.getStart(), vc.getEnd());
+                regionWalker.forEach(vcLoc, haplotypes -> {
 
-            // assign
-            Map<String, List<GATKRead>> perSampleFilteredReadList = perSampleReadList;
-            SimpleInterval genotypingSpan = loc;
-            SAMFileHeader readsHeader = readsReader.getHeader();
-            Map<Integer,AlleleLikelihoods<GATKRead, Allele>>    genotypeLikelihoods = genotypingEngine.assignGenotypeLikelihoods2(
-                    haplotypes,
-                    readLikelihoods,
-                    perSampleFilteredReadList,
-                    assemblyResult.getFullReferenceWithPadding(),
-                    assemblyResult.getPaddedReferenceLoc(),
-                    genotypingSpan,
-                    null,
-                    variants,
-                    false,
-                    hcArgs.maxMnpDistance,
-                    readsHeader,
-                    false);
-            resultWriter.add(loc, genotypeLikelihoods, variants, assemblyResult);
-        });
+                    // get reads overlapping haplotypes
+                    SimpleInterval haplotypeSpan = new SimpleInterval(haplotypes.get(0).getGenomeLocation());
+                    Collection<FlowBasedRead> reads = readsReader.getReads(haplotypeSpan);
+                    List<VariantContext>      variants = new LinkedList<>(Arrays.asList(vc));
+                    logger.info(String.format("vcLoc %s, haplotypeSpan: %s, %d haplotypes, %d reads",
+                            vcLoc.toString(), haplotypeSpan.toString(), haplotypes.size(), reads.size(), variants.size()));
+
+                    // prepare assembly result
+                    AssemblyResultSet assemblyResult = new AssemblyResultSet();
+                    haplotypes.forEach(haplotype -> assemblyResult.add(haplotype));
+                    Map<String, List<GATKRead>> perSampleReadList = new LinkedHashMap<>();
+                    List<GATKRead> gtakReads = new LinkedList<>();
+                    reads.forEach(flowBasedRead -> gtakReads.add(flowBasedRead));
+                    perSampleReadList.put(sampleNames[0], gtakReads);
+                    assemblyResult.setPaddedReferenceLoc(haplotypeSpan);
+                    assemblyResult.setFullReferenceWithPadding(reference.queryAndPrefetch(haplotypeSpan).getBases());
+
+                    // computer likelihood
+                    AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods = likelihoodCalculationEngine.computeReadLikelihoods(
+                            assemblyResult, samplesList, perSampleReadList, false);
+
+                    // assign
+                    Map<String, List<GATKRead>> perSampleFilteredReadList = perSampleReadList;
+                    SimpleInterval genotypingSpan = haplotypeSpan;
+                    SAMFileHeader readsHeader = readsReader.getHeader();
+                    Map<Integer, AlleleLikelihoods<GATKRead, Allele>> genotypeLikelihoods = genotypingEngine.assignGenotypeLikelihoods2(
+                            haplotypes,
+                            readLikelihoods,
+                            perSampleFilteredReadList,
+                            assemblyResult.getFullReferenceWithPadding(),
+                            assemblyResult.getPaddedReferenceLoc(),
+                            genotypingSpan,
+                            null,
+                            variants,
+                            false,
+                            hcArgs.maxMnpDistance,
+                            readsHeader,
+                            false);
+                    resultWriter.add(haplotypeSpan, genotypeLikelihoods, variants, assemblyResult);
+                });
+            });
+        }
 
         resultWriter.close();
     }
