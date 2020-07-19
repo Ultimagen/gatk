@@ -82,6 +82,7 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                 vrArgs.ALLELE_VCF_FILE.getAbsolutePath(), null, 0, VariantContext.class);
         final HaplotypeRegionWalker regionWalker = new HaplotypeRegionWalker(vrArgs);
         final TrimmedReadsReader readsReader = new TrimmedReadsReader(vrArgs);
+        progressMeter.setRecordsBetweenTimeChecks(1);
 
         // walk regions, as defined by argument
         for ( String regionStr : vrArgs.REGION_LOC.split(",") ) {
@@ -97,8 +98,10 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                     SimpleInterval haplotypeSpan = new SimpleInterval(haplotypes.get(0).getGenomeLocation());
                     Collection<FlowBasedRead> reads = readsReader.getReads(haplotypeSpan);
                     List<VariantContext>      variants = new LinkedList<>(Arrays.asList(vc));
-                    logger.info(String.format("vcLoc %s, haplotypeSpan: %s, %d haplotypes, %d reads",
-                            vcLoc.toString(), haplotypeSpan.toString(), haplotypes.size(), reads.size(), variants.size()));
+                    if ( logger.isDebugEnabled() )
+                        logger.debug(String.format("vcLoc %s, haplotypeSpan: %s, %d haplotypes, %d reads",
+                                vcLoc.toString(), haplotypeSpan.toString(), haplotypes.size(), reads.size(), variants.size()));
+                    progressMeter.update(vcLoc);
 
                     // prepare assembly result
                     AssemblyResultSet assemblyResult = new AssemblyResultSet();
