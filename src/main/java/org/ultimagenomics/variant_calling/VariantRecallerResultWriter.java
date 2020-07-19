@@ -1,11 +1,14 @@
 package org.ultimagenomics.variant_calling;
 
+import htsjdk.samtools.CigarElement;
+import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.util.Locatable;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyResultSet;
+import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.genotyper.LikelihoodMatrix;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
@@ -16,18 +19,16 @@ import shaded.cloud_nio.com.google.errorprone.annotations.Var;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class VariantCallerResultWriter {
+public class VariantRecallerResultWriter {
     PrintWriter     pw;
     boolean         first = true;
     boolean         debugFormat = false;
 
-    public VariantCallerResultWriter(File file) {
+    public VariantRecallerResultWriter(File file) {
         try {
             pw = new PrintWriter(file);
         } catch (IOException e) {
@@ -85,6 +86,9 @@ public class VariantCallerResultWriter {
                     });
                 } else {
                     pw.print("#" + vc.getContig() + ":" + vc.getStart());
+                    if ( vc.getEnd() != vc.getStart() )
+                        pw.print("-" + vc.getEnd());
+                    pw.print(" " + loc);
                     likelihoods.alleles().forEach(allele -> {
                         pw.print(" " + allele);
                     });
@@ -101,16 +105,61 @@ public class VariantCallerResultWriter {
                 for (int alleleIndex = 0; alleleIndex < matrix.numberOfAlleles(); alleleIndex++)
                     matrix.copyAlleleLikelihoods(alleleIndex, values[alleleIndex], 0);
                 double[] lineValues = new double[matrix.numberOfAlleles()];
+                SimpleInterval      vcSpan = new SimpleInterval(vc.getContig(), vc.getStart(), vc.getEnd());
                 for ( int evidenceIndex = 0; evidenceIndex < matrix.evidenceCount() ; evidenceIndex++ ) {
 
                     for (int alleleIndex = 0; alleleIndex < matrix.numberOfAlleles(); alleleIndex++)
                         lineValues[alleleIndex] = values[alleleIndex][evidenceIndex];
 
-                    String line = StringUtils.join(ArrayUtils.toObject(lineValues), " ");
+                    // build basic matrix line
+                    GATKRead        read = matrix.evidence().get(evidenceIndex);
+                    String line = String.format("%s %s",
+                            read.getName(),
+                            StringUtils.join(ArrayUtils.toObject(lineValues), " "));
 
-                    pw.println(matrix.evidence().get(evidenceIndex).getName() + " " + line);
+                    // add bytes at variant location?
+                    if ( read.getContig() != null ) {
+                        SimpleInterval  readSpan = new SimpleInterval(read.getContig(), read.getStart(), read.getEnd());
+                        if ( readSpan.contains(vcSpan) ) {
+                            int ofs = vcSpan.getStart() - readSpan.getStart();
+                            int vcLength = vcSpan.getEnd() - vc.getStart() + 1;
+                            StringBuilder bases = new StringBuilder();
+                            for (int i = 0; i < vcLength; i++) {
+                                int readOfs = getOffsetOnRead(read, ofs + i);
+                                if (readOfs >= 0)
+                                    bases.append((char) read.getBase(readOfs));
+                                else
+                                    bases.append('?');
+                            }
+                            if (bases.length() > 0)
+                                line += (" " + bases);
+                        }
+                    }
+
+                    pw.println(line);
                 }
             }
         });
+    }
+
+    private int getOffsetOnRead(GATKRead read, int ofs) {
+        int     readOfs = 0;
+
+        Iterator<CigarElement> iter = read.getCigar().iterator();
+        while ( iter.hasNext() ) {
+            CigarElement    elem = iter.next();
+            CigarOperator   op = elem.getOperator();
+            if ( !op.consumesReadBases() )
+                ofs -= (op.consumesReferenceBases() ? elem.getLength() : 0);
+            else {
+                if (ofs < elem.getLength() )
+                    return readOfs + ofs;
+                else
+                    readOfs += elem.getLength();
+            }
+        }
+
+        // if here, not found
+        return -1;
     }
 }
