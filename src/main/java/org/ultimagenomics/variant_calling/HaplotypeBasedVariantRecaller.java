@@ -110,8 +110,11 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                     List<GATKRead> gtakReads = new LinkedList<>();
                     reads.forEach(flowBasedRead -> gtakReads.add(flowBasedRead));
                     perSampleReadList.put(sampleNames[0], gtakReads);
+                    AssemblyRegion regionForGenotyping = new AssemblyRegion(haplotypeSpan, 0, readsReader.getHeader());
                     assemblyResult.setPaddedReferenceLoc(haplotypeSpan);
                     assemblyResult.setFullReferenceWithPadding(reference.queryAndPrefetch(haplotypeSpan).getBases());
+                    assemblyResult.setRegionForGenotyping(regionForGenotyping);
+
 
                     // computer likelihood
                     AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods = likelihoodCalculationEngine.computeReadLikelihoods(
@@ -119,7 +122,6 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
 
                     // assign
                     Map<String, List<GATKRead>> perSampleFilteredReadList = perSampleReadList;
-                    SimpleInterval genotypingSpan = haplotypeSpan;
                     SAMFileHeader readsHeader = readsReader.getHeader();
                     Map<Integer, AlleleLikelihoods<GATKRead, Allele>> genotypeLikelihoods = genotypingEngine.assignGenotypeLikelihoods2(
                             haplotypes,
@@ -127,7 +129,7 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                             perSampleFilteredReadList,
                             assemblyResult.getFullReferenceWithPadding(),
                             assemblyResult.getPaddedReferenceLoc(),
-                            genotypingSpan,
+                            regionForGenotyping.getSpan(),
                             null,
                             variants,
                             false,
