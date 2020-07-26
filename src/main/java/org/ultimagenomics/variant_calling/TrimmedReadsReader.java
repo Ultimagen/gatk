@@ -2,14 +2,17 @@ package org.ultimagenomics.variant_calling;
 
 import htsjdk.samtools.*;
 import htsjdk.samtools.util.Locatable;
-import org.broadinstitute.hellbender.utils.SimpleInterval;
+import org.broadinstitute.hellbender.utils.gcs.BucketUtils;
+import org.broadinstitute.hellbender.utils.io.IOUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
 import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
 import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
 
+import java.nio.channels.SeekableByteChannel;
+import java.nio.file.Path;
 import java.util.*;
-import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class TrimmedReadsReader {
 
@@ -19,8 +22,11 @@ public class TrimmedReadsReader {
     private FlowBasedAlignmentArgumentCollection fbArgs = new FlowBasedAlignmentArgumentCollection();
 
     public TrimmedReadsReader(HaplotypeBasedVariantRecallerArgumentCollection vrArgs) {
+        Path samPath = IOUtils.getPath(vrArgs.READS_BAM_FILE);
 
-        samReader = SamReaderFactory.makeDefault().referenceSequence(vrArgs.REFERENCE_FASTA).open(vrArgs.READS_BAM_FILE);
+        Function<SeekableByteChannel, SeekableByteChannel> cloudWrapper = BucketUtils.getPrefetchingWrapper(40);
+        Function<SeekableByteChannel, SeekableByteChannel> cloudIndexWrapper = BucketUtils.getPrefetchingWrapper(40);
+        samReader = SamReaderFactory.makeDefault().referenceSequence(vrArgs.REFERENCE_FASTA).open(samPath, cloudWrapper, cloudIndexWrapper);
     }
 
     public Collection<FlowBasedRead>  getReads(Locatable loc) {
