@@ -6,15 +6,17 @@ import htsjdk.samtools.SamReader;
 import htsjdk.samtools.SamReaderFactory;
 import htsjdk.samtools.util.Locatable;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
+import org.broadinstitute.hellbender.utils.gcs.BucketUtils;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
-import org.broadinstitute.hellbender.utils.read.GATKRead;
-import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
-import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
+import org.broadinstitute.hellbender.utils.io.IOUtils;
 
+import java.nio.channels.SeekableByteChannel;
+import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class HaplotypeRegionWalker {
 
@@ -23,8 +25,12 @@ public class HaplotypeRegionWalker {
     private boolean         reusePreviousResults = false;
 
     HaplotypeRegionWalker(HaplotypeBasedVariantRecallerArgumentCollection vrArgs) {
+        Path samPath = IOUtils.getPath(vrArgs.HAPLOTYPES_BAM_FILE);
 
-        samReader = SamReaderFactory.makeDefault().referenceSequence(vrArgs.REFERENCE_FASTA).open(vrArgs.HAPLOTYPES_BAM_FILE);
+        Function<SeekableByteChannel, SeekableByteChannel> cloudWrapper = BucketUtils.getPrefetchingWrapper(40);
+        Function<SeekableByteChannel, SeekableByteChannel> cloudIndexWrapper = BucketUtils.getPrefetchingWrapper(40);
+        samReader = SamReaderFactory.makeDefault().referenceSequence(vrArgs.REFERENCE_FASTA).open(samPath, cloudWrapper, cloudIndexWrapper);
+
     }
 
     void forEach(Locatable queryLoc, Consumer<List<Haplotype>> action) {
