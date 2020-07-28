@@ -29,26 +29,33 @@ public class TrimmedReadsReader {
         samReader = SamReaderFactory.makeDefault().referenceSequence(vrArgs.REFERENCE_FASTA).open(samPath, cloudWrapper, cloudIndexWrapper);
     }
 
-    public Collection<FlowBasedRead>  getReads(Locatable loc) {
+    public Collection<FlowBasedRead>  getReads(Locatable span, Locatable vcLoc) {
 
         List<FlowBasedRead>     reads = new LinkedList<>();
-        SAMRecordIterator       iter = samReader.query(loc.getContig(), loc.getStart(), loc.getEnd(), false);
+        SAMRecordIterator       iter = samReader.query(span.getContig(), span.getStart(), span.getEnd(), false);
         while ( iter.hasNext() ) {
+
+            // establish record. ignore if variant context is not covered by this read?
             SAMRecord       record = iter.next();
+            if ( !record.contains(vcLoc) )
+                continue;
+
+            // convert to a flow based read
             String          readGroup = record.getReadGroup().getId();
             GATKRead        gatkRead = new SAMRecordToGATKReadAdapter(record);
-
             int             maxClass = getMaxClass(readGroup);
             String          flowOrder = getFlowOrder(readGroup);
             FlowBasedRead   fbr = new FlowBasedRead(gatkRead, flowOrder, maxClass, fbArgs);
             fbr.apply_alignment();
 
+            // clip to given span
             int read_start = fbr.getStart();
             int read_end = fbr.getEnd();
-            int diff_left = loc.getStart() - read_start;
-            int diff_right = read_end - loc.getEnd();
+            int diff_left = span.getStart() - read_start;
+            int diff_right = read_end - span.getEnd();
             fbr.apply_base_clipping(Math.max(0, diff_left), Math.max(diff_right, 0));
 
+            // add to output collection
             reads.add(fbr);
         }
         iter.close();

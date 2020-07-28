@@ -175,7 +175,8 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             throw new GATKException.ShouldNeverReachHereException("Reads should be trimmed to the haplotype");
         }
 
-        if (!read.is_valid()) return Double.NEGATIVE_INFINITY;
+        if (!read.is_valid())
+            return Double.NEGATIVE_INFINITY;
 
         int haplotype_start = ReadUtils.getReadIndexForReferenceCoordinate(haplotype.getStart(), haplotype.getCigar(),
                 read.getTrimmedStart()).getLeft();
