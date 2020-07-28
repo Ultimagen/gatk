@@ -2,9 +2,11 @@ package org.ultimagenomics.variant_calling;
 
 import htsjdk.samtools.*;
 import htsjdk.samtools.util.Locatable;
+import org.broadinstitute.hellbender.utils.clipping.ReadClipper;
 import org.broadinstitute.hellbender.utils.gcs.BucketUtils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
+import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
 import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
 import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
@@ -40,9 +42,14 @@ public class TrimmedReadsReader {
             if ( !record.contains(vcLoc) )
                 continue;
 
-            // convert to a flow based read
+            // convert to gatk read
             String          readGroup = record.getReadGroup().getId();
             GATKRead        gatkRead = new SAMRecordToGATKReadAdapter(record);
+
+            // soft/hard clipped bases
+            gatkRead = ReadClipper.hardClipSoftClippedBases(gatkRead);
+
+            // convert to a flow based read
             int             maxClass = getMaxClass(readGroup);
             String          flowOrder = getFlowOrder(readGroup);
             FlowBasedRead   fbr = new FlowBasedRead(gatkRead, flowOrder, maxClass, fbArgs);
