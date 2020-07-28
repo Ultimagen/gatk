@@ -3,6 +3,7 @@ package org.ultimagenomics.variant_calling;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.util.Locatable;
+import htsjdk.samtools.util.Tuple;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.commons.lang3.ArrayUtils;
@@ -107,14 +108,17 @@ public class VariantRecallerResultWriter {
                     matrix.copyAlleleLikelihoods(alleleIndex, values[alleleIndex], 0);
                 double[] lineValues = new double[matrix.numberOfAlleles()];
                 SimpleInterval      vcSpan = new SimpleInterval(vc.getContig(), vc.getStart(), vc.getEnd());
+                List<Tuple<Double,String>>      vcLines = new LinkedList<>();
                 for ( int evidenceIndex = 0; evidenceIndex < matrix.evidenceCount() ; evidenceIndex++ ) {
 
                     // determine matrix values
                     boolean         allValuesNegativeInfinity = true;
+                    double          sortKey = Double.NEGATIVE_INFINITY;
                     for (int alleleIndex = 0; alleleIndex < matrix.numberOfAlleles(); alleleIndex++) {
                         lineValues[alleleIndex] = values[alleleIndex][evidenceIndex];
                         if ( lineValues[alleleIndex] != Double.NEGATIVE_INFINITY )
                             allValuesNegativeInfinity = false;
+                        sortKey = lineValues[alleleIndex];
                     }
 
                     // lines which have all values of -Inf are complete alignment failures. Ignore them
@@ -154,8 +158,16 @@ public class VariantRecallerResultWriter {
                         }
                     }
 
-                    pw.println(line);
+                    vcLines.add(new Tuple<>(sortKey, line));
                 }
+
+                // optional: sort vcLines on second column if present
+                vcLines.sort((o1, o2) -> {
+                    return -Double.compare(o1.a, o2.a);
+                });
+
+                // pour into output file
+                vcLines.forEach(doubleStringTuple -> pw.println(doubleStringTuple.b));
             }
         });
     }
