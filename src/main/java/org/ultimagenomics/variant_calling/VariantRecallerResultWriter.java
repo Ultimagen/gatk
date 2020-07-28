@@ -13,6 +13,7 @@ import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.genotyper.LikelihoodMatrix;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
+import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
 import org.ultimagenomics.haplotype_calling.LHWRefView;
 import shaded.cloud_nio.com.google.errorprone.annotations.Var;
 
@@ -108,13 +109,28 @@ public class VariantRecallerResultWriter {
                 SimpleInterval      vcSpan = new SimpleInterval(vc.getContig(), vc.getStart(), vc.getEnd());
                 for ( int evidenceIndex = 0; evidenceIndex < matrix.evidenceCount() ; evidenceIndex++ ) {
 
-                    for (int alleleIndex = 0; alleleIndex < matrix.numberOfAlleles(); alleleIndex++)
+                    // determine matrix values
+                    boolean         allValuesNegativeInfinity = true;
+                    for (int alleleIndex = 0; alleleIndex < matrix.numberOfAlleles(); alleleIndex++) {
                         lineValues[alleleIndex] = values[alleleIndex][evidenceIndex];
+                        if ( lineValues[alleleIndex] != Double.NEGATIVE_INFINITY )
+                            allValuesNegativeInfinity = false;
+                    }
+
+                    // lines which have all values of -Inf are complete alignment failures. Ignore them
+                    if ( allValuesNegativeInfinity )
+                        continue;
+
+                    // determine length in key space
+                    GATKRead        read = matrix.evidence().get(evidenceIndex);
+                    int         keyspaceLength = 0;
+                    if ( read instanceof FlowBasedRead )
+                        keyspaceLength = ((FlowBasedRead)read).getKeyLength();
 
                     // build basic matrix line
-                    GATKRead        read = matrix.evidence().get(evidenceIndex);
-                    String line = String.format("%s %s",
+                    String line = String.format("%s %d %s",
                             read.getName(),
+                            keyspaceLength,
                             StringUtils.join(ArrayUtils.toObject(lineValues), " "));
 
                     // add bytes at variant location?
@@ -131,8 +147,10 @@ public class VariantRecallerResultWriter {
                                 else
                                     bases.append('?');
                             }
-                            if (bases.length() > 0)
-                                line += (" " + bases);
+                            // make sure that we have a bases column on the output
+                            if ( bases.length() == 0 )
+                                bases.append("*");
+                            line += (" " + bases);
                         }
                     }
 

@@ -2,6 +2,8 @@ package org.ultimagenomics.variant_calling;
 
 import htsjdk.samtools.*;
 import htsjdk.samtools.util.Locatable;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.utils.clipping.ReadClipper;
 import org.broadinstitute.hellbender.utils.gcs.BucketUtils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
@@ -17,6 +19,8 @@ import java.util.*;
 import java.util.function.Function;
 
 public class TrimmedReadsReader {
+
+    private static final Logger logger = LogManager.getLogger(TrimmedReadsReader.class);
 
     private SamReader               samReader;
     private Map<String, Integer>    readGroupMaxClass = new LinkedHashMap<>();
@@ -61,6 +65,11 @@ public class TrimmedReadsReader {
             int diff_left = span.getStart() - read_start;
             int diff_right = read_end - span.getEnd();
             fbr.apply_base_clipping(Math.max(0, diff_left), Math.max(diff_right, 0));
+
+            // check if read is valid. it is possible that read was made invalid by apply_base_clipping
+            // if so, ignore it (see FlowBasedRead.java:478 valid_key=false;
+            if ( !fbr.is_valid() )
+                continue;
 
             // add to output collection
             reads.add(fbr);
