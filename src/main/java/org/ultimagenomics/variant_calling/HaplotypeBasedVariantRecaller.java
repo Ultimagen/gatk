@@ -96,7 +96,7 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
 
                     // get reads overlapping haplotypes
                     SimpleInterval haplotypeSpan = new SimpleInterval(haplotypes.get(0).getGenomeLocation());
-                    Collection<FlowBasedRead> reads = readsReader.getReads(haplotypeSpan);
+                    Collection<FlowBasedRead> reads = readsReader.getReads(haplotypeSpan, vcLoc);
                     List<VariantContext>      variants = new LinkedList<>(Arrays.asList(vc));
                     if ( logger.isDebugEnabled() )
                         logger.debug(String.format("vcLoc %s, haplotypeSpan: %s, %d haplotypes, %d reads",
