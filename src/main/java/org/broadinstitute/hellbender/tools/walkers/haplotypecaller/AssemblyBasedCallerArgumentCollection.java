@@ -162,11 +162,11 @@ public abstract class AssemblyBasedCallerArgumentCollection {
 
     @Hidden
     @Advanced
-    @Argument(fullName="ultima-assembly-collapse-hmer-size", doc="Collapse reference regions with >Nhmer during assembly, normal value when used is 12", optional = true)
-    public int ultimaAssemblyCollapseHKerSize = 0;
+    @Argument(fullName="flow-assembly-collapse-hmer-size", doc="Collapse reference regions with >Nhmer during assembly, normal value when used is 12", optional = true)
+    public int flowAssemblyCollapseHKerSize = 0;
 
     @Hidden
     @Advanced
-    @Argument(fullName="ultima-flow-matrix-mods", doc="Modifications to perform on the read flow matrix. For now only supported mod is copy. Format is a list of src,dst,src,dst.... Operation is triggered when src is written. Example: 8,12,11,12", optional = true)
-    public String ultimaFlowMatrixMods = null;
+    @Argument(fullName="flow-matrix-mods", doc="Modifications to perform on the read flow matrix. For now only supported mod is copy. Format is a list of src,dst,src,dst.... Operation is triggered when src is written. Example: 8,12,11,12", optional = true)
+    public String flowMatrixMods = null;
 }
