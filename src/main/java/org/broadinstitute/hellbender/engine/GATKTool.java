@@ -39,6 +39,7 @@ import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.config.ConfigFactory;
 import org.broadinstitute.hellbender.utils.config.GATKConfig;
+import org.broadinstitute.hellbender.utils.io.IOUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.read.SAMFileGATKReadWriter;
@@ -1105,5 +1106,9 @@ public abstract class GATKTool extends CommandLineProgram {
      * Subclasses should override this method to close any resources that must be closed regardless of the success of traversal.
      */
     public void closeTool(){
+    }
+
+    public List<SimpleInterval> getUserIntervals() {
+        return userIntervals;
     }
 }

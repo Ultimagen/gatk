@@ -70,18 +70,20 @@ public class LHWRefView {
         return false;
     }
 
-    public List<Haplotype> uncollapseHaplotypesByRef(final Collection<Haplotype> haplotypes, boolean log, boolean limit) {
+    public List<Haplotype> uncollapseHaplotypesByRef(final Collection<Haplotype> haplotypes, boolean log, boolean limit, byte[] refBases) {
 
         final List<Haplotype>       result = new LinkedList<>();
         final Map<Locatable, byte[]> refMap = new LinkedHashMap<>();
-        Haplotype                   refHaplotype = null;
+        int                         alignmentStartHapwrtRef = 0;
 
-        // locate reference haplotype, if exists
-        for ( Haplotype h : haplotypes )
-            if ( h.isReference() ) {
-                refHaplotype = h;
-                break;
-            }
+        // locate reference haplotype, if needed
+        if ( refBases == null )
+            for ( Haplotype h : haplotypes )
+                if ( h.isReference() ) {
+                    refBases = h.getBases();
+                    alignmentStartHapwrtRef = h.getAlignmentStartHapwrtRef();
+                    break;
+                }
 
         // uncollapse haplotypes
         for ( Haplotype h : haplotypes )
@@ -124,12 +126,12 @@ public class LHWRefView {
         }
 
         // if we had a reference, generate cigar against it
-        if ( refHaplotype != null ) {
+        if ( refBases != null ) {
             for ( Haplotype h : result ) {
-                if ( h != refHaplotype ) {
-                    SmithWatermanAlignment  alignment = aligner.align(refHaplotype.getBases(), h.getBases(), SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
+                if ( !h.isReference() ) {
+                    SmithWatermanAlignment  alignment = aligner.align(refBases, h.getBases(), SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
                     h.setCigar(alignment.getCigar());
-                    h.setAlignmentStartHapwrtRef(alignment.getAlignmentOffset() + refHaplotype.getAlignmentStartHapwrtRef());
+                    h.setAlignmentStartHapwrtRef(alignment.getAlignmentOffset() + alignmentStartHapwrtRef);
                 }
             }
         }
