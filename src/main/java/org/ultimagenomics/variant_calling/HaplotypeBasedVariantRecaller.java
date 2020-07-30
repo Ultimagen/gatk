@@ -69,6 +69,12 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
     @ArgumentCollection
     private final HaplotypeCallerArgumentCollection hcArgs = new HaplotypeCallerArgumentCollection();
 
+    public HaplotypeBasedVariantRecaller() {
+        super();
+
+        // tool specific default
+        hcArgs.likelihoodArgs.phredScaledGlobalReadMismappingRate = -1;
+    }
 
     @Override
     public void traverse() {
