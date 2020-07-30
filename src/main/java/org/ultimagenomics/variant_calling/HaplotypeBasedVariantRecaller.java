@@ -8,8 +8,10 @@ import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.argparser.ArgumentCollection;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
 import org.broadinstitute.barclay.help.DocumentedFeature;
+import org.broadinstitute.hellbender.cmdline.GATKPlugin.GATKReadFilterPluginDescriptor;
 import org.broadinstitute.hellbender.cmdline.programgroups.ShortVariantDiscoveryProgramGroup;
 import org.broadinstitute.hellbender.engine.*;
+import org.broadinstitute.hellbender.engine.filters.*;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.*;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
@@ -72,16 +74,18 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
     public void traverse() {
 
         // inits
-        final ReadLikelihoodCalculationEngine likelihoodCalculationEngine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(hcArgs.likelihoodArgs, hcArgs.fbargs);
-        final String[] sampleNames = {SAMPLE_NAME_DEFAULT};
-        final SampleList samplesList = new IndexedSampleList(Arrays.asList(sampleNames));
-        final HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samplesList, !hcArgs.doNotRunPhysicalPhasing);
-        final ReferenceDataSource             reference = ReferenceDataSource.of(vrArgs.REFERENCE_FASTA.toPath());
-        final VariantRecallerResultWriter resultWriter = new VariantRecallerResultWriter(vrArgs.MATRIX_CSV_FILE);
+        final ReadLikelihoodCalculationEngine   likelihoodCalculationEngine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(hcArgs.likelihoodArgs, hcArgs.fbargs);
+        final String[]                          sampleNames = {SAMPLE_NAME_DEFAULT};
+        final SampleList                        samplesList = new IndexedSampleList(Arrays.asList(sampleNames));
+        final HaplotypeCallerGenotypingEngine   genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samplesList, !hcArgs.doNotRunPhysicalPhasing);
+        final ReferenceDataSource               reference = ReferenceDataSource.of(vrArgs.REFERENCE_FASTA.toPath());
+        final VariantRecallerResultWriter       resultWriter = new VariantRecallerResultWriter(vrArgs.MATRIX_CSV_FILE);
         final FeatureDataSource<VariantContext> dataSource = new FeatureDataSource<VariantContext>(
                 vrArgs.ALLELE_VCF_FILE.getAbsolutePath(), null, 0, VariantContext.class);
-        final HaplotypeRegionWalker regionWalker = new HaplotypeRegionWalker(vrArgs);
-        final TrimmedReadsReader readsReader = new TrimmedReadsReader(vrArgs);
+        final HaplotypeRegionWalker             regionWalker = new HaplotypeRegionWalker(vrArgs);
+        final TrimmedReadsReader                readsReader = new TrimmedReadsReader(vrArgs);
+        final CountingReadFilter                readFilter = makeReadFilter(readsReader.getHeader());
+        readsReader.setReadFilter(readFilter);
         progressMeter.setRecordsBetweenTimeChecks(1);
 
         // walk regions, as defined by argument
@@ -143,5 +147,17 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
 
         resultWriter.close();
     }
+
+    @Override
+    public List<ReadFilter> getDefaultReadFilters() {
+        return HaplotypeCallerEngine.makeStandardHCReadFilters();
+    }
+
+    public CountingReadFilter makeReadFilter(SAMFileHeader samFileHeader){
+        final GATKReadFilterPluginDescriptor readFilterPlugin =
+                getCommandLineParser().getPluginDescriptor(GATKReadFilterPluginDescriptor.class);
+        return  readFilterPlugin.getMergedCountingReadFilter(samFileHeader);
+    }
+
 }
 
