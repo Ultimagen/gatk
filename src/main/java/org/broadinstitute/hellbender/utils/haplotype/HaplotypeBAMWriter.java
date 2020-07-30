@@ -57,7 +57,7 @@ public class HaplotypeBAMWriter implements AutoCloseable {
         /**
          * With this option, haplotypes will not be included in the output bam.
          */
-        NO_HAPLOTYPES
+        NO_HAPLOTYPES,
 
         /**
          * Same as CALLED_HAPLOTYPES, but without reads
