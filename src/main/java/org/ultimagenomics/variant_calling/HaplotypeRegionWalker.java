@@ -5,6 +5,8 @@ import htsjdk.samtools.SAMRecordIterator;
 import htsjdk.samtools.SamReader;
 import htsjdk.samtools.SamReaderFactory;
 import htsjdk.samtools.util.Locatable;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.gcs.BucketUtils;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
@@ -15,10 +17,13 @@ import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class HaplotypeRegionWalker {
+
+    private static final Logger logger = LogManager.getLogger(HaplotypeRegionWalker.class);
 
     private SamReader       samReader;
     private List<Haplotype> walkerHaplotypes = new LinkedList<>();
@@ -32,6 +37,44 @@ public class HaplotypeRegionWalker {
         samReader = SamReaderFactory.makeDefault().referenceSequence(vrArgs.REFERENCE_FASTA).open(samPath, cloudWrapper, cloudIndexWrapper);
 
     }
+
+    void forBest(Locatable queryLoc, Consumer<List<Haplotype>> action) {
+        Objects.requireNonNull(action);
+
+        final List<Haplotype> best = new LinkedList<>();
+
+        forEach(queryLoc, haplotypes -> {
+            if ( best.size() == 0 ||
+                    (fittnessScore(queryLoc, haplotypes) > fittnessScore(queryLoc, best)) ) {
+                best.clear();
+                best.addAll(haplotypes);
+            }
+        });
+
+        if ( best.size() != 0 )
+            action.accept(best);
+    }
+
+    private double fittnessScore(Locatable loc, List<Haplotype> haplotypes) {
+        Objects.requireNonNull(haplotypes);
+        if ( haplotypes.size() == 0 )
+            return 0;
+        Locatable   hloc = haplotypes.get(0).getGenomeLocation();
+
+        // determine spacing before and end of loc
+        int         before = Math.max(1, loc.getStart() - hloc.getStart());
+        int         after = Math.max(1, hloc.getEnd() - loc.getEnd());
+
+        // score reflects closeness to being in the center
+        double       score = 1.0 - 2 * Math.abs(0.5 - (double)before / (before + after));
+
+        if ( logger.isDebugEnabled() )
+            logger.debug(String.format("loc %s, hloc: %s, before: %d, after: %d, score: %f",
+                                                            loc, hloc, before, after, score));
+
+        return score;
+    }
+
 
     void forEach(Locatable queryLoc, Consumer<List<Haplotype>> action) {
         Objects.requireNonNull(action);

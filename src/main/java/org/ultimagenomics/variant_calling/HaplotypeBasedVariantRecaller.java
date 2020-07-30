@@ -92,7 +92,7 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
 
                 // walk haplotype (groups) under this variant
                 SimpleInterval      vcLoc = new SimpleInterval(vc.getContig(), vc.getStart(), vc.getEnd());
-                regionWalker.forEach(vcLoc, haplotypes -> {
+                regionWalker.forBest(vcLoc, haplotypes -> {
 
                     // get reads overlapping haplotypes
                     SimpleInterval haplotypeSpan = new SimpleInterval(haplotypes.get(0).getGenomeLocation());
