@@ -20,6 +20,7 @@ import org.broadinstitute.hellbender.utils.genotyper.SampleList;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
+import org.ultimagenomics.haplotype_calling.LHWRefView;
 
 import java.util.*;
 
@@ -104,8 +105,20 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                 SimpleInterval      vcLoc = new SimpleInterval(vc.getContig(), vc.getStart(), vc.getEnd());
                 regionWalker.forBest(vcLoc, haplotypes -> {
 
+                    SimpleInterval  haplotypeSpan = new SimpleInterval(haplotypes.get(0).getGenomeLocation());
+                    byte[]          refBases = reference.queryAndPrefetch(haplotypeSpan).getBases();
+
+                    LHWRefView      refView = null;
+                    final List<Haplotype> processedHaplotypes = new LinkedList<>();
+                    if ( (hcArgs.flowAssemblyCollapseHKerSize > 0)
+                                    && LHWRefView.needsCollapsing(refBases, hcArgs.flowAssemblyCollapseHKerSize, logger, false) ) {
+                        refView = new LHWRefView(hcArgs.flowAssemblyCollapseHKerSize, refBases, haplotypeSpan, logger, false);
+                        processedHaplotypes.addAll(refView.uncollapseHaplotypesByRef(haplotypes, false, true, refBases));
+                    }
+                    else
+                        processedHaplotypes.addAll(haplotypes);
+
                     // get reads overlapping haplotypes
-                    SimpleInterval haplotypeSpan = new SimpleInterval(haplotypes.get(0).getGenomeLocation());
                     Collection<FlowBasedRead> reads = readsReader.getReads(haplotypeSpan, vcLoc);
                     List<VariantContext>      variants = new LinkedList<>(Arrays.asList(vc));
                     if ( logger.isDebugEnabled() )
@@ -115,14 +128,14 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
 
                     // prepare assembly result
                     AssemblyResultSet assemblyResult = new AssemblyResultSet();
-                    haplotypes.forEach(haplotype -> assemblyResult.add(haplotype));
+                    processedHaplotypes.forEach(haplotype -> assemblyResult.add(haplotype));
                     Map<String, List<GATKRead>> perSampleReadList = new LinkedHashMap<>();
                     List<GATKRead> gtakReads = new LinkedList<>();
                     reads.forEach(flowBasedRead -> gtakReads.add(flowBasedRead));
                     perSampleReadList.put(sampleNames[0], gtakReads);
                     AssemblyRegion regionForGenotyping = new AssemblyRegion(haplotypeSpan, 0, readsReader.getHeader());
                     assemblyResult.setPaddedReferenceLoc(haplotypeSpan);
-                    assemblyResult.setFullReferenceWithPadding(reference.queryAndPrefetch(haplotypeSpan).getBases());
+                    assemblyResult.setFullReferenceWithPadding(refBases);
                     assemblyResult.setRegionForGenotyping(regionForGenotyping);
 
 
