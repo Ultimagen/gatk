@@ -132,9 +132,12 @@ public class VariantRecallerResultWriter {
                         keyspaceLength = ((FlowBasedRead)read).getKeyLength();
 
                     // build basic matrix line
-                    String line = String.format("%s %d %s",
+                    String line = String.format("%s %d %d %d %d %s",
                             read.getName(),
                             keyspaceLength,
+                            read.isDuplicate() ? 1 : 0,
+                            read.isReverseStrand() ? 1 : 0,
+                            read.getMappingQuality(),
                             StringUtils.join(ArrayUtils.toObject(lineValues), " "));
 
                     // add bytes at variant location?
