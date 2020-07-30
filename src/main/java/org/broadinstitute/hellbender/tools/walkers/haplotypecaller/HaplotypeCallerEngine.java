@@ -192,7 +192,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                                  ReferenceSequenceFile referenceReader, VariantAnnotatorEngine annotationEngine) {
         this.dragstrParams = DragstrParamUtils.parse(hcArgs.likelihoodArgs.dragstrParams);
         this.hcArgs = Utils.nonNull(hcArgs);
-        FlowBasedRead.setUltimaFlowMatrixMods(hcArgs.ultimaFlowMatrixMods);
+        FlowBasedRead.setFlowMatrixMods(hcArgs.flowMatrixMods);
         this.readsHeader = Utils.nonNull(readsHeader);
         this.referenceReader = Utils.nonNull(referenceReader);
         this.annotationEngine = Utils.nonNull(annotationEngine);
@@ -464,7 +464,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         // where the filters are used.  For example, in emitting all sites the lowQual field is used
         headerInfo.add(GATKVCFHeaderLines.getFilterLine(GATKVCFConstants.LOW_QUAL_FILTER_NAME));
 
-        if ( hcArgs.ultimaAssemblyCollapseHKerSize > 0 ) {
+        if ( hcArgs.flowAssemblyCollapseHKerSize > 0 ) {
             headerInfo.add(GATKVCFHeaderLines.getInfoLine(GATKVCFConstants.EXT_COLLAPSED_KEY));
         }
 
