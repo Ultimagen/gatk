@@ -140,6 +140,19 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                     else
                         processedHaplotypes.addAll(haplotypes);
 
+                    SimpleInterval  haplotypeSpan = new SimpleInterval(haplotypes.get(0).getGenomeLocation());
+                    byte[]          refBases = reference.queryAndPrefetch(haplotypeSpan).getBases();
+
+                    LHWRefView      refView = null;
+                    final List<Haplotype> processedHaplotypes = new LinkedList<>();
+                    if ( (hcArgs.flowAssemblyCollapseHKerSize > 0)
+                                    && LHWRefView.needsCollapsing(refBases, hcArgs.flowAssemblyCollapseHKerSize, logger, false) ) {
+                        refView = new LHWRefView(hcArgs.flowAssemblyCollapseHKerSize, refBases, haplotypeSpan, logger, false);
+                        processedHaplotypes.addAll(refView.uncollapseHaplotypesByRef(haplotypes, false, true, refBases));
+                    }
+                    else
+                        processedHaplotypes.addAll(haplotypes);
+
                     // get reads overlapping haplotypes
                     Map<SamReader, Collection<FlowBasedRead>> readsByReader = readsReader.getReads(haplotypeSpan, vcLoc);
                     List<VariantContext>      variants = new LinkedList<>(Arrays.asList(vc));
