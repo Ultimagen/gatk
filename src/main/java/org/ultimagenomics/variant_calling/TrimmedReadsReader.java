@@ -4,6 +4,8 @@ import htsjdk.samtools.*;
 import htsjdk.samtools.util.Locatable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.broadinstitute.hellbender.engine.filters.CountingReadFilter;
+import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.utils.clipping.ReadClipper;
 import org.broadinstitute.hellbender.utils.gcs.BucketUtils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
@@ -23,6 +25,7 @@ public class TrimmedReadsReader {
     private static final Logger logger = LogManager.getLogger(TrimmedReadsReader.class);
 
     private SamReader               samReader;
+    private CountingReadFilter      readFilter;
     private Map<String, Integer>    readGroupMaxClass = new LinkedHashMap<>();
     private Map<String, String>     readGroupFlowOrder = new LinkedHashMap<>();
     private FlowBasedAlignmentArgumentCollection fbArgs = new FlowBasedAlignmentArgumentCollection();
@@ -32,6 +35,7 @@ public class TrimmedReadsReader {
 
         Function<SeekableByteChannel, SeekableByteChannel> cloudWrapper = BucketUtils.getPrefetchingWrapper(40);
         Function<SeekableByteChannel, SeekableByteChannel> cloudIndexWrapper = BucketUtils.getPrefetchingWrapper(40);
+
         samReader = SamReaderFactory.makeDefault().referenceSequence(vrArgs.REFERENCE_FASTA).open(samPath, cloudWrapper, cloudIndexWrapper);
     }
 
@@ -49,6 +53,10 @@ public class TrimmedReadsReader {
             // convert to gatk read
             String          readGroup = record.getReadGroup().getId();
             GATKRead        gatkRead = new SAMRecordToGATKReadAdapter(record);
+
+            // filter out?
+            if ( readFilter != null && !readFilter.test(gatkRead) )
+                continue;
 
             // soft/hard clipped bases
             gatkRead = ReadClipper.hardClipSoftClippedBases(gatkRead);
@@ -104,4 +112,9 @@ public class TrimmedReadsReader {
     public SAMFileHeader getHeader() {
         return samReader.getFileHeader();
     }
+
+    public void setReadFilter(CountingReadFilter readFilter) {
+        this.readFilter = readFilter;
+    }
+
 }
