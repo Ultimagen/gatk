@@ -191,7 +191,8 @@ public final class ReadThreadingAssemblerUnitTest extends GATKBaseTest {
         activeRegion.addAll(reads);
 //        logger.warn("Assembling " + activeRegion + " with " + engine);
         final AssemblyResultSet assemblyResultSet =  assembler.runLocalAssembly(activeRegion, refHaplotype, refBases, loc, null, header,
-                                                                                SmithWatermanJavaAligner.getInstance(), DANGLING_END_SW_PARAMETERS, HAPLOTYPE_TO_REFERENCE_SW_PARAMETERS);
+                                                                                SmithWatermanJavaAligner.getInstance(), null,
+                                                                                DANGLING_END_SW_PARAMETERS, HAPLOTYPE_TO_REFERENCE_SW_PARAMETERS);
         return assemblyResultSet.getHaplotypeList();
     }
 

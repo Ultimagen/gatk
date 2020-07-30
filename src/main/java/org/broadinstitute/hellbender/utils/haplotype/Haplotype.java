@@ -293,16 +293,13 @@ public final class Haplotype extends Allele {
     public int getDiffMatter() {
         return diffMatter;
     }
-
-    public void setDiffMatter(int diffMatter) {
-        this.diffMatter = diffMatter;
-    }
-
-
     public int getKmerSize() {
         return kmerSize;
     }
 
+    public void setDiffMatter(int diffMatter) {
+        this.diffMatter = diffMatter;
+    }
     public void setKmerSize(int kmerSize) {
         this.kmerSize = kmerSize;
     }
