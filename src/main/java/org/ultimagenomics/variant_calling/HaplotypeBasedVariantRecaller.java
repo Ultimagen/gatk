@@ -103,9 +103,9 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
 
                 // walk haplotype (groups) under this variant
                 SimpleInterval      vcLoc = new SimpleInterval(vc.getContig(), vc.getStart(), vc.getEnd());
-                regionWalker.forBest(vcLoc, haplotypes -> {
+                regionWalker.forBest(vcLoc, bestHaplotypes -> {
 
-                    SimpleInterval  haplotypeSpan = new SimpleInterval(haplotypes.get(0).getGenomeLocation());
+                    SimpleInterval  haplotypeSpan = new SimpleInterval(bestHaplotypes.get(0).getGenomeLocation());
                     byte[]          refBases = reference.queryAndPrefetch(haplotypeSpan).getBases();
 
                     LHWRefView      refView = null;
@@ -113,17 +113,17 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                     if ( (hcArgs.flowAssemblyCollapseHKerSize > 0)
                                     && LHWRefView.needsCollapsing(refBases, hcArgs.flowAssemblyCollapseHKerSize, logger, false) ) {
                         refView = new LHWRefView(hcArgs.flowAssemblyCollapseHKerSize, refBases, haplotypeSpan, logger, false);
-                        processedHaplotypes.addAll(refView.uncollapseHaplotypesByRef(haplotypes, false, true, refBases));
+                        processedHaplotypes.addAll(refView.uncollapseHaplotypesByRef(bestHaplotypes, false, true, refBases));
                     }
                     else
-                        processedHaplotypes.addAll(haplotypes);
+                        processedHaplotypes.addAll(bestHaplotypes);
 
                     // get reads overlapping haplotypes
                     Collection<FlowBasedRead> reads = readsReader.getReads(haplotypeSpan, vcLoc);
                     List<VariantContext>      variants = new LinkedList<>(Arrays.asList(vc));
                     if ( logger.isDebugEnabled() )
                         logger.debug(String.format("vcLoc %s, haplotypeSpan: %s, %d haplotypes, %d reads",
-                                vcLoc.toString(), haplotypeSpan.toString(), haplotypes.size(), reads.size(), variants.size()));
+                                vcLoc.toString(), haplotypeSpan.toString(), processedHaplotypes.size(), reads.size(), variants.size()));
                     progressMeter.update(vcLoc);
 
                     // prepare assembly result
@@ -147,7 +147,7 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                     Map<String, List<GATKRead>> perSampleFilteredReadList = perSampleReadList;
                     SAMFileHeader readsHeader = readsReader.getHeader();
                     Map<Integer, AlleleLikelihoods<GATKRead, Allele>> genotypeLikelihoods = genotypingEngine.assignGenotypeLikelihoods2(
-                            haplotypes,
+                            processedHaplotypes,
                             readLikelihoods,
                             perSampleFilteredReadList,
                             assemblyResult.getFullReferenceWithPadding(),
