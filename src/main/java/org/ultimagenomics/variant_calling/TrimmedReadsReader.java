@@ -30,13 +30,17 @@ public class TrimmedReadsReader {
     private Map<String, String>     readGroupFlowOrder = new LinkedHashMap<>();
     private FlowBasedAlignmentArgumentCollection fbArgs = new FlowBasedAlignmentArgumentCollection();
 
-    public TrimmedReadsReader(HaplotypeBasedVariantRecallerArgumentCollection vrArgs) {
+    public TrimmedReadsReader(HaplotypeBasedVariantRecallerArgumentCollection vrArgs, Path referencePath) {
         Path samPath = IOUtils.getPath(vrArgs.READS_BAM_FILE);
 
         Function<SeekableByteChannel, SeekableByteChannel> cloudWrapper = BucketUtils.getPrefetchingWrapper(40);
         Function<SeekableByteChannel, SeekableByteChannel> cloudIndexWrapper = BucketUtils.getPrefetchingWrapper(40);
 
-        samReader = SamReaderFactory.makeDefault().referenceSequence(vrArgs.REFERENCE_FASTA).open(samPath, cloudWrapper, cloudIndexWrapper);
+        samReader = SamReaderFactory.makeDefault().referenceSequence(referencePath).open(samPath, cloudWrapper, cloudIndexWrapper);
+    }
+
+    SAMSequenceDictionary getSamSequenceDictionary() {
+        return samReader.getFileHeader().getSequenceDictionary();
     }
 
     public Collection<FlowBasedRead>  getReads(Locatable span, Locatable vcLoc) {

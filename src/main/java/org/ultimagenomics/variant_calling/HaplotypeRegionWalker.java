@@ -12,6 +12,7 @@ import org.broadinstitute.hellbender.utils.gcs.BucketUtils;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 
+import java.io.File;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Path;
 import java.util.LinkedList;
@@ -29,12 +30,12 @@ public class HaplotypeRegionWalker {
     private List<Haplotype> walkerHaplotypes = new LinkedList<>();
     private boolean         reusePreviousResults = false;
 
-    HaplotypeRegionWalker(HaplotypeBasedVariantRecallerArgumentCollection vrArgs) {
+    HaplotypeRegionWalker(HaplotypeBasedVariantRecallerArgumentCollection vrArgs, Path referencePath) {
         Path samPath = IOUtils.getPath(vrArgs.HAPLOTYPES_BAM_FILE);
 
         Function<SeekableByteChannel, SeekableByteChannel> cloudWrapper = BucketUtils.getPrefetchingWrapper(40);
         Function<SeekableByteChannel, SeekableByteChannel> cloudIndexWrapper = BucketUtils.getPrefetchingWrapper(40);
-        samReader = SamReaderFactory.makeDefault().referenceSequence(vrArgs.REFERENCE_FASTA).open(samPath, cloudWrapper, cloudIndexWrapper);
+        samReader = SamReaderFactory.makeDefault().referenceSequence(referencePath).open(samPath, cloudWrapper, cloudIndexWrapper);
 
     }
 
