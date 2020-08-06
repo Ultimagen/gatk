@@ -9,10 +9,12 @@ import org.broadinstitute.barclay.argparser.ArgumentCollection;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.GATKPlugin.GATKReadFilterPluginDescriptor;
+import org.broadinstitute.hellbender.cmdline.argumentcollections.OptionalIntervalArgumentCollection;
 import org.broadinstitute.hellbender.cmdline.programgroups.ShortVariantDiscoveryProgramGroup;
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.engine.filters.*;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.*;
+import org.broadinstitute.hellbender.utils.IntervalUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.genotyper.IndexedSampleList;
@@ -85,20 +87,22 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
         final String[]                          sampleNames = {SAMPLE_NAME_DEFAULT};
         final SampleList                        samplesList = new IndexedSampleList(Arrays.asList(sampleNames));
         final HaplotypeCallerGenotypingEngine   genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samplesList, !hcArgs.doNotRunPhysicalPhasing);
-        final ReferenceDataSource               reference = ReferenceDataSource.of(vrArgs.REFERENCE_FASTA.toPath());
+        final ReferenceDataSource               reference = ReferenceDataSource.of(referenceArguments.getReferencePath());
         final VariantRecallerResultWriter       resultWriter = new VariantRecallerResultWriter(vrArgs.MATRIX_CSV_FILE);
         final FeatureDataSource<VariantContext> dataSource = new FeatureDataSource<VariantContext>(
                 vrArgs.ALLELE_VCF_FILE.getAbsolutePath(), null, 0, VariantContext.class);
-        final HaplotypeRegionWalker             regionWalker = new HaplotypeRegionWalker(vrArgs);
-        final TrimmedReadsReader                readsReader = new TrimmedReadsReader(vrArgs);
+        final HaplotypeRegionWalker             regionWalker = new HaplotypeRegionWalker(vrArgs, referenceArguments.getReferencePath());
+        final TrimmedReadsReader                readsReader = new TrimmedReadsReader(vrArgs, referenceArguments.getReferencePath());
         final CountingReadFilter                readFilter = makeReadFilter(readsReader.getHeader());
+        final SAMSequenceDictionary             samSequenceDictionary = readsReader.getSamSequenceDictionary();
+        final List<SimpleInterval>              intervals = hasUserSuppliedIntervals() ? getUserIntervals() : IntervalUtils.getAllIntervalsForReference(samSequenceDictionary);
         readsReader.setReadFilter(readFilter);
         progressMeter.setRecordsBetweenTimeChecks(1);
 
         // walk regions, as defined by argument
-        for ( String regionStr : vrArgs.REGION_LOC.split(",") ) {
-            SimpleInterval      region = new SimpleInterval(regionStr);
+        for ( SimpleInterval region : intervals ) {
 
+            logger.info("region: " + region);
             dataSource.query(region).forEachRemaining(vc -> {
 
                 // walk haplotype (groups) under this variant
