@@ -34,16 +34,4 @@ public class HaplotypeBasedVariantRecallerArgumentCollection implements Serializ
      **/
     @Argument(fullName = "matrix-file-csv", doc = "CSV file to be filled with likelihood matrix data", optional = false)
     public File MATRIX_CSV_FILE = null;
-
-    /**
-     *  This argument specifies FASTA reference
-     **/
-    @Argument(fullName = "reference-fasta", doc = "FASTA reference", optional = false)
-    public File REFERENCE_FASTA = null;
-
-    /**
-     *  This argument specifies region to work on
-     **/
-    @Argument(fullName = "region-loc", doc = "Region to work on", optional = false)
-    public String REGION_LOC = null;
 }

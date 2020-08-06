@@ -1079,4 +1079,8 @@ public abstract class GATKTool extends CommandLineProgram {
      */
     public void closeTool(){
     }
+
+    public List<SimpleInterval> getUserIntervals() {
+        return userIntervals;
+    }
 }
