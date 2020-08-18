@@ -66,6 +66,11 @@ public class FlowBasedHaplotype  extends Allele {
     }
 
     static protected byte[] base2key(byte[] bases, String flow_order, int clipping){
+
+        // at the moment, we can not handle flow counts higher than 127 since the flow key
+        // is kept in an array of byte, which is an 8 bit signed type. enforce
+        clipping = Math.min(127, clipping);
+
         ArrayList<Byte> result = new ArrayList<>();
         byte[] flow_order_bytes = flow_order.getBytes();
         int loc = 0;
