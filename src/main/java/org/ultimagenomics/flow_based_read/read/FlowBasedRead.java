@@ -145,6 +145,16 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         return sb.toString();
     }
 
+    static public String keyAsString(int[] ints)
+    {
+        StringBuilder   sb = new StringBuilder();
+
+        for ( int i : ints )
+            sb.append((char)((i < 10) ? ('0' + i) : ('A' + i - 10)));
+
+        return sb.toString();
+    }
+
     private void readBaseMatrixRecal(String _flowOrder) {
 
        // generate key (base to flow space)
@@ -217,7 +227,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         flowMatrix = new double[maxHmer+1][key.length];
         for (int i = 0 ; i < maxHmer+1; i++) {
             for (int j = 0 ; j < key.length; j++ ){
-                flowMatrix[i][j] = fbargs.filling_value;;
+                flowMatrix[i][j] = fbargs.filling_value;
             }
         }
 
