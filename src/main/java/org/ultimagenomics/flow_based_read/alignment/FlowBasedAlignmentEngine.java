@@ -24,7 +24,6 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
     private double log10globalReadMismappingRate;
     private final double expectedErrorRatePerBase;
     private static final int ALIGNMENT_UNCERTAINTY = 4;
-    private static final int FLOW_ORDER_CYCLE_LENGTH = 4;
     private static final double LOG10_QUAL_PER_BASE = Double.NEGATIVE_INFINITY;
     final FlowBasedAlignmentArgumentCollection fbargs;
     private final Logger logger = LogManager.getLogger(this.getClass());
@@ -81,6 +80,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         List<FlowBasedRead> processedReads = new ArrayList<>(likelihoods.evidenceCount());
         List<FlowBasedHaplotype> processedHaplotypes = new ArrayList<>(likelihoods.numberOfAlleles());
         String flow_order = null;
+        String original_flow_order = null;
         String fo;
         int max_class = 12 ;
         for (int i = 0 ; i < likelihoods.evidenceCount(); i++) {
@@ -93,13 +93,14 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             }
 
             fo = hdr.getReadGroup(rd.getReadGroup()).getFlowOrder();
+            original_flow_order = fo.substring(0,fbargs.flowOrderCycleLength);
             FlowBasedRead tmp = new FlowBasedRead(rd, fo, max_class, fbargs);
             tmp.apply_alignment();
 
             if ( flow_order == null)  {
                 fo = tmp.getFlowOrder();
-                if (fo.length()>=FLOW_ORDER_CYCLE_LENGTH) {
-                    flow_order = fo.substring(0,FLOW_ORDER_CYCLE_LENGTH);
+                if (fo.length()>=fbargs.flowOrderCycleLength) {
+                    flow_order = fo.substring(0,fbargs.flowOrderCycleLength);
                }
             }
             processedReads.add(tmp);
@@ -108,7 +109,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         FlowBasedHaplotype fbh;
 
         for (int i = 0; i < likelihoods.numberOfAlleles(); i++){
-            fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i), flow_order, max_class);
+            fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i), original_flow_order, max_class);
             processedHaplotypes.add(fbh);
         }
 
