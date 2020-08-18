@@ -210,7 +210,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         clip_right = original_length - clip_right + ALIGNMENT_UNCERTAINTY < original_length ?
                             original_length - clip_right+ALIGNMENT_UNCERTAINTY : original_length;
 
-        byte [] key;
+        int [] key;
         key = Arrays.copyOfRange(haplotype.getKey(), clip_left, clip_right);
 
         byte[] flow_order;
