@@ -145,6 +145,16 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         return sb.toString();
     }
 
+    static public String keyAsString(int[] ints)
+    {
+        StringBuilder   sb = new StringBuilder();
+
+        for ( int i : ints )
+            sb.append((char)((i < 10) ? ('0' + i) : ('A' + i - 10)));
+
+        return sb.toString();
+    }
+
     private void readBaseMatrixRecal(String _flowOrder) {
 
        // generate key (base to flow space)
@@ -217,7 +227,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         flowMatrix = new double[maxHmer+1][key.length];
         for (int i = 0 ; i < maxHmer+1; i++) {
             for (int j = 0 ; j < key.length; j++ ){
-                flowMatrix[i][j] = fbargs.filling_value;;
+                flowMatrix[i][j] = fbargs.filling_value;
             }
         }
 
@@ -305,7 +315,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
 
     public String getFlowOrder() {
-        return new String(Arrays.copyOfRange(flowOrder, 0, Math.min(4,flowOrder.length)));
+        return new String(Arrays.copyOfRange(flowOrder, 0, Math.min(fbargs.flowOrderCycleLength,flowOrder.length)));
     }
 
     public int getMaxHmer() {
@@ -323,7 +333,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         double [] result = new double[kq.length];
         for (int i = 0 ; i < kq.length; i++ ) {
             //disallow probabilities below filling_value
-            result[i] = Math.max(Math.pow(10, ((double)-kq[i])/fbargs.probability_scaling_factor), fbargs.filling_value);
+            result[i] = Math.max(Math.pow(10, ((double)-kq[i])/fbargs.probabilityScalingFactor), fbargs.filling_value);
         }
         return result;
     }
@@ -838,7 +848,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     private void quantizeProbs( int [] kd_probs ) {
         int nQuants = fbargs.probability_quantization;
-        double bin_size = 6*fbargs.probability_scaling_factor/(float)nQuants;
+        double bin_size = 6*fbargs.probabilityScalingFactor/(float)nQuants;
         for ( int i = 0 ; i < kd_probs.length; i++) {
             if (kd_probs[i] <=0)
                 continue;
@@ -852,7 +862,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private void quantizeProbs() {
 
         int nQuants = fbargs.probability_quantization;
-        double bin_size = 6*fbargs.probability_scaling_factor/(float)nQuants;
+        double bin_size = 6*fbargs.probabilityScalingFactor/(float)nQuants;
         for (int i = 0 ; i < getNFlows(); i++) {
             for (int j = 0 ; j < getMaxHmer()+1; j ++){
                 if ( flowMatrix[j][i] == fbargs.filling_value)
@@ -861,9 +871,9 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
                     continue;
                 }
 
-                double origQual = -fbargs.probability_scaling_factor*Math.log10(flowMatrix[j][i]);
+                double origQual = -fbargs.probabilityScalingFactor*Math.log10(flowMatrix[j][i]);
                 byte binnedQual = (byte)(bin_size * (byte)(origQual/bin_size)+1);
-                flowMatrix[j][i] = Math.max(Math.pow(10, ((double)binnedQual)/fbargs.probability_scaling_factor), fbargs.filling_value);
+                flowMatrix[j][i] = Math.max(Math.pow(10, ((double)binnedQual)/fbargs.probabilityScalingFactor), fbargs.filling_value);
             }
         }
     }

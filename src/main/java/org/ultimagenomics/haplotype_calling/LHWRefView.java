@@ -257,17 +257,15 @@ public class LHWRefView {
 
                     // check for a delete at the end of an hmer or at the beginning
                     if (onHomoPolymer(ref, refOfs - hmerSizeThreshold, ref[refOfs], hmerSizeThreshold, 1)) {
-                        // fill with base until end of jomopolymer on the ref
-                        byte base = ref[refOfs];
+                        // fill with base until end of homopolymer on the ref
                         for (int size = 0; (size < c.getLength()) /*&& (ref[refOfs + size] == base)*/; size++)
-                            result[resultOfs++] = base;
+                            result[resultOfs++] = ref[refOfs + size];
                         didCollapse.set(true);
 
                     } else if (onHomoPolymer(ref, refOfs + c.getLength(), ref[refOfs + c.getLength() - 1], hmerSizeThreshold, -1)) {
-                        // fill with base until start of jomopolymer on the ref
-                        byte base = ref[refOfs + c.getLength() - 1];
+                        // fill with base until start of homopolymer on the ref
                         for (int size = 0; (size < c.getLength()) /*&& (ref[refOfs + c.getLength() - 1 - size] == base)*/; size++)
-                            result[resultOfs++] = base;
+                            result[resultOfs++] = ref[refOfs + c.getLength() - 1 - size];
                         didCollapse.set(true);
                     }
                 }
