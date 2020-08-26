@@ -290,6 +290,37 @@ public final class ReadUtils {
     public static int getStrandedUnclippedStart( final GATKRead read ) {
         return read.isReverseStrand() ? read.getUnclippedEnd() : read.getUnclippedStart();
     }
+    public static int getSelectedStart(final GATKRead read, final boolean skipEndsHmer, final boolean clipped) {
+        if ( skipEndsHmer ) {
+            byte[]      bases = read.getBasesNoCopy();
+            byte        hmerBase = bases[0];
+            int         hmerSize = 1;
+            for ( ; hmerSize < bases.length ; hmerSize++ )
+                if (bases[hmerSize] != hmerBase)
+                    break;
+            return read.getStart() + hmerSize;
+        }
+        else if ( clipped )
+            return read.getStart();
+        else
+            return read.getUnclippedStart();
+    }
+
+    public static int getSelectedEnd(final GATKRead read, final boolean skipEndsHmer, final boolean clipped) {
+        if ( skipEndsHmer ) {
+            byte[]      bases = read.getBasesNoCopy();
+            byte        hmerBase = bases[bases.length - 1];
+            int         hmerSize = 1;
+            for ( ; hmerSize < bases.length ; hmerSize++ )
+                if (bases[bases.length - 1 - hmerSize] != hmerBase)
+                    break;
+            return read.getEnd() - hmerSize;
+        }
+        else if ( clipped )
+            return read.getEnd();
+        else
+            return read.getUnclippedEnd();
+    }
 
     public static boolean isEmpty(final SAMRecord read) {
         return read.getReadBases() == null || read.getReadLength() == 0;

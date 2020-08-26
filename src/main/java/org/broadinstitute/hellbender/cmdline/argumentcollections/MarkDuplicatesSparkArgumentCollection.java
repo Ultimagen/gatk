@@ -37,4 +37,17 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
     @Argument(fullName = MarkDuplicatesSparkArgumentCollection.REMOVE_SEQUENCING_DUPLICATE_READS, doc = "If true do not write optical/sequencing duplicates to the output file instead of writing them with appropriate flags set.",
             mutex = {MarkDuplicatesSparkArgumentCollection.DUPLICATE_TAGGING_POLICY_LONG_NAME, MarkDuplicatesSparkArgumentCollection.REMOVE_ALL_DUPLICATE_READS}, optional = true)
     public boolean removeSequencingDuplicates = false;
+
+    @Argument(doc = "Make end location of read be significant when considering duplicates, " +
+            "in addition to the start location, which is always significant. Default false.")
+    public boolean FLOW_END_LOCATION_SIGNIFICANT = false;
+
+    @Argument(doc = "Use clipped, rather than unclipped, when considering duplicates. Default false.")
+    public boolean FLOW_USE_CLIPPED_LOCATIONS = false;
+
+    @Argument(doc = "Skip first and last homopolymers, when considering duplicates. " +
+            " This argument takes precedence over FLOW_USE_CLIPPED_LOCATIONS. Default false.")
+    public boolean FLOW_SKIP_ENDS_HOMOPOLYMERS = false;
+
+
 }

@@ -1,6 +1,7 @@
 package org.broadinstitute.hellbender.utils.read.markduplicates.sparkrecords;
 
 import htsjdk.samtools.SAMFileHeader;
+import org.broadinstitute.hellbender.cmdline.argumentcollections.MarkDuplicatesSparkArgumentCollection;
 import org.broadinstitute.hellbender.tools.spark.transforms.markduplicates.MarkDuplicatesSparkUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
@@ -27,10 +28,11 @@ public final class EmptyFragment extends PairedEnds {
      * this only includes the necessary data to locate the read, the rest is unnecessary because it will appear in the paired bucket
      *
      */
-    public EmptyFragment(GATKRead read, SAMFileHeader header, Map<String, Byte> headerLibraryMap) {
+    public EmptyFragment(GATKRead read, SAMFileHeader header, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
         super(0, null);
         this.R1R = read.isReverseStrand();
-        this.key = ReadsKey.getKeyForFragment(ReadUtils.getStrandedUnclippedStart(read),
+        this.key = ReadsKey.getKeyForFragment(ReadUtils.getSelectedStart(read, mdArgs.FLOW_SKIP_ENDS_HOMOPOLYMERS, mdArgs.FLOW_USE_CLIPPED_LOCATIONS),
+                mdArgs.FLOW_END_LOCATION_SIGNIFICANT ? ReadUtils.getSelectedEnd(read, mdArgs.FLOW_SKIP_ENDS_HOMOPOLYMERS, mdArgs.FLOW_USE_CLIPPED_LOCATIONS) : 0,
                 isRead1ReverseStrand(),
                 ReadUtils.getReferenceIndex(read, header),
                 headerLibraryMap.get(MarkDuplicatesSparkUtils.getLibraryForRead(read, header, LibraryIdGenerator.UNKNOWN_LIBRARY)));
