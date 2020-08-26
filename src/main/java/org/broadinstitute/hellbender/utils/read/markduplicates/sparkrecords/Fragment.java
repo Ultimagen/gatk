@@ -1,6 +1,8 @@
 package org.broadinstitute.hellbender.utils.read.markduplicates.sparkrecords;
 
 import htsjdk.samtools.SAMFileHeader;
+import org.broadinstitute.hellbender.cmdline.argumentcollections.MarkDuplicatesSparkArgumentCollection;
+import org.broadinstitute.hellbender.tools.spark.transforms.markduplicates.MarkDuplicatesSpark;
 import org.broadinstitute.hellbender.tools.spark.transforms.markduplicates.MarkDuplicatesSparkUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
@@ -24,12 +26,13 @@ public class Fragment extends TransientFieldPhysicalLocation {
 
     protected final short score;
 
-    public Fragment(final GATKRead first, final SAMFileHeader header, int partitionIndex, MarkDuplicatesScoringStrategy scoringStrategy, Map<String, Byte> headerLibraryMap) {
+    public Fragment(final GATKRead first, final SAMFileHeader header, int partitionIndex, MarkDuplicatesScoringStrategy scoringStrategy, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
         super(partitionIndex, first.getName());
 
         this.score = scoringStrategy.score(first);
         this.R1R = first.isReverseStrand();
-        this.key = ReadsKey.getKeyForFragment(ReadUtils.getStrandedUnclippedStart(first),
+        this.key = ReadsKey.getKeyForFragment(ReadUtils.getSelectedStart(first, mdArgs.FLOW_SKIP_ENDS_HOMOPOLYMERS, mdArgs.FLOW_USE_CLIPPED_LOCATIONS),
+                mdArgs.FLOW_END_LOCATION_SIGNIFICANT ? ReadUtils.getSelectedEnd(first, mdArgs.FLOW_SKIP_ENDS_HOMOPOLYMERS, mdArgs.FLOW_USE_CLIPPED_LOCATIONS) : 0,
                 isRead1ReverseStrand(),
                 (short)ReadUtils.getReferenceIndex(first, header),
                 headerLibraryMap.get(MarkDuplicatesSparkUtils.getLibraryForRead(first, header, LibraryIdGenerator.UNKNOWN_LIBRARY)));

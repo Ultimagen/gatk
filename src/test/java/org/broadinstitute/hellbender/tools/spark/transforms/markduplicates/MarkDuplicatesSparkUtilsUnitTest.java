@@ -10,6 +10,7 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.serializer.KryoRegistrator;
 import org.broadinstitute.hellbender.GATKBaseTest;
+import org.broadinstitute.hellbender.cmdline.argumentcollections.MarkDuplicatesSparkArgumentCollection;
 import org.broadinstitute.hellbender.engine.spark.SAMRecordSerializer;
 import org.broadinstitute.hellbender.engine.spark.SparkContextFactory;
 import org.broadinstitute.hellbender.exceptions.UserException;
@@ -80,7 +81,7 @@ public class MarkDuplicatesSparkUtilsUnitTest extends GATKBaseTest {
         SAMFileHeader header = samRecordSetBuilder.getHeader();
         header.setReadGroups(new ArrayList<>());
 
-        MarkDuplicatesSparkUtils.transformToDuplicateNames(header, MarkDuplicatesScoringStrategy.SUM_OF_BASE_QUALITIES, null, reads, 2, false).collect();
+        MarkDuplicatesSparkUtils.transformToDuplicateNames(header, MarkDuplicatesScoringStrategy.SUM_OF_BASE_QUALITIES, null, reads, 2, false, new MarkDuplicatesSparkArgumentCollection()).collect();
     }
 
     @Test
@@ -96,7 +97,7 @@ public class MarkDuplicatesSparkUtilsUnitTest extends GATKBaseTest {
         SAMFileHeader header = samRecordSetBuilder.getHeader();
 
         try {
-            MarkDuplicatesSparkUtils.transformToDuplicateNames(header, MarkDuplicatesScoringStrategy.SUM_OF_BASE_QUALITIES, null, reads, 2, false).collect();
+            MarkDuplicatesSparkUtils.transformToDuplicateNames(header, MarkDuplicatesScoringStrategy.SUM_OF_BASE_QUALITIES, null, reads, 2, false, new MarkDuplicatesSparkArgumentCollection()).collect();
             Assert.fail("Should have thrown an exception");
         } catch (Exception e){
             Assert.assertTrue(e instanceof SparkException);

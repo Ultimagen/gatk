@@ -30,12 +30,13 @@ public abstract class ReadsKey {
         return new KeyForFragment(read.getName().hashCode()) ;
     }
 
-    public static ReadsKey getKeyForFragment(int strandedUnclippedStart, boolean reverseStrand, int referenceIndex, byte library) {
-        return new KeyForFragment(longKeyForFragment(strandedUnclippedStart, reverseStrand, referenceIndex, library));
+    public static ReadsKey getKeyForFragment(int start, int end, boolean reverseStrand, int referenceIndex, byte library) {
+        return new KeyForFragment(longKeyForFragment(start, end, reverseStrand, referenceIndex, library));
     }
 
     public static ReadsKey getKeyForPair(final SAMFileHeader header, final GATKRead first, final GATKRead second, final Map<String, Byte> libraryKeyMap) {
         return new KeyForPair(longKeyForFragment(ReadUtils.getStrandedUnclippedStart(first),
+                                0,
                                 first.isReverseStrand(),
                                 ReadUtils.getReferenceIndex(first, header),
                                 libraryKeyMap.get(MarkDuplicatesSparkUtils.getLibraryForRead(first, header, LibraryIdGenerator.UNKNOWN_LIBRARY))),
@@ -112,11 +113,19 @@ public abstract class ReadsKey {
     }
 
     // Helper methods for generating summary longs
-    private static long longKeyForFragment(int strandedUnclippedStart, boolean reverseStrand, int referenceIndex, byte library) {
-        return (((long)strandedUnclippedStart) << 32) |
+    private static long longKeyForFragment(int start, int end, boolean reverseStrand, int referenceIndex, byte library) {
+        long key = (((long)start) << 32) |
                         (referenceIndex << 16 & (0xFFFF0000)) | // Note, the bitmasks are being used here because upcasting a negative int to a long in java results in the top bits being filled with 1s, which will ruin the rest of the key. So we mask it for saftey.
                         ((library << 8) & (0x0000FF00)) |
                         (reverseStrand ? 1 : 0);
+
+        // encode length within the remaining 7 bits
+        if ( end > start ) {
+            int     lengthMod = (end + 1 - start) & 0x0000007F;
+            key |= (lengthMod << 1);
+        }
+
+        return key;
     }
 
     private static long longKeyForPair(int strandedUnclippedStart, boolean reverseStrand, int referenceIndex) {
