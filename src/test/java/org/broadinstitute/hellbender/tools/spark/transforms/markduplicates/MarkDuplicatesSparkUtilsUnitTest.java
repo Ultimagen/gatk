@@ -126,8 +126,9 @@ public class MarkDuplicatesSparkUtilsUnitTest extends GATKBaseTest {
         sortedHeader.setSortOrder(SAMFileHeader.SortOrder.queryname);
 
         // Using the header flagged as unsorted will result in the reads being sorted again
-        JavaRDD<GATKRead> unsortedReadsMarked = MarkDuplicatesSpark.mark(unsortedReads,unsortedHeader, MarkDuplicatesScoringStrategy.SUM_OF_BASE_QUALITIES,new OpticalDuplicateFinder(),100,true,MarkDuplicates.DuplicateTaggingPolicy.DontTag);
-        JavaRDD<GATKRead> sortedReadsMarked = MarkDuplicatesSpark.mark(pariedEndsQueryGrouped,sortedHeader, MarkDuplicatesScoringStrategy.SUM_OF_BASE_QUALITIES,new OpticalDuplicateFinder(),1, true, MarkDuplicates.DuplicateTaggingPolicy.DontTag);
+        MarkDuplicatesSparkArgumentCollection mdArgs = new MarkDuplicatesSparkArgumentCollection();
+        JavaRDD<GATKRead> unsortedReadsMarked = MarkDuplicatesSpark.mark(unsortedReads,unsortedHeader, MarkDuplicatesScoringStrategy.SUM_OF_BASE_QUALITIES,new OpticalDuplicateFinder(),100,true,MarkDuplicates.DuplicateTaggingPolicy.DontTag, mdArgs);
+        JavaRDD<GATKRead> sortedReadsMarked = MarkDuplicatesSpark.mark(pariedEndsQueryGrouped,sortedHeader, MarkDuplicatesScoringStrategy.SUM_OF_BASE_QUALITIES,new OpticalDuplicateFinder(),1, true, MarkDuplicates.DuplicateTaggingPolicy.DontTag, mdArgs);
 
         Iterator<GATKRead> sortedReadsFinal = sortedReadsMarked.sortBy(GATKRead::commonToString, false, 1).collect().iterator();
         Iterator<GATKRead> unsortedReadsFinal = unsortedReadsMarked.sortBy(GATKRead::commonToString, false, 1).collect().iterator();
