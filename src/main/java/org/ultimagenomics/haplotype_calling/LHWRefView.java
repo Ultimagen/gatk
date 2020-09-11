@@ -117,6 +117,7 @@ public class LHWRefView {
                 alignedHaplotype.setAlignmentStartHapwrtRef(offset.get());
                 alignedHaplotype.contigs = h.contigs;
                 alignedHaplotype.setCollapsed(didCollapse.get());
+                alignedHaplotype.setDiffMatter(result.size());
             }
 
             result.add(alignedHaplotype);

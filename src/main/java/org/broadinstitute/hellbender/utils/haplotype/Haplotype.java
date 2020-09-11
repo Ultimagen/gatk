@@ -37,6 +37,7 @@ public final class Haplotype extends Allele {
     public List<? extends Allele> contigs = null;
 
     private boolean isCollapsed;
+    private int     diffMatter;
 
     // debug information for tracking kmer sizes used in graph construction for debug output
     private int kmerSize = 0;
@@ -138,7 +139,9 @@ public final class Haplotype extends Allele {
 
     @Override
     public boolean equals( final Object h ) {
-        return h instanceof Haplotype && Arrays.equals(getBases(), ((Haplotype) h).getBases());
+        return h instanceof Haplotype
+                && getDiffMatter() == ((Haplotype) h).getDiffMatter()
+                && Arrays.equals(getBases(), ((Haplotype) h).getBases());
     }
 
     @Override
@@ -286,7 +289,13 @@ public final class Haplotype extends Allele {
         this.isCollapsed = collapsed;
     }
 
+    public int getDiffMatter() {
+        return diffMatter;
+    }
 
+    public void setDiffMatter(int diffMatter) {
+        this.diffMatter = diffMatter;
+    }
 
 
     public int getKmerSize() {
