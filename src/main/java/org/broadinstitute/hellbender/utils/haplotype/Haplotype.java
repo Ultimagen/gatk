@@ -137,6 +137,7 @@ public final class Haplotype extends Allele {
     public boolean equals( final Object h ) {
         return h instanceof Haplotype
                 && getDiffMatter() == ((Haplotype) h).getDiffMatter()
+                && isReference() == ((Haplotype) h).isReference()
                 && Arrays.equals(getBases(), ((Haplotype) h).getBases());
     }
 
