@@ -1,6 +1,7 @@
 package org.ultimagenomics.flow_based_read.alignment;
 
 import htsjdk.samtools.SAMFileHeader;
+import htsjdk.samtools.SAMReadGroupRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.ultimagenomics.flow_based_read.utils.Direction;
@@ -108,6 +109,16 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         }
 
         FlowBasedHaplotype fbh;
+
+        if ( flow_order == null && hdr.getReadGroups().size() > 0 ) {
+            for ( SAMReadGroupRecord rg : hdr.getReadGroups() ) {
+                flow_order = rg.getAttribute("FO");
+                if ( flow_order != null && flow_order.length() >= FLOW_ORDER_CYCLE_LENGTH ) {
+                    flow_order = flow_order.substring(0, FLOW_ORDER_CYCLE_LENGTH);
+                    break;
+                }
+            }
+        }
 
         for (int i = 0; i < likelihoods.numberOfAlleles(); i++){
             fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i), original_flow_order, max_class);
