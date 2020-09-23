@@ -50,12 +50,8 @@ public class HaplotypeBAMWriter implements AutoCloseable {
          * A mode for users.  Writes out the reads aligned only to the called
          * haplotypes.  Useful to understand why the caller is calling what it is
          */
-        CALLED_HAPLOTYPES,
+        CALLED_HAPLOTYPES
 
-        /**
-         * Same as CALLED_HAPLOTYPES, but without reads
-         */
-        CALLED_HAPLOTYPES_NO_READS
     }
 
     /**
@@ -131,7 +127,7 @@ public class HaplotypeBAMWriter implements AutoCloseable {
         Utils.nonNull(readLikelihoods, "readLikelihoods cannot be null");
         Utils.nonNull(bestHaplotypes, "bestHaplotypes cannot be null");
 
-        if (writerType.equals(WriterType.CALLED_HAPLOTYPES) || writerType.equals(WriterType.CALLED_HAPLOTYPES_NO_READS)){
+        if (writerType.equals(WriterType.CALLED_HAPLOTYPES)){
             if (calledHaplotypes.isEmpty()){
                 return;
             }
@@ -141,12 +137,10 @@ public class HaplotypeBAMWriter implements AutoCloseable {
             writeHaplotypesAsReads(haplotypes, new LinkedHashSet<>(bestHaplotypes), paddedReferenceLoc, callableRegion);
         }
 
-        if ( !writerType.equals(WriterType.CALLED_HAPLOTYPES_NO_READS) ) {
-            final int sampleCount = readLikelihoods.numberOfSamples();
-            for (int i = 0; i < sampleCount; i++) {
-                for (final GATKRead read : readLikelihoods.sampleEvidence(i)) {
-                    writeReadAgainstHaplotype(read);
-                }
+        final int sampleCount = readLikelihoods.numberOfSamples();
+        for (int i = 0; i < sampleCount; i++) {
+            for (final GATKRead read : readLikelihoods.sampleEvidence(i)) {
+                writeReadAgainstHaplotype(read);
             }
         }
     }
