@@ -113,15 +113,16 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         if ( flow_order == null && hdr.getReadGroups().size() > 0 ) {
             for ( SAMReadGroupRecord rg : hdr.getReadGroups() ) {
                 flow_order = rg.getAttribute("FO");
-                if ( flow_order != null && flow_order.length() >= FLOW_ORDER_CYCLE_LENGTH ) {
-                    flow_order = flow_order.substring(0, FLOW_ORDER_CYCLE_LENGTH);
+                if ( flow_order != null && flow_order.length() >= fbargs.flowOrderCycleLength ) {
+                    flow_order = flow_order.substring(0, fbargs.flowOrderCycleLength);
                     break;
                 }
             }
         }
 
         for (int i = 0; i < likelihoods.numberOfAlleles(); i++){
-            fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i), original_flow_order, max_class);
+            fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i),
+                        original_flow_order != null ? original_flow_order : flow_order, max_class);
             processedHaplotypes.add(fbh);
         }
 
