@@ -3,8 +3,8 @@ package org.broadinstitute.hellbender.tools.walkers.genotyper.afcalc;
 import htsjdk.variant.variantcontext.*;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
-import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.math3.special.Gamma;
+import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.math3.util.MathArrays;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeAlleleCounts;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeCalculationArgumentCollection;
@@ -15,6 +15,7 @@ import org.broadinstitute.hellbender.utils.IndexRange;
 import org.broadinstitute.hellbender.utils.MathUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -247,16 +248,14 @@ public final class AlleleFrequencyCalculator {
 
         for (int sn = 0 ; sn < n_samples; sn++) {
             GenotypeBuilder newGt = new GenotypeBuilder(vc.getGenotype(sn));
-            int[] pls = vc.getGenotype(sn).getPL();
-            if (pls != null){
-                int maxVal = MathUtils.arrayMax(pls);
-                for (int idx = 0; idx < genotypes_fix.size(); idx++) {
-                    pls[genotypes_fix.get(idx)] = maxVal;
-                }
-                int minVal = MathUtils.arrayMin(pls);
-                for (int idx = 0; idx < pls.length; idx++) {
-                    pls[idx] -= minVal;
-                }
+            int [] pls = vc.getGenotype(sn).getPL();
+            int maxVal = MathUtils.arrayMax(pls);
+            for (int idx = 0; idx < genotypes_fix.size(); idx++ ){
+                pls[genotypes_fix.get(idx)] = maxVal;
+            }
+            int minVal = MathUtils.arrayMin(pls);
+            for (int idx = 0 ; idx < pls.length; idx ++) {
+                pls[idx]-=minVal;
             }
             newGt.PL(pls);
             newGtC.add(newGt.make());
