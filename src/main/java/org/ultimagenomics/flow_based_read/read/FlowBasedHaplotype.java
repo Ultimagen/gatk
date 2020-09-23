@@ -10,8 +10,8 @@ import java.util.ArrayList;
 public class FlowBasedHaplotype  extends Allele {
     private static final long serialVersionUID = 42L;
     private static int N_ASCII=78;
-    private int [] key;
-    private int [] r_key;
+    private byte [] key;
+    private byte [] r_key;
     private int[] flow2base;
     private int[] r_flow2base;
     private String flow_order;
@@ -24,7 +24,7 @@ public class FlowBasedHaplotype  extends Allele {
         return key.length;
     }
 
-    public int[] getKey() {
+    public byte[] getKey() {
         return key;
     }
 
@@ -35,7 +35,7 @@ public class FlowBasedHaplotype  extends Allele {
 
     public FlowBasedHaplotype(Haplotype source_haplotype, String flow_order, int clipping){
         super(source_haplotype.getBases(), source_haplotype.isReference());
-        key = base2key(source_haplotype.getBases(), flow_order);
+        key = base2key(source_haplotype.getBases(), flow_order, 1000 );
         this.flow_order = flow_order;
         genomeLoc = source_haplotype.getGenomeLocation();
         cigar = source_haplotype.getCigar();
@@ -56,7 +56,7 @@ public class FlowBasedHaplotype  extends Allele {
 
 
 
-    private int[] getKey2Base(int[] key){
+    private int[] getKey2Base(byte[] key){
         int[] result = new int[key.length];
         result[0] = -1;
         for (int i = 1 ; i < result.length; i++) {
@@ -65,24 +65,8 @@ public class FlowBasedHaplotype  extends Allele {
         return result;
     }
 
-    static protected byte[] base2key(byte[] bases, String flow_order, int clipping) {
-
-        clipping = Math.min(clipping, 127);
-
-        int[]       intKeys = base2key(bases, flow_order);
-        byte[]      byteKeys = new byte[intKeys.length];
-        int         i = 0;
-
-        for ( int intKey : intKeys ) {
-            byteKeys[i++] = (byte)((intKey < clipping) ? intKey : clipping);
-        }
-
-        return byteKeys;
-    }
-
-    static protected int[] base2key(byte[] bases, String flow_order){
-
-        ArrayList<Integer> result = new ArrayList<>();
+    static protected byte[] base2key(byte[] bases, String flow_order, int clipping){
+        ArrayList<Byte> result = new ArrayList<>();
         byte[] flow_order_bytes = flow_order.getBytes();
         int loc = 0;
         int flow_number = 0 ;
@@ -90,19 +74,18 @@ public class FlowBasedHaplotype  extends Allele {
         while ( loc < bases.length ) {
             byte flowBase = flow_order_bytes[flow_number%period];
             if ((bases[loc]!=flowBase) && ( bases[loc]!=N_ASCII)) {
-                result.add(0);
+                result.add((byte) 0);
             } else {
                 int count = 0;
                 while ( ( loc < bases.length) && ((bases[loc]==flowBase) || (bases[loc]==N_ASCII)) ){
                     loc++;
                     count ++;
                 }
-                result.add(count);
-
+                result.add(count<clipping ? (byte)count : (byte)clipping);
             }
             flow_number++;
         }
-        int[] ret = new int[result.size()];
+        byte[] ret = new byte[result.size()];
         for (int i = 0; i < result.size(); i++) {
             ret[i] = result.get(i);
         }
@@ -215,7 +198,7 @@ public class FlowBasedHaplotype  extends Allele {
             return false;
         }
         int diff_counts = 0;
-        int [] otherkey = other.getKey();
+        byte [] otherkey = other.getKey();
         for (int i = 0 ; i < getKeyLength(); i ++ ) {
             if (((key[i]==0) && (otherkey[i]!=0)) ||
                     ((key[i]!=0) && ( otherkey[i]==0))) {
