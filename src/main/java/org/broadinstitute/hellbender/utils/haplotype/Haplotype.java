@@ -37,6 +37,7 @@ public final class Haplotype extends Allele {
     public List<? extends Allele> contigs = null;
 
     private boolean isCollapsed;
+    private int     diffMatter;
 
     /**
      * Main constructor
@@ -134,7 +135,10 @@ public final class Haplotype extends Allele {
 
     @Override
     public boolean equals( final Object h ) {
-        return h instanceof Haplotype && Arrays.equals(getBases(), ((Haplotype) h).getBases());
+        return h instanceof Haplotype
+                && getDiffMatter() == ((Haplotype) h).getDiffMatter()
+                && isReference() == ((Haplotype) h).isReference()
+                && Arrays.equals(getBases(), ((Haplotype) h).getBases());
     }
 
     @Override
@@ -217,8 +221,13 @@ public final class Haplotype extends Allele {
     }
 
     public Haplotype insertAllele( final Allele refAllele, final Allele altAllele, final int refInsertLocation, final int genomicInsertLocation ) {
+        return insertAllele(refAllele, altAllele, refInsertLocation, genomicInsertLocation, 0);
+    }
+
+    public Haplotype insertAllele( final Allele refAllele, final Allele altAllele, final int refInsertLocation, final int genomicInsertLocation, final int commonPrefixLength ) {
         // refInsertLocation is in ref haplotype offset coordinates NOT genomic coordinates
-        final Pair<Integer, CigarOperator> haplotypeInsertLocationAndOperator = ReadUtils.getReadIndexForReferenceCoordinate(alignmentStartHapwrtRef, cigar, refInsertLocation);
+        final Pair<Integer, CigarOperator> haplotypeInsertLocationAndOperator = ReadUtils.getReadIndexForReferenceCoordinate(alignmentStartHapwrtRef,
+                cigar, refInsertLocation + commonPrefixLength);
 
         // can't insert outside the haplotype or into a deletion
         if( haplotypeInsertLocationAndOperator.getLeft() == ReadUtils.READ_INDEX_NOT_FOUND || !haplotypeInsertLocationAndOperator.getRight().consumesReadBases() ) {
@@ -228,16 +237,19 @@ public final class Haplotype extends Allele {
         final byte[] myBases = getBases();
 
         // can't insert if we don't have any sequence after the inserted alt allele to span the new variant
-        if (haplotypeInsertLocation + refAllele.length() > myBases.length) {
+        if (haplotypeInsertLocation + refAllele.length()-commonPrefixLength > myBases.length) {
             return null;
         }
 
         byte[] newHaplotypeBases = {};
         newHaplotypeBases = ArrayUtils.addAll(newHaplotypeBases, ArrayUtils.subarray(myBases, 0, haplotypeInsertLocation)); // bases before the variant
-        newHaplotypeBases = ArrayUtils.addAll(newHaplotypeBases, altAllele.getBases()); // the alt allele of the variant
-        newHaplotypeBases = ArrayUtils.addAll(newHaplotypeBases, ArrayUtils.subarray(myBases, haplotypeInsertLocation + refAllele.length(), myBases.length)); // bases after the variant
+        newHaplotypeBases = ArrayUtils.addAll(newHaplotypeBases, ArrayUtils.subarray(altAllele.getBases(), commonPrefixLength, altAllele.getBases().length)); // the alt allele of the variant
+        newHaplotypeBases = ArrayUtils.addAll(newHaplotypeBases, ArrayUtils.subarray(myBases,
+                haplotypeInsertLocation + refAllele.length()-commonPrefixLength, myBases.length)); // bases after the variant
         return new Haplotype(newHaplotypeBases);
     }
+
+
 
     /**
      * Get the score (an estimate of the support) of this haplotype
@@ -274,5 +286,11 @@ public final class Haplotype extends Allele {
         this.isCollapsed = collapsed;
     }
 
+    public int getDiffMatter() {
+        return diffMatter;
+    }
 
+    public void setDiffMatter(int diffMatter) {
+        this.diffMatter = diffMatter;
+    }
 }
