@@ -2,13 +2,10 @@ package org.broadinstitute.hellbender.tools.walkers.haplotypecaller;
 
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
-import org.apache.avro.generic.GenericData;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.broadinstitute.hellbender.utils.haplotype.EventMap;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.ultimagenomics.flow_based_read.read.FlowBasedHaplotype;
-import scala.Int;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -151,6 +148,8 @@ public class HaplotypeAlleleMatrix {
 
         for (int i = 0 ; i < col2Variant.length; i++) {
             LocationAndAlleles tmp = col2Variant[i];
+            int commonPrefixShift = commonPrefixLength(tmp);
+
             List<Allele> allelesList = tmp.getAlleles();
             if (allelesList.size()>2) {
                 throw new RuntimeException("More than two alleles extracted from haplotype");
@@ -165,16 +164,55 @@ public class HaplotypeAlleleMatrix {
                     ref = al;
                 }
             }
+
             Haplotype tmpHap = reference.insertAllele(ref, alt,
                     tmp.getLoc() - activeWindowStart,
-                    tmp.getLoc() - activeWindowStart);
+                    tmp.getLoc() - activeWindowStart,
+                    commonPrefixShift);
             modifiedHaplotypes.add(tmpHap);
 
         }
         return modifiedHaplotypes;
     }
 
+    //removes common prefix from indels
+    private int commonPrefixLength(LocationAndAlleles input){
+        List<Allele> alleleList = input.getAlleles();
 
+        for (Allele al: alleleList){
+            if (al.isSymbolic())
+                return 0;
+        }
+        if (alleleList.size() <=1)
+            return 0;
+
+        int minLen = alleleList.get(0).length();
+        for (int i = 1; i < alleleList.size(); i++){
+            if (alleleList.get(i).length() < minLen)
+                minLen = alleleList.get(i).length();
+        }
+
+        boolean foundNonCommonBase = false;
+        int shift = 0 ;
+        for (int i = input.getLoc(); i < input.getLoc()+minLen; i++){
+            byte base = alleleList.get(0).getBases()[i-input.getLoc()];
+            for (int j = 1; j < alleleList.size(); j++){
+                if (alleleList.get(j).getBases()[i-input.getLoc()] != base){
+                    foundNonCommonBase = true;
+                }
+            }
+            if (foundNonCommonBase) {
+                shift = i - input.getLoc();
+                break;
+            }
+        }
+        if (!foundNonCommonBase) {
+            shift = minLen;
+        }
+
+        return shift;
+
+    }
     private List<FlowBasedHaplotype> haplotypes2FlowHaplotypes(List<Haplotype> haps) {
         List<FlowBasedHaplotype> flowBasedHaplotypes = haps.stream().map(h -> new FlowBasedHaplotype(h, "GCAT")).collect(Collectors.toList());
 

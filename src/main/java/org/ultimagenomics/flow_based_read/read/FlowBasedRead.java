@@ -145,6 +145,16 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         return sb.toString();
     }
 
+    static public String keyAsString(int[] ints)
+    {
+        StringBuilder   sb = new StringBuilder();
+
+        for ( int i : ints )
+            sb.append((char)((i < 10) ? ('0' + i) : ('A' + i - 10)));
+
+        return sb.toString();
+    }
+
     private void readBaseMatrixRecal(String _flowOrder) {
 
        // generate key (base to flow space)
@@ -202,6 +212,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             }
 
         }
+        applyFilteringFlowMatrix();
     }
 
     private void readBaseMatrixProb(String _flowOrder) {
@@ -216,7 +227,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         flowMatrix = new double[maxHmer+1][key.length];
         for (int i = 0 ; i < maxHmer+1; i++) {
             for (int j = 0 ; j < key.length; j++ ){
-                flowMatrix[i][j] = fbargs.filling_value;;
+                flowMatrix[i][j] = fbargs.filling_value;
             }
         }
 
@@ -247,6 +258,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             flowMatrix[Math.min(run, maxHmer)][i] = callProb;
             qualOfs+=run;
         }
+        applyFilteringFlowMatrix();
     }
 
 
@@ -295,42 +307,15 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         quantizeProbs(kd);
 
         double [] kd_probs = phredToProb(kd);
-        if (fbargs.disallow_larger_probs) {
-            removeLargeProbs(kd_probs);
-        }
-
-        if (fbargs.remove_longer_than_one_indels) {
-            removeLongIndels( key_kh, kh, kf, kd_probs );
-        }
-
-        if (fbargs.remove_one_to_zero_probs) {
-            removeOneToZeroProbs(key_kh, kh, kf, kd_probs);
-        }
-
         fillFlowMatrix( kh, kf, kd_probs);
-
-        if ((fbargs.lump_probs)) {
-            lumpProbs();
-        }
-        clipProbs();
-
-        if (fbargs.symmetric_indels) {
-            smoothIndels(key_kh);
-        }
-        if (fbargs.only_ins_or_del) {
-            reportInsOrDel(key_kh);
-        }
-
-        if ((fbargs.retainMaxNProbs)){
-            reportMaxNProbsHmer(key_kh);
-        }
-
+        applyFilteringFlowMatrix();
         validateSequence();
     }
 
 
+
     public String getFlowOrder() {
-        return new String(Arrays.copyOfRange(flowOrder, 0, Math.min(4,flowOrder.length)));
+        return new String(Arrays.copyOfRange(flowOrder, 0, Math.min(fbargs.flowOrderCycleLength,flowOrder.length)));
     }
 
     public int getMaxHmer() {
@@ -348,7 +333,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         double [] result = new double[kq.length];
         for (int i = 0 ; i < kq.length; i++ ) {
             //disallow probabilities below filling_value
-            result[i] = Math.max(Math.pow(10, ((double)-kq[i])/fbargs.probability_scaling_factor), fbargs.filling_value);
+            result[i] = Math.max(Math.pow(10, ((double)-kq[i])/fbargs.probabilityScalingFactor), fbargs.filling_value);
         }
         return result;
     }
@@ -829,36 +814,41 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
-    private void removeLargeProbs(double [] kd_probs) {
-        for (int i = 0 ; i < kd_probs.length; i++) {
-            if (kd_probs[i] > 1) {
-                kd_probs[i] = 1;
+    private void removeLargeProbs(){
+        for (int i = 0; i < getNFlows(); i++){
+            for (int j = 0 ; j < getMaxHmer()+1; j++) {
+                if (flowMatrix[j][i] > 1) {
+                    flowMatrix[j][i] = 1;
+                }
             }
         }
     }
 
-    private void removeLongIndels(  byte [] key_kh, byte [] kh, int [] kf, double [] kd_probs ){
-        for ( int i = 0 ; i < kd_probs.length; i++ ) {
-            if (Math.abs(key_kh[kf[i]] - kh[i]) > 1 ){
-                kd_probs[i] = fbargs.filling_value;
+    private void removeLongIndels(  byte [] key_kh ){
+        for ( int i = 0 ; i < getNFlows(); i++ ) {
+            for (int j = 0; j < getMaxHmer()+1; j++){
+                if (Math.abs(j-key_kh[i])>1){
+                    flowMatrix[j][i] = fbargs.filling_value;
+                }
             }
         }
     }
 
-    private void removeOneToZeroProbs( byte [] key_kh, byte [] kh, int[] kf, double [] kd_probs) {
-        for ( int i = 0 ; i < kd_probs.length; i++ ) {
-            if (key_kh[kf[i]]==0 && kh[i]>0 ){
-                kd_probs[i] = fbargs.filling_value;
+    private void removeOneToZeroProbs( byte [] key_kh) {
+        for (int i = 0 ; i < getNFlows(); i++){
+            if (key_kh[i] == 0){
+                for (int j = 1; j < getMaxHmer()+1; j++){
+                    flowMatrix[j][i]=fbargs.filling_value;
+                }
             }
         }
     }
-
 
 
 
     private void quantizeProbs( int [] kd_probs ) {
         int nQuants = fbargs.probability_quantization;
-        double bin_size = 6*fbargs.probability_scaling_factor/(float)nQuants;
+        double bin_size = 6*fbargs.probabilityScalingFactor/(float)nQuants;
         for ( int i = 0 ; i < kd_probs.length; i++) {
             if (kd_probs[i] <=0)
                 continue;
@@ -867,6 +857,27 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             }
         }
     }
+
+    //Note: untested
+    private void quantizeProbs() {
+
+        int nQuants = fbargs.probability_quantization;
+        double bin_size = 6*fbargs.probabilityScalingFactor/(float)nQuants;
+        for (int i = 0 ; i < getNFlows(); i++) {
+            for (int j = 0 ; j < getMaxHmer()+1; j ++){
+                if ( flowMatrix[j][i] == fbargs.filling_value)
+                    continue;
+                if (flowMatrix[j][i]>=1){
+                    continue;
+                }
+
+                double origQual = -fbargs.probabilityScalingFactor*Math.log10(flowMatrix[j][i]);
+                byte binnedQual = (byte)(bin_size * (byte)(origQual/bin_size)+1);
+                flowMatrix[j][i] = Math.max(Math.pow(10, ((double)binnedQual)/fbargs.probabilityScalingFactor), fbargs.filling_value);
+            }
+        }
+    }
+
 
     private void smoothIndels( byte [] kr ) {
         for ( int i = 0 ; i < kr.length; i++ ){
@@ -954,5 +965,36 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
+    private void applyFilteringFlowMatrix(){
+
+        if (fbargs.disallow_larger_probs) {
+            removeLargeProbs();
+        }
+
+        if (fbargs.remove_longer_than_one_indels) {
+            removeLongIndels( key );
+        }
+
+        if (fbargs.remove_one_to_zero_probs) {
+            removeOneToZeroProbs(key);
+        }
+
+        if ((fbargs.lump_probs)) {
+            lumpProbs();
+        }
+        clipProbs();
+
+        if (fbargs.symmetric_indels) {
+            smoothIndels(key);
+        }
+        if (fbargs.only_ins_or_del) {
+            reportInsOrDel(key);
+        }
+
+        if ((fbargs.retainMaxNProbs)){
+            reportMaxNProbsHmer(key);
+        }
+
+    }
 }
 
