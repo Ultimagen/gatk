@@ -6,9 +6,6 @@ import htsjdk.samtools.util.Locatable;
 import htsjdk.samtools.util.SequenceUtil;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.gatk.nativebindings.smithwaterman.SWOverhangStrategy;
-import org.broadinstitute.hellbender.engine.AssemblyRegion;
-import org.broadinstitute.hellbender.utils.SimpleInterval;
-import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAlignment;
@@ -26,7 +23,7 @@ public class LHWRefView {
     final private Logger          logger;
     final private boolean         debug;
 
-    private SmithWatermanAligner  aligner = SmithWatermanAligner.getAligner(SmithWatermanAligner.Implementation.FASTEST_AVAILABLE);
+    static private SmithWatermanAligner  aligner = SmithWatermanAligner.getAligner(SmithWatermanAligner.Implementation.FASTEST_AVAILABLE);
 
     public LHWRefView(final int hmerSizeThreshold, final byte[] fullRef, final Locatable refLoc, final Logger logger, final boolean debug) {
 
@@ -122,6 +119,7 @@ public class LHWRefView {
                 alignedHaplotype.setAlignmentStartHapwrtRef(offset.get());
                 alignedHaplotype.contigs = h.contigs;
                 alignedHaplotype.setCollapsed(didCollapse.get());
+                alignedHaplotype.setDiffMatter(result.size());
             }
 
             result.add(alignedHaplotype);
@@ -262,17 +260,15 @@ public class LHWRefView {
 
                     // check for a delete at the end of an hmer or at the beginning
                     if (onHomoPolymer(ref, refOfs - hmerSizeThreshold, ref[refOfs], hmerSizeThreshold, 1)) {
-                        // fill with base until end of jomopolymer on the ref
-                        byte base = ref[refOfs];
+                        // fill with base until end of homopolymer on the ref
                         for (int size = 0; (size < c.getLength()) /*&& (ref[refOfs + size] == base)*/; size++)
-                            result[resultOfs++] = base;
+                            result[resultOfs++] = ref[refOfs + size];
                         didCollapse.set(true);
 
                     } else if (onHomoPolymer(ref, refOfs + c.getLength(), ref[refOfs + c.getLength() - 1], hmerSizeThreshold, -1)) {
-                        // fill with base until start of jomopolymer on the ref
-                        byte base = ref[refOfs + c.getLength() - 1];
+                        // fill with base until start of homopolymer on the ref
                         for (int size = 0; (size < c.getLength()) /*&& (ref[refOfs + c.getLength() - 1 - size] == base)*/; size++)
-                            result[resultOfs++] = base;
+                            result[resultOfs++] = ref[refOfs + c.getLength() - 1 - size];
                         didCollapse.set(true);
                     }
                 }
