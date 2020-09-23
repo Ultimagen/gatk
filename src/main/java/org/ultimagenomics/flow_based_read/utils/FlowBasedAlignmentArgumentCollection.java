@@ -2,7 +2,7 @@ package org.ultimagenomics.flow_based_read.utils;
 
 import org.broadinstitute.barclay.argparser.Advanced;
 import org.broadinstitute.barclay.argparser.Argument;
-import org.broadinstitute.barclay.argparser.Hidden;
+import org.broadinstitute.barclay.argparser.ArgumentCollection;
 
 import java.io.Serializable;
 
@@ -20,7 +20,6 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     private static final String LUMP_PROBS = "flow-lump-probs";
     private static final String PROB_SF = "flow-probability-scaling-factor";
     private static final String RETAIN_MAX_N_PROBS_BASE = "flow-retain-max-n-probs-base-format";
-    private static final String FLOW_ORDER_CYCLE_LENGTH = "flow-order-cycle-length";
 
     private static final double DEFAULT_RATIO_THRESHOLD = 0.003;
     private static final double DEFAULT_FILLING_VALUE = 0.001;
@@ -33,7 +32,6 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     private static final boolean DEFAULT_LUMP_PROBS = false;
     private static final boolean DEFAULT_RETAIN_MAX_N_PROBS = false;
     private static final int DEFAULT_PROB_SCALING_FACTOR = 10;
-    private static final int DEFAULT_FLOW_ORDER_CYCLE_LENGTH = 4;
 
     @Advanced
     @Argument(fullName = PROBABILITY_RATIO_THRESHOLD_LONG_NAME, doc = "Lowest probability ratio to be used as an option", optional = true)
@@ -77,13 +75,7 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
 
     @Advanced
     @Argument(fullName = PROB_SF, doc = "probability scaling factor for (phred=10)", optional=true)
-    public int probabilityScalingFactor = DEFAULT_PROB_SCALING_FACTOR;
-
-    @Advanced
-    @Hidden
-    @Argument(fullName = FLOW_ORDER_CYCLE_LENGTH, doc = "the length of flow order cycle", optional=true)
-    public int flowOrderCycleLength = DEFAULT_FLOW_ORDER_CYCLE_LENGTH;
-
+    public int probability_scaling_factor = DEFAULT_PROB_SCALING_FACTOR;
 
     public FlowBasedAlignmentArgumentCollection() {}
 
