@@ -88,7 +88,7 @@ public class VariantRecallerResultWriter {
                     });
                 } else {
                     pw.print("#" + vc.getContig() + ":" + vc.getStart());
-                    if ( vc.getEnd() != vc.getStart() )
+                    if ( vc.getType() != VariantContext.Type.MIXED && (vc.getEnd() != vc.getStart()) )
                         pw.print("-" + vc.getEnd());
                     pw.print(" " + loc);
                     likelihoods.alleles().forEach(allele -> {
