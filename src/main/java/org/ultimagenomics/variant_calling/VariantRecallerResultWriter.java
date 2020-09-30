@@ -182,14 +182,13 @@ public class VariantRecallerResultWriter {
         while ( iter.hasNext() ) {
             CigarElement    elem = iter.next();
             CigarOperator   op = elem.getOperator();
-            if ( !op.consumesReadBases() )
-                ofs -= (op.consumesReferenceBases() ? elem.getLength() : 0);
-            else {
+            if ( op.consumesReadBases() ) {
                 if (ofs < elem.getLength() )
                     return readOfs + ofs;
                 else
                     readOfs += elem.getLength();
             }
+            ofs -= (op.consumesReferenceBases() ? elem.getLength() : 0);
         }
 
         // if here, not found
