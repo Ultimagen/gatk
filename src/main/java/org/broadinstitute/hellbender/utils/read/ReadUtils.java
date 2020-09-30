@@ -293,12 +293,20 @@ public final class ReadUtils {
     public static int getSelectedStart(final GATKRead read, final boolean skipEndsHmer, final boolean clipped) {
         if ( skipEndsHmer ) {
             byte[]      bases = read.getBasesNoCopy();
-            byte        hmerBase = bases[0];
+            int         ofs = clipped ? (read.getStart() - read.getUnclippedStart()) : 0;
+            byte        hmerBase = bases[ofs];
             int         hmerSize = 1;
+            int         hmersLeft = 3;      // number of hmer left to trim
             for ( ; hmerSize < bases.length ; hmerSize++ )
-                if (bases[hmerSize] != hmerBase)
-                    break;
-            return read.getStart() + hmerSize;
+                if (bases[ofs + hmerSize] != hmerBase) {
+                    if (bases[ofs + hmerSize] != hmerBase) {
+                        if (--hmersLeft <= 0)
+                            break;
+                        else
+                            hmerBase = bases[ofs + hmerSize];
+                    }
+                }
+            return (clipped ? read.getStart() : read.getUnclippedStart()) + hmerSize;
         }
         else if ( clipped )
             return read.getStart();
@@ -309,12 +317,20 @@ public final class ReadUtils {
     public static int getSelectedEnd(final GATKRead read, final boolean skipEndsHmer, final boolean clipped) {
         if ( skipEndsHmer ) {
             byte[]      bases = read.getBasesNoCopy();
-            byte        hmerBase = bases[bases.length - 1];
+            int         ofs = clipped ? (read.getUnclippedEnd() - read.getEnd()) : 0;
+            byte        hmerBase = bases[bases.length - 1 - ofs];
             int         hmerSize = 1;
+            int         hmersLeft = 3;      // number of hmer left to trim
             for ( ; hmerSize < bases.length ; hmerSize++ )
-                if (bases[bases.length - 1 - hmerSize] != hmerBase)
-                    break;
-            return read.getEnd() - hmerSize;
+                if (bases[bases.length - 1 - hmerSize - ofs] != hmerBase) {
+                    if (bases[bases.length - 1 - hmerSize - ofs] != hmerBase) {
+                        if (--hmersLeft <= 0)
+                            break;
+                        else
+                            hmerBase = bases[bases.length - 1 - hmerSize - ofs];
+                    }
+                }
+            return (clipped ? read.getEnd() : read.getUnclippedEnd()) - hmerSize;
         }
         else if ( clipped )
             return read.getEnd();
