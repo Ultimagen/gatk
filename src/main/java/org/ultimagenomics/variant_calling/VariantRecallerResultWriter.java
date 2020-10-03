@@ -141,27 +141,29 @@ public class VariantRecallerResultWriter {
                             StringUtils.join(ArrayUtils.toObject(lineValues), " "));
 
                     // add bytes at variant location?
+                    StringBuilder bases = new StringBuilder();
                     if ( read.getContig() != null ) {
                         SimpleInterval  readSpan = new SimpleInterval(read.getContig(), read.getStart(), read.getEnd());
                         if ( readSpan.contains(vcSpan) ) {
                             int ofs = vcSpan.getStart() - readSpan.getStart();
                             int vcLength = vcSpan.getEnd() - vc.getStart() + 1;
-                            StringBuilder bases = new StringBuilder();
                             for (int i = 0; i < vcLength; i++) {
                                 int readOfs = getOffsetOnRead(read, ofs + i);
                                 if (readOfs >= 0)
                                     bases.append((char) read.getBase(readOfs));
-                                else
-                                    bases.append('?');
+                                else {
+                                    // we don't like '?' bases anymore!
+                                    bases.setLength(0);
+                                    break;
+                                }
                             }
-                            // make sure that we have a bases column on the output
-                            if ( bases.length() == 0 )
-                                bases.append("*");
-                            line += (" " + bases);
                         }
                     }
 
-                    vcLines.add(new Tuple<>(sortKey, line));
+                    if ( bases.length() > 0 ) {
+                        line += (" " + bases);
+                        vcLines.add(new Tuple<>(sortKey, line));
+                    }
                 }
 
                 // optional: sort vcLines on second column if present
