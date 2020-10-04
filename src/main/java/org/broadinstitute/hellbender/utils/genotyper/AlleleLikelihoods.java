@@ -670,6 +670,8 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
         final List<List<NEW_EVIDENCE_TYPE>> newEvidenceBySampleIndex = new ArrayList<>(sampleCount);
 
         for (int s = 0; s < sampleCount; s++) {
+
+
             final List<List<EVIDENCE>> evidenceGroups = new ArrayList<>(sampleEvidence(s).stream()
                     .collect(Collectors.groupingBy(groupingFunction)).values());
 
@@ -697,6 +699,10 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
                 samples,
                 newEvidenceBySampleIndex,
                 newLikelihoodValues);
+        for (int s = 0; s < sampleCount; s++) {
+            if ( numberOfEvidences[s] == 0 )
+                result.numberOfEvidences[s] = numberOfEvidences[s];
+        }
 
         result.isNaturalLog = this.isNaturalLog;
         return result;
