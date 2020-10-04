@@ -701,6 +701,8 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
         final List<List<NEW_EVIDENCE_TYPE>> newEvidenceBySampleIndex = new ArrayList<>(sampleCount);
 
         for (int s = 0; s < sampleCount; s++) {
+
+
             final List<List<EVIDENCE>> evidenceGroups = new ArrayList<>(sampleEvidence(s).stream()
                     .collect(Collectors.groupingBy(groupingFunction)).values());
 
@@ -729,6 +731,10 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
                 newEvidenceBySampleIndex,
                 null, //TODO this is only currently used for Somatic and i'm alright with removing this for now but this is NOT robust and 3 of these methods is too many
                 newLikelihoodValues);
+        for (int s = 0; s < sampleCount; s++) {
+            if ( numberOfEvidences[s] == 0 )
+                result.numberOfEvidences[s] = numberOfEvidences[s];
+        }
 
         result.isNaturalLog = this.isNaturalLog;
         return result;
