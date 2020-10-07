@@ -65,6 +65,8 @@ public class TrimmedReadsReader {
             // soft/hard clipped bases
             gatkRead = ReadClipper.hardClipSoftClippedBases(gatkRead);
             gatkRead = ReadClipper.hardClipToRegion(gatkRead, span.getStart(), span.getEnd());
+            if ( gatkRead.isUnmapped() || gatkRead.getCigar().isEmpty() )
+                continue;
 
             // convert to a flow based read
             int             maxClass = getMaxClass(readGroup);
