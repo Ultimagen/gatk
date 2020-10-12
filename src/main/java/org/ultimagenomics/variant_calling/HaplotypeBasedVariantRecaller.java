@@ -91,7 +91,7 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
         final VariantRecallerResultWriter       resultWriter = new VariantRecallerResultWriter(vrArgs.MATRIX_CSV_FILE);
         final FeatureDataSource<VariantContext> dataSource = new FeatureDataSource<VariantContext>(
                 vrArgs.ALLELE_VCF_FILE.getAbsolutePath(), null, 0, VariantContext.class);
-        final HaplotypeRegionWalker             regionWalker = new HaplotypeRegionWalker(vrArgs, referenceArguments.getReferencePath());
+        final HaplotypeRegionWalker             regionWalker = new HaplotypeRegionWalker(vrArgs, referenceArguments.getReferencePath(), getDefaultCloudPrefetchBufferSize());
         final TrimmedReadsReader                readsReader = new TrimmedReadsReader(vrArgs, referenceArguments.getReferencePath());
         final CountingReadFilter                readFilter = makeReadFilter(readsReader.getHeader());
         final SAMSequenceDictionary             samSequenceDictionary = readsReader.getSamSequenceDictionary();
