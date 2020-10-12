@@ -30,11 +30,11 @@ public class HaplotypeRegionWalker {
     private List<Haplotype> walkerHaplotypes = new LinkedList<>();
     private boolean         reusePreviousResults = false;
 
-    HaplotypeRegionWalker(HaplotypeBasedVariantRecallerArgumentCollection vrArgs, Path referencePath) {
+    HaplotypeRegionWalker(HaplotypeBasedVariantRecallerArgumentCollection vrArgs, Path referencePath, int cloudPrefetchBuffer) {
         Path samPath = IOUtils.getPath(vrArgs.HAPLOTYPES_BAM_FILE);
 
-        Function<SeekableByteChannel, SeekableByteChannel> cloudWrapper = BucketUtils.getPrefetchingWrapper(40);
-        Function<SeekableByteChannel, SeekableByteChannel> cloudIndexWrapper = BucketUtils.getPrefetchingWrapper(40);
+        Function<SeekableByteChannel, SeekableByteChannel> cloudWrapper = BucketUtils.getPrefetchingWrapper(cloudPrefetchBuffer);
+        Function<SeekableByteChannel, SeekableByteChannel> cloudIndexWrapper = BucketUtils.getPrefetchingWrapper(cloudPrefetchBuffer);
         samReader = SamReaderFactory.makeDefault().referenceSequence(referencePath).open(samPath, cloudWrapper, cloudIndexWrapper);
 
     }
