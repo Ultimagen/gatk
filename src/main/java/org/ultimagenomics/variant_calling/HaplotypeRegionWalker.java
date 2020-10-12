@@ -39,6 +39,8 @@ public class HaplotypeRegionWalker {
 
     }
 
+    // iterate over a haplotypes behind the variant context. If there are multiple sets, select the best set
+    // see fittnessScore for the scoring function
     void forBest(Locatable queryLoc, Consumer<List<Haplotype>> action) {
         Objects.requireNonNull(action);
 
