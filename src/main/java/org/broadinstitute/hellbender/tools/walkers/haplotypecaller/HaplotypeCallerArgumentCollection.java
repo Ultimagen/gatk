@@ -171,34 +171,5 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
     public boolean STRATIFICATION_FOR_ACTIVE_REGION = false;
 
 
-    public final String FILTER_CONTIGS = "flow-filter-contigs";
-    public final String FILTER_CONTIGS_QUAL_THRESHOLD = "flow-filter-contigs-qual-threshold";
-    public final String FILTER_CONTIGS_SOR_THRESHOLD = "flow-filter-contigs-sor-threshold";
-    public final String FILTER_REFERENCE_QUAL_THRESHOLD = "flow-filter-ref-contigs-qual-threshold";
-
-    public final float PREFILTER_QUAL_THRESHOLD = 30;
-    public final float PREFILTER_SOR_THRESHOLD = 3;
-    public final float REF_PREFILTER_QUAL_THRESHOLD = -100;
-
-    @Advanced
-    @Hidden
-    @Argument(fullName = FILTER_CONTIGS, doc = "pre-filter contigs before genotyping", optional=true)
-    public boolean filterContigs=false;
-
-    @Advanced
-    @Hidden
-    @Argument(fullName = FILTER_CONTIGS_QUAL_THRESHOLD, doc = "Threshold for prefiltering contigs on quality", optional=true)
-    public float prefilterQualThreshold=PREFILTER_QUAL_THRESHOLD;
-
-    @Advanced
-    @Hidden
-    @Argument(fullName = FILTER_REFERENCE_QUAL_THRESHOLD, doc = "Threshold for prefiltering reference contigs on quality", optional=true)
-    public float refPrefilterQualThreshold=REF_PREFILTER_QUAL_THRESHOLD;
-
-    @Advanced
-    @Hidden
-    @Argument(fullName = FILTER_CONTIGS_SOR_THRESHOLD, doc = "Threshold for prefiltering contigs on SOR", optional=true)
-    public float prefilterSorThreshold=PREFILTER_SOR_THRESHOLD;
-
 
 }
