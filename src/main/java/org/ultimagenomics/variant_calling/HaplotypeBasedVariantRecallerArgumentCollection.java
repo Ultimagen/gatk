@@ -18,12 +18,6 @@ public class HaplotypeBasedVariantRecallerArgumentCollection implements Serializ
     public File ALLELE_VCF_FILE = null;
 
     /**
-     *  This argument specifies a BAM file with Reads to recall from
-     **/
-    @Argument(fullName = "reads-file-bam", doc = "BAM file containing reads", optional = false)
-    public String READS_BAM_FILE = null;
-
-    /**
      *  This argument specifies a BAM file with Haplotypes to limit reads on
      **/
     @Argument(fullName = "haplotypes-file-bam", doc = "BAM file containing haplotypes", optional = false)
