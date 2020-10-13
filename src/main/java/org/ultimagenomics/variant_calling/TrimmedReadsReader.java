@@ -15,6 +15,7 @@ import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
 import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
 import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
 
+import java.io.File;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Path;
 import java.util.*;
@@ -24,72 +25,74 @@ public class TrimmedReadsReader {
 
     private static final Logger logger = LogManager.getLogger(TrimmedReadsReader.class);
 
-    private SamReader               samReader;
+    private List<SamReader>         samReaders = new LinkedList<>();
     private CountingReadFilter      readFilter;
     private Map<String, Integer>    readGroupMaxClass = new LinkedHashMap<>();
     private Map<String, String>     readGroupFlowOrder = new LinkedHashMap<>();
     private FlowBasedAlignmentArgumentCollection fbArgs = new FlowBasedAlignmentArgumentCollection();
 
-    public TrimmedReadsReader(HaplotypeBasedVariantRecallerArgumentCollection vrArgs, Path referencePath, int cloudPrefetchBuffer) {
-        Path samPath = IOUtils.getPath(vrArgs.READS_BAM_FILE);
+    public TrimmedReadsReader(List<File> readsFiles, Path referencePath, int cloudPrefetchBuffer) {
 
         Function<SeekableByteChannel, SeekableByteChannel> cloudWrapper = BucketUtils.getPrefetchingWrapper(cloudPrefetchBuffer);
         Function<SeekableByteChannel, SeekableByteChannel> cloudIndexWrapper = BucketUtils.getPrefetchingWrapper(cloudPrefetchBuffer);
 
-        samReader = SamReaderFactory.makeDefault().referenceSequence(referencePath).open(samPath, cloudWrapper, cloudIndexWrapper);
+        for ( File readsFile : readsFiles )
+            samReaders.add(SamReaderFactory.makeDefault().referenceSequence(referencePath).open(IOUtils.getPath(readsFile.getAbsolutePath()), cloudWrapper, cloudIndexWrapper));
     }
 
     SAMSequenceDictionary getSamSequenceDictionary() {
-        return samReader.getFileHeader().getSequenceDictionary();
+        return samReaders.get(0).getFileHeader().getSequenceDictionary();
     }
 
     public Collection<FlowBasedRead>  getReads(Locatable span, Locatable vcLoc) {
 
         List<FlowBasedRead>     reads = new LinkedList<>();
-        SAMRecordIterator       iter = samReader.query(span.getContig(), span.getStart(), span.getEnd(), false);
-        while ( iter.hasNext() ) {
+        for ( SamReader samReader : samReaders ) {
+            SAMRecordIterator iter = samReader.query(span.getContig(), span.getStart(), span.getEnd(), false);
+            while (iter.hasNext()) {
 
-            // establish record. ignore if variant context is not covered by this read?
-            SAMRecord       record = iter.next();
-            if ( !record.contains(vcLoc) )
-                continue;
+                // establish record. ignore if variant context is not covered by this read?
+                SAMRecord record = iter.next();
+                if (!record.contains(vcLoc))
+                    continue;
 
-            // convert to gatk read
-            String          readGroup = record.getReadGroup().getId();
-            GATKRead        gatkRead = new SAMRecordToGATKReadAdapter(record);
+                // convert to gatk read
+                String readGroup = record.getReadGroup().getId();
+                GATKRead gatkRead = new SAMRecordToGATKReadAdapter(record);
 
-            // filter out?
-            if ( readFilter != null && !readFilter.test(gatkRead) )
-                continue;
+                // filter out?
+                if (readFilter != null && !readFilter.test(gatkRead))
+                    continue;
 
-            // soft/hard clipped bases
-            gatkRead = ReadClipper.hardClipSoftClippedBases(gatkRead);
-            gatkRead = ReadClipper.hardClipToRegion(gatkRead, span.getStart(), span.getEnd());
-            if ( gatkRead.isUnmapped() || gatkRead.getCigar().isEmpty() )
-                continue;
+                // soft/hard clipped bases
+                gatkRead = ReadClipper.hardClipSoftClippedBases(gatkRead);
+                gatkRead = ReadClipper.hardClipToRegion(gatkRead, span.getStart(), span.getEnd());
+                if (gatkRead.isUnmapped() || gatkRead.getCigar().isEmpty())
+                    continue;
 
-            // convert to a flow based read
-            int             maxClass = getMaxClass(readGroup);
-            String          flowOrder = getFlowOrder(readGroup);
-            FlowBasedRead   fbr = new FlowBasedRead(gatkRead, flowOrder, maxClass, fbArgs);
-            fbr.apply_alignment();
+                // convert to a flow based read
+                int maxClass = getMaxClass(readGroup);
+                String flowOrder = getFlowOrder(readGroup);
+                FlowBasedRead fbr = new FlowBasedRead(gatkRead, flowOrder, maxClass, fbArgs);
+                fbr.apply_alignment();
 
-            // clip to given span
-            int read_start = fbr.getStart();
-            int read_end = fbr.getEnd();
-            int diff_left = span.getStart() - read_start;
-            int diff_right = read_end - span.getEnd();
-            fbr.apply_base_clipping(Math.max(0, diff_left), Math.max(diff_right, 0));
+                // clip to given span
+                int read_start = fbr.getStart();
+                int read_end = fbr.getEnd();
+                int diff_left = span.getStart() - read_start;
+                int diff_right = read_end - span.getEnd();
+                fbr.apply_base_clipping(Math.max(0, diff_left), Math.max(diff_right, 0));
 
-            // check if read is valid. it is possible that read was made invalid by apply_base_clipping
-            // if so, ignore it (see FlowBasedRead.java:478 valid_key=false;
-            if ( !fbr.is_valid() )
-                continue;
+                // check if read is valid. it is possible that read was made invalid by apply_base_clipping
+                // if so, ignore it (see FlowBasedRead.java:478 valid_key=false;
+                if (!fbr.is_valid())
+                    continue;
 
-            // add to output collection
-            reads.add(fbr);
+                // add to output collection
+                reads.add(fbr);
+            }
+            iter.close();
         }
-        iter.close();
 
         return reads;
     }
@@ -99,14 +102,14 @@ public class TrimmedReadsReader {
         Integer     v = readGroupMaxClass.get(rg);
 
         if ( v == null ) {
-            String mc_string = samReader.getFileHeader().getReadGroup(rg).getAttribute("mc");
+            String mc_string = samReaders.get(0).getFileHeader().getReadGroup(rg).getAttribute("mc");
             if ( mc_string == null ) {
                 v = 12;
             } else {
                 v = Integer.parseInt(mc_string);
             }
             readGroupMaxClass.put(rg, v);
-            readGroupFlowOrder.put(rg, samReader.getFileHeader().getReadGroup(rg).getFlowOrder());
+            readGroupFlowOrder.put(rg, samReaders.get(0).getFileHeader().getReadGroup(rg).getFlowOrder());
         }
 
         return v;
@@ -117,7 +120,7 @@ public class TrimmedReadsReader {
     }
 
     public SAMFileHeader getHeader() {
-        return samReader.getFileHeader();
+        return samReaders.get(0).getFileHeader();
     }
 
     public void setReadFilter(CountingReadFilter readFilter) {

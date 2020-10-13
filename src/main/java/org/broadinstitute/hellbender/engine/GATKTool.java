@@ -438,7 +438,7 @@ public abstract class GATKTool extends CommandLineProgram {
      * Package-private so that engine classes can access it, but concrete tool child classes cannot.
      * May be overridden by traversals that require custom initialization of the reads data source.
      */
-    void initializeReads() {
+    protected void initializeReads() {
         if (! readArguments.getReadFiles().isEmpty()) {
             SamReaderFactory factory = SamReaderFactory.makeDefault().validationStringency(readArguments.getReadValidationStringency());
             if (hasReference()) { // pass in reference if available, because CRAM files need it
