@@ -92,7 +92,7 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
         final FeatureDataSource<VariantContext> dataSource = new FeatureDataSource<VariantContext>(
                 vrArgs.ALLELE_VCF_FILE.getAbsolutePath(), null, 0, VariantContext.class);
         final HaplotypeRegionWalker             regionWalker = new HaplotypeRegionWalker(vrArgs, referenceArguments.getReferencePath(), getDefaultCloudPrefetchBufferSize());
-        final TrimmedReadsReader                readsReader = new TrimmedReadsReader(vrArgs, referenceArguments.getReferencePath(), getDefaultCloudPrefetchBufferSize());
+        final TrimmedReadsReader                readsReader = new TrimmedReadsReader(readArguments.getReadFiles(), referenceArguments.getReferencePath(), getDefaultCloudPrefetchBufferSize());
         final CountingReadFilter                readFilter = makeReadFilter(readsReader.getHeader());
         final SAMSequenceDictionary             samSequenceDictionary = readsReader.getSamSequenceDictionary();
         final List<SimpleInterval>              intervals = hasUserSuppliedIntervals() ? getUserIntervals() : IntervalUtils.getAllIntervalsForReference(samSequenceDictionary);
@@ -182,5 +182,9 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
         return  readFilterPlugin.getMergedCountingReadFilter(samFileHeader);
     }
 
+    @Override
+    protected void initializeReads() {
+
+    }
 }
 
