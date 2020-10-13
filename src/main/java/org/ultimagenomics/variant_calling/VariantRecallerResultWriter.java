@@ -142,6 +142,7 @@ public class VariantRecallerResultWriter {
 
                     // add bytes at variant location?
                     StringBuilder bases = new StringBuilder();
+                    int           firstBaseUnclippedOfs = 0;
                     if ( read.getContig() != null ) {
                         SimpleInterval  readSpan = new SimpleInterval(read.getContig(), read.getStart(), read.getEnd());
                         if ( readSpan.contains(vcSpan) ) {
@@ -149,9 +150,13 @@ public class VariantRecallerResultWriter {
                             int vcLength = vcSpan.getEnd() - vc.getStart() + 1;
                             for (int i = 0; i < vcLength; i++) {
                                 int readOfs = getOffsetOnRead(read, ofs + i);
-                                if (readOfs >= 0)
+                                if (readOfs >= 0) {
                                     bases.append((char) read.getBase(readOfs));
-                                else {
+                                    if ( !read.isReverseStrand() )
+                                        firstBaseUnclippedOfs = readOfs + (read.getStart() - read.getUnclippedStart());
+                                    else
+                                        firstBaseUnclippedOfs = readOfs;
+                                } else {
                                     // we don't like '?' bases anymore!
                                     bases.setLength(0);
                                     break;
@@ -161,7 +166,7 @@ public class VariantRecallerResultWriter {
                     }
 
                     if ( bases.length() > 0 ) {
-                        line += String.format(" %s %s", bases, read.getReadGroup());
+                        line += String.format(" %s %d %s", bases, firstBaseUnclippedOfs, read.getReadGroup());
                         vcLines.add(new Tuple<>(sortKey, line));
                     }
                 }
