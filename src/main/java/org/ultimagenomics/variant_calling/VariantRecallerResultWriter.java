@@ -161,7 +161,7 @@ public class VariantRecallerResultWriter {
                     }
 
                     if ( bases.length() > 0 ) {
-                        line += (" " + bases);
+                        line += String.format(" %s %s", bases, read.getReadGroup());
                         vcLines.add(new Tuple<>(sortKey, line));
                     }
                 }
