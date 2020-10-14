@@ -155,7 +155,7 @@ public class VariantRecallerResultWriter {
                                     if ( !read.isReverseStrand() )
                                         firstBaseUnclippedOfs = readOfs + (read.getStart() - read.getUnclippedStart());
                                     else
-                                        firstBaseUnclippedOfs = read.getUnclippedEnd() - read.getStart() - readOfs;
+                                        firstBaseUnclippedOfs = (read.getLength() - readOfs - 1) + (read.getUnclippedEnd() - read.getEnd());
                                 } else {
                                     // we don't like '?' bases anymore!
                                     bases.setLength(0);
