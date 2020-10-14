@@ -21,6 +21,10 @@ public class JoinedContigs extends Allele {
     }
 
     @Override
+    public byte [] getBases(){
+        return super.getBases();
+    }
+    @Override
     public boolean isSymbolic() {
         return true;
     }
