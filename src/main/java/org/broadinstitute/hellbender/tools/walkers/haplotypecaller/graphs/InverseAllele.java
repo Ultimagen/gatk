@@ -20,6 +20,9 @@ public class InverseAllele extends Allele {
         }
     }
 
+    public byte [] getBases(){
+        return getDisplayString().getBytes();
+    }
     @Override
     public boolean isReference() {
         return internalAllele.isReference();
