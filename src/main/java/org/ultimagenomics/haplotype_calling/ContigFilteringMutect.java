@@ -24,13 +24,23 @@ public class ContigFilteringMutect extends ContigFiltering {
     }
 
     int getContigLikelihood(final AlleleLikelihoods<GATKRead, Allele> contigLikelihoods, Allele contig) {
-
+        final LikelihoodMatrix<GATKRead, Allele> initialMatrix = contigLikelihoods.sampleMatrix(0);
         final LikelihoodMatrix<GATKRead, Allele> logMatrixWithoutThisAllele = SubsettedLikelihoodMatrix.excludingAllele(contigLikelihoods.sampleMatrix(0), contig);
+
+
         final double logEvidenceWithoutThisAllele = logMatrixWithoutThisAllele.evidenceCount() == 0 ? 0 :
                 SomaticLikelihoodsEngine.logEvidence(SomaticGenotypingEngine.getAsRealMatrix(logMatrixWithoutThisAllele),
                         genotypingEngine.makePriorPseudocounts(logMatrixWithoutThisAllele.numberOfAlleles()));
+        final double logEvidenceWithAllAlleles= initialMatrix.evidenceCount() == 0 ? 0 :
+                SomaticLikelihoodsEngine.logEvidence(SomaticGenotypingEngine.getAsRealMatrix(initialMatrix),
+                        genotypingEngine.makePriorPseudocounts(initialMatrix.numberOfAlleles()));
 
-        return (int)(10*logEvidenceWithoutThisAllele);
+        logger.debug(String.format("GCL:: %s->%s: %f %f %d", ((JoinedContigs)contig).getAllele1().getBaseString(),
+                ((JoinedContigs)contig).getAllele2().getBaseString(), logEvidenceWithAllAlleles,
+                logEvidenceWithoutThisAllele,
+                (int)(10*(-logEvidenceWithAllAlleles + logEvidenceWithoutThisAllele))));
+
+        return (int)(10*(-logEvidenceWithAllAlleles + logEvidenceWithoutThisAllele));
 
     }
 
