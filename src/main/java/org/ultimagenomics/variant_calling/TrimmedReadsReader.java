@@ -40,14 +40,17 @@ public class TrimmedReadsReader {
             samReaders.add(SamReaderFactory.makeDefault().referenceSequence(referencePath).open(IOUtils.getPath(readsFile.getAbsolutePath()), cloudWrapper, cloudIndexWrapper));
     }
 
-    SAMSequenceDictionary getSamSequenceDictionary() {
-        return samReaders.get(0).getFileHeader().getSequenceDictionary();
+    SAMSequenceDictionary getSamSequenceDictionary(SamReader samReader) {
+        if ( samReader == null )
+            samReader = samReaders.get(0);
+        return samReader.getFileHeader().getSequenceDictionary();
     }
 
-    public Collection<FlowBasedRead>  getReads(Locatable span, Locatable vcLoc) {
+    public Map<SamReader, Collection<FlowBasedRead>>  getReads(Locatable span, Locatable vcLoc) {
 
-        List<FlowBasedRead>     reads = new LinkedList<>();
+        Map<SamReader, Collection<FlowBasedRead>>   readsByReader = new LinkedHashMap<>();
         for ( SamReader samReader : samReaders ) {
+            List<FlowBasedRead>     reads = new LinkedList<>();
             SAMRecordIterator iter = samReader.query(span.getContig(), span.getStart(), span.getEnd(), false);
             while (iter.hasNext()) {
 
@@ -71,7 +74,7 @@ public class TrimmedReadsReader {
                     continue;
 
                 // convert to a flow based read
-                int maxClass = getMaxClass(readGroup);
+                int maxClass = getMaxClass(readGroup, samReader.getFileHeader());
                 String flowOrder = getFlowOrder(readGroup);
                 FlowBasedRead fbr = new FlowBasedRead(gatkRead, flowOrder, maxClass, fbArgs);
                 fbr.apply_alignment();
@@ -92,24 +95,25 @@ public class TrimmedReadsReader {
                 reads.add(fbr);
             }
             iter.close();
+            readsByReader.put(samReader, reads);
         }
 
-        return reads;
+        return readsByReader;
     }
 
-    private synchronized int getMaxClass(String rg) {
+    private synchronized int getMaxClass(String rg, SAMFileHeader hdr) {
 
         Integer     v = readGroupMaxClass.get(rg);
 
         if ( v == null ) {
-            String mc_string = samReaders.get(0).getFileHeader().getReadGroup(rg).getAttribute("mc");
+            String mc_string = hdr.getReadGroup(rg).getAttribute("mc");
             if ( mc_string == null ) {
                 v = 12;
             } else {
                 v = Integer.parseInt(mc_string);
             }
             readGroupMaxClass.put(rg, v);
-            readGroupFlowOrder.put(rg, samReaders.get(0).getFileHeader().getReadGroup(rg).getFlowOrder());
+            readGroupFlowOrder.put(rg, hdr.getReadGroup(rg).getFlowOrder());
         }
 
         return v;
@@ -119,8 +123,10 @@ public class TrimmedReadsReader {
         return readGroupFlowOrder.get(rg);
     }
 
-    public SAMFileHeader getHeader() {
-        return samReaders.get(0).getFileHeader();
+    public SAMFileHeader getHeader(SamReader samReader) {
+        if ( samReader == null )
+            samReader = samReaders.get(0);
+        return samReader.getFileHeader();
     }
 
     public void setReadFilter(CountingReadFilter readFilter) {
