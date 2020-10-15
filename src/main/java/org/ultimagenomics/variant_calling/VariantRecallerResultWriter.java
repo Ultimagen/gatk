@@ -2,6 +2,7 @@ package org.ultimagenomics.variant_calling;
 
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
+import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.util.Locatable;
 import htsjdk.samtools.util.Tuple;
 import htsjdk.variant.variantcontext.Allele;
@@ -43,7 +44,7 @@ public class VariantRecallerResultWriter {
         pw = null;
     }
 
-    public void add(Locatable loc, Map<Integer, AlleleLikelihoods<GATKRead, Allele>> genotypeLikelihoods, List<VariantContext> variants, AssemblyResultSet assemblyResult) {
+    public void add(Locatable loc, Map<Integer, AlleleLikelihoods<GATKRead, Allele>> genotypeLikelihoods, List<VariantContext> variants, AssemblyResultSet assemblyResult, SAMFileHeader fileHeader) {
 
         // build a map of vcs by startPos
         Map<Integer, VariantContext>    vcStartPos = new LinkedHashMap<>();
@@ -166,7 +167,7 @@ public class VariantRecallerResultWriter {
                     }
 
                     if ( bases.length() > 0 ) {
-                        line += String.format(" %s %d %s", bases, firstBaseUnclippedOfs, read.getReadGroup());
+                        line += String.format(" %s %d %s", bases, firstBaseUnclippedOfs, fileHeader.getReadGroup(read.getReadGroup()).getSample());
                         vcLines.add(new Tuple<>(sortKey, line));
                     }
                 }
