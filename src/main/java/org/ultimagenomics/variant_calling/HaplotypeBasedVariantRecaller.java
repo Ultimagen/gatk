@@ -93,8 +93,8 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                 vrArgs.ALLELE_VCF_FILE.getAbsolutePath(), null, 0, VariantContext.class);
         final HaplotypeRegionWalker             regionWalker = new HaplotypeRegionWalker(vrArgs, referenceArguments.getReferencePath(), getDefaultCloudPrefetchBufferSize());
         final TrimmedReadsReader                readsReader = new TrimmedReadsReader(readArguments.getReadFiles(), referenceArguments.getReferencePath(), getDefaultCloudPrefetchBufferSize());
-        final CountingReadFilter                readFilter = makeReadFilter(readsReader.getHeader());
-        final SAMSequenceDictionary             samSequenceDictionary = readsReader.getSamSequenceDictionary();
+        final CountingReadFilter                readFilter = makeReadFilter(readsReader.getHeader(null));
+        final SAMSequenceDictionary             samSequenceDictionary = readsReader.getSamSequenceDictionary(null);
         final List<SimpleInterval>              intervals = hasUserSuppliedIntervals() ? getUserIntervals() : IntervalUtils.getAllIntervalsForReference(samSequenceDictionary);
         readsReader.setReadFilter(readFilter);
         progressMeter.setRecordsBetweenTimeChecks(1);
@@ -123,47 +123,64 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                         processedHaplotypes.addAll(bestHaplotypes);
 
                     // get reads overlapping haplotypes
-                    Collection<FlowBasedRead> reads = readsReader.getReads(haplotypeSpan, vcLoc);
+                    Map<SamReader, Collection<FlowBasedRead>> readsByReader = readsReader.getReads(haplotypeSpan, vcLoc);
                     List<VariantContext>      variants = new LinkedList<>(Arrays.asList(vc));
-                    if ( logger.isDebugEnabled() )
+                    if ( logger.isDebugEnabled() ) {
+                        int readCount = 0;
+                        for ( Collection<FlowBasedRead> reads : readsByReader.values() )
+                            readCount += reads.size();
                         logger.debug(String.format("vcLoc %s, haplotypeSpan: %s, %d haplotypes, %d reads",
-                                vcLoc.toString(), haplotypeSpan.toString(), processedHaplotypes.size(), reads.size(), variants.size()));
+                                vcLoc.toString(), haplotypeSpan.toString(), processedHaplotypes.size(), readCount, variants.size()));
+                    }
                     progressMeter.update(vcLoc);
 
                     // prepare assembly result
-                    AssemblyResultSet assemblyResult = new AssemblyResultSet();
-                    processedHaplotypes.forEach(haplotype -> assemblyResult.add(haplotype));
-                    Map<String, List<GATKRead>> perSampleReadList = new LinkedHashMap<>();
-                    List<GATKRead> gtakReads = new LinkedList<>();
-                    reads.forEach(flowBasedRead -> gtakReads.add(flowBasedRead));
-                    perSampleReadList.put(sampleNames[0], gtakReads);
-                    AssemblyRegion regionForGenotyping = new AssemblyRegion(haplotypeSpan, 0, readsReader.getHeader());
-                    assemblyResult.setPaddedReferenceLoc(haplotypeSpan);
-                    assemblyResult.setFullReferenceWithPadding(refBases);
-                    assemblyResult.setRegionForGenotyping(regionForGenotyping);
+                    List<Map<Integer, AlleleLikelihoods<GATKRead, Allele>>> genotypeLikelihoodsList = new LinkedList<>();
+                    List<AssemblyResultSet>                                 assemblyResultList = new LinkedList<>();
+                    List<SAMFileHeader>                                     readsHeaderList = new LinkedList<>();
+                    for ( Map.Entry<SamReader, Collection<FlowBasedRead>> entry : readsByReader.entrySet() ) {
+                        AssemblyResultSet assemblyResult = new AssemblyResultSet();
+                        processedHaplotypes.forEach(haplotype -> assemblyResult.add(haplotype));
+
+                        Map<String, List<GATKRead>> perSampleReadList = new LinkedHashMap<>();
+                        SamReader                   samReader = entry.getKey();
+                        Collection<FlowBasedRead>   reads = entry.getValue();
+
+                        List<GATKRead> gtakReads = new LinkedList<>();
+                        reads.forEach(flowBasedRead -> gtakReads.add(flowBasedRead));
+                        perSampleReadList.put(sampleNames[0], gtakReads);
+                        AssemblyRegion regionForGenotyping = new AssemblyRegion(haplotypeSpan, 0, samReader.getFileHeader());
+                        assemblyResult.setPaddedReferenceLoc(haplotypeSpan);
+                        assemblyResult.setFullReferenceWithPadding(refBases);
+                        assemblyResult.setRegionForGenotyping(regionForGenotyping);
 
 
-                    // computer likelihood
-                    AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods = likelihoodCalculationEngine.computeReadLikelihoods(
-                            assemblyResult, samplesList, perSampleReadList, false);
+                        // computer likelihood
+                        AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods = likelihoodCalculationEngine.computeReadLikelihoods(
+                                assemblyResult, samplesList, perSampleReadList, false);
 
-                    // assign
-                    Map<String, List<GATKRead>> perSampleFilteredReadList = perSampleReadList;
-                    SAMFileHeader readsHeader = readsReader.getHeader();
-                    Map<Integer, AlleleLikelihoods<GATKRead, Allele>> genotypeLikelihoods = genotypingEngine.assignGenotypeLikelihoods2(
-                            processedHaplotypes,
-                            readLikelihoods,
-                            perSampleFilteredReadList,
-                            assemblyResult.getFullReferenceWithPadding(),
-                            assemblyResult.getPaddedReferenceLoc(),
-                            regionForGenotyping.getSpan(),
-                            null,
-                            variants,
-                            false,
-                            hcArgs.maxMnpDistance,
-                            readsHeader,
-                            false);
-                    resultWriter.add(haplotypeSpan, genotypeLikelihoods, variants, assemblyResult, readsHeader);
+                        // assign
+                        Map<String, List<GATKRead>> perSampleFilteredReadList = perSampleReadList;
+                        SAMFileHeader readsHeader = samReader.getFileHeader();
+                        Map<Integer, AlleleLikelihoods<GATKRead, Allele>> genotypeLikelihoods = genotypingEngine.assignGenotypeLikelihoods2(
+                                processedHaplotypes,
+                                readLikelihoods,
+                                perSampleFilteredReadList,
+                                assemblyResult.getFullReferenceWithPadding(),
+                                assemblyResult.getPaddedReferenceLoc(),
+                                regionForGenotyping.getSpan(),
+                                null,
+                                variants,
+                                false,
+                                hcArgs.maxMnpDistance,
+                                readsHeader,
+                                false);
+
+                        genotypeLikelihoodsList.add(genotypeLikelihoods);
+                        assemblyResultList.add(assemblyResult);
+                        readsHeaderList.add(readsHeader);
+                    }
+                    resultWriter.add(haplotypeSpan, genotypeLikelihoodsList, variants, assemblyResultList, readsHeaderList);
                 });
             });
         }
