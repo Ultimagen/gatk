@@ -1,6 +1,8 @@
 package org.ultimagenomics.variant_calling;
 
-import htsjdk.samtools.*;
+import htsjdk.samtools.SAMFileHeader;
+import htsjdk.samtools.SAMSequenceDictionary;
+import htsjdk.samtools.SamReader;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.logging.log4j.LogManager;
@@ -9,10 +11,13 @@ import org.broadinstitute.barclay.argparser.ArgumentCollection;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.GATKPlugin.GATKReadFilterPluginDescriptor;
-import org.broadinstitute.hellbender.cmdline.argumentcollections.OptionalIntervalArgumentCollection;
 import org.broadinstitute.hellbender.cmdline.programgroups.ShortVariantDiscoveryProgramGroup;
-import org.broadinstitute.hellbender.engine.*;
-import org.broadinstitute.hellbender.engine.filters.*;
+import org.broadinstitute.hellbender.engine.AssemblyRegion;
+import org.broadinstitute.hellbender.engine.FeatureDataSource;
+import org.broadinstitute.hellbender.engine.GATKTool;
+import org.broadinstitute.hellbender.engine.ReferenceDataSource;
+import org.broadinstitute.hellbender.engine.filters.CountingReadFilter;
+import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.*;
 import org.broadinstitute.hellbender.utils.IntervalUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
@@ -90,9 +95,9 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
         final ReferenceDataSource               reference = ReferenceDataSource.of(referenceArguments.getReferencePath());
         final VariantRecallerResultWriter       resultWriter = new VariantRecallerResultWriter(vrArgs.MATRIX_CSV_FILE);
         final FeatureDataSource<VariantContext> dataSource = new FeatureDataSource<VariantContext>(
-                vrArgs.ALLELE_VCF_FILE.getAbsolutePath(), null, 0, VariantContext.class);
+                vrArgs.ALLELE_VCF_FILE, null, 0, VariantContext.class);
         final HaplotypeRegionWalker             regionWalker = new HaplotypeRegionWalker(vrArgs, referenceArguments.getReferencePath(), getDefaultCloudPrefetchBufferSize());
-        final TrimmedReadsReader                readsReader = new TrimmedReadsReader(readArguments.getReadFiles(), referenceArguments.getReferencePath(), getDefaultCloudPrefetchBufferSize());
+        final TrimmedReadsReader                readsReader = new TrimmedReadsReader(readArguments.getReadPaths(), referenceArguments.getReferencePath(), getDefaultCloudPrefetchBufferSize());
         final CountingReadFilter                readFilter = makeReadFilter(readsReader.getHeader(null));
         final SAMSequenceDictionary             samSequenceDictionary = readsReader.getSamSequenceDictionary(null);
         final List<SimpleInterval>              intervals = hasUserSuppliedIntervals() ? getUserIntervals() : IntervalUtils.getAllIntervalsForReference(samSequenceDictionary);
