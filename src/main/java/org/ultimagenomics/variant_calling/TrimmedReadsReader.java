@@ -5,17 +5,13 @@ import htsjdk.samtools.util.Locatable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.engine.filters.CountingReadFilter;
-import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.utils.clipping.ReadClipper;
 import org.broadinstitute.hellbender.utils.gcs.BucketUtils;
-import org.broadinstitute.hellbender.utils.io.IOUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
-import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
 import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
 import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
 
-import java.io.File;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Path;
 import java.util.*;
@@ -31,13 +27,13 @@ public class TrimmedReadsReader {
     private Map<String, String>     readGroupFlowOrder = new LinkedHashMap<>();
     private FlowBasedAlignmentArgumentCollection fbArgs = new FlowBasedAlignmentArgumentCollection();
 
-    public TrimmedReadsReader(List<File> readsFiles, Path referencePath, int cloudPrefetchBuffer) {
+    public TrimmedReadsReader(List<Path> readsFiles, Path referencePath, int cloudPrefetchBuffer) {
 
         Function<SeekableByteChannel, SeekableByteChannel> cloudWrapper = BucketUtils.getPrefetchingWrapper(cloudPrefetchBuffer);
         Function<SeekableByteChannel, SeekableByteChannel> cloudIndexWrapper = BucketUtils.getPrefetchingWrapper(cloudPrefetchBuffer);
 
-        for ( File readsFile : readsFiles )
-            samReaders.add(SamReaderFactory.makeDefault().referenceSequence(referencePath).open(IOUtils.getPath(readsFile.getAbsolutePath()), cloudWrapper, cloudIndexWrapper));
+        for ( Path readsFile : readsFiles )
+            samReaders.add(SamReaderFactory.makeDefault().referenceSequence(referencePath).open(readsFile, cloudWrapper, cloudIndexWrapper));
     }
 
     SAMSequenceDictionary getSamSequenceDictionary(SamReader samReader) {
