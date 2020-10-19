@@ -15,7 +15,7 @@ public class HaplotypeBasedVariantRecallerArgumentCollection implements Serializ
      *  This argument specifies a VCF file with Alleles to be recalled
      **/
     @Argument(fullName = "alleles-file-vcf", doc = "VCF file containing alleles", optional = false)
-    public File ALLELE_VCF_FILE = null;
+    public String ALLELE_VCF_FILE = null;
 
     /**
      *  This argument specifies a BAM file with Haplotypes to limit reads on
