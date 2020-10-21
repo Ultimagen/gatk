@@ -185,6 +185,7 @@ public class VariantRecallerResultWriter {
 
                 // pour into output file
                 vcLines.forEach(doubleStringTuple -> pw.println(doubleStringTuple.b));
+                vcLines.clear();
             });
         }
     }
