@@ -260,13 +260,13 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
         }
 
         final Map<GATKRead,GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(subsettedReadLikelihoodsFinal, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner);
-        readLikelihoods.changeEvidence(readRealignments);
+        subsettedReadLikelihoodsFinal.changeEvidence(readRealignments);
 
         List<Haplotype> haplotypes = subsettedReadLikelihoodsFinal.alleles();
 
         if ( refView != null ) {
             haplotypes = refView.uncollapseHaplotypesByRef(haplotypes, true, false, null);
-            readLikelihoods.changeAlleles(haplotypes);
+            subsettedReadLikelihoodsFinal.changeAlleles(haplotypes);
         }
 
         final CalledHaplotypes calledHaplotypes = genotypingEngine.callMutations(
