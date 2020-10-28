@@ -19,7 +19,7 @@ import java.util.Map;
 
 public class TrimmedReadsReaderTest extends GATKBaseTest {
 
-    protected static String    vcTestDir = publicTestDir + "org.ultimagenomics.variant_calling";
+    protected static String    vcTestDir = publicTestDir + Const.DATA_DIR;
 
     @Test
     public void testBasic() throws Exception {
