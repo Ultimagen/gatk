@@ -1,28 +1,16 @@
 package org.ultimagenomics.variant_calling;
 
 import htsjdk.samtools.SAMFileHeader;
-import htsjdk.samtools.SAMReadGroupRecord;
-import htsjdk.samtools.util.Locatable;
 import org.broadinstitute.hellbender.GATKBaseTest;
-import org.broadinstitute.hellbender.engine.AlignmentContext;
-import org.broadinstitute.hellbender.exceptions.UserException;
-import org.broadinstitute.hellbender.utils.SimpleInterval;
-import org.broadinstitute.hellbender.utils.pileup.ReadPileup;
 import org.broadinstitute.hellbender.utils.read.ArtificialReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
-import org.broadinstitute.hellbender.utils.read.ReadUtils;
-import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
 import org.testng.Assert;
 import org.testng.annotations.Test;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Map;
 
 public class VariantRecallerResultWriterTest extends GATKBaseTest {
 
     @Test
-    public void testTest() throws Exception {
+    public void testGetOffsetOnRead() throws Exception {
 
         // create sam header
         final SAMFileHeader header = ArtificialReadUtils.createArtificialSamHeader(1, 1, 1000);
