@@ -10,7 +10,6 @@ import java.io.IOException;
 public class HaplotypeBasedVariantRecallerTest extends CommandLineProgramTest {
 
     protected static String    vcTestDir = publicTestDir + Const.DATA_DIR;
-    protected static String    refDir = gatkDirectory + "testdata/ref";
 
     @Test
     public void testBasic() throws IOException {
@@ -21,7 +20,7 @@ public class HaplotypeBasedVariantRecallerTest extends CommandLineProgramTest {
                 "--haplotypes-file-bam", vcTestDir + "/haps_chr5.bam",
                 "-I", vcTestDir + "/chr5.bam1.rename.bam",
                 "-I", vcTestDir + "/chr5.bam2.rename.bam",
-                "--reference", refDir + "/Homo_sapiens_assembly38.fasta",
+                "--reference", largeFileTestDir + "/Homo_sapiens_assembly38.fasta.gz",
                 "--matrix-file-csv", outputDir + "/output.csv",
                 "--likelihood-calculation-engine", "FlowBased",
                 "--phred-scaled-global-read-mismapping-rate", "-1",
