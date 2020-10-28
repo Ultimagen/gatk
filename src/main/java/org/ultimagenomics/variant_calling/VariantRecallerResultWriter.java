@@ -190,7 +190,7 @@ public class VariantRecallerResultWriter {
         }
     }
 
-    private int getOffsetOnRead(GATKRead read, int ofs) {
+    public static int getOffsetOnRead(GATKRead read, int ofs) {
         int     readOfs = 0;
 
         Iterator<CigarElement> iter = read.getCigar().iterator();
