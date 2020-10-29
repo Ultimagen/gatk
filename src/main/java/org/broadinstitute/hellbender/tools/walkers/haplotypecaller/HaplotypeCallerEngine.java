@@ -777,7 +777,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         List<Haplotype> haplotypes = subsettedReadLikelihoodsFinal.alleles();
 
         if ( refView != null ) {
-            haplotypes = refView.uncollapseHaplotypesByRef(haplotypes, true, false);
+            haplotypes = refView.uncollapseHaplotypesByRef(haplotypes, true, false, null);
             subsettedReadLikelihoodsFinal.changeAlleles(haplotypes);
         }
 
