@@ -102,7 +102,7 @@ public final class AssemblyResultSetUnitTest extends GATKBaseTest {
         for (final Haplotype h : haplotypesAndResultSets.keySet())
             originalHaplotypesByTrimmed.put(h.trim(newRegion.getPaddedSpan()), h);
 
-        final AssemblyResultSet trimmed = subject.trimTo(newRegion, null);
+        final AssemblyResultSet trimmed = subject.trimTo(newRegion);
 
         for (final Haplotype h : trimmed.getHaplotypeList()) {
             Assert.assertEquals(h.getGenomeLocation(), newLocation);
