@@ -47,7 +47,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private final FlowBasedAlignmentArgumentCollection fbargs;
     private final Logger logger = LogManager.getLogger(this.getClass());
     static private String ultimaFlowMatrixMods = null;
-    static private int[] ultimaFlowMatrixModsInstructions = new int[MAXIMAL_MAXHMER];
+    static private int[] flowMatrixModsInstructions = new int[MAXIMAL_MAXHMER];
 
 
     public FlowBasedRead(SAMRecord samRecord, String _flowOrder, int _maxHmer) {
@@ -364,7 +364,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             }
 
             // mod instruction implementation
-            int hmer2 = ultimaFlowMatrixModsInstructions[hmer];
+            int hmer2 = flowMatrixModsInstructions[hmer];
             if ( hmer2 != 0 ) {
                 flowMatrix[hmer2][pos] = Math.max(flowMatrix[hmer2][pos], kd_probs[i]);
 
@@ -956,12 +956,12 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         return q.peek();
     }
 
-    public static void setUltimaFlowMatrixMods(String list) {
+    public static void setFlowMatrixMods(String list) {
         if ( list != null )
         {
             String[]    toks = list.split(",");
             for ( int i = 0 ; i < toks.length - 1 ; i += 2 )
-                ultimaFlowMatrixModsInstructions[Integer.parseInt(toks[i])] = Integer.parseInt(toks[i+1]);
+                flowMatrixModsInstructions[Integer.parseInt(toks[i])] = Integer.parseInt(toks[i+1]);
         }
     }
 

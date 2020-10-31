@@ -1,6 +1,7 @@
 package org.ultimagenomics.flow_based_read.alignment;
 
 import htsjdk.samtools.SAMFileHeader;
+import htsjdk.samtools.SAMReadGroupRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.ultimagenomics.flow_based_read.utils.Direction;
@@ -38,7 +39,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
     @Override
     public AlleleLikelihoods<GATKRead, Haplotype> computeReadLikelihoods(AssemblyResultSet assemblyResultSet,
                                                              SampleList samples,
-                                                             Map<String, List<GATKRead>> perSampleReadList) {
+                                                             Map<String, List<GATKRead>> perSampleReadList, boolean filterPoorly) {
         Utils.nonNull(assemblyResultSet, "assemblyResultSet is null");
         Utils.nonNull(samples, "samples is null");
         Utils.nonNull(perSampleReadList, "perSampleReadList is null");
@@ -56,7 +57,8 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
 
 
         result.normalizeLikelihoods(log10globalReadMismappingRate);
-        result.filterPoorlyModeledEvidence(log10MinTrueLikelihood(expectedErrorRatePerBase));
+        if ( filterPoorly )
+            result.filterPoorlyModeledEvidence(log10MinTrueLikelihood(expectedErrorRatePerBase));
 
         return result;
     }
@@ -108,8 +110,19 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
 
         FlowBasedHaplotype fbh;
 
+        if ( flow_order == null && hdr.getReadGroups().size() > 0 ) {
+            for ( SAMReadGroupRecord rg : hdr.getReadGroups() ) {
+                flow_order = rg.getAttribute("FO");
+                if ( flow_order != null && flow_order.length() >= fbargs.flowOrderCycleLength ) {
+                    flow_order = flow_order.substring(0, fbargs.flowOrderCycleLength);
+                    break;
+                }
+            }
+        }
+
         for (int i = 0; i < likelihoods.numberOfAlleles(); i++){
-            fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i), original_flow_order, max_class);
+            fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i),
+                        original_flow_order != null ? original_flow_order : flow_order, max_class);
             processedHaplotypes.add(fbh);
         }
 
@@ -139,7 +152,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
 
     //This function is for testing purposes only
     public AlleleLikelihoods<GATKRead, Haplotype> computeReadLikelihoods(
-            final List<Haplotype> haplotypeList, final List<GATKRead> reads) {
+            final List<Haplotype> haplotypeList, final List<GATKRead> reads, boolean filterPoorly) {
 
 
         final AlleleList<Haplotype> haplotypes = new IndexedAlleleList<>(haplotypeList);
@@ -158,7 +171,8 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         }
 
         result.normalizeLikelihoods(log10globalReadMismappingRate);
-        result.filterPoorlyModeledEvidence(log10MinTrueLikelihood(expectedErrorRatePerBase));
+        if ( filterPoorly )
+            result.filterPoorlyModeledEvidence(log10MinTrueLikelihood(expectedErrorRatePerBase));
 
         return result;
     }
@@ -173,7 +187,8 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             throw new GATKException.ShouldNeverReachHereException("Reads should be trimmed to the haplotype");
         }
 
-        if (!read.is_valid()) return Double.NEGATIVE_INFINITY;
+        if (!read.is_valid())
+            return Double.NEGATIVE_INFINITY;
 
         int haplotype_start = ReadUtils.getReadIndexForReferenceCoordinate(haplotype.getStart(), haplotype.getCigar(),
                 read.getTrimmedStart()).getLeft();

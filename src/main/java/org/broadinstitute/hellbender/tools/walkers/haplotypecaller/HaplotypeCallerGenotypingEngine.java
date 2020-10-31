@@ -247,6 +247,104 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
         return new CalledHaplotypes(phasedCalls, calledHaplotypes);
     }
 
+    public Map<Integer,AlleleLikelihoods<GATKRead, Allele>> assignGenotypeLikelihoods2(final List<Haplotype> haplotypes,
+                                                      final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods,
+                                                      final Map<String, List<GATKRead>> perSampleFilteredReadList,
+                                                      final byte[] ref,
+                                                      final SimpleInterval refLoc,
+                                                      final SimpleInterval activeRegionWindow,
+                                                      final FeatureContext tracker,
+                                                      final List<VariantContext> givenAlleles,
+                                                      final boolean emitReferenceConfidence,
+                                                      final int maxMnpDistance,
+                                                      final SAMFileHeader header,
+                                                      final boolean withBamOut) {
+        // sanity check input arguments
+        Utils.nonEmpty(haplotypes, "haplotypes input should be non-empty and non-null");
+        Utils.validateArg(readLikelihoods != null && readLikelihoods.numberOfSamples() > 0, "readLikelihoods input should be non-empty and non-null");
+        Utils.validateArg(ref != null && ref.length > 0, "ref bytes input should be non-empty and non-null");
+        Utils.nonNull(refLoc, "refLoc must be non-null");
+        Utils.validateArg(refLoc.size() == ref.length, " refLoc length must match ref bytes");
+        Utils.nonNull(activeRegionWindow, "activeRegionWindow must be non-null");
+        Utils.nonNull(givenAlleles, "givenAlleles must be non-null");
+        Utils.validateArg(refLoc.contains(activeRegionWindow), "refLoc must contain activeRegionWindow");
+        ParamUtils.isPositiveOrZero(maxMnpDistance, "maxMnpDistance may not be negative.");
+
+        // update the haplotypes so we're ready to call, getting the ordered list of positions on the reference
+        // that carry events among the haplotypes
+        final SortedSet<Integer> startPosKeySet = EventMap.buildEventMapsForHaplotypes(haplotypes, ref, refLoc, hcArgs.assemblerArgs.debugAssembly, maxMnpDistance);
+
+        //Later addition (Jukebox) - looking for variants that seem to be the same up to hmer indel, yet are placed on different locations.
+        //These variants should be actually placed on the same location and their haplotypes should map to each other and not necessarily
+        //to the reference
+
+        List<Pair<LocationAndAlleles, LocationAndAlleles>> exclusivePairs=null;
+        Map<LocationAndAlleles, Set<LocationAndAlleles>> exclusivePairMap=null;
+        if (hcArgs.filterContigs) {
+            final HaplotypeAlleleMatrix coocurrence = new HaplotypeAlleleMatrix(haplotypes);
+            exclusivePairs = coocurrence.nonCoOcurringVariants();
+            exclusivePairs = HaplotypeAlleleMatrix.filterExclusivePairsByDistance(exclusivePairs, MAX_SAME_ALLELE_DIST);
+            exclusivePairs = coocurrence.filterSameUpToHmerPairs(exclusivePairs, refLoc.getStart());
+            exclusivePairMap = HaplotypeAlleleMatrix.getExclusiveAlleleMap(exclusivePairs);
+        }
+
+
+        // Walk along each position in the key set and create each event to be outputted
+        final Set<Haplotype> calledHaplotypes = new HashSet<>();
+        final List<VariantContext> returnCalls = new ArrayList<>();
+        final int ploidy = configuration.genotypeArgs.samplePloidy;
+        final List<Allele> noCallAlleles = GATKVariantContextUtils.noCallAlleles(ploidy);
+
+
+        if (withBamOut) {
+            //add annotations to reads for alignment regions and calling regions
+            AssemblyBasedCallerUtils.annotateReadLikelihoodsWithRegions(readLikelihoods, activeRegionWindow);
+        }
+
+        Map<Integer,AlleleLikelihoods<GATKRead, Allele>>    result = new LinkedHashMap<>();
+        for( final int loc : startPosKeySet ) {
+            if( loc < activeRegionWindow.getStart() || loc > activeRegionWindow.getEnd() ) {
+                continue;
+            }
+
+            final List<VariantContext> eventsAtThisLoc = AssemblyBasedCallerUtils.getVariantContextsFromActiveHaplotypes(loc,
+                    haplotypes, true);
+
+            List<VariantContext> possibleEquivalents = null;
+            if (hcArgs.filterContigs) {
+                //Adding all variants in the area that are possibly equivalent allele up to hmer indel
+                possibleEquivalents = getPossibleEquivalents(loc, eventsAtThisLoc,
+                        exclusivePairMap, haplotypes);
+            }
+
+            final List<VariantContext> eventsAtThisLocWithSpanDelsReplaced = replaceSpanDels(eventsAtThisLoc,
+                    Allele.create(ref[loc - refLoc.getStart()], true), loc);
+
+            VariantContext mergedVC = AssemblyBasedCallerUtils.makeMergedVariantContext(eventsAtThisLocWithSpanDelsReplaced);
+
+            if( mergedVC == null ) {
+                continue;
+            }
+
+            int mergedAllelesListSizeBeforePossibleTrimming = mergedVC.getAlleles().size();
+
+            final Map<Allele, List<Haplotype>> alleleMapper = AssemblyBasedCallerUtils.createAlleleMapper(mergedVC, loc,
+                    possibleEquivalents, haplotypes);
+
+            if( hcArgs.assemblerArgs.debugAssembly && logger != null ) {
+                logger.info("Genotyping event at " + loc + " with alleles = " + mergedVC.getAlleles());
+            }
+
+            mergedVC = removeAltAllelesIfTooManyGenotypes(ploidy, alleleMapper, mergedVC);
+
+            AlleleLikelihoods<GATKRead, Allele> readAlleleLikelihoods = readLikelihoods.marginalize(alleleMapper);
+
+            result.put(loc, readAlleleLikelihoods);
+        }
+
+        return result;
+    }
+
     private static List<VariantContext> getPossibleEquivalents(int loc,
                                                                List<VariantContext> eventsAtThisLoc,
                                                                Map<LocationAndAlleles, Set<LocationAndAlleles>> exclusivePairMap,

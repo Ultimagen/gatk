@@ -37,7 +37,8 @@ public interface ReadLikelihoodCalculationEngine extends AutoCloseable {
      *    The value maps can be potentially empty though.
      */
     public AlleleLikelihoods<GATKRead, Haplotype> computeReadLikelihoods(AssemblyResultSet assemblyResultSet, SampleList samples,
-                                                                         Map<String, List<GATKRead>> perSampleReadList);
+                                                                         Map<String, List<GATKRead>> perSampleReadList,
+                                                                         boolean filterPoorly);
 
     /**
      * This method must be called when the client is done with likelihood calculations.

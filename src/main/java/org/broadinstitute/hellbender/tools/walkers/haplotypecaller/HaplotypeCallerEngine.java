@@ -191,7 +191,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                                  boolean createBamOutMD5, final SAMFileHeader readsHeader,
                                  ReferenceSequenceFile referenceReader, VariantAnnotatorEngine annotationEngine) {
         this.hcArgs = Utils.nonNull(hcArgs);
-        FlowBasedRead.setUltimaFlowMatrixMods(hcArgs.ultimaFlowMatrixMods);
+        FlowBasedRead.setFlowMatrixMods(hcArgs.flowMatrixMods);
         this.readsHeader = Utils.nonNull(readsHeader);
         this.referenceReader = Utils.nonNull(referenceReader);
         this.annotationEngine = Utils.nonNull(annotationEngine);
@@ -450,7 +450,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         // where the filters are used.  For example, in emitting all sites the lowQual field is used
         headerInfo.add(GATKVCFHeaderLines.getFilterLine(GATKVCFConstants.LOW_QUAL_FILTER_NAME));
 
-        if ( hcArgs.ultimaAssemblyCollapseHKerSize > 0 ) {
+        if ( hcArgs.flowAssemblyCollapseHKerSize > 0 ) {
             headerInfo.add(GATKVCFHeaderLines.getInfoLine(GATKVCFConstants.EXT_COLLAPSED_KEY));
         }
 
@@ -684,7 +684,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
         // Calculate the likelihoods: CPU intensive part.
         final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods =
-                likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads);
+                likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads, true);
 
         alleleLikelihoodWriter.ifPresent(
                 writer -> writer.writeAlleleLikelihoods(readLikelihoods));
@@ -716,7 +716,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         List<Haplotype> haplotypes = subsettedReadLikelihoodsFinal.alleles();
 
         if ( refView != null ) {
-            haplotypes = refView.uncollapseHaplotypesByRef(haplotypes, true, false);
+            haplotypes = refView.uncollapseHaplotypesByRef(haplotypes, true, false, null);
             subsettedReadLikelihoodsFinal.changeAlleles(haplotypes);
         }
 
