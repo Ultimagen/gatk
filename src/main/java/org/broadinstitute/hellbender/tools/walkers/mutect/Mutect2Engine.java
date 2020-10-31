@@ -46,6 +46,8 @@ import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
+import org.ultimagenomics.haplotype_calling.ContigFilteringMutect;
+import org.ultimagenomics.haplotype_calling.LHWRefView;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -224,6 +226,7 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
 
         final AssemblyRegion assemblyActiveRegion = AssemblyBasedCallerUtils.assemblyRegionWithWellMappedReads(originalAssemblyRegion, READ_QUALITY_FILTER_THRESHOLD, header);
         final AssemblyResultSet untrimmedAssemblyResult = AssemblyBasedCallerUtils.assembleReads(assemblyActiveRegion, givenAlleles, MTAC, header, samplesList, logger, referenceReader, assemblyEngine, aligner, false);
+        final LHWRefView refView = untrimmedAssemblyResult.getRefView();
 
         final SortedSet<VariantContext> allVariationEvents = untrimmedAssemblyResult.getVariationEvents(MTAC.maxMnpDistance);
         final AssemblyRegionTrimmer.Result trimmingResult = trimmer.trim(originalAssemblyRegion, allVariationEvents, referenceContext);
@@ -245,13 +248,30 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
 
         final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods = likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult,samplesList,reads, true);
         readLikelihoods.switchToNaturalLog();
+        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
 
-        final Map<GATKRead,GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(readLikelihoods, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner);
-        readLikelihoods.changeEvidence(readRealignments);
+        if (MTAC.filterContigs) {
+            logger.debug("Filtering contigs");
+            ContigFilteringMutect contigFilter = new ContigFilteringMutect(MTAC, null, genotypingEngine);
+            subsettedReadLikelihoodsFinal = contigFilter.filterContigs(readLikelihoods);
+        } else {
+            logger.debug("Not filtering contigs");
+            subsettedReadLikelihoodsFinal = readLikelihoods;
+        }
+
+        final Map<GATKRead,GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(subsettedReadLikelihoodsFinal, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner);
+        subsettedReadLikelihoodsFinal.changeEvidence(readRealignments);
+
+        List<Haplotype> haplotypes = subsettedReadLikelihoodsFinal.alleles();
+
+        if ( refView != null ) {
+            haplotypes = refView.uncollapseHaplotypesByRef(haplotypes, true, false, null);
+            subsettedReadLikelihoodsFinal.changeAlleles(haplotypes);
+        }
 
         final CalledHaplotypes calledHaplotypes = genotypingEngine.callMutations(
-                readLikelihoods, assemblyResult, referenceContext, regionForGenotyping.getSpan(), featureContext, givenAlleles, header, haplotypeBAMWriter.isPresent(), emitReferenceConfidence());
-        writeBamOutput(assemblyResult, readLikelihoods, calledHaplotypes, regionForGenotyping.getSpan());
+                subsettedReadLikelihoodsFinal, assemblyResult, referenceContext, regionForGenotyping.getSpan(), featureContext, givenAlleles, header, haplotypeBAMWriter.isPresent(), emitReferenceConfidence());
+        writeBamOutput(assemblyResult, subsettedReadLikelihoodsFinal, calledHaplotypes, regionForGenotyping.getSpan());
         if (emitReferenceConfidence()) {
             if ( !containsCalls(calledHaplotypes) ) {
                 // no called all of the potential haplotypes
@@ -264,7 +284,7 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
 
                 result.addAll(referenceConfidenceModel.calculateRefConfidence(assemblyResult.getReferenceHaplotype(),
                         calledHaplotypes.getCalledHaplotypes(), assemblyResult.getPaddedReferenceLoc(), regionForGenotyping,
-                        readLikelihoods, new HomogeneousPloidyModel(samplesList, 2), calledHaplotypes.getCalls()));
+                        subsettedReadLikelihoodsFinal, new HomogeneousPloidyModel(samplesList, 2), calledHaplotypes.getCalls()));
 
                 trimmingResult.nonVariantRightFlankRegion().ifPresent(flank -> result.addAll(referenceModelForNoVariation(flank)));
 

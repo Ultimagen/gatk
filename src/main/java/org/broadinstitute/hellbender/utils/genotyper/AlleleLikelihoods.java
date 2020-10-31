@@ -657,6 +657,8 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
         final List<List<NEW_EVIDENCE_TYPE>> newEvidenceBySampleIndex = new ArrayList<>(sampleCount);
 
         for (int s = 0; s < sampleCount; s++) {
+
+
             final List<List<EVIDENCE>> evidenceGroups = new ArrayList<>(sampleEvidence(s).stream()
                     .collect(Collectors.groupingBy(groupingFunction)).values());
 
@@ -684,6 +686,10 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
                 samples,
                 newEvidenceBySampleIndex,
                 newLikelihoodValues);
+        for (int s = 0; s < sampleCount; s++) {
+            if ( numberOfEvidences[s] == 0 )
+                result.numberOfEvidences[s] = numberOfEvidences[s];
+        }
 
         result.isNaturalLog = this.isNaturalLog;
         return result;
@@ -1284,10 +1290,6 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
             final int newEvidenceCount = oldEvidenceCount - evidencesToRemove.length;
             if (newEvidenceCount < 0) {
                 throw new IllegalStateException("attempt to remove non-existent evidence or repeated evidence");
-            } else if (newEvidenceCount == 0) { // taking in consideration the assumption we simply remove
-                // all evidence.
-                evidenceIndex.clear();
-                numberOfEvidences[sampleIndex] = 0;
             } else {
                 final List<EVIDENCE> evidences = evidenceBySampleIndex.get(sampleIndex);
                 final double[][] values = valuesBySampleIndex[sampleIndex];

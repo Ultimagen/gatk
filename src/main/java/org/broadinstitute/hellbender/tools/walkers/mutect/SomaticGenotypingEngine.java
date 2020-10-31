@@ -207,7 +207,7 @@ public class SomaticGenotypingEngine {
         return new CalledHaplotypes(outputCallsWithEventCountAnnotation, calledHaplotypes);
     }
 
-    private double[] makePriorPseudocounts(final int numAlleles) {
+    public double[] makePriorPseudocounts(final int numAlleles) {
         return new IndexRange(0, numAlleles).mapToDouble(n -> n == 0 ? refPseudocount : altPseudocount);
     }
 
