@@ -173,7 +173,7 @@ public final class ReadThreadingAssemblerUnitTest extends GATKBaseTest {
         final Haplotype refHaplotype = new Haplotype(refBases, true);
         final Haplotype altHaplotype = new Haplotype(altBases, false);
         final List<Haplotype> haplotypes = assemble(assembler, refBases, loc, reads);
-        Assert.assertEquals(haplotypes, Arrays.asList(refHaplotype, altHaplotype));
+        Assert.assertEquals(new HashSet<>(haplotypes), new HashSet<>(Arrays.asList(refHaplotype, altHaplotype)));
     }
 
 
@@ -234,10 +234,11 @@ public final class ReadThreadingAssemblerUnitTest extends GATKBaseTest {
         final Haplotype altHaplotype = new Haplotype(altBases, false);
         final List<Haplotype> haplotypes = assemble(assembler, refBases, loc, reads);
         Assert.assertTrue(haplotypes.size() > 0, "Failed to find ref haplotype");
-        Assert.assertEquals(haplotypes.get(0), refHaplotype);
+        final HashSet<Haplotype> haplotypes_hash = new HashSet(haplotypes);
+        Assert.assertTrue(haplotypes_hash.contains(refHaplotype), "Reference haplotype missing");
 
         Assert.assertEquals(haplotypes.size(), 2, "Failed to find single alt haplotype");
-        Assert.assertEquals(haplotypes.get(1), altHaplotype);
+        Assert.assertTrue(haplotypes_hash.contains(altHaplotype), "Alternate haplotype missing");
     }
 
     private static class TestAssembler {
