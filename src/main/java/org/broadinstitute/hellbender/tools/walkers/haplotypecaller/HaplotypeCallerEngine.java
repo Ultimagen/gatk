@@ -256,7 +256,10 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samplesList, ! hcArgs.doNotRunPhysicalPhasing, hcArgs.applyBQD);
         genotypingEngine.setAnnotationEngine(annotationEngine);
 
-        referenceConfidenceModel = new ReferenceConfidenceModel(samplesList, readsHeader, hcArgs.indelSizeToEliminateInRefModel, hcArgs.standardArgs.genotypeArgs.numRefIfMissing);
+        referenceConfidenceModel = new ReferenceConfidenceModel(samplesList, readsHeader,
+                hcArgs.indelSizeToEliminateInRefModel,
+                hcArgs.standardArgs.genotypeArgs.numRefIfMissing,
+                hcArgs.refModelDelQual);
 
         //Allele-specific annotations are not yet supported in the VCF mode
         if (isAlleleSpecificMode(annotationEngine) && isVCFMode()){
@@ -304,9 +307,9 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
 
         if ( emitReferenceConfidence() ) {
-            hcArgs.standardArgs.genotypeArgs.standardConfidenceForCalling = -0.0;
+            //hcArgs.standardArgs.genotypeArgs.standardConfidenceForCalling = -0.0;
 
-            logger.info("Standard Emitting and Calling confidence set to 0.0 for reference-model confidence output");
+            logger.info("Standard Emitting and Calling confidence set to 30.0 for reference-model confidence output");
             if ( ! hcArgs.standardArgs.annotateAllSitesWithPLs ) {
                 logger.info("All sites annotated with PLs forced to true for reference-model confidence output");
             }
