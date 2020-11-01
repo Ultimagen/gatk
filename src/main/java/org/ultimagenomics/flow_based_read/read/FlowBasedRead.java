@@ -8,6 +8,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.exceptions.GATKException;
+import org.broadinstitute.hellbender.utils.Tail;
 import org.broadinstitute.hellbender.utils.read.CigarUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
@@ -93,10 +94,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         //Spread boundary flow probabilities when the read is unclipped
         //in this case the value of the hmer is uncertain
-        if (CigarUtils.countLeftHardClippedBases(samRecord.getCigar()) == 0){
+        if (CigarUtils.countClippedBases(samRecord.getCigar(), Tail.LEFT, CigarOperator.HARD_CLIP) == 0){
             _spreadFlowProbs(findFirstNonZero(key));
         }
-        if (CigarUtils.countRightHardClippedBases(samRecord.getCigar()) == 0){
+        if (CigarUtils.countClippedBases(samRecord.getCigar(), Tail.RIGHT, CigarOperator.HARD_CLIP) == 0){
             _spreadFlowProbs(findLastNonZero(key));
         }
 
