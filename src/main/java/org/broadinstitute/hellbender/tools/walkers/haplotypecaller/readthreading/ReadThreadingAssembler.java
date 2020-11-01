@@ -17,20 +17,7 @@ import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyResult;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyResultSet;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.ReadErrorCorrector;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.AdaptiveChainPruner;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.BaseEdge;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.BaseGraph;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.BaseVertex;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.BaseVertexBackedAllele;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.ChainPruner;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.GraphBasedKBestHaplotypeFinder;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.JTBestHaplotype;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.JunctionTreeKBestHaplotypeFinder;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.KBestHaplotype;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.LowWeightChainPruner;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.MultiSampleEdge;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.SeqGraph;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.SeqVertex;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.*;
 import org.broadinstitute.hellbender.utils.Histogram;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
@@ -40,23 +27,14 @@ import org.broadinstitute.hellbender.utils.param.ParamUtils;
 import org.broadinstitute.hellbender.utils.read.CigarUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
-import java.util.stream.Collectors;
 import org.ultimagenomics.haplotype_calling.LHWRefView;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 
@@ -426,22 +404,36 @@ public final class ReadThreadingAssembler {
             // Make sure that the ref haplotype is amongst the return haplotypes and calculate its score as
             // the first returned by any finder.
             // HERE we want to preserve the signal that assembly failed completely so in this case we don't add anything to the empty list
-            if (!returnHaplotypes.isEmpty() && !returnHaplotypes.contains(refHaplotype)) {
+
+            Haplotype tmpRefHaplotype = new Haplotype(refHaplotype.getBases(), false);
+            if (!returnHaplotypes.isEmpty()){
+
+
                 refHaplotype.contigs = getRefHaplotypesContigs(refHaplotype,returnHaplotypes);
+                if ( returnHaplotypes.contains((tmpRefHaplotype))){
+                    returnHaplotypes.remove(tmpRefHaplotype);
+                }
+
                 returnHaplotypes.add(refHaplotype);
-
+                if (resultSet != null) {
+                    resultSet.replaceAllHaplotypes(returnHaplotypes);
+                }
             }
 
-            for (Haplotype h: resultSet.getHaplotypeList()) {
-                if (h.isReference() && (h.contigs==null))
-                    h.contigs = getRefHaplotypesContigs(h, returnHaplotypes);
-            }
 
+            if (resultSet!=null) {
+                for (Haplotype h : resultSet.getHaplotypeList()) {
+                    if (h.isReference() && (h.contigs == null))
+                        h.contigs = getRefHaplotypesContigs(h, returnHaplotypes);
+                }
+            }
 
             // uncollapse haplotypes now?
             if ( resultSet != null && resultSet.getRefView() != null ) {
                 returnHaplotypes = new LinkedHashSet<>(resultSet.getRefView().uncollapseHaplotypesByRef(resultSet.getHaplotypeList(), true, true, null));
-                resultSet.replaceAllHaplotypes(returnHaplotypes);
+                if (resultSet!=null) { //linkedDebruijnGraph does not  have a resultSet?
+                    resultSet.replaceAllHaplotypes(returnHaplotypes);
+                }
             }
 
             assemblyResult.setDiscoveredHaplotypes(returnHaplotypes);
@@ -470,7 +462,6 @@ public final class ReadThreadingAssembler {
     private List<? extends Allele> getRefHaplotypesContigs(final Haplotype refHaplotype, final Set<Haplotype> returnHaplotypes) {
         List<Allele> contigs = new ArrayList<>();
         String refString = refHaplotype.toString();
-
         Map<Haplotype,? extends Allele> candidateHaplotypesToNextContig = returnHaplotypes.stream().collect(Collectors.toMap(Function.identity(), h -> h.contigs.get(0)));
 
         while (refString.length() > 0) {
