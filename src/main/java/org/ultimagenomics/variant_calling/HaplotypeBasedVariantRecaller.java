@@ -204,9 +204,6 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
         return  readFilterPlugin.getMergedCountingReadFilter(samFileHeader);
     }
 
-    @Override
-    protected void initializeReads() {
 
-    }
 }
 
