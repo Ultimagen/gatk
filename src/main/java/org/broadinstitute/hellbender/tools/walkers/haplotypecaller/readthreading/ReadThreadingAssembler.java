@@ -389,11 +389,12 @@ public final class ReadThreadingAssembler {
             Haplotype tmpRefHaplotype = new Haplotype(refHaplotype.getBases(), false);
             if (!returnHaplotypes.isEmpty()){
 
+
+                refHaplotype.contigs = getRefHaplotypesContigs(refHaplotype,returnHaplotypes);
                 if ( returnHaplotypes.contains((tmpRefHaplotype))){
                     returnHaplotypes.remove(tmpRefHaplotype);
                 }
 
-                refHaplotype.contigs = getRefHaplotypesContigs(refHaplotype,returnHaplotypes);
                 returnHaplotypes.add(refHaplotype);
                 resultSet.replaceAllHaplotypes(returnHaplotypes);
             }
@@ -437,7 +438,6 @@ public final class ReadThreadingAssembler {
     private List<? extends Allele> getRefHaplotypesContigs(final Haplotype refHaplotype, final Set<Haplotype> returnHaplotypes) {
         List<Allele> contigs = new ArrayList<>();
         String refString = refHaplotype.toString();
-
         Map<Haplotype,? extends Allele> candidateHaplotypesToNextContig = returnHaplotypes.stream().collect(Collectors.toMap(Function.identity(), h -> h.contigs.get(0)));
 
         while (refString.length() > 0) {
