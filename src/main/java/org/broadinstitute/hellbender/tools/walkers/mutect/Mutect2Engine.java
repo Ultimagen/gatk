@@ -158,7 +158,8 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
         genotypingEngine = new SomaticGenotypingEngine(MTAC, normalSamples, annotationEngine);
         haplotypeBAMWriter = AssemblyBasedCallerUtils.createBamWriter(MTAC, createBamOutIndex, createBamOutMD5, header);
         trimmer = new AssemblyRegionTrimmer(assemblyRegionArgs, header.getSequenceDictionary());
-        referenceConfidenceModel = new SomaticReferenceConfidenceModel(samplesList, header, 0, MTAC.minAF);  //TODO: do something classier with the indel size arg
+        referenceConfidenceModel = new SomaticReferenceConfidenceModel(samplesList, header, 0,
+                MTAC.minAF, MTAC.refModelDelQual);  //TODO: do something classier with the indel size arg
         final List<String> tumorSamples = ReadUtils.getSamplesFromHeader(header).stream().filter(this::isTumorSample).collect(Collectors.toList());
         f1R2CountsCollector = MTAC.f1r2TarGz == null ? Optional.empty() : Optional.of(new F1R2CountsCollector(MTAC.f1r2Args, header, MTAC.f1r2TarGz, tumorSamples));
         assembledEventMapVcfOutputWriter = Optional.ofNullable(MTAC.assemblerArgs.debugAssemblyVariantsOut != null ?

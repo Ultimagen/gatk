@@ -1,16 +1,14 @@
 package org.broadinstitute.hellbender.tools.walkers.mutect;
 
 import htsjdk.samtools.SAMFileHeader;
-import htsjdk.variant.variantcontext.*;
+import htsjdk.variant.variantcontext.Allele;
+import htsjdk.variant.variantcontext.GenotypeBuilder;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.ReferenceConfidenceModel;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.ReferenceConfidenceResult;
 import org.broadinstitute.hellbender.tools.walkers.readorientation.BetaDistributionShape;
 import org.broadinstitute.hellbender.utils.MathUtils;
 import org.broadinstitute.hellbender.utils.Utils;
-import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
-import org.broadinstitute.hellbender.utils.genotyper.IndexedAlleleList;
 import org.broadinstitute.hellbender.utils.genotyper.SampleList;
-import org.broadinstitute.hellbender.utils.param.ParamUtils;
 import org.broadinstitute.hellbender.utils.pileup.PileupElement;
 import org.broadinstitute.hellbender.utils.pileup.ReadPileup;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
@@ -33,8 +31,8 @@ public class SomaticReferenceConfidenceModel extends ReferenceConfidenceModel {
      * @param minAF soft threshold for allele fractions -- above this value prior is nearly flat, below, prior is nearly zero
      */
     SomaticReferenceConfidenceModel(final SampleList samples, final SAMFileHeader header, final int indelInformativeDepthIndelSize,
-                                    final double minAF){
-        super(samples, header, indelInformativeDepthIndelSize, 0);
+                                    final double minAF, final byte refModelDelQual){
+        super(samples, header, indelInformativeDepthIndelSize, 0, refModelDelQual);
         Utils.validateArg(minAF >= 0.0 && minAF < 1, "minAF must be < 1 and >= 0");
 
         // To softly cut off allele fractions below minAF, we use a Beta prior of the form Beta(1+epsilon, 1); that is
