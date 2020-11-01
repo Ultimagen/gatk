@@ -33,7 +33,7 @@ public final class BaseEdgeUnitTest extends GATKBaseTest {
         final BaseEdge e = new BaseEdge(isRef, fMult, rMult);
         Assert.assertEquals(e.isRef(), isRef);
         Assert.assertEquals(e.getMultiplicity(), fMult + rMult);
-        Assert.assertEquals(e.getPruningMultiplicity(), Math.min(fMult, rMult));
+        Assert.assertEquals(e.getPruningMultiplicity(), fMult+ rMult);
         Assert.assertEquals(e.getDotLabel(), String.format("%d//%d", fMult, rMult));
 
         e.toString(); //just check not blowing up
@@ -45,14 +45,14 @@ public final class BaseEdgeUnitTest extends GATKBaseTest {
 
         e.setMultiplicity(fMult + 1, rMult);
         Assert.assertEquals(e.getMultiplicity(), rMult + fMult + 1);
-        Assert.assertEquals(e.getPruningMultiplicity(), Math.min(fMult + 1, rMult));
+        Assert.assertEquals(e.getPruningMultiplicity(), fMult + 1+ rMult);
         Assert.assertEquals(e.getDotLabel(), String.format("%d//%d", fMult + 1, rMult));
 
         e.toString();//just check not blowing up
 
         e.incMultiplicity(1, true);
         Assert.assertEquals(e.getMultiplicity(), rMult + fMult + 2);
-        Assert.assertEquals(e.getPruningMultiplicity(), Math.min(fMult + 1, rMult + 1));
+        Assert.assertEquals(e.getPruningMultiplicity(), fMult + 1 + rMult + 1);
         Assert.assertEquals(e.getDotLabel(), String.format("%d//%d", fMult + 1, rMult + 1));
 
         e.toString();//just check not blowing up
@@ -74,7 +74,7 @@ public final class BaseEdgeUnitTest extends GATKBaseTest {
         Assert.assertTrue(e1 == e3);//identity
         Assert.assertEquals(e1.isRef(), isRef);
         Assert.assertEquals(e1.getMultiplicity(), 2*(fMult+rMult));
-        Assert.assertEquals(e1.getPruningMultiplicity(), 2*Math.min(fMult,rMult));
+        Assert.assertEquals(e1.getPruningMultiplicity(), 2*(fMult+rMult));
         Assert.assertEquals(e1.getDotLabel(), String.format("%d//%d", 2*fMult, 2*rMult));
 
         final BaseEdge e4 = new BaseEdge(!isRef, fMult,rMult);
