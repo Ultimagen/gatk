@@ -73,7 +73,6 @@ public final class MultiSampleEdgeUnitTest extends GATKBaseTest {
         final int prune = counts.get(Math.max(counts.size() - cfg.numSamplesPruning, 0));
         Assert.assertEquals(edge.getMultiplicity(), total);
         // this forgets that pruning is now defined as the min of forward and reverse...
-//        Assert.assertEquals(edge.getPruningMultiplicity(), prune);
-        Assert.assertEquals(edge.getPruningMultiplicity(), 0);
+        Assert.assertEquals(edge.getPruningMultiplicity(), prune);
     }
 }
