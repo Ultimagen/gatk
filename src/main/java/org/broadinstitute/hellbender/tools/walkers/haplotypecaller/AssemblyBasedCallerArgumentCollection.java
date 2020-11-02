@@ -153,6 +153,15 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     @Argument(fullName = "strand-bias-pileup-p", doc = "p-value threshold for rejecting pileups as strand bias artifacts.", optional = true)
     public double strandBiasPileupPValue = 0.0;
 
+    /**
+     * This parameter is determining the deletion quality in the reference confidence model. In JB data we currently recommend
+     * to set it to 20, although it should be determined dynamically. Ilmn model has 30
+     */
+    @Advanced
+    @Argument(fullName = "reference-model-deletion-quality", doc = "The quality of deletion in the reference model", optional = true)
+    public byte refModelDelQual= 30;
+
+
     @Advanced
     @Argument(fullName = ALLELE_EXTENSION_LONG_NAME,
             doc = "Likelihood and read-based annotations will only take into consideration reads " +

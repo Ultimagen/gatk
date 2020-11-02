@@ -57,6 +57,7 @@ public class ReferenceConfidenceModel {
     private final SampleList samples;
     private final int indelInformativeDepthIndelSize;
     private final int numRefSamplesForPrior;
+    private final byte refModelDeletionQuality;
 
     @VisibleForTesting
     protected static final String NON_REF_ALLELE_DESCRIPTION = "Represents any possible alternative allele not already represented at this location by REF and ALT";
@@ -70,7 +71,7 @@ public class ReferenceConfidenceModel {
      * when assessing the confidence on the hom-ref call at that site.
      * </p>
      */
-    private static final byte REF_MODEL_DELETION_QUAL = 30;
+
 
     private static final byte MAX_QUAL_FOR_ACTIVE_REGION = 20;
 
@@ -128,16 +129,19 @@ public class ReferenceConfidenceModel {
      * @param samples the list of all samples we'll be considering with this model
      * @param header the SAMFileHeader describing the read information (used for debugging)
      * @param indelInformativeDepthIndelSize the max size of indels to consider when calculating indel informative depths
+     * @param refDelQual reference model deletion quality (30 - Ilmn, 20 - JB)
      */
     public ReferenceConfidenceModel(final SampleList samples,
                                     final SAMFileHeader header,
                                     final int indelInformativeDepthIndelSize,
-                                    final int numRefForPrior) {
+                                    final int numRefForPrior,
+                                    final byte refDelQual) {
         Utils.nonNull(samples, "samples cannot be null");
         Utils.validateArg( samples.numberOfSamples() > 0, "samples cannot be empty");
         Utils.nonNull(header, "header cannot be empty");
         //TODO: code and comment disagree -- which is right?
         Utils.validateArg( indelInformativeDepthIndelSize >= 0, () -> "indelInformativeDepthIndelSize must be >= 1 but got " + indelInformativeDepthIndelSize);
+
 
         this.samples = samples;
         this.indelInformativeDepthIndelSize = indelInformativeDepthIndelSize;
@@ -145,6 +149,7 @@ public class ReferenceConfidenceModel {
         this.options = new PosteriorProbabilitiesUtils.PosteriorProbabilitiesOptions(HomoSapiensConstants.SNP_HETEROZYGOSITY,
                 HomoSapiensConstants.INDEL_HETEROZYGOSITY, useInputSamplesAlleleCounts, useMLEAC, ignoreInputSamplesForMissingVariants,
                 useFlatPriorsForIndels);
+        this.refModelDeletionQuality = refDelQual;
     }
 
     /**
@@ -393,7 +398,7 @@ public class ReferenceConfidenceModel {
         final RefVsAnyResult result = new RefVsAnyResult(likelihoodCount);
         int readCount = 0;
         for (final PileupElement p : pileup) {
-            final byte qual = p.isDeletion() ? REF_MODEL_DELETION_QUAL : (byte)Math.min(MAX_QUAL_FOR_ACTIVE_REGION, p.getQual());
+            final byte qual = p.isDeletion() ? this.refModelDeletionQuality : p.getQual();
             if (!p.isDeletion() && qual <= minBaseQual) {
                 continue;
             }
@@ -420,6 +425,7 @@ public class ReferenceConfidenceModel {
             nonRefLikelihood = QualityUtils.qualToErrorProbLog10(qual) + MathUtils.LOG10_ONE_THIRD;
             result.refDepth++;
         }
+
         // Homozygous likelihoods don't need the logSum trick.
         result.genotypeLikelihoods[0] += referenceLikelihood + log10Ploidy;
         result.genotypeLikelihoods[likelihoodCount - 1] += nonRefLikelihood + log10Ploidy;
