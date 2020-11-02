@@ -92,6 +92,23 @@ public final class Haplotype extends Allele {
      * @return a new Haplotype within only the bases spanning the provided location, or null for some reason the haplotype would be malformed if
      */
     public Haplotype trim(final Locatable loc) {
+        return trim(loc, false);
+    }
+
+    /**
+     * Create a new Haplotype derived from this one that exactly spans the provided location
+     *
+     * Note that this haplotype must have a contain a genome loc for this operation to be successful.  If no
+     * GenomeLoc is contained than @throws an IllegalStateException
+     *
+     * Also loc must be fully contained within this Haplotype's genomeLoc.  If not an IllegalArgumentException is
+     * thrown.
+     *
+     * @param loc a location completely contained within this Haplotype's location
+     * @param ignoreRefState should the reference state of the original Haplotype be ignored
+     * @return a new Haplotype within only the bases spanning the provided location, or null for some reason the haplotype would be malformed if
+     */
+    public Haplotype trim(final Locatable loc, boolean ignoreRefState) {
         Utils.nonNull( loc, "Loc cannot be null");
         Utils.nonNull(genomeLocation, "Cannot trim a Haplotype without containing GenomeLoc");
         Utils.validateArg(new SimpleInterval(genomeLocation).contains(loc), () -> "Can only trim a Haplotype to a containing span.  My loc is " + genomeLocation + " but wanted trim to " + loc);
@@ -123,7 +140,7 @@ public final class Haplotype extends Allele {
         final Cigar leadingIndelTrimmedNewCigar = !(leadingInsertion || trailingInsertion)  ? newCigar :
                 new CigarBuilder(false).addAll(newCigar.getCigarElements().subList(firstIndexToKeepInclusive, lastIndexToKeepExclusive)).make();
 
-        final Haplotype ret = new Haplotype(newBases, isReference());
+        final Haplotype ret = new Haplotype(newBases, ignoreRefState ? false : isReference());
         ret.setCigar(leadingIndelTrimmedNewCigar);
         ret.setGenomeLocation(loc);
         ret.setScore(score);
@@ -132,6 +149,7 @@ public final class Haplotype extends Allele {
         ret.contigs=contigs;
         return ret;
     }
+
 
     @Override
     public boolean equals( final Object h ) {

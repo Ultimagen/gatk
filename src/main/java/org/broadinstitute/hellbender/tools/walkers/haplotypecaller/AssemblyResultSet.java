@@ -2,7 +2,6 @@
 package org.broadinstitute.hellbender.tools.walkers.haplotypecaller;
 
 import htsjdk.samtools.util.Locatable;
-import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -105,6 +104,8 @@ public final class AssemblyResultSet {
     }
 
     private Map<Haplotype, Haplotype> calculateOriginalByTrimmedHaplotypes(final Locatable span) {
+
+
         if ( debug ) {
             logger.info("Trimming active region " + getRegionForGenotyping() + " with " + getHaplotypeCount() + " haplotypes");
         }
@@ -132,15 +133,22 @@ public final class AssemblyResultSet {
         return sortedOriginalByTrimmedHaplotypes;
     }
 
+    // trim haplotypes to span merging haplotypes that are equal in bases
     private Map<Haplotype, Haplotype> trimDownHaplotypes(final Locatable span, final List<Haplotype> haplotypeList) {
+
         final Map<Haplotype,Haplotype> originalByTrimmedHaplotypes = new HashMap<>();
 
+        // Note that two haplotypes one of which is marked as reference are different,
+        // so trivially after trimming duplicate haplotypes could occur. We remove
+        // these duplcations. If one of the haplotypes before trimming was marked as
+        // reference - we mark the trimmed haplotype reference
+
         for ( final Haplotype h : haplotypeList ) {
-            final Haplotype trimmed = h.trim(span);
+            final Haplotype trimmed = h.trim(span, true);
 
             if ( trimmed != null ) {
                 if (originalByTrimmedHaplotypes.containsKey(trimmed)) {
-                    if (trimmed.isReference()) {
+                    if (h.isReference()) {
                         originalByTrimmedHaplotypes.remove(trimmed);
                         originalByTrimmedHaplotypes.put(trimmed, h);
                     }
@@ -154,7 +162,24 @@ public final class AssemblyResultSet {
                         " because it starts with or ends with an insertion or deletion when trimmed to " + span);
             }
         }
-        return originalByTrimmedHaplotypes;
+
+        // Now set reference status originalByTrimmedHaplotypes
+        final Map<Haplotype, Haplotype> fixedOriginalByTrimmedHaplotypes = new HashMap<>();
+        for (Haplotype h : originalByTrimmedHaplotypes.keySet()){
+            if (originalByTrimmedHaplotypes.get(h).isReference()){
+                Haplotype fixedHap = new Haplotype(h.getBases(), true);
+                fixedHap.setCigar(h.getCigar());
+                fixedHap.setGenomeLocation(h.getGenomeLocation());
+                fixedHap.setScore(h.getScore());
+                fixedHap.setAlignmentStartHapwrtRef(h.getAlignmentStartHapwrtRef());
+                //TODO: need to trim this down as well.
+                fixedHap.contigs=h.contigs;
+                fixedOriginalByTrimmedHaplotypes.put(fixedHap, originalByTrimmedHaplotypes.get(h));
+            } else {
+                fixedOriginalByTrimmedHaplotypes.put(h, originalByTrimmedHaplotypes.get(h));
+            }
+        }
+        return fixedOriginalByTrimmedHaplotypes;
     }
 
     private static Map<Haplotype, Haplotype> mapOriginalToTrimmed(final Map<Haplotype, Haplotype> originalByTrimmedHaplotypes, final List<Haplotype> trimmedHaplotypes) {
