@@ -250,7 +250,10 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samplesList, ! hcArgs.doNotRunPhysicalPhasing, hcArgs.applyBQD);
         genotypingEngine.setAnnotationEngine(annotationEngine);
 
-        referenceConfidenceModel = new ReferenceConfidenceModel(samplesList, readsHeader, hcArgs.indelSizeToEliminateInRefModel, hcArgs.standardArgs.genotypeArgs.numRefIfMissing);
+        referenceConfidenceModel = new ReferenceConfidenceModel(samplesList, readsHeader,
+                hcArgs.indelSizeToEliminateInRefModel,
+                hcArgs.standardArgs.genotypeArgs.numRefIfMissing,
+                hcArgs.refModelDelQual);
 
         //Allele-specific annotations are not yet supported in the VCF mode
         if (isAlleleSpecificMode(annotationEngine) && isVCFMode()){
