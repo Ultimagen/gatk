@@ -324,6 +324,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
                 "-G", "StandardAnnotation",
                 "-G", "StandardHCAnnotation",
                 "-G", "AS_StandardAnnotation",
+                "-AX", "AS_StrandOddsRatioProbabilistic",
                 "--" + AssemblyBasedCallerArgumentCollection.EMIT_REF_CONFIDENCE_LONG_NAME, ReferenceConfidenceMode.GVCF.toString(),
                 "-pairHMM", "AVX_LOGLESS_CACHING",
                 "--" + AssemblyBasedCallerArgumentCollection.ALLELE_EXTENSION_LONG_NAME, "2",

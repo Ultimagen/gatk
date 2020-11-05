@@ -396,20 +396,25 @@ public final class ReadThreadingAssembler {
                 }
 
                 returnHaplotypes.add(refHaplotype);
-                resultSet.replaceAllHaplotypes(returnHaplotypes);
+                if (resultSet != null) {
+                    resultSet.replaceAllHaplotypes(returnHaplotypes);
+                }
             }
 
 
-            for (Haplotype h: resultSet.getHaplotypeList()) {
-                if (h.isReference() && (h.contigs==null))
-                    h.contigs = getRefHaplotypesContigs(h, returnHaplotypes);
+            if (resultSet!=null) {
+                for (Haplotype h : resultSet.getHaplotypeList()) {
+                    if (h.isReference() && (h.contigs == null))
+                        h.contigs = getRefHaplotypesContigs(h, returnHaplotypes);
+                }
             }
-
 
             // uncollapse haplotypes now?
             if ( resultSet != null && resultSet.getRefView() != null ) {
                 returnHaplotypes = new LinkedHashSet<>(resultSet.getRefView().uncollapseHaplotypesByRef(resultSet.getHaplotypeList(), true, true, null));
-                resultSet.replaceAllHaplotypes(returnHaplotypes);
+                if (resultSet!=null) { //linkedDebruijnGraph does not  have a resultSet?
+                    resultSet.replaceAllHaplotypes(returnHaplotypes);
+                }
             }
 
             assemblyResult.setDiscoveredHaplotypes(returnHaplotypes);

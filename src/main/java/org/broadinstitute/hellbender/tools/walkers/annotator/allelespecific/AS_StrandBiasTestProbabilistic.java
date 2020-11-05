@@ -14,7 +14,7 @@ import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import java.util.*;
 
 
-public abstract class AS_StrandBiasTestProbabilistic extends StrandBiasTest implements ReducibleAnnotation {
+public abstract class AS_StrandBiasTestProbabilistic extends StrandBiasTest implements ReducibleAnnotation, AlleleSpecificAnnotation {
     private final static Logger logger = LogManager.getLogger(AS_StrandBiasTestProbabilistic.class);
 
     public static final int FORWARD = 0;
