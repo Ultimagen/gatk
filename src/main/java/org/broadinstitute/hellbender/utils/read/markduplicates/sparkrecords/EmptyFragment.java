@@ -1,6 +1,8 @@
 package org.broadinstitute.hellbender.utils.read.markduplicates.sparkrecords;
 
 import htsjdk.samtools.SAMFileHeader;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.cmdline.argumentcollections.MarkDuplicatesSparkArgumentCollection;
 import org.broadinstitute.hellbender.tools.spark.transforms.markduplicates.MarkDuplicatesSparkUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
@@ -10,6 +12,7 @@ import org.broadinstitute.hellbender.utils.read.markduplicates.ReadsKey;
 import picard.sam.markduplicates.util.ReadEnds;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Dummy class representing a mated read fragment at a particular start position to be used for accounting
@@ -30,9 +33,24 @@ public final class EmptyFragment extends PairedEnds {
      */
     public EmptyFragment(GATKRead read, SAMFileHeader header, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
         super(0, null);
+
+        int        start = read.isReverseStrand() ? ReadUtils.getSelectedRecordEnd(read, null, header, mdArgs) : ReadUtils.getSelectedRecordStart(read, null, header, mdArgs);
+        int        end = 0;
+        int        endUncert = 0;
+        if ( mdArgs.FLOW_END_LOCATION_SIGNIFICANT ) {
+            AtomicInteger endUncertainty = new AtomicInteger(mdArgs.ENDS_READ_UNCERTAINTY);
+            end = !read.isReverseStrand() ? ReadUtils.getSelectedRecordEnd(read, endUncertainty, header, mdArgs) : ReadUtils.getSelectedRecordStart(read, endUncertainty, header, mdArgs);
+            endUncert = endUncertainty.intValue();
+        }
+        if ( mdArgs.DEBUG_ULTIMA_DUPS )
+            System.out.println(String.format("[%s %b] : %d %d : %d %d : %d %d %d",
+                    read.getName(), read.isReverseStrand(),
+                    read.getUnclippedStart(), read.getUnclippedEnd(),
+                    read.getStart(), read.getEnd(),
+                    start, end, endUncert));
+
         this.R1R = read.isReverseStrand();
-        this.key = ReadsKey.getKeyForFragment(ReadUtils.getSelectedStart(read, mdArgs.FLOW_SKIP_ENDS_HOMOPOLYMERS, mdArgs.FLOW_USE_CLIPPED_LOCATIONS),
-                mdArgs.FLOW_END_LOCATION_SIGNIFICANT ? ReadUtils.getSelectedEnd(read, mdArgs.FLOW_SKIP_ENDS_HOMOPOLYMERS, mdArgs.FLOW_USE_CLIPPED_LOCATIONS) : 0,
+        this.key = ReadsKey.getKeyForFragment(start, end, endUncert,
                 isRead1ReverseStrand(),
                 ReadUtils.getReferenceIndex(read, header),
                 headerLibraryMap.get(MarkDuplicatesSparkUtils.getLibraryForRead(read, header, LibraryIdGenerator.UNKNOWN_LIBRARY)));

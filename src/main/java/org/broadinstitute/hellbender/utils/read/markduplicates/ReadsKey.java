@@ -31,12 +31,15 @@ public abstract class ReadsKey {
     }
 
     public static ReadsKey getKeyForFragment(int start, int end, boolean reverseStrand, int referenceIndex, byte library) {
-        return new KeyForFragment(longKeyForFragment(start, end, reverseStrand, referenceIndex, library));
+        return new KeyForFragment(longKeyForFragment(start, reverseStrand, referenceIndex, library), end, 0);
+    }
+    public static ReadsKey getKeyForFragment(int start, int end, int endUncertainty, boolean reverseStrand, int referenceIndex, byte library) {
+        return new KeyForFragment(longKeyForFragment(start, reverseStrand, referenceIndex, library), end, endUncertainty);
     }
 
     public static ReadsKey getKeyForPair(final SAMFileHeader header, final GATKRead first, final GATKRead second, final Map<String, Byte> libraryKeyMap) {
+
         return new KeyForPair(longKeyForFragment(ReadUtils.getStrandedUnclippedStart(first),
-                                0,
                                 first.isReverseStrand(),
                                 ReadUtils.getReferenceIndex(first, header),
                                 libraryKeyMap.get(MarkDuplicatesSparkUtils.getLibraryForRead(first, header, LibraryIdGenerator.UNKNOWN_LIBRARY))),
@@ -54,9 +57,17 @@ public abstract class ReadsKey {
      */
     public static class KeyForFragment extends ReadsKey {
         final long keyValue;
+        final int endKeyValue;
+        final int endKeyUncertainty;
 
         KeyForFragment(final long key) {
+            this(key, 0, 0);
+        }
+
+        KeyForFragment(final long key, final int endKey, final int endKeyUncertainty) {
             this.keyValue = key;
+            this.endKeyValue = endKey;
+            this.endKeyUncertainty = endKeyUncertainty;
         }
 
         @Override
@@ -64,7 +75,12 @@ public abstract class ReadsKey {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             KeyForFragment that = (KeyForFragment) o;
-            return keyValue == that.keyValue;
+            if ( keyValue != that.keyValue )
+                return false;
+            int     endDelta = endKeyValue - that.endKeyValue;
+            if ( Math.abs(endDelta) <= endKeyUncertainty )
+                endDelta = 0;
+            return endDelta == 0;
         }
         @Override
         public int hashCode() {
@@ -113,17 +129,11 @@ public abstract class ReadsKey {
     }
 
     // Helper methods for generating summary longs
-    private static long longKeyForFragment(int start, int end, boolean reverseStrand, int referenceIndex, byte library) {
+    private static long longKeyForFragment(int start, boolean reverseStrand, int referenceIndex, byte library) {
         long key = (((long)start) << 32) |
                         (referenceIndex << 16 & (0xFFFF0000)) | // Note, the bitmasks are being used here because upcasting a negative int to a long in java results in the top bits being filled with 1s, which will ruin the rest of the key. So we mask it for saftey.
                         ((library << 8) & (0x0000FF00)) |
                         (reverseStrand ? 1 : 0);
-
-        // encode length within the remaining 7 bits
-        if ( end > start ) {
-            int     lengthMod = (end + 1 - start) & 0x0000007F;
-            key |= (lengthMod << 1);
-        }
 
         return key;
     }
