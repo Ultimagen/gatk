@@ -7,6 +7,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
+import org.broadinstitute.hellbender.cmdline.argumentcollections.MarkDuplicatesSparkArgumentCollection;
 import org.broadinstitute.hellbender.engine.ReadsContext;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.UserException;
@@ -15,6 +16,7 @@ import org.broadinstitute.hellbender.utils.QualityUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.recalibration.EventType;
+import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -24,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A miscellaneous collection of utilities for working with reads, headers, etc.
@@ -289,6 +292,107 @@ public final class ReadUtils {
      */
     public static int getStrandedUnclippedStart( final GATKRead read ) {
         return read.isReverseStrand() ? read.getUnclippedEnd() : read.getUnclippedStart();
+    }
+
+   public static int getSelectedRecordStart(final GATKRead rec, AtomicInteger endUncertainty, SAMFileHeader header, MarkDuplicatesSparkArgumentCollection mdArgs) {
+        if ( endUncertainty == null && mdArgs.FLOW_SKIP_START_HOMOPOLYMERS != 0 ) {
+            byte[]      bases = rec.getBasesNoCopy();
+            int         ofs = 0;
+            byte        hmerBase = bases[ofs];
+            byte[]      flowOrder = getFlowOrder(header);
+            int         flowOrderOfs = 0;
+            int         hmersLeft = mdArgs.FLOW_SKIP_START_HOMOPOLYMERS;      // number of hmer left to trim
+
+            // advance flow order to base
+            if ( flowOrder != null )
+                while ( flowOrder[flowOrderOfs] != hmerBase ) {
+                    if (++flowOrderOfs >= flowOrder.length)
+                        flowOrderOfs = 0;
+                    hmersLeft--;
+                }
+
+            int         hmerSize = 1;
+            for ( ; hmerSize < bases.length ; hmerSize++ )
+                if (bases[ofs + hmerSize] != hmerBase) {
+                    if ( --hmersLeft <= 0 )
+                        break;
+                    else {
+                        hmerBase = bases[ofs + hmerSize];
+                        if ( flowOrder != null ) {
+                            if ( ++flowOrderOfs >= flowOrder.length )
+                                flowOrderOfs = 0;
+                            while ( flowOrder[flowOrderOfs] != hmerBase ) {
+                                hmersLeft--;
+                                if ( ++flowOrderOfs >= flowOrder.length )
+                                    flowOrderOfs = 0;
+                            }
+                            if ( hmersLeft <= 0 )
+                                break;
+                        }
+                    }
+                }
+            int     start = rec.getUnclippedStart() + hmerSize;
+            return mdArgs.FLOW_USE_CLIPPED_LOCATIONS ? Math.max(start, rec.getStart()) : start;
+        }
+        else if ( mdArgs.FLOW_USE_CLIPPED_LOCATIONS )
+            return rec.getStart();
+        else
+            return rec.getUnclippedStart();
+    }
+
+    public static int getSelectedRecordEnd(final GATKRead rec, AtomicInteger endUncertainty, SAMFileHeader header, MarkDuplicatesSparkArgumentCollection mdArgs) {
+        if ( endUncertainty == null && mdArgs.FLOW_SKIP_START_HOMOPOLYMERS != 0 ) {
+            byte[]      bases = rec.getBasesNoCopy();
+            int         ofs = 0;
+            byte        hmerBase = bases[bases.length - 1 - ofs];
+            byte[]      flowOrder = getFlowOrder(header);
+            int         flowOrderOfs = 0;
+            int         hmersLeft = mdArgs.FLOW_SKIP_START_HOMOPOLYMERS;      // number of hmer left to trim
+
+            // advance flow order to base
+            if ( flowOrder != null )
+                while ( flowOrder[flowOrderOfs] != hmerBase ) {
+                    if (++flowOrderOfs >= flowOrder.length)
+                        flowOrderOfs = 0;
+                    hmersLeft--;
+                }
+
+            int         hmerSize = 1;
+            for ( ; hmerSize < bases.length ; hmerSize++ )
+                if (bases[bases.length - 1 - hmerSize - ofs] != hmerBase) {
+                    if ( --hmersLeft <= 0 )
+                        break;
+                    else {
+                        hmerBase = bases[bases.length - 1 - hmerSize - ofs];
+                        if ( flowOrder != null ) {
+                            if (++flowOrderOfs >= flowOrder.length)
+                                flowOrderOfs = 0;
+                            while (flowOrder[flowOrderOfs] != hmerBase) {
+                                hmersLeft--;
+                                if (++flowOrderOfs >= flowOrder.length)
+                                    flowOrderOfs = 0;
+                            }
+                            if (hmersLeft <= 0)
+                                break;
+                        }
+                    }
+                }
+            int     end = rec.getUnclippedEnd() - hmerSize;
+            return mdArgs.FLOW_USE_CLIPPED_LOCATIONS ? Math.min(end, rec.getEnd()) : end;
+        }
+        else if ( mdArgs.FLOW_USE_CLIPPED_LOCATIONS )
+            return rec.getEnd();
+        else
+            return rec.getUnclippedEnd();
+    }
+
+    private static byte[] getFlowOrder(final SAMFileHeader header) {
+        for ( SAMReadGroupRecord rg : header.getReadGroups() ) {
+            String      flowOrder = rg.getFlowOrder();
+            if ( flowOrder != null )
+                return flowOrder.getBytes();
+        }
+        return null;
     }
 
     public static boolean isEmpty(final SAMRecord read) {

@@ -11,6 +11,7 @@ import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.broadcast.Broadcast;
+import org.broadinstitute.hellbender.cmdline.argumentcollections.MarkDuplicatesSparkArgumentCollection;
 import org.broadinstitute.hellbender.engine.filters.ReadFilterLibrary;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.UserException;
@@ -115,7 +116,7 @@ public class MarkDuplicatesSparkUtils {
      *       highest scoring as duplicates.
      *   (b) Determine which duplicates are optical duplicates and increase the overall count.
      */
-    static JavaPairRDD<IndexPair<String>, Integer> transformToDuplicateNames(final SAMFileHeader header, final MarkDuplicatesScoringStrategy scoringStrategy, final OpticalDuplicateFinder finder, final JavaRDD<GATKRead>  reads, final int numReducers, final boolean markOpticalDups) {
+    static JavaPairRDD<IndexPair<String>, Integer> transformToDuplicateNames(final SAMFileHeader header, final MarkDuplicatesScoringStrategy scoringStrategy, final OpticalDuplicateFinder finder, final JavaRDD<GATKRead>  reads, final int numReducers, final boolean markOpticalDups, final MarkDuplicatesSparkArgumentCollection mdArgs) {
         // we treat these specially and don't mark them as duplicates
         final JavaRDD<GATKRead> mappedReads = reads.filter(ReadFilterLibrary.MAPPED::test);
 
@@ -136,8 +137,8 @@ public class MarkDuplicatesSparkUtils {
                         final GATKRead read = readWithIndex.getValue();
                         if (!(read.isSecondaryAlignment()||read.isSupplementaryAlignment())) {
                             PairedEnds fragment = (ReadUtils.readHasMappedMate(read)) ?
-                                    MarkDuplicatesSparkRecord.newEmptyFragment(read, header, libraryIndex.getValue()) :
-                                    MarkDuplicatesSparkRecord.newFragment(read, header, readWithIndex.getIndex(), scoringStrategy, libraryIndex.getValue());
+                                    MarkDuplicatesSparkRecord.newEmptyFragment(read, header, libraryIndex.getValue(), mdArgs) :
+                                    MarkDuplicatesSparkRecord.newFragment(read, header, readWithIndex.getIndex(), scoringStrategy, libraryIndex.getValue(), mdArgs);
 
                             out.add(new Tuple2<>(fragment.key(), fragment));
                         } else {

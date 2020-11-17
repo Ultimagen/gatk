@@ -16,7 +16,8 @@ import java.util.function.ToIntFunction;
 public enum MarkDuplicatesScoringStrategy {
 
     SUM_OF_BASE_QUALITIES(MarkDuplicatesScoringStrategy::sumOfBaseQualities),
-    TOTAL_MAPPED_REFERENCE_LENGTH(MarkDuplicatesScoringStrategy::totalMappedReferenceLength);
+    TOTAL_MAPPED_REFERENCE_LENGTH(MarkDuplicatesScoringStrategy::totalMappedReferenceLength),
+    FLOW_SUM_OF_BASE_QUALITIES(MarkDuplicatesScoringStrategy::flowSumOfBaseQualities);
 
     private final ToIntFunction<GATKRead> scoring;
 
@@ -54,6 +55,36 @@ public enum MarkDuplicatesScoringStrategy {
                     sum += i;
                 }
             }
+            return sum;
+        }
+    }
+
+    /**
+     * Computes the sum of base qualities of the given flow read.
+     */
+    public static int flowSumOfBaseQualities(final GATKRead read) {
+        if (read == null) {
+            return 0;
+        } else {
+            int sum = 0;
+
+            // access qualities and bases
+            byte[]      quals = read.getBaseQualitiesNoCopy();
+            byte[]      bases = read.getBasesNoCopy();
+
+            // loop on bases, extract qual related to homopolymer from start of homopolymer
+            int         i = 0;
+            byte        lastBase = 0;
+            byte        effectiveQual = 0;
+            for (final byte base : bases ) {
+                if ( base != lastBase )
+                    effectiveQual = quals[i];
+                if ( effectiveQual >= 15 )
+                    sum += effectiveQual;
+                lastBase = base;
+                i++;
+            }
+
             return sum;
         }
     }

@@ -1,6 +1,8 @@
 package org.broadinstitute.hellbender.utils.read.markduplicates.sparkrecords;
 
 import htsjdk.samtools.SAMFileHeader;
+import org.broadinstitute.hellbender.cmdline.argumentcollections.MarkDuplicatesSparkArgumentCollection;
+import org.broadinstitute.hellbender.tools.spark.transforms.markduplicates.MarkDuplicatesSpark;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.markduplicates.MarkDuplicatesScoringStrategy;
 import org.broadinstitute.hellbender.utils.read.markduplicates.ReadsKey;
@@ -28,13 +30,13 @@ public abstract class MarkDuplicatesSparkRecord {
 
 
     // A fragment containing only one read without a mapped mate
-    public static Fragment newFragment(final GATKRead first, final SAMFileHeader header, int partitionIndex, MarkDuplicatesScoringStrategy scoringStrategy, Map<String, Byte> headerLibraryMap) {
-        return new Fragment (first, header, partitionIndex, scoringStrategy, headerLibraryMap);
+    public static Fragment newFragment(final GATKRead first, final SAMFileHeader header, int partitionIndex, MarkDuplicatesScoringStrategy scoringStrategy, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
+        return new Fragment (first, header, partitionIndex, scoringStrategy, headerLibraryMap, mdArgs);
     }
 
     // An optimization for reducing the serialized data passed around when indicating that there was a mapped read at a location
-    public static EmptyFragment newEmptyFragment(GATKRead read, SAMFileHeader header, Map<String, Byte> headerLibraryMap) {
-        return new EmptyFragment(read, header, headerLibraryMap);
+    public static EmptyFragment newEmptyFragment(GATKRead read, SAMFileHeader header, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
+        return new EmptyFragment(read, header, headerLibraryMap, mdArgs);
     }
 
     // An object representing a pair of primary and secondary reads with a particular span for duplicate marking
