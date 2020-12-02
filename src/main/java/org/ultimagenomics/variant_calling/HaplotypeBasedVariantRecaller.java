@@ -26,6 +26,7 @@ import org.broadinstitute.hellbender.utils.genotyper.IndexedSampleList;
 import org.broadinstitute.hellbender.utils.genotyper.SampleList;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
+import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
 import org.ultimagenomics.haplotype_calling.LHWRefView;
 
@@ -121,7 +122,8 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                     final List<Haplotype> processedHaplotypes = new LinkedList<>();
                     if ( (hcArgs.flowAssemblyCollapseHKerSize > 0)
                                     && LHWRefView.needsCollapsing(refBases, hcArgs.flowAssemblyCollapseHKerSize, logger, false) ) {
-                        refView = new LHWRefView(hcArgs.flowAssemblyCollapseHKerSize, refBases, haplotypeSpan, logger, false);
+                        refView = new LHWRefView(hcArgs.flowAssemblyCollapseHKerSize, refBases, haplotypeSpan, logger, false,
+                                SmithWatermanAligner.getAligner(SmithWatermanAligner.Implementation.FASTEST_AVAILABLE));
                         processedHaplotypes.addAll(refView.uncollapseHaplotypesByRef(bestHaplotypes, false, true, refBases));
                     }
                     else
