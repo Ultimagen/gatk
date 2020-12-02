@@ -22,17 +22,16 @@ public class LHWRefView {
     final private Locatable       refLoc;
     final private Logger          logger;
     final private boolean         debug;
+    final private SmithWatermanAligner aligner;
 
-    static private SmithWatermanAligner  aligner = SmithWatermanAligner.getAligner(SmithWatermanAligner.Implementation.FASTEST_AVAILABLE);
-
-    public LHWRefView(final int hmerSizeThreshold, final byte[] fullRef, final Locatable refLoc, final Logger logger, final boolean debug) {
+    public LHWRefView(final int hmerSizeThreshold, final byte[] fullRef, final Locatable refLoc, final Logger logger, final boolean debug, final SmithWatermanAligner aligner) {
 
         this.hmerSizeThreshold = hmerSizeThreshold;
         this.fullRef = fullRef;
         this.refLoc = refLoc;
         this.logger = logger;
         this.debug = debug;
-
+        this.aligner = aligner;
         if ( debug ) {
             logger.info("LHWRefView: >" + hmerSizeThreshold + "hmer, refLoc: " + refLoc + " fullRef:");
             logger.info(basesAsString(fullRef));
