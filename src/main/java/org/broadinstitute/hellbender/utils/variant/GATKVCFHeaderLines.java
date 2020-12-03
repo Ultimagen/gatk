@@ -211,6 +211,9 @@ public class GATKVCFHeaderLines {
                 "Base quality counts for each allele represented sparsely as alternating entries of qualities and counts for each allele." +
                         "For example [10,1,0,20,0,1] means one ref base with quality 10 and one alt base with quality 20."));
 
+        addInfoLine(new VCFInfoHeaderLine(AS_RAW_HMER_LENGTH_KEY, 1, VCFHeaderLineType.String, "Raw allele specific max length of hmer in ref or alt."));
+        addInfoLine(new VCFInfoHeaderLine(AS_HMER_LENGTH_KEY, VCFHeaderLineCount.A, VCFHeaderLineType.Integer, "Allele specific max length of hmer in ref or alt."));
+
         // M2-related info lines
         addInfoLine(new VCFInfoHeaderLine(EVENT_COUNT_IN_HAPLOTYPE_KEY, 1, VCFHeaderLineType.Integer, "Number of events in this haplotype"));
         addInfoLine(new VCFInfoHeaderLine(NORMAL_LOG_10_ODDS_KEY, VCFHeaderLineCount.A, VCFHeaderLineType.Float, "Normal log 10 likelihood ratio of diploid het or hom alt genotypes"));
