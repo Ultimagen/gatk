@@ -92,7 +92,6 @@ public final class GATKVCFConstants {
     public static final String F1R2_KEY =                           "F1R2";
     public static final String F2R1_KEY =                           "F2R1";
 
-    public static final String AS_RAW_HMER_LENGTH_KEY =              "AS_RAW_HmerLength";
     public static final String AS_HMER_LENGTH_KEY =                  "AS_HmerLength";
 
     // Mutect2-specific INFO keys
