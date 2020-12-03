@@ -190,6 +190,9 @@ public class GATKVCFHeaderLines {
         addInfoLine(new VCFInfoHeaderLine(INTERVAL_GC_CONTENT_KEY, 1, VCFHeaderLineType.Float, "GC Content of the interval"));
         addInfoLine(new VCFInfoHeaderLine(GENOTYPE_PRIOR_KEY, VCFHeaderLineCount.G, VCFHeaderLineType.Integer, "Genotype Likelihood Prior"));
 
+        addInfoLine(new VCFInfoHeaderLine(AS_RAW_HMER_LENGTH_KEY, 1, VCFHeaderLineType.String, "Raw allele specific max length of hmer in ref or alt."));
+        addInfoLine(new VCFInfoHeaderLine(AS_HMER_LENGTH_KEY, VCFHeaderLineCount.A, VCFHeaderLineType.Integer, "Allele specific max length of hmer in ref or alt."));
+
         // M2-related info lines
         addInfoLine(new VCFInfoHeaderLine(EVENT_COUNT_IN_HAPLOTYPE_KEY, 1, VCFHeaderLineType.Integer, "Number of events in this haplotype"));
         addInfoLine(new VCFInfoHeaderLine(NORMAL_LOG_10_ODDS_KEY, VCFHeaderLineCount.A, VCFHeaderLineType.Float, "Normal log 10 likelihood ratio of diploid het or hom alt genotypes"));
