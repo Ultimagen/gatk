@@ -25,10 +25,10 @@ public class AS_HmerLengthUnitTest extends GATKBaseTest {
     @Test
     public void testHmerAlleles() {
         VariantContext vc = new VariantContextBuilder().chr("1").start(10025).stop(10027).alleles("TAA", "TAAA", "TA", "CAA", "T").make();
-        ReferenceContext ref = new ReferenceContext(refSource, new SimpleInterval("1", 10025, 10027));
+        ReferenceContext ref = new ReferenceContext(refSource, new SimpleInterval("1", 10025, 10125));
         AS_HmerLength annotation = new AS_HmerLength();
-        Map<String, Object> output = annotation.annotateRawData(ref, vc, null);
-        Assert.assertEquals(output.get(GATKVCFConstants.AS_HMER_LENGTH_KEY), "3|2|1|2");
+        Map<String, Object> output = annotation.annotate(ref, vc, null);
+        Assert.assertEquals(output.get(GATKVCFConstants.AS_HMER_LENGTH_KEY), "3,2,1,2");
     }
 
     // REF:  T A A C C C T A A C C C
@@ -39,8 +39,8 @@ public class AS_HmerLengthUnitTest extends GATKBaseTest {
         VariantContext vc = new VariantContextBuilder().chr("1").start(10025).stop(10031).alleles("TAACCCT", "T", "CTACCCT").make();
         ReferenceContext ref = new ReferenceContext(refSource, new SimpleInterval("1", 10025, 10031));
         AS_HmerLength annotation = new AS_HmerLength();
-        Map<String, Object> output = annotation.annotateRawData(ref, vc, null);
-        Assert.assertEquals(output.get(GATKVCFConstants.AS_HMER_LENGTH_KEY), "0|0");
+        Map<String, Object> output = annotation.annotate(ref, vc, null);
+        Assert.assertEquals(output.get(GATKVCFConstants.AS_HMER_LENGTH_KEY), "0,0");
     }
 
     // REF:  C C C G C C C
@@ -50,7 +50,7 @@ public class AS_HmerLengthUnitTest extends GATKBaseTest {
         VariantContext vc = new VariantContextBuilder().chr("2").start(10803).stop(10803).alleles("G", "C").make();
         ReferenceContext ref = new ReferenceContext(refSource, new SimpleInterval("2", 10803, 10803));
         AS_HmerLength annotation = new AS_HmerLength();
-        Map<String, Object> output = annotation.annotateRawData(ref, vc, null);
+        Map<String, Object> output = annotation.annotate(ref, vc, null);
         Assert.assertEquals(output.get(GATKVCFConstants.AS_HMER_LENGTH_KEY), "1");
     }
 
@@ -62,7 +62,7 @@ public class AS_HmerLengthUnitTest extends GATKBaseTest {
         VariantContext vc = new VariantContextBuilder().chr("2").start(10679).stop(10679).alleles("T", "C", "G").make();
         ReferenceContext ref = new ReferenceContext(refSource, new SimpleInterval("2", 10679, 10679));
         AS_HmerLength annotation = new AS_HmerLength();
-        Map<String, Object> output = annotation.annotateRawData(ref, vc, null);
-        Assert.assertEquals(output.get(GATKVCFConstants.AS_HMER_LENGTH_KEY), "1|1");
+        Map<String, Object> output = annotation.annotate(ref, vc, null);
+        Assert.assertEquals(output.get(GATKVCFConstants.AS_HMER_LENGTH_KEY), "1,1");
     }
 }
