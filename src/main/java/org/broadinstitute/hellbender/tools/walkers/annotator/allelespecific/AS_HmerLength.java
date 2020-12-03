@@ -8,6 +8,7 @@ import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.walkers.annotator.AnnotationUtils;
 import org.broadinstitute.hellbender.tools.walkers.annotator.InfoFieldAnnotation;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeAssignmentMethod;
+import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.help.HelpConstants;
@@ -17,31 +18,21 @@ import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 
 import java.util.*;
 
+/**
+ * Allele specific annotation of length of longest homopolymer. In the case of deletions, the longest homopolymer is
+ * however long the reference h-mer is (before the deletion). For insertions it is the length of the h-mer in the reference
+ * plus the length of the insertion. Indels with multiple h-mer changes are excluded (given a length of 0).
+ *
+ * This is not a reducible annotation, meaning it must be calculated after combining multiple GVCFS, or when generating a
+ * single VCF. This is done by adding -A AS_HmerLength when calling HaplotypeCaller in VCF mode, or when calling
+ * GenotypeGvcfs (GnarlyGenotyper will be adding -A arg at some point in the future, but doesn't work today). If the annotation
+ * is generated in a GVCF, there is currently no way to combine it when JointCalling. If GenomicsDB is used, it will automatically
+ * drop the annotation.
+ */
 @DocumentedFeature(groupName= HelpConstants.DOC_CAT_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_ANNOTATORS_SUMMARY, summary="Allele-specific length of homopolymer (longer of either ref or alt)")
-public class AS_HmerLength extends InfoFieldAnnotation implements AS_StandardAnnotation, AlleleSpecificAnnotation, ReducibleAnnotation {
+public class AS_HmerLength extends InfoFieldAnnotation implements AS_StandardAnnotation, AlleleSpecificAnnotation {
     @Override
     public Map<String, Object> annotate(ReferenceContext ref, VariantContext vc, AlleleLikelihoods<GATKRead, Allele> likelihoods) {
-        return Collections.emptyMap();
-        //TODO: make sure regular HC still outputs the annotation
-    }
-
-    @Override
-    public String getPrimaryRawKey() {
-        return GATKVCFConstants.AS_RAW_HMER_LENGTH_KEY;
-    }
-
-    @Override
-    public boolean hasSecondaryRawKeys() {
-        return false;
-    }
-
-    @Override
-    public List<String> getSecondaryRawKeys() {
-        return null;
-    }
-
-    @Override
-    public Map<String, Object> annotateRawData(ReferenceContext ref, VariantContext vc, AlleleLikelihoods<GATKRead, Allele> likelihoods) {
         Utils.nonNull(vc, "vc is null");
         Utils.nonNull(ref, "ref is null");
         if (!ref.hasBackingDataSource()) {
@@ -49,9 +40,11 @@ public class AS_HmerLength extends InfoFieldAnnotation implements AS_StandardAnn
         }
 
         final List<VariantContext> splitVcs = GATKVariantContextUtils.splitVariantContextToBiallelics(vc, true, GenotypeAssignmentMethod.BEST_MATCH_TO_ORIGINAL, false);
+        final SimpleInterval refWindowFromVcStart = new SimpleInterval (vc.getContig(), vc.getStart(), ref.getWindow().getEnd());
         final List<String> hmerLengths = new LinkedList<>();
 
         for (final VariantContext splitVariant : splitVcs) {
+            //splitVariant is now biallelic so we can get the first (only) alt allele.
             final Allele altAllele = splitVariant.getAlternateAllele(0);
 
             if (splitVariant.isSNP()) {
@@ -61,7 +54,8 @@ public class AS_HmerLength extends InfoFieldAnnotation implements AS_StandardAnn
             } else if (splitVariant.isSymbolic()) {
                 hmerLengths.add("");
             } else {
-                final byte base = ref.getBases()[1];
+                //INDELs are left aligned, so the h-mer base in question is the second base from variant start.
+                final byte base = ref.getBases(refWindowFromVcStart)[1];
                 int altHmerLength = 0;
                 for (int i=1; i < altAllele.getBases().length; i++) {
                     final byte curBase = altAllele.getBases()[i];
@@ -69,12 +63,13 @@ public class AS_HmerLength extends InfoFieldAnnotation implements AS_StandardAnn
                         altHmerLength++;
                     } else {
                         altHmerLength = 0;
+                        break;
                     }
                 }
 
                 int refHmerLength = 0;
                 boolean isFirstBaseOfRef = true;
-                for (Byte refBase : ref) {
+                for (Byte refBase : ref.getBases(refWindowFromVcStart)) {
                     if (isFirstBaseOfRef) {
                         isFirstBaseOfRef = false;
                         continue;
@@ -86,66 +81,16 @@ public class AS_HmerLength extends InfoFieldAnnotation implements AS_StandardAnn
                     }
                 }
 
+                //Still need to check if variant is actually an Hmer since we only checked the alt allele, not the
+                // ref allele (just the reference itself).
                 int finalHmerLength = variantIsHmer(splitVariant) ? refHmerLength + altHmerLength : 0;
                 hmerLengths.add(String.valueOf(finalHmerLength));
             }
         }
 
         final Map<String, Object> map = new HashMap<>();
-        map.put(getPrimaryRawKey(), String.join(AnnotationUtils.ALLELE_SPECIFIC_RAW_DELIM, hmerLengths));
+        map.put(getKeyNames().get(0), String.join(AnnotationUtils.ALLELE_SPECIFIC_REDUCED_DELIM, hmerLengths));
         return map;
-    }
-
-    @Override
-    public Map<String, Object> combineRawData(List<Allele> allelesList, List<ReducibleAnnotationData<?>> listOfRawData) {
-        Map<Allele, String> hmerLengths = new HashMap<>();
-
-        for (final ReducibleAnnotationData currentValue : listOfRawData) {
-            List<String> currentHmerLengths = AnnotationUtils.getAlleleLengthListOfString(currentValue.rawData);
-
-            for (int i=0; i<allelesList.size(); i++) {
-                Allele a = allelesList.get(i);
-                if (!a.isReference()) {
-                    if (hmerLengths.containsKey(a)) {
-                        if (!currentValue.attributeMap.get(a).equals(hmerLengths.get(a))) {
-                            throw new UserException("Hmer lengths for the same allele must match.");
-                        }
-                    } else {
-                        //we don't have an entry for the ref allele, so subtract 1 from the index
-                        hmerLengths.put(a, currentHmerLengths.get(i-1));
-                    }
-                }
-            }
-        }
-
-        List<String> hmerLengthsInAlleleOrder = new LinkedList<>();
-        for(Allele a : allelesList) {
-            if (!a.isReference()) {
-                hmerLengthsInAlleleOrder.add(hmerLengths.get(a));
-            }
-        }
-        return Collections.singletonMap(getPrimaryRawKey(), String.join(AnnotationUtils.ALLELE_SPECIFIC_RAW_DELIM, hmerLengthsInAlleleOrder));
-        //return null;
-    }
-
-    /*
-    // To "finalize" this annotation, just replace the raw delimiter in the list to the reduced delimiter
-     */
-    @Override
-    public Map<String, Object> finalizeRawData(VariantContext vc, VariantContext originalVC) {
-        if (!vc.hasAttribute(getPrimaryRawKey())) {
-            return new HashMap<>();
-        }
-        String rawHmerLengthData = vc.getAttributeAsString(getPrimaryRawKey(),null);
-        if (rawHmerLengthData == null) {
-            return new HashMap<>();
-        }
-        AlleleSpecificAnnotationData<List<Integer>> myData = new AlleleSpecificAnnotationData<>(originalVC.getAlleles(), rawHmerLengthData);
-
-        Map<String, Object> returnMap = new HashMap<>();
-        returnMap.put(getKeyNames().get(0), myData.rawData.replace(AnnotationUtils.ALLELE_SPECIFIC_RAW_DELIM, AnnotationUtils.ALLELE_SPECIFIC_REDUCED_DELIM));
-        returnMap.put(getPrimaryRawKey(), myData.rawData);  //this is in case raw annotations are requested
-        return returnMap;
     }
 
     @Override
@@ -153,11 +98,17 @@ public class AS_HmerLength extends InfoFieldAnnotation implements AS_StandardAnn
         return Arrays.asList(GATKVCFConstants.AS_HMER_LENGTH_KEY);
     }
 
-    // Checks if biallelic INDEL is a homopolymer (need to check both ref and alt)
+
+    /**
+     * Checks if biallelic INDEL is a homopolymer. Need to check either ref or alt are all one nucleotide (whichever is longer).
+     *
+     * @param vc Biallelic INDEL variant context. Must only have one alt allele.
+     */
     private Boolean variantIsHmer(VariantContext vc) {
         Allele refAllele = vc.getReference();
         Allele altAllele = vc.getAlternateAllele(0);
         Allele longerAllele = refAllele.length() > altAllele.length() ? refAllele : altAllele;
+        //INDELs are left aligned so start at the second base to test for an h-mer.
         byte base = longerAllele.getBases()[1];
         boolean isHmer = false;
         for (int i=1; i < longerAllele.getBases().length; i++) {
