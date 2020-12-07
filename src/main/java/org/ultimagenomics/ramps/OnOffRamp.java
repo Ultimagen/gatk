@@ -8,16 +8,17 @@ import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import htsjdk.samtools.util.Locatable;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 
-import java.io.ByteArrayOutputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 public class OnOffRamp {
@@ -31,25 +32,27 @@ public class OnOffRamp {
     }
 
     // local vars
-    private String  filename;
-    private Type    type;
+    private Type        type;
+    private Locatable   loc;
+    private File        file;
 
     // zip streams
-    private ZipOutputStream     outputZip;
-    private Locatable           loc;
     private JSONObject          info;
+    private ZipOutputStream     outputZip;
+    private ZipFile             inputZip;
 
     public OnOffRamp(String filename, Locatable loc, Type type) throws IOException  {
-        logger.info("opening ramp. filename: " + filename + ", type: " + type);
         this.type = type;
         this.loc = loc;
-        this.filename = filename + getLocFilenameSuffix();
+        this.file = new File(filename + getLocFilenameSuffix());
+        logger.info("opening ramp. file: " + file + ", type: " + type);
 
         // open stream
         if ( type == Type.OffRamp ) {
 
             // open zip for writing
-            outputZip = new ZipOutputStream(new FileOutputStream(this.filename));
+            this.file.getParentFile().mkdirs();
+            outputZip = new ZipOutputStream(new FileOutputStream(this.file));
 
             // create info object
             info = new JSONObject();
@@ -60,10 +63,18 @@ public class OnOffRamp {
             regionObj.put("end", loc.getEnd());
             info.put("region", regionObj);
 
+        } else if ( type == Type.OnRamp ) {
+
+            // open zip for reading
+            inputZip = new ZipFile(this.file);
+
+            // read info object
+            InputStream     is = getEntry("info.json");
+            info = new JSONObject(new JSONTokener(is));
+
         } else {
             throw new Error("type not supprted: " + type);
         }
-
     }
 
     private String getLocFilenameSuffix() {
@@ -72,31 +83,47 @@ public class OnOffRamp {
 
     public void close() throws IOException {
 
-        // add info
-        addEntry("info.json", info.toString(2).getBytes());
+        if ( type == Type.OffRamp ) {
 
-        // close file
-        outputZip.close();
-        logger.info("closing ramp. filename: " + filename);
+            // add info
+            addEntry("info.json", info.toString(2).getBytes());
+
+            // close file
+            outputZip.close();
+
+        } else if ( type == Type.OnRamp ) {
+
+            // close file
+            inputZip.close();
+        }
+
+        logger.info("closing ramp. file: " + file);
     }
 
     public void add(String name, AlleleLikelihoods<GATKRead, Haplotype> value) throws IOException {
+
+        // add global info
+        JSONObject      info = new JSONObject();
+        info.put("haplotypeCount", value.numberOfAlleles());
+        info.put("readCount", value.evidenceCount());
+        addInfo(name, info);
+
+        // add haplotypes
+        addHaplotypes(name + ".haplotypes", value.alleles());
 
         // loop on samples
         for ( int sampleIndex = 0 ; sampleIndex < value.numberOfSamples() ; sampleIndex++ ) {
 
             // establish context
-            String                                 baseName = name + "." + value.getSample(sampleIndex);
+            String                                 baseName = name + ".samples." + value.getSample(sampleIndex);
             LikelihoodMatrix<GATKRead, Haplotype>  sampleMatrix = value.sampleMatrix(sampleIndex);
 
             // add to info
-            JSONObject      info = new JSONObject();
-            info.put("haplotypeCount", sampleMatrix.numberOfAlleles());
-            info.put("readsCount", sampleMatrix.evidenceCount());
-            addInfo(baseName, info);
+            JSONObject      info1 = new JSONObject();
+            info1.put("readCount", sampleMatrix.evidenceCount());
+            addInfo(baseName, info1);
 
-            // write haplotypes, reads
-            addHaplotypes(baseName + ".haplotypes", sampleMatrix.alleles());
+            // write reads
             addReads(baseName + ".reads", sampleMatrix.evidence());
 
             // write matrix itself
@@ -197,6 +224,23 @@ public class OnOffRamp {
         outputZip.putNextEntry(e);
         outputZip.write(bytes);
         outputZip.closeEntry();
+    }
+
+    private InputStream getEntry(String name) throws IOException {
+
+        Enumeration<? extends ZipEntry> entries = inputZip.entries();
+        while ( entries.hasMoreElements() ) {
+            ZipEntry entry = entries.nextElement();
+            if ( entry.getName().equals(name) )
+                return inputZip.getInputStream(entry);
+        }
+
+        // if here, not found
+        throw new IOException("no such: " + name);
+    }
+
+    public AlleleLikelihoods<GATKRead, Haplotype> getAlleleLikelihoods(String readLikelihoods) {
+        return null;
     }
 
 }

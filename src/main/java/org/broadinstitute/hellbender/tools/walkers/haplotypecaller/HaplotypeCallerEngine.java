@@ -685,9 +685,16 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         // ramp point: pre-filter
         if (hcArgs.rampPreFilterOff != null) {
             try {
+                // build off ramp
                 OnOffRamp ramp = new OnOffRamp(hcArgs.rampPreFilterOff, region, OnOffRamp.Type.OffRamp);
                 ramp.add("readLikelihoods", readLikelihoods);
                 ramp.close();
+
+                // read the off ramp back as an on ramp, as a debug measure .. will be removed
+                OnOffRamp onRamp = new OnOffRamp(hcArgs.rampPreFilterOff, region, OnOffRamp.Type.OnRamp);
+                AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods_onRamp = onRamp.getAlleleLikelihoods("readLikelihoods");
+                onRamp.close();
+
                 System.exit(0);
             } catch (IOException e) {
                 throw new RuntimeException(e);
