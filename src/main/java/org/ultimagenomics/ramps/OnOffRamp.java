@@ -1,0 +1,202 @@
+package org.ultimagenomics.ramps;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
+import org.broadinstitute.hellbender.utils.genotyper.LikelihoodMatrix;
+import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
+import org.broadinstitute.hellbender.utils.read.GATKRead;
+import htsjdk.samtools.util.Locatable;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+public class OnOffRamp {
+
+    private static final Logger logger = LogManager.getLogger(OnOffRamp.class);
+
+    // type of ramp enum - determines data flow direction
+    public enum Type {
+        OffRamp,
+        OnRamp
+    }
+
+    // local vars
+    private String  filename;
+    private Type    type;
+
+    // zip streams
+    private ZipOutputStream     outputZip;
+    private Locatable           loc;
+    private JSONObject          info;
+
+    public OnOffRamp(String filename, Locatable loc, Type type) throws IOException  {
+        logger.info("opening ramp. filename: " + filename + ", type: " + type);
+        this.type = type;
+        this.loc = loc;
+        this.filename = filename + getLocFilenameSuffix();
+
+        // open stream
+        if ( type == Type.OffRamp ) {
+
+            // open zip for writing
+            outputZip = new ZipOutputStream(new FileOutputStream(this.filename));
+
+            // create info object
+            info = new JSONObject();
+            info.put("created", ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
+            JSONObject regionObj = new JSONObject();
+            regionObj.put("contig", loc.getContig());
+            regionObj.put("start", loc.getStart());
+            regionObj.put("end", loc.getEnd());
+            info.put("region", regionObj);
+
+        } else {
+            throw new Error("type not supprted: " + type);
+        }
+
+    }
+
+    private String getLocFilenameSuffix() {
+        return String.format("-%s-%d-%d.zip", loc.getContig(), loc.getStart(), loc.getEnd());
+    }
+
+    public void close() throws IOException {
+
+        // add info
+        addEntry("info.json", info.toString(2).getBytes());
+
+        // close file
+        outputZip.close();
+        logger.info("closing ramp. filename: " + filename);
+    }
+
+    public void add(String name, AlleleLikelihoods<GATKRead, Haplotype> value) throws IOException {
+
+        // loop on samples
+        for ( int sampleIndex = 0 ; sampleIndex < value.numberOfSamples() ; sampleIndex++ ) {
+
+            // establish context
+            String                                 baseName = name + "." + value.getSample(sampleIndex);
+            LikelihoodMatrix<GATKRead, Haplotype>  sampleMatrix = value.sampleMatrix(sampleIndex);
+
+            // add to info
+            JSONObject      info = new JSONObject();
+            info.put("haplotypeCount", sampleMatrix.numberOfAlleles());
+            info.put("readsCount", sampleMatrix.evidenceCount());
+            addInfo(baseName, info);
+
+            // write haplotypes, reads
+            addHaplotypes(baseName + ".haplotypes", sampleMatrix.alleles());
+            addReads(baseName + ".reads", sampleMatrix.evidence());
+
+            // write matrix itself
+            addSampleMatrix(baseName + ".matrix", sampleMatrix);
+        }
+    }
+
+    private void addSampleMatrix(String name, LikelihoodMatrix<GATKRead, Haplotype> value) throws IOException {
+
+        // build text representation
+        ByteArrayOutputStream   os = new ByteArrayOutputStream();
+        PrintWriter             pw = new PrintWriter(os);
+
+        // header line
+        pw.print("read");
+        for ( int n = 0 ; n < value.numberOfAlleles() ; n++ )
+            pw.print(",h" + n);
+        pw.println("");
+
+        // walk the lines
+        for ( int readIndex  = 0 ; readIndex < value.evidenceCount() ; readIndex++ ) {
+            pw.print(value.getEvidence(readIndex).getName());
+            for ( int hapIndex = 0 ; hapIndex < value.numberOfAlleles() ; hapIndex++ )
+                pw.print("," + value.get(hapIndex, readIndex));
+            pw.println("");
+        }
+        pw.close();
+
+        // add entry
+        addEntry(name, os.toByteArray());
+    }
+
+    private void addHaplotypes(String name, List<Haplotype> value) throws IOException {
+
+        // build text representation
+        ByteArrayOutputStream   os = new ByteArrayOutputStream();
+        PrintWriter             pw = new PrintWriter(os);
+        pw.println("contig,start,end,ref,cigar,bases");
+        for ( Haplotype haplotype : value ) {
+            Locatable        loc = haplotype.getGenomeLocation();
+            pw.println(String.format("%s,%d,%d,%d,%s,%s",
+                    loc.getContig(), loc.getStart(), loc.getEnd(),
+                    haplotype.isReference() ? 1 : 0,
+                    haplotype.getCigar().toString(),
+                    new String(haplotype.getBases())
+                    )
+            );
+        }
+        pw.close();
+
+        // add entry
+        addEntry(name, os.toByteArray());
+    }
+
+    public void addReads(String name, List<GATKRead> value) throws IOException {
+
+        // build text representation
+        ByteArrayOutputStream   os = new ByteArrayOutputStream();
+        PrintWriter             pw = new PrintWriter(os);
+        pw.println("name,contig,start,end");
+        for ( GATKRead read : value ) {
+            pw.println(String.format("%s,%s,%d,%d,%d,%d,%s",
+                    read.getName(),
+                    read.getContig(),
+                    read.getUnclippedEnd(), read.getStart(),
+                    read.getEnd(), read.getUnclippedEnd(),
+                    read.getCigar().toString()
+                    )
+            );
+        }
+        pw.close();
+
+        // add entry
+        addEntry(name, os.toByteArray());
+    }
+
+    public void add(String name, Object value) throws IOException {
+
+        // this is a useless default
+        addEntry(name, value.toString().getBytes());
+    }
+
+    private void addInfo(String name, JSONObject obj) {
+
+        JSONObject      parent = info;
+        String[]        toks =  name.split("\\.");
+        for ( int tokIndex = 0 ; tokIndex < toks.length - 1 ; tokIndex++ ) {
+            if (!parent.has(toks[tokIndex]))
+                parent.put(toks[tokIndex], new JSONObject());
+            parent = parent.getJSONObject(toks[tokIndex]);
+        }
+        parent.put(toks[toks.length - 1], obj);
+    }
+
+    private void addEntry(String name, byte[] bytes) throws IOException {
+
+        ZipEntry    e = new ZipEntry(name);
+        outputZip.putNextEntry(e);
+        outputZip.write(bytes);
+        outputZip.closeEntry();
+    }
+
+}

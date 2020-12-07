@@ -186,6 +186,7 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     public final String FILTER_CONTIGS_SOR_THRESHOLD = "flow-filter-contigs-sor-threshold";
     public final String FILTER_REFERENCE_QUAL_THRESHOLD = "flow-filter-ref-contigs-qual-threshold";
 
+    public final String RAMP_PRE_FILTER_OFF = "ramp-pre-filter-off";
 
     @Advanced
     @Hidden
@@ -207,5 +208,8 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     @Argument(fullName = FILTER_CONTIGS_SOR_THRESHOLD, doc = "Threshold for prefiltering contigs on SOR", optional=true)
     public float prefilterSorThreshold=PREFILTER_SOR_THRESHOLD;
 
-
+    @Advanced
+    @Hidden
+    @Argument(fullName = RAMP_PRE_FILTER_OFF, doc = "Get off the pre-filter ramp using provided filename for saving", optional=true)
+    public String rampPreFilterOff=null;
 }

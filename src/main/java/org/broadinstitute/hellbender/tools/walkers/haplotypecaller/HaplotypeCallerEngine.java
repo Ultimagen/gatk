@@ -51,6 +51,7 @@ import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
 import org.ultimagenomics.flow_based_read.tests.AlleleLikelihoodWriter;
 import org.ultimagenomics.haplotype_calling.ContigFilteringHC;
 import org.ultimagenomics.haplotype_calling.LHWRefView;
+import org.ultimagenomics.ramps.OnOffRamp;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -681,6 +682,17 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         alleleLikelihoodWriter.ifPresent(
                 writer -> writer.writeAlleleLikelihoods(readLikelihoods));
 
+        // ramp point: pre-filter
+        if (hcArgs.rampPreFilterOff != null) {
+            try {
+                OnOffRamp ramp = new OnOffRamp(hcArgs.rampPreFilterOff, region, OnOffRamp.Type.OffRamp);
+                ramp.add("readLikelihoods", readLikelihoods);
+                ramp.close();
+                System.exit(0);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
 
         final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
         if (hcArgs.filterContigs) {
