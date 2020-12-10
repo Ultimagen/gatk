@@ -166,6 +166,9 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
     private static final Allele FAKE_REF_ALLELE = Allele.create("N", true); // used in isActive function to call into UG Engine. Should never appear anywhere in a VCF file
     private static final Allele FAKE_ALT_ALLELE = Allele.create("<FAKE_ALT>", false); // used in isActive function to call into UG Engine. Should never appear anywhere in a VCF file
 
+    // on-off ramp, if present
+    private OnOffRamp   ramp = null;
+
     /**
      * Create and initialize a new HaplotypeCallerEngine given a collection of HaplotypeCaller arguments, a reads header,
      * and a reference file
@@ -682,20 +685,11 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         alleleLikelihoodWriter.ifPresent(
                 writer -> writer.writeAlleleLikelihoods(readLikelihoods));
 
-        // ramp point: pre-filter
-        if (hcArgs.rampPreFilterOff != null) {
+        // ramp point: pre-filter off ramp
+        if (ramp != null && hcArgs.rampPreFilterOff != null && ramp.getType() == OnOffRamp.Type.OffRamp)  {
             try {
-                // build off ramp
-                OnOffRamp ramp = new OnOffRamp(hcArgs.rampPreFilterOff, region, OnOffRamp.Type.OffRamp);
-                ramp.add("readLikelihoods", readLikelihoods);
-                ramp.close();
-
-                // read the off ramp back as an on ramp, as a debug measure .. will be removed
-                OnOffRamp onRamp = new OnOffRamp(hcArgs.rampPreFilterOff, region, OnOffRamp.Type.OnRamp);
-                AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods_onRamp = onRamp.getAlleleLikelihoods("readLikelihoods");
-                onRamp.close();
-
-                System.exit(0);
+                ramp.add(region, "readLikelihoods", readLikelihoods);
+                return Collections.emptyList();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -841,6 +835,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         // Write assembly region debug output if present
         assemblyEngine.printDebugHistograms();
 
+        tearRamps();
     }
 
     private Set<GATKRead> filterNonPassingReads( final AssemblyRegion activeRegion ) {
@@ -876,5 +871,24 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             }
         }
         activeRegion.removeAll( readsToRemove );
+    }
+
+    public void buildRamps(HaplotypeCallerArgumentCollection hcArgs) {
+        try {
+            if (hcArgs.rampPreFilterOff != null)
+                ramp = new OnOffRamp(hcArgs.rampPreFilterOff, OnOffRamp.Type.OffRamp);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void tearRamps() {
+        if ( ramp != null ) {
+            try {
+                ramp.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 }
