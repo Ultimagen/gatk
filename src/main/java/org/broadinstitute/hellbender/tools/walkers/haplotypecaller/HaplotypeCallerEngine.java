@@ -51,7 +51,8 @@ import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
 import org.ultimagenomics.flow_based_read.tests.AlleleLikelihoodWriter;
 import org.ultimagenomics.haplotype_calling.ContigFilteringHC;
 import org.ultimagenomics.haplotype_calling.LHWRefView;
-import org.ultimagenomics.ramps.OnOffRamp;
+import org.ultimagenomics.ramps.PreFilterOffRamp;
+import org.ultimagenomics.ramps.PostFilterOnRamp;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -167,7 +168,8 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
     private static final Allele FAKE_ALT_ALLELE = Allele.create("<FAKE_ALT>", false); // used in isActive function to call into UG Engine. Should never appear anywhere in a VCF file
 
     // on-off ramp, if present
-    private OnOffRamp   ramp = null;
+    private PreFilterOffRamp preFilterOffRamp = null;
+    private PostFilterOnRamp postFilterOnRamp = null;
 
     /**
      * Create and initialize a new HaplotypeCallerEngine given a collection of HaplotypeCaller arguments, a reads header,
@@ -686,9 +688,9 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                 writer -> writer.writeAlleleLikelihoods(readLikelihoods));
 
         // ramp point: pre-filter off ramp
-        if (ramp != null && hcArgs.rampPreFilterOff != null && ramp.getType() == OnOffRamp.Type.OffRamp)  {
+        if ( preFilterOffRamp != null )  {
             try {
-                ramp.add(region, "readLikelihoods", readLikelihoods);
+                preFilterOffRamp.add(region, "readLikelihoods", readLikelihoods);
                 return Collections.emptyList();
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -703,6 +705,20 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         } else {
             logger.debug("Not filtering contigs");
             subsettedReadLikelihoodsFinal = readLikelihoods;
+        }
+
+        // TEMP: (just to make code development easier w/ real data) ramp point: post-filter on ramp
+        if ( postFilterOnRamp != null )  {
+            try {
+                Map<String, GATKRead>   allReads = new LinkedHashMap<>();
+                for ( List<GATKRead> readList : reads.values() )
+                    for ( GATKRead read : readList )
+                        allReads.put(read.getName(), read);
+
+                postFilterOnRamp.getAlleleLikelihoods(region, "readLikelihoods", samplesList, allReads.values());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         // Realign reads to their best haplotype.
@@ -876,19 +892,22 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
     public void buildRamps(HaplotypeCallerArgumentCollection hcArgs) {
         try {
             if (hcArgs.rampPreFilterOff != null)
-                ramp = new OnOffRamp(hcArgs.rampPreFilterOff, OnOffRamp.Type.OffRamp);
+                preFilterOffRamp = new PreFilterOffRamp(hcArgs.rampPreFilterOff);
+            if (hcArgs.rampPostFilterOn != null)
+                postFilterOnRamp = new PostFilterOnRamp(hcArgs.rampPostFilterOn);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
     private void tearRamps() {
-        if ( ramp != null ) {
-            try {
-                ramp.close();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+        try {
+            if ( preFilterOffRamp != null )
+                preFilterOffRamp.close();
+            if ( postFilterOnRamp != null )
+                postFilterOnRamp.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 }

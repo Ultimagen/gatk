@@ -187,6 +187,7 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     public final String FILTER_REFERENCE_QUAL_THRESHOLD = "flow-filter-ref-contigs-qual-threshold";
 
     public final String RAMP_PRE_FILTER_OFF = "ramp-pre-filter-off";
+    public final String RAMP_POST_FILTER_ON = "ramp-post-filter-on";
 
     @Advanced
     @Hidden
@@ -212,4 +213,10 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     @Hidden
     @Argument(fullName = RAMP_PRE_FILTER_OFF, doc = "Get off the pre-filter ramp using provided filename for saving", optional=true)
     public String rampPreFilterOff=null;
+
+    @Advanced
+    @Hidden
+    @Argument(fullName = RAMP_POST_FILTER_ON, doc = "Get on the post-filter ramp using provided filename for reading", optional=true)
+    public String rampPostFilterOn=null;
+
 }

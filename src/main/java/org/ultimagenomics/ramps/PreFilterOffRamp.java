@@ -1,97 +1,50 @@
 package org.ultimagenomics.ramps;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import htsjdk.samtools.util.Locatable;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.genotyper.LikelihoodMatrix;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
-import htsjdk.samtools.util.Locatable;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.json.JSONTokener;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
-public class OnOffRamp {
+public class PreFilterOffRamp extends RampBase {
 
-    private static final Logger logger = LogManager.getLogger(OnOffRamp.class);
+    private ZipOutputStream outputZip;
 
-    // type of ramp enum - determines data flow direction
-    public enum Type {
-        OffRamp,
-        OnRamp
-    }
+    public PreFilterOffRamp(String filename) throws IOException {
+        super(filename, Type.OffRamp);
 
-    // local vars
-    private Type        type;
-    private File        file;
+        // open zip for writing
+        this.file.getParentFile().mkdirs();
+        outputZip = new ZipOutputStream(new FileOutputStream(this.file));
 
-    // zip streams
-    private JSONObject          info;
-    private ZipOutputStream     outputZip;
-    private ZipFile             inputZip;
-
-    public OnOffRamp(String filename, Type type) throws IOException  {
-        this.type = type;
-        this.file = new File(filename);
-        logger.info("opening ramp. file: " + file + ", type: " + type);
-
-        // open stream
-        if ( type == Type.OffRamp ) {
-
-            // open zip for writing
-            this.file.getParentFile().mkdirs();
-            outputZip = new ZipOutputStream(new FileOutputStream(this.file));
-
-            // create info object
-            info = new JSONObject();
-            info.put("created", ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
-            info.put("regions", new JSONArray());
-
-        } else if ( type == Type.OnRamp ) {
-
-            // open zip for reading
-            inputZip = new ZipFile(this.file);
-
-            // read info object
-            InputStream     is = getEntry("info.json");
-            info = new JSONObject(new JSONTokener(is));
-
-        } else {
-            throw new Error("type not supprted: " + type);
-        }
-    }
-
-    private String getLocFilenameSuffix(Locatable loc) {
-        return String.format("%s-%d-%d", loc.getContig(), loc.getStart(), loc.getEnd());
+        // create info object
+        info = new JSONObject();
+        info.put("created", ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
+        info.put("regions", new JSONArray());
     }
 
     public void close() throws IOException {
 
-        if ( type == Type.OffRamp ) {
+        // add info
+        addEntry(null,"info.json", info.toString(2).getBytes());
 
-            // add info
-            addEntry(null,"info.json", info.toString(2).getBytes());
+        // close file
+        outputZip.close();
 
-            // close file
-            outputZip.close();
-
-        } else if ( type == Type.OnRamp ) {
-
-            // close file
-            inputZip.close();
-        }
-
-        logger.info("closing ramp. file: " + file);
+        super.close();
     }
 
     public synchronized  void add(Locatable loc, String name, AlleleLikelihoods<GATKRead, Haplotype> value) throws IOException {
@@ -114,7 +67,7 @@ public class OnOffRamp {
 
             // establish context
             String                                 baseName = name + ".samples." + value.getSample(sampleIndex);
-            LikelihoodMatrix<GATKRead, Haplotype>  sampleMatrix = value.sampleMatrix(sampleIndex);
+            LikelihoodMatrix<GATKRead, Haplotype> sampleMatrix = value.sampleMatrix(sampleIndex);
 
             // add to info
             JSONObject      info2 = new JSONObject();
@@ -135,8 +88,8 @@ public class OnOffRamp {
     private void addSampleMatrix(Locatable loc, String name, LikelihoodMatrix<GATKRead, Haplotype> value) throws IOException {
 
         // build text representation
-        ByteArrayOutputStream   os = new ByteArrayOutputStream();
-        PrintWriter             pw = new PrintWriter(os);
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        PrintWriter pw = new PrintWriter(os);
 
         // header line
         pw.print("read");
@@ -148,7 +101,7 @@ public class OnOffRamp {
         for ( int readIndex  = 0 ; readIndex < value.evidenceCount() ; readIndex++ ) {
             pw.print(value.getEvidence(readIndex).getName());
             for ( int hapIndex = 0 ; hapIndex < value.numberOfAlleles() ; hapIndex++ )
-                pw.print("," + value.get(hapIndex, readIndex));
+                pw.print("," + String.format(MATRIX_FLOAT_FORMAT, value.get(hapIndex, readIndex)));
             pw.println("");
         }
         pw.close();
@@ -162,14 +115,16 @@ public class OnOffRamp {
         // build text representation
         ByteArrayOutputStream   os = new ByteArrayOutputStream();
         PrintWriter             pw = new PrintWriter(os);
-        pw.println("contig,start,end,ref,cigar,bases");
+        pw.println("contig,start,end,ref,cigar,bases,score,alignmentStartHapwrtRef");
         for ( Haplotype haplotype : value ) {
             Locatable        hapLoc = haplotype.getGenomeLocation();
-            pw.println(String.format("%s,%d,%d,%d,%s,%s",
+            pw.println(String.format("%s,%d,%d,%d,%s,%s,%.5f,%d",
                     hapLoc.getContig(), hapLoc.getStart(), hapLoc.getEnd(),
                     haplotype.isReference() ? 1 : 0,
                     haplotype.getCigar().toString(),
-                    new String(haplotype.getBases())
+                    new String(haplotype.getBases()),
+                    haplotype.getScore(),
+                    haplotype.getAlignmentStartHapwrtRef()
                     )
             );
         }
@@ -181,17 +136,17 @@ public class OnOffRamp {
 
     public void addReads(Locatable loc, String name, List<GATKRead> value) throws IOException {
 
+        /**
+         * at this point it is not clear if we need the reads at all. we'll keep a skeleton here
+         */
+
         // build text representation
         ByteArrayOutputStream   os = new ByteArrayOutputStream();
         PrintWriter             pw = new PrintWriter(os);
-        pw.println("name,contig,unc_start,start,end,unc_end,cigar");
+        pw.println("name");
         for ( GATKRead read : value ) {
-            pw.println(String.format("%s,%s,%d,%d,%d,%d,%s",
-                    read.getName(),
-                    read.getContig(),
-                    read.getUnclippedEnd(), read.getStart(),
-                    read.getEnd(), read.getUnclippedEnd(),
-                    read.getCigar().toString()
+            pw.println(String.format("%s",
+                    read.getName()
                     )
             );
         }
@@ -222,33 +177,10 @@ public class OnOffRamp {
     private void addEntry(Locatable loc, String name, byte[] bytes) throws IOException {
 
         String      prefix = loc != null ? getLocFilenameSuffix(loc) + "/" : "";
-        ZipEntry    e = new ZipEntry(prefix + name);
+        ZipEntry e = new ZipEntry(prefix + name);
         outputZip.putNextEntry(e);
         outputZip.write(bytes);
         outputZip.closeEntry();
     }
-
-    private InputStream getEntry(String name) throws IOException {
-
-        Enumeration<? extends ZipEntry> entries = inputZip.entries();
-        while ( entries.hasMoreElements() ) {
-            ZipEntry entry = entries.nextElement();
-            if ( entry.getName().equals(name) )
-                return inputZip.getInputStream(entry);
-        }
-
-        // if here, not found
-        throw new IOException("no such: " + name);
-    }
-
-    public AlleleLikelihoods<GATKRead, Haplotype> getAlleleLikelihoods(String readLikelihoods) {
-        return null;
-    }
-
-    public Type getType() {
-        return type;
-    }
-
-
 
 }
