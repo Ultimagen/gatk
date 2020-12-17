@@ -9,4 +9,5 @@ Number of quality-score clipped bases 0
 Number of range clipped bases         0
 Number of sequence clipped bases      10
         10 clip sites matching CCCCC
+Number of adapter clipped bases       0
 --------------------------------------------------------------------------------
