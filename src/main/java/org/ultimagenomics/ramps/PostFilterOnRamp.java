@@ -57,9 +57,16 @@ public class PostFilterOnRamp extends RampBase {
         throw new IOException("no such: " + name);
     }
 
-    public AlleleLikelihoods<GATKRead, Haplotype> getAlleleLikelihoods(Locatable loc, String name, SampleList sampleList, Collection<GATKRead> reads) throws IOException {
+    public AlleleLikelihoods<GATKRead, Haplotype> getAlleleLikelihoods(Locatable loc, String name, SampleList sampleList, Map<String,List<GATKRead>> readsBySample) throws IOException {
 
-        List<Haplotype>         haplotypes = getHaplotypes(loc, name + ".haplotypes");
+        // get haplotypes
+        List<Haplotype> haplotypes = getHaplotypes(loc, name + ".haplotypes");
+
+        // collect reads by name
+        Map<String, GATKRead> readsByName = new LinkedHashMap<>();
+        for ( List<GATKRead> readList : readsBySample.values() )
+            for ( GATKRead read : readList )
+                readsByName.put(read.getName(), read);
 
         // walk the samples
         List<List<GATKRead>>        evidenceBySampleList = new LinkedList<>();
@@ -71,7 +78,7 @@ public class PostFilterOnRamp extends RampBase {
             String                  baseName = name + ".samples." + sampleName;
 
             // enrich reads
-            List<GATKRead>          enrichedReads = enrichReads(loc,baseName + ".reads", reads);
+            List<GATKRead>          enrichedReads = enrichReads(loc,baseName + ".reads", readsByName);
             evidenceBySampleList.add(enrichedReads);
 
             // read matrix
@@ -83,7 +90,10 @@ public class PostFilterOnRamp extends RampBase {
         IndexedAlleleList<Haplotype> allelList = new IndexedAlleleList<>(haplotypes);
         AlleleLikelihoods<GATKRead, Haplotype>      alleleLikelihoods = new AlleleLikelihoods<>(
                                                         allelList, sampleList, evidenceBySampleList, values);
-        return alleleLikelihoods;
+        for ( int sampleIndex = 0 ; sampleIndex < sampleList.numberOfSamples() ; sampleIndex++ )
+            alleleLikelihoods.sampleMatrix(sampleIndex);
+
+            return alleleLikelihoods;
     }
 
     private List<Haplotype> getHaplotypes(Locatable loc, String name) throws IOException {
@@ -107,7 +117,7 @@ public class PostFilterOnRamp extends RampBase {
             haplotype.setGenomeLocation(reader.getLocatable(contigColumn, startColumn, endColumn));
             haplotype.setScore(reader.getDouble(scoreColumn));
             haplotype.setCigar(reader.getCigar(cigarColumn));
-            haplotype.setAlignmentStartHapwrtRef(alignmentStartHapwrtRefColumn);
+            haplotype.setAlignmentStartHapwrtRef(reader.getInteger(alignmentStartHapwrtRefColumn));
 
             /**
              * what to do about contigs? can they be regenerted?
@@ -124,12 +134,7 @@ public class PostFilterOnRamp extends RampBase {
         return haplotypes;
     }
 
-    private List<GATKRead> enrichReads(Locatable loc, String name, Collection<GATKRead> reads) throws IOException {
-
-        // create map of reads by name
-        Map<String, GATKRead> readsByName = new LinkedHashMap<>();
-        for ( GATKRead read : reads )
-            readsByName.put(read.getName(), read);
+    private List<GATKRead> enrichReads(Locatable loc, String name, Map<String, GATKRead> readsByName) throws IOException {
 
         // open csv file
         CSVReader           reader = new CSVReader(getEntry(loc, name));

@@ -680,42 +680,37 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         // evaluate each sample's reads against all haplotypes
         final Map<String,List<GATKRead>> reads = AssemblyBasedCallerUtils.splitReadsBySample(samplesList, readsHeader, regionForGenotyping.getReads());
 
-        // Calculate the likelihoods: CPU intensive part.
-        final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods =
-                likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads, true);
-
-        alleleLikelihoodWriter.ifPresent(
-                writer -> writer.writeAlleleLikelihoods(readLikelihoods));
-
-        // ramp point: pre-filter off ramp
-        if ( preFilterOffRamp != null )  {
-            try {
-                preFilterOffRamp.add(region, "readLikelihoods", readLikelihoods);
-                return Collections.emptyList();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
         final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
-        if (hcArgs.filterContigs) {
-            logger.debug("Filtering contigs");
-            ContigFilteringHC contigFilter = new ContigFilteringHC(hcArgs, assemblyDebugOutStream, genotypingEngine);
-            subsettedReadLikelihoodsFinal = contigFilter.filterContigs(readLikelihoods);
+        if ( postFilterOnRamp == null ) {
+
+            // Calculate the likelihoods: CPU intensive part.
+            final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods =
+                    likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads, true);
+
+            alleleLikelihoodWriter.ifPresent(
+                    writer -> writer.writeAlleleLikelihoods(readLikelihoods));
+
+            // ramp point: pre-filter off ramp
+            if (preFilterOffRamp != null) {
+                try {
+                    preFilterOffRamp.add(region, "readLikelihoods", readLikelihoods);
+                    return Collections.emptyList();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            if (hcArgs.filterContigs) {
+                logger.debug("Filtering contigs");
+                ContigFilteringHC contigFilter = new ContigFilteringHC(hcArgs, assemblyDebugOutStream, genotypingEngine);
+                subsettedReadLikelihoodsFinal = contigFilter.filterContigs(readLikelihoods);
+            } else {
+                logger.debug("Not filtering contigs");
+                subsettedReadLikelihoodsFinal = readLikelihoods;
+            }
         } else {
-            logger.debug("Not filtering contigs");
-            subsettedReadLikelihoodsFinal = readLikelihoods;
-        }
-
-        // TEMP: (just to make code development easier w/ real data) ramp point: post-filter on ramp
-        if ( postFilterOnRamp != null )  {
             try {
-                Map<String, GATKRead>   allReads = new LinkedHashMap<>();
-                for ( List<GATKRead> readList : reads.values() )
-                    for ( GATKRead read : readList )
-                        allReads.put(read.getName(), read);
-
-                postFilterOnRamp.getAlleleLikelihoods(region, "readLikelihoods", samplesList, allReads.values());
+                subsettedReadLikelihoodsFinal = postFilterOnRamp.getAlleleLikelihoods(region, "readLikelihoods", samplesList, reads);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
