@@ -40,17 +40,17 @@ public class AlleleFilteringHC extends AlleleFiltering {
         final int[] asPL = genotypingLikelihoods.sampleLikelihoods(0).getAsPLs();
         final int retVal;
         retVal = Math.min(asPL[1], asPL[0]) - asPL[2]; // if this is "large", reject the contig.
-        logger.debug(String.format("GCL:: %s: %d %d %d", allele.toString(), asPL[0], asPL[1], asPL[2]));
+        logger.debug(String.format("GAL:: %s: %d %d %d", allele.toString(), asPL[0], asPL[1], asPL[2]));
         return retVal;
     }
 
 
 
-    double getAlleleSOR(final AlleleLikelihoods<GATKRead, LocationAndAllele> alleleLikelihoods, Allele allele) {
+    double getAlleleSOR(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele) {
         final Allele notAllele = InverseAllele.of(allele);
         int [][] contingency_table = StrandOddsRatio.getContingencyTable(alleleLikelihoods, notAllele, Arrays.asList(allele), 1);
         double sor = StrandOddsRatio.calculateSOR(contingency_table);
-        logger.debug(String.format("GCS:: %s: %f (%d %d %d %d)", allele.toString(), sor, contingency_table[0][0], contingency_table[0][1], contingency_table[1][0], contingency_table[1][1]));
+        logger.debug(String.format("GAS:: %s: %f (%d %d %d %d)", allele.toString(), sor, contingency_table[0][0], contingency_table[0][1], contingency_table[1][0], contingency_table[1][1]));
         return sor;
 
     }
