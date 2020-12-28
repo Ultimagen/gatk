@@ -29,12 +29,12 @@ public abstract class AlleleFiltering {
     public AlleleLikelihoods<GATKRead, Haplotype> filterAlleles(AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods){
         AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
 
-        logger.debug("SHC:: filter alleles - start");
+        logger.debug("SHA:: filter alleles - start");
         AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsBoth = subsetHaplotypesByAlleles(readLikelihoods, hcArgs);
-        logger.debug("SHC:: filter alleles - end");
-        logger.debug("SHC:: filter ref alleles - start");
+        logger.debug("SHA:: filter alleles - end");
+        logger.debug("SHA:: filter ref alleles - start");
         subsettedReadLikelihoodsBoth = subsetHaplotypesByRefAlleles(subsettedReadLikelihoodsBoth, hcArgs);
-                logger.debug("SHC:: filter ref alleles - end");
+        logger.debug("SHA:: filter ref alleles - end");
 
         subsettedReadLikelihoodsFinal = subsettedReadLikelihoodsBoth;
         if (assemblyDebugOutStream != null) {
@@ -82,16 +82,16 @@ public abstract class AlleleFiltering {
                     );
 
 
-            logger.debug("CHM::printout start");
+            logger.debug("AHM::printout start");
             for (LocationAndAllele al: alleleHaplotypeMap.keySet()) {
-                logger.debug("CHM::allele block ---> ");
+                logger.debug("AHM::allele block ---> ");
                 for (Allele h: alleleHaplotypeMap.get(al)){
-                    logger.debug(String.format("CHM:: (%d) %s: %s", al.getLoc(), al.getAllele().getBaseString(),h.getBaseString()));
+                    logger.debug(String.format("AHM:: (%d) %s: %s", al.getLoc(), al.getAllele().getBaseString(),h.getBaseString()));
                 }
-                logger.debug("CHM::allele block ---< ");
+                logger.debug("AHM::allele block ---< ");
 
             }
-            logger.debug("CHM::printout end");
+            logger.debug("AHM::printout end");
 
             final List<Haplotype> eventualAlleles = new ArrayList<>(currentReadLikelihoods.alleles());
             if (eventualAlleles.stream().noneMatch(Allele::isReference)) {
@@ -104,43 +104,43 @@ public abstract class AlleleFiltering {
             if (keepRef) {
                 final List<LocationAndAllele> refOnlyAlleles = alleleHaplotypeMap.keySet().stream().filter(c -> alleleHaplotypeMap.get(c).stream().anyMatch(Allele::isReference)).collect(Collectors.toList());
                 refOnlyAlleles.forEach(alleleHaplotypeMap::remove);
-                logger.debug("----- ROC start ");
+                logger.debug("----- ROA start ");
                 for (LocationAndAllele al : refOnlyAlleles) {
-                    logger.debug(String.format("ROC:: %s", (al).toString()));
+                    logger.debug(String.format("ROA:: %s", (al).toString()));
                 }
-                logger.debug("----- ROC end");
+                logger.debug("----- ROA end");
             }
 
             // find contigs that have all the haplotypes in them and remove them.
             final List<LocationAndAllele> allHapAlleles = alleleHaplotypeMap.keySet().stream().filter(c -> alleleHaplotypeMap.get(c).containsAll(eventualAlleles)).collect(Collectors.toList());
             allHapAlleles.forEach(alleleHaplotypeMap::remove);
 
-            logger.debug("----- AHC start ----");
+            logger.debug("----- AHA start ----");
             for (LocationAndAllele al: allHapAlleles) {
-                logger.debug(String.format("AHC:: %s", (al).toString()));
+                logger.debug(String.format("AHA:: %s", (al).toString()));
             }
-            logger.debug("----- AHC end -----");
+            logger.debug("----- AHA end -----");
 
 
             //find contigs that have no haplotypes in them and remove them.
-            final List<LocationAndAllele> noHapContigs = alleleHaplotypeMap.keySet().stream().filter(c -> alleleHaplotypeMap.get(c).isEmpty()).collect(Collectors.toList());
-            noHapContigs.forEach(alleleHaplotypeMap::remove);
-            logger.debug("----- NHC start ----");
-            for (LocationAndAllele al: noHapContigs) {
-                logger.debug(String.format("NHC:: %s", (al.toString())));
+            final List<LocationAndAllele> noHapAlleles= alleleHaplotypeMap.keySet().stream().filter(c -> alleleHaplotypeMap.get(c).isEmpty()).collect(Collectors.toList());
+            noHapAlleles.forEach(alleleHaplotypeMap::remove);
+            logger.debug("----- NHA start ----");
+            for (LocationAndAllele al: noHapAlleles) {
+                logger.debug(String.format("NHA:: %s", (al.toString())));
             }
-            logger.debug("----- NHC end -----");
+            logger.debug("----- NHA end -----");
 
             final List<LocationAndAllele> allAlleles = new ArrayList<>(alleleHaplotypeMap.keySet());
 
             final AlleleLikelihoods<GATKRead, Haplotype> finalCurrentReadLikelihoods = currentReadLikelihoods;
-            logger.debug("GCL::start");
+            logger.debug("GAL::start");
             final List<AlleleLikelihoods<GATKRead, Allele>> alleleLikelihoods =
                     allAlleles.stream().map(c -> getAlleleLikelihoodMatrix(finalCurrentReadLikelihoods, c, haplotypeAlleleMap)).collect(Collectors.toList());
 
             final List<Integer> collectedRPLs = IntStream.range(0, allAlleles.size()).mapToObj(i -> getAlleleLikelihood(alleleLikelihoods.get(i), allAlleles.get(i))).collect(Collectors.toList());
             final List<Double> collectedSORs = IntStream.range(0, allAlleles.size()).mapToObj( i -> getAlleleSOR(alleleLikelihoods.get(i), allAlleles.get(i))).collect(Collectors.toList());
-            logger.debug("GCL::end");
+            logger.debug("GAL::end");
 
             final LocationAndAllele badAllele;
             if (keepRef) {
@@ -150,7 +150,7 @@ public abstract class AlleleFiltering {
             }
 
             if (badAllele != null){
-                logger.debug(String.format("SHC:: Removing %s", badAllele.toString()));
+                logger.debug(String.format("SHA:: Removing %s", badAllele.toString()));
                 final ArrayList<Haplotype> haplotypesWithAllele = new ArrayList<>(alleleHaplotypeMap.get(badAllele));
                 haplotypesWithAllele.removeIf(Allele::isReference);
 
@@ -175,15 +175,15 @@ public abstract class AlleleFiltering {
         int argmin=-1;
         if (worstRPL > THRESHOLD ) {
             argmin = collectedRPLs.indexOf(worstRPL);
-            logger.debug(String.format("SHC:: WorstRPL: %d", worstRPL));
+            logger.debug(String.format("SHA:: WorstRPL: %d", worstRPL));
         }
         else if (worstSOR > SOR_THRESHOLD ) {
             argmin = collectedSORs.indexOf(worstSOR);
-            logger.debug(String.format("SHC:: WorstSOR: %f", worstSOR));
+            logger.debug(String.format("SHA:: WorstSOR: %f", worstSOR));
 
         }
         if (argmin >= 0 ) {
-            logger.debug(String.format("SHC:: %d", argmin));
+            logger.debug(String.format("SHA:: %d", argmin));
             return alleles.get(argmin);
         } else
             return null;
@@ -219,7 +219,7 @@ public abstract class AlleleFiltering {
         readLikelihoods.alleles().stream().filter(h -> !haplotypeAlleleMap.get(h).contains(allele)).forEach(alleleHaplotypeMap.get(notAllele)::add);
 
         final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods = readLikelihoods.marginalize(alleleHaplotypeMap);
-        logger.debug(String.format("GCLM: %s %d %d", allele.toString(), alleleHaplotypeMap.get(allele).size(), alleleHaplotypeMap.get(notAllele).size()));
+        logger.debug(String.format("GALM: %s %d %d", allele.toString(), alleleHaplotypeMap.get(allele).size(), alleleHaplotypeMap.get(notAllele).size()));
         return alleleLikelihoods;
     }
 

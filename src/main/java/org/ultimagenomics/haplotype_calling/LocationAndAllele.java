@@ -26,12 +26,12 @@ public class LocationAndAllele extends Allele {
         final org.ultimagenomics.haplotype_calling.LocationAndAllele that = (org.ultimagenomics.haplotype_calling.LocationAndAllele) o;
 
         if (loc != that.loc) return false;
-        return this != null ? this.equals(that) : that == null;
+        return this != null ? super.equals(that) : that == null;
     }
 
     @Override
     public int hashCode() {
-        return 31 * loc + (this != null ? ((Allele)this).hashCode() : 0);
+        return 31 * loc + (this != null ? super.hashCode() : 0);
     }
 
     public String toString() {return String.format("(%d) %s", loc, getBaseString());}

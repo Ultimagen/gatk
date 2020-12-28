@@ -35,6 +35,7 @@ import org.broadinstitute.hellbender.utils.downsampling.AlleleBiasedDownsampling
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.genotyper.IndexedSampleList;
 import org.broadinstitute.hellbender.utils.genotyper.SampleList;
+import org.broadinstitute.hellbender.utils.haplotype.EventMap;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.haplotype.HaplotypeBAMWriter;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
@@ -49,7 +50,7 @@ import org.broadinstitute.hellbender.utils.variant.HomoSapiensConstants;
 import org.broadinstitute.hellbender.utils.variant.writers.GVCFWriter;
 import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
 import org.ultimagenomics.flow_based_read.tests.AlleleLikelihoodWriter;
-import org.ultimagenomics.haplotype_calling.ContigFilteringHC;
+import org.ultimagenomics.haplotype_calling.AlleleFilteringHC;
 import org.ultimagenomics.haplotype_calling.LHWRefView;
 
 import java.io.IOException;
@@ -684,11 +685,18 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
         final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
         if (hcArgs.filterContigs) {
-            logger.debug("Filtering contigs");
-            ContigFilteringHC contigFilter = new ContigFilteringHC(hcArgs, assemblyDebugOutStream, genotypingEngine);
-            subsettedReadLikelihoodsFinal = contigFilter.filterContigs(readLikelihoods);
+            logger.debug("Filtering alleles");
+            AlleleFilteringHC alleleFilter = new AlleleFilteringHC(hcArgs, assemblyDebugOutStream, genotypingEngine);
+            //need to update haplotypes to find the alleles
+            EventMap.buildEventMapsForHaplotypes(readLikelihoods.alleles(),
+                    assemblyResult.getFullReferenceWithPadding(),
+                    assemblyResult.getPaddedReferenceLoc(),
+                    hcArgs.assemblerArgs.debugAssembly,
+                    hcArgs.maxMnpDistance);
+            subsettedReadLikelihoodsFinal = alleleFilter.filterAlleles(readLikelihoods);
+
         } else {
-            logger.debug("Not filtering contigs");
+            logger.debug("Not filtering alleles");
             subsettedReadLikelihoodsFinal = readLikelihoods;
         }
 
