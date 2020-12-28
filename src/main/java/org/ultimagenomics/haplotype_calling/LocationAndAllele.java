@@ -2,6 +2,7 @@ package org.ultimagenomics.haplotype_calling;
 import htsjdk.variant.variantcontext.Allele;
 
 public class LocationAndAllele extends Allele {
+    final static public long serialVersionUID = 1L;
     private final int loc;
 
     public LocationAndAllele(final int loc, final Allele allele) {

@@ -48,7 +48,7 @@ import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
-import org.ultimagenomics.haplotype_calling.ContigFilteringMutect;
+import org.ultimagenomics.haplotype_calling.AlleleFilteringMutect;
 import org.ultimagenomics.haplotype_calling.LHWRefView;
 
 import java.io.File;
@@ -258,11 +258,11 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
         final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
 
         if (MTAC.filterContigs) {
-            logger.debug("Filtering contigs");
-            ContigFilteringMutect contigFilter = new ContigFilteringMutect(MTAC, null, genotypingEngine);
-            subsettedReadLikelihoodsFinal = contigFilter.filterContigs(readLikelihoods);
+            logger.debug("Filtering alleles");
+            AlleleFilteringMutect alleleFilter = new AlleleFilteringMutect(MTAC, null, genotypingEngine);
+            subsettedReadLikelihoodsFinal = alleleFilter.filterAlleles(readLikelihoods);
         } else {
-            logger.debug("Not filtering contigs");
+            logger.debug("Not filtering alleles");
             subsettedReadLikelihoodsFinal = readLikelihoods;
         }
 
