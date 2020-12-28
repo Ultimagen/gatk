@@ -684,7 +684,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
 
         final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
-        if (hcArgs.filterContigs) {
+        if (hcArgs.filterAlleles) {
             logger.debug("Filtering alleles");
             AlleleFilteringHC alleleFilter = new AlleleFilteringHC(hcArgs, assemblyDebugOutStream, genotypingEngine);
             //need to update haplotypes to find the alleles

@@ -188,7 +188,7 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     @Advanced
     @Hidden
     @Argument(fullName = FILTER_ALLELES, doc = "pre-filter alleles before genotyping", optional=true)
-    public boolean filterContigs=false;
+    public boolean filterAlleles=false;
 
     @Advanced
     @Hidden
