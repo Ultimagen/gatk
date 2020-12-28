@@ -257,7 +257,7 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
         readLikelihoods.switchToNaturalLog();
         final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
 
-        if (MTAC.filterContigs) {
+        if (MTAC.filterAlleles) {
             logger.debug("Filtering alleles");
             AlleleFilteringMutect alleleFilter = new AlleleFilteringMutect(MTAC, null, genotypingEngine);
             subsettedReadLikelihoodsFinal = alleleFilter.filterAlleles(readLikelihoods);

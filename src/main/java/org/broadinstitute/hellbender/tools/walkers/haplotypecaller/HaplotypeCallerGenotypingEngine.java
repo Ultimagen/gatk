@@ -140,7 +140,7 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
 
         List<Pair<LocationAndAlleles, LocationAndAlleles>> exclusivePairs=null;
         Map<LocationAndAlleles, Set<LocationAndAlleles>> exclusivePairMap=null;
-        if (hcArgs.filterContigs) {
+        if (hcArgs.filterAlleles) {
             final HaplotypeAlleleMatrix coocurrence = new HaplotypeAlleleMatrix(haplotypes);
             exclusivePairs = coocurrence.nonCoOcurringVariants();
             exclusivePairs = HaplotypeAlleleMatrix.filterExclusivePairsByDistance(exclusivePairs, MAX_SAME_ALLELE_DIST);
@@ -170,7 +170,7 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
                     haplotypes, true);
 
             List<VariantContext> possibleEquivalents = null;
-            if (hcArgs.filterContigs) {
+            if (hcArgs.filterAlleles) {
                 //Adding all variants in the area that are possibly equivalent allele up to hmer indel
                 possibleEquivalents = getPossibleEquivalents(loc, eventsAtThisLoc,
                         exclusivePairMap, haplotypes);
@@ -280,7 +280,7 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
 
         List<Pair<LocationAndAlleles, LocationAndAlleles>> exclusivePairs=null;
         Map<LocationAndAlleles, Set<LocationAndAlleles>> exclusivePairMap=null;
-        if (hcArgs.filterContigs) {
+        if (hcArgs.filterAlleles) {
             final HaplotypeAlleleMatrix coocurrence = new HaplotypeAlleleMatrix(haplotypes);
             exclusivePairs = coocurrence.nonCoOcurringVariants();
             exclusivePairs = HaplotypeAlleleMatrix.filterExclusivePairsByDistance(exclusivePairs, MAX_SAME_ALLELE_DIST);
@@ -311,7 +311,7 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
                     haplotypes, true);
 
             List<VariantContext> possibleEquivalents = null;
-            if (hcArgs.filterContigs) {
+            if (hcArgs.filterAlleles) {
                 //Adding all variants in the area that are possibly equivalent allele up to hmer indel
                 possibleEquivalents = getPossibleEquivalents(loc, eventsAtThisLoc,
                         exclusivePairMap, haplotypes);
