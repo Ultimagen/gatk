@@ -42,10 +42,6 @@ public abstract class AlleleFiltering {
         return subsettedReadLikelihoodsFinal;
     }
 
-    private AlleleLikelihoods<GATKRead, Haplotype> subsetHaplotypesByAlleles(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods,
-                                                                             AssemblyBasedCallerArgumentCollection hcargs) {
-        return subsetHaplotypesByAlleles(readLikelihoods, hcargs, true);
-    }
 
 
     static private Set<LocationAndAllele> getAlleles(final Haplotype haplotype){
@@ -58,7 +54,7 @@ public abstract class AlleleFiltering {
     }
 
     private AlleleLikelihoods<GATKRead, Haplotype> subsetHaplotypesByAlleles(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods,
-                                                                             AssemblyBasedCallerArgumentCollection hcargs, boolean keepRef ){
+                                                                             AssemblyBasedCallerArgumentCollection hcargs){
 
         boolean removedHaplotype = true;
         AlleleLikelihoods<GATKRead, Haplotype> currentReadLikelihoods = readLikelihoods;
