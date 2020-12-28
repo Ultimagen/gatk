@@ -1,4 +1,4 @@
-package org.ultimagenomics.variant_calling;
+package org.ultimagenomics.variant_recalling;
 
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SAMRecordIterator;
@@ -12,13 +12,11 @@ import org.broadinstitute.hellbender.utils.gcs.BucketUtils;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 
-import java.io.File;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 

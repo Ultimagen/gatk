@@ -1,7 +1,6 @@
-package org.ultimagenomics.variant_calling;
+package org.ultimagenomics.variant_recalling;
 
 import org.broadinstitute.hellbender.CommandLineProgramTest;
-import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.testng.annotations.Test;
 
 import java.io.File;
