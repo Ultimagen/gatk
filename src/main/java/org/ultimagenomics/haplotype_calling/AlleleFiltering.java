@@ -32,9 +32,6 @@ public abstract class AlleleFiltering {
         logger.debug("SHA:: filter alleles - start");
         AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsBoth = subsetHaplotypesByAlleles(readLikelihoods, hcArgs);
         logger.debug("SHA:: filter alleles - end");
-        logger.debug("SHA:: filter ref alleles - start");
-        subsettedReadLikelihoodsBoth = subsetHaplotypesByRefAlleles(subsettedReadLikelihoodsBoth, hcArgs);
-        logger.debug("SHA:: filter ref alleles - end");
 
         subsettedReadLikelihoodsFinal = subsettedReadLikelihoodsBoth;
         if (assemblyDebugOutStream != null) {
@@ -50,10 +47,6 @@ public abstract class AlleleFiltering {
         return subsetHaplotypesByAlleles(readLikelihoods, hcargs, true);
     }
 
-    private AlleleLikelihoods<GATKRead, Haplotype> subsetHaplotypesByRefAlleles(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods,
-                                                                                AssemblyBasedCallerArgumentCollection hcargs) {
-        return subsetHaplotypesByAlleles(readLikelihoods, hcargs, false);
-    }
 
     static private Set<LocationAndAllele> getAlleles(final Haplotype haplotype){
         Collection<VariantContext> vcs = haplotype.getEventMap().getVariantContexts();
@@ -100,18 +93,8 @@ public abstract class AlleleFiltering {
             // repeat until no change.
             removedHaplotype = false;
 
-            //find contigs that only have the reference haplotypes and remove them.
-            if (keepRef) {
-                final List<LocationAndAllele> refOnlyAlleles = alleleHaplotypeMap.keySet().stream().filter(c -> alleleHaplotypeMap.get(c).stream().anyMatch(Allele::isReference)).collect(Collectors.toList());
-                refOnlyAlleles.forEach(alleleHaplotypeMap::remove);
-                logger.debug("----- ROA start ");
-                for (LocationAndAllele al : refOnlyAlleles) {
-                    logger.debug(String.format("ROA:: %s", (al).toString()));
-                }
-                logger.debug("----- ROA end");
-            }
 
-            // find contigs that have all the haplotypes in them and remove them.
+            // find all the haplotypes have them and remove them from a consideration to be removed.
             final List<LocationAndAllele> allHapAlleles = alleleHaplotypeMap.keySet().stream().filter(c -> alleleHaplotypeMap.get(c).containsAll(eventualAlleles)).collect(Collectors.toList());
             allHapAlleles.forEach(alleleHaplotypeMap::remove);
 
@@ -122,7 +105,7 @@ public abstract class AlleleFiltering {
             logger.debug("----- AHA end -----");
 
 
-            //find contigs that have no haplotypes in them and remove them.
+            //find alleles that no haplotypes have them and remove them from a consideration to be removed (nobody cares).
             final List<LocationAndAllele> noHapAlleles= alleleHaplotypeMap.keySet().stream().filter(c -> alleleHaplotypeMap.get(c).isEmpty()).collect(Collectors.toList());
             noHapAlleles.forEach(alleleHaplotypeMap::remove);
             logger.debug("----- NHA start ----");
@@ -143,11 +126,8 @@ public abstract class AlleleFiltering {
             logger.debug("GAL::end");
 
             final LocationAndAllele badAllele;
-            if (keepRef) {
-                badAllele = identifyBadAllele(collectedRPLs, collectedSORs, allAlleles, hcargs.prefilterQualThreshold, hcargs.prefilterSorThreshold);
-            } else {
-                badAllele = identifyBadAllele(collectedRPLs, collectedSORs, allAlleles, hcargs.refPrefilterQualThreshold, hcargs.prefilterSorThreshold);
-            }
+            badAllele = identifyBadAllele(collectedRPLs, collectedSORs, allAlleles, hcargs.prefilterQualThreshold, hcargs.prefilterSorThreshold);
+
 
             if (badAllele != null){
                 logger.debug(String.format("SHA:: Removing %s", badAllele.toString()));
