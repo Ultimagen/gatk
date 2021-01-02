@@ -2,11 +2,18 @@ package org.ultimagenomics.haplotype_calling;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.jgrapht.UndirectedGraph;
+import org.jgrapht.alg.ConnectivityInspector;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.SimpleGraph;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class OccurrenceMatrix<R,C> {
+    protected static final Logger logger = LogManager.getLogger(OccurrenceMatrix.class);
 
     private List<R> rowNames;
     private List<C> colNames;
@@ -29,10 +36,14 @@ public class OccurrenceMatrix<R,C> {
                 }
             }
         }
+
         nCols = col_count;
         colNames = new ArrayList<>();
+        for (int i = 0 ; i < nCols; i++ ){
+            colNames.add(null);
+        }
         for ( C col: col2idx.keySet() ){
-            colNames.add(col2idx.get(col), col);
+            colNames.set(col2idx.get(col), col);
         }
 
 
@@ -68,8 +79,15 @@ public class OccurrenceMatrix<R,C> {
         return vc_result;
     }
 
-    public List<List<C>> getIndependentSets(){
+    public List<Set<C>> getIndependentSets(){
         List<Pair<C,C>> nonCoOcurring = nonCoOcurringColumns();
-        return null;
+        UndirectedGraph<C, DefaultEdge> nonConnectedAllelesGraph = new SimpleGraph<>(DefaultEdge.class);
+        colNames.stream().forEach(x -> nonConnectedAllelesGraph.addVertex(x));
+        nonCoOcurring.stream().forEach(edge->nonConnectedAllelesGraph.addEdge(edge.getLeft(), edge.getRight()));
+
+        ConnectivityInspector ci = new ConnectivityInspector(nonConnectedAllelesGraph);
+        List<Set<C>> result = ci.connectedSets();
+        logger.debug (String.format("Received %d alleles that generate %d connected components", colNames.size(), result.size()));
+        return result;
     }
 }

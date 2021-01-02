@@ -58,86 +58,99 @@ public abstract class AlleleFiltering {
 
         boolean removedHaplotype = true;
         AlleleLikelihoods<GATKRead, Haplotype> currentReadLikelihoods = readLikelihoods;
-        final Map<Haplotype, List<LocationAndAllele>> haplotypeAlleleMap  = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
-        readLikelihoods.alleles().forEach(h -> getAlleles(h).forEach(jh -> haplotypeAlleleMap.get(h).add(jh)));
+        final Map<Haplotype, Collection<LocationAndAllele>> haplotypeAlleleMap  = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
+        readLikelihoods.alleles().forEach(h -> getAlleles(h).stream().filter(al -> !al.isReference()).forEach(jh -> haplotypeAlleleMap.get(h).add(jh)));
+        OccurrenceMatrix<Haplotype, LocationAndAllele> occm = new OccurrenceMatrix<Haplotype, LocationAndAllele>(haplotypeAlleleMap);
+        List<Set<LocationAndAllele>> independentAlleles = occm.getIndependentSets();
+        List<LocationAndAllele> allRemovedAlleles = new ArrayList<>();
+        Set<Haplotype> haplotypesToRemove = new HashSet<>();
 
-        while (removedHaplotype) {
-            // build map from contig to haplotype
-            final Map<LocationAndAllele, List<Haplotype>> alleleHaplotypeMap = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
+        for ( Set<LocationAndAllele> alleleSet : independentAlleles) {
+            Set<Haplotype> enabledHaplotypes = new HashSet<>();
 
-            currentReadLikelihoods.alleles()
-                    .forEach(h -> getAlleles(h).forEach(
-                            jh -> alleleHaplotypeMap.get(jh).add(h))
-                    );
+            for (Haplotype h : currentReadLikelihoods.alleles()) enabledHaplotypes.add(h);
+
+            while (removedHaplotype) {
+                // build map from contig to haplotype
+                final Map<LocationAndAllele, List<Haplotype>> alleleHaplotypeMap = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
+
+                currentReadLikelihoods.alleles().stream().filter(h->enabledHaplotypes.contains(h))
+                        .forEach(h -> getAlleles(h).stream().filter(al -> alleleSet.contains(al)).filter(al -> !al.isReference()).forEach(
+                                jh -> alleleHaplotypeMap.get(jh).add(h))
+                        );
 
 
-            logger.debug("AHM::printout start");
-            for (LocationAndAllele al: alleleHaplotypeMap.keySet()) {
-                logger.debug("AHM::allele block ---> ");
-                for (Allele h: alleleHaplotypeMap.get(al)){
-                    logger.debug(String.format("AHM:: (%d) %s: %s", al.getLoc(), al.getAllele().getBaseString(),h.getBaseString()));
+                logger.debug("AHM::printout start");
+                for (LocationAndAllele al : alleleHaplotypeMap.keySet()) {
+                    logger.debug("AHM::allele block ---> ");
+                    for (Allele h : alleleHaplotypeMap.get(al)) {
+                        logger.debug(String.format("AHM:: (%d) %s: %s", al.getLoc(), al.getAllele().getBaseString(), h.getBaseString()));
+                    }
+                    logger.debug("AHM::allele block ---< ");
+
                 }
-                logger.debug("AHM::allele block ---< ");
+                logger.debug("AHM::printout end");
 
-            }
-            logger.debug("AHM::printout end");
-
-            final List<Haplotype> eventualAlleles = new ArrayList<>(currentReadLikelihoods.alleles());
-            if (eventualAlleles.stream().noneMatch(Allele::isReference)) {
-                throw new IllegalStateException("Reference haplotype must always remain!");
-            }
-            // repeat until no change.
-            removedHaplotype = false;
-
-
-            // find all the haplotypes have them and remove them from a consideration to be removed.
-            final List<LocationAndAllele> allHapAlleles = alleleHaplotypeMap.keySet().stream().filter(c -> alleleHaplotypeMap.get(c).containsAll(eventualAlleles)).collect(Collectors.toList());
-            allHapAlleles.forEach(alleleHaplotypeMap::remove);
-
-            logger.debug("----- AHA start ----");
-            for (LocationAndAllele al: allHapAlleles) {
-                logger.debug(String.format("AHA:: %s", (al).toString()));
-            }
-            logger.debug("----- AHA end -----");
-
-
-            //find alleles that no haplotypes have them and remove them from a consideration to be removed (nobody cares).
-            final List<LocationAndAllele> noHapAlleles= alleleHaplotypeMap.keySet().stream().filter(c -> alleleHaplotypeMap.get(c).isEmpty()).collect(Collectors.toList());
-            noHapAlleles.forEach(alleleHaplotypeMap::remove);
-            logger.debug("----- NHA start ----");
-            for (LocationAndAllele al: noHapAlleles) {
-                logger.debug(String.format("NHA:: %s", (al.toString())));
-            }
-            logger.debug("----- NHA end -----");
-
-            final List<LocationAndAllele> allAlleles = new ArrayList<>(alleleHaplotypeMap.keySet());
-
-            final AlleleLikelihoods<GATKRead, Haplotype> finalCurrentReadLikelihoods = currentReadLikelihoods;
-            logger.debug("GAL::start");
-            final List<AlleleLikelihoods<GATKRead, Allele>> alleleLikelihoods =
-                    allAlleles.stream().map(c -> getAlleleLikelihoodMatrix(finalCurrentReadLikelihoods, c, haplotypeAlleleMap)).collect(Collectors.toList());
-
-            final List<Integer> collectedRPLs = IntStream.range(0, allAlleles.size()).mapToObj(i -> getAlleleLikelihood(alleleLikelihoods.get(i), allAlleles.get(i))).collect(Collectors.toList());
-            final List<Double> collectedSORs = IntStream.range(0, allAlleles.size()).mapToObj( i -> getAlleleSOR(alleleLikelihoods.get(i), allAlleles.get(i))).collect(Collectors.toList());
-            logger.debug("GAL::end");
-
-            final LocationAndAllele badAllele;
-            badAllele = identifyBadAllele(collectedRPLs, collectedSORs, allAlleles, hcargs.prefilterQualThreshold, hcargs.prefilterSorThreshold);
-
-
-            if (badAllele != null){
-                logger.debug(String.format("SHA:: Removing %s", badAllele.toString()));
-                final ArrayList<Haplotype> haplotypesWithAllele = new ArrayList<>(alleleHaplotypeMap.get(badAllele));
-                haplotypesWithAllele.removeIf(Allele::isReference);
-
-                removedHaplotype = eventualAlleles.removeAll(haplotypesWithAllele);
+                final List<Haplotype> eventualAlleles = new ArrayList<>(currentReadLikelihoods.alleles());
                 if (eventualAlleles.stream().noneMatch(Allele::isReference)) {
                     throw new IllegalStateException("Reference haplotype must always remain!");
                 }
-                //subset to remaining haplotypes:
-                currentReadLikelihoods = currentReadLikelihoods.subsetToAlleles(eventualAlleles);
+                // repeat until no change.
+                removedHaplotype = false;
+
+
+                // find all the haplotypes have them and remove them from a consideration to be removed.
+                final List<LocationAndAllele> allHapAlleles = alleleHaplotypeMap.keySet().stream().filter(c -> alleleHaplotypeMap.get(c).containsAll(eventualAlleles)).collect(Collectors.toList());
+                allHapAlleles.forEach(alleleHaplotypeMap::remove);
+
+                logger.debug("----- AHA start ----");
+                for (LocationAndAllele al : allHapAlleles) {
+                    logger.debug(String.format("AHA:: %s", (al).toString()));
+                }
+                logger.debug("----- AHA end -----");
+
+
+                //find alleles that no haplotypes have them and remove them from a consideration to be removed (nobody cares).
+                final List<LocationAndAllele> noHapAlleles = alleleHaplotypeMap.keySet().stream().filter(c -> alleleHaplotypeMap.get(c).isEmpty()).collect(Collectors.toList());
+                noHapAlleles.forEach(alleleHaplotypeMap::remove);
+                logger.debug("----- NHA start ----");
+                for (LocationAndAllele al : noHapAlleles) {
+                    logger.debug(String.format("NHA:: %s", (al.toString())));
+                }
+                logger.debug("----- NHA end -----");
+
+                final List<LocationAndAllele> allAlleles = new ArrayList<>(alleleHaplotypeMap.keySet());
+
+                final AlleleLikelihoods<GATKRead, Haplotype> finalCurrentReadLikelihoods = currentReadLikelihoods;
+                logger.debug("GAL::start");
+                final List<AlleleLikelihoods<GATKRead, Allele>> alleleLikelihoods =
+                        allAlleles.stream().map(c -> getAlleleLikelihoodMatrix(finalCurrentReadLikelihoods, c, haplotypeAlleleMap)).collect(Collectors.toList());
+
+                final List<Integer> collectedRPLs = IntStream.range(0, allAlleles.size()).mapToObj(i -> getAlleleLikelihood(alleleLikelihoods.get(i), allAlleles.get(i))).collect(Collectors.toList());
+                final List<Double> collectedSORs = IntStream.range(0, allAlleles.size()).mapToObj(i -> getAlleleSOR(alleleLikelihoods.get(i), allAlleles.get(i))).collect(Collectors.toList());
+                logger.debug("GAL::end");
+
+                final LocationAndAllele badAllele;
+                badAllele = identifyBadAllele(collectedRPLs, collectedSORs, allAlleles, hcargs.prefilterQualThreshold, hcargs.prefilterSorThreshold);
+
+
+                if (badAllele != null) {
+                    logger.debug(String.format("SHA:: Removing %s", badAllele.toString()));
+                    allRemovedAlleles.add(badAllele);
+                    removedHaplotype = true;
+                    final ArrayList<Haplotype> haplotypesWithAllele = new ArrayList<>(alleleHaplotypeMap.get(badAllele));
+                    haplotypesWithAllele.removeIf(Allele::isReference);
+                    for (Haplotype h: haplotypesWithAllele){
+                        haplotypesToRemove.add(h);
+                        enabledHaplotypes.remove(h);
+                    }
+                }
             }
         }
+
+        Set<Haplotype> eventualAlleles = new HashSet<>();
+        currentReadLikelihoods.alleles().stream().filter(al -> !haplotypesToRemove.contains(al)).forEach(al -> eventualAlleles.add(al));
+        currentReadLikelihoods = currentReadLikelihoods.subsetToAlleles(eventualAlleles);
 
         return currentReadLikelihoods;
     }
@@ -182,7 +195,7 @@ public abstract class AlleleFiltering {
 
     private AlleleLikelihoods<GATKRead, Allele> getAlleleLikelihoodMatrix(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods,
                                                                                      final LocationAndAllele allele,
-                                                                                     final Map<Haplotype, List<LocationAndAllele> > haplotypeAlleleMap
+                                                                                     final Map<Haplotype, Collection<LocationAndAllele>> haplotypeAlleleMap
                                                                                      ){
         Map<Allele,List<Haplotype>> alleleHaplotypeMap = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
 
