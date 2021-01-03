@@ -81,9 +81,13 @@ public class OccurrenceMatrix<R,C> {
 
     public List<Set<C>> getIndependentSets(){
         List<Pair<C,C>> nonCoOcurring = nonCoOcurringColumns();
+        return getIndependentSets(nonCoOcurring);
+    }
+
+    public List<Set<C>> getIndependentSets(List<Pair<C,C>> nonCoOcurringColumns){
         UndirectedGraph<C, DefaultEdge> nonConnectedAllelesGraph = new SimpleGraph<>(DefaultEdge.class);
         colNames.stream().forEach(x -> nonConnectedAllelesGraph.addVertex(x));
-        nonCoOcurring.stream().forEach(edge->nonConnectedAllelesGraph.addEdge(edge.getLeft(), edge.getRight()));
+        nonCoOcurringColumns.stream().forEach(edge->nonConnectedAllelesGraph.addEdge(edge.getLeft(), edge.getRight()));
 
         ConnectivityInspector ci = new ConnectivityInspector(nonConnectedAllelesGraph);
         List<Set<C>> result = ci.connectedSets();
