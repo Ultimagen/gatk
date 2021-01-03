@@ -4,11 +4,11 @@ import htsjdk.variant.variantcontext.Allele;
 public class LocationAndAllele extends Allele {
     final static public long serialVersionUID = 1L;
     private final int loc;
-
-    public LocationAndAllele(final int loc, final Allele allele) {
+    private final Allele refAllele;
+    public LocationAndAllele(final int loc, final Allele allele, final Allele refAllele) {
         super(allele, false);
         this.loc = loc;
-
+        this.refAllele = refAllele;
     }
 
     public int getLoc() {
@@ -36,5 +36,6 @@ public class LocationAndAllele extends Allele {
     }
 
     public String toString() {return String.format("(%d) %s", loc, getBaseString());}
+    public Allele getRefAllele() { return refAllele;}
 }
 

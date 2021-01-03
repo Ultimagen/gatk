@@ -3,6 +3,8 @@ package org.ultimagenomics.haplotype_calling;
 import htsjdk.samtools.util.CollectionUtil;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyBasedCallerArgumentCollection;
@@ -10,6 +12,7 @@ import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.Invers
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
+import org.ultimagenomics.flow_based_read.read.FlowBasedHaplotype;
 
 import java.io.PrintStream;
 import java.util.*;
@@ -21,16 +24,17 @@ public abstract class AlleleFiltering {
     protected static final Logger logger = LogManager.getLogger(AlleleFiltering.class);
     private AssemblyBasedCallerArgumentCollection hcArgs;
     private PrintStream assemblyDebugOutStream;
+
     public AlleleFiltering(AssemblyBasedCallerArgumentCollection _hcargs, PrintStream _assemblyDebugOutStream){
         hcArgs = _hcargs;
         assemblyDebugOutStream = _assemblyDebugOutStream;
     }
 
-    public AlleleLikelihoods<GATKRead, Haplotype> filterAlleles(AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods){
+    public AlleleLikelihoods<GATKRead, Haplotype> filterAlleles(AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods, int activeWindowStart){
         AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
 
         logger.debug("SHA:: filter alleles - start");
-        AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsBoth = subsetHaplotypesByAlleles(readLikelihoods, hcArgs);
+        AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsBoth = subsetHaplotypesByAlleles(readLikelihoods, hcArgs, activeWindowStart);
         logger.debug("SHA:: filter alleles - end");
 
         subsettedReadLikelihoodsFinal = subsettedReadLikelihoodsBoth;
@@ -48,22 +52,28 @@ public abstract class AlleleFiltering {
         Collection<VariantContext> vcs = haplotype.getEventMap().getVariantContexts();
         Set<LocationAndAllele> allEvents = new HashSet<>();
         for (VariantContext vc: vcs) {
-            allEvents.addAll(vc.getAlleles().stream().map( al -> new LocationAndAllele(vc.getStart(), al)).collect(Collectors.toList()));
+            allEvents.addAll(vc.getAlleles().stream().map( al -> new LocationAndAllele(vc.getStart(), al, vc.getReference())).collect(Collectors.toList()));
         }
         return allEvents;
     }
 
     private AlleleLikelihoods<GATKRead, Haplotype> subsetHaplotypesByAlleles(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods,
-                                                                             AssemblyBasedCallerArgumentCollection hcargs){
+                                                                             AssemblyBasedCallerArgumentCollection hcargs,
+                                                                             int activeWindowStart){
 
         boolean removedHaplotype = true;
         AlleleLikelihoods<GATKRead, Haplotype> currentReadLikelihoods = readLikelihoods;
         final Map<Haplotype, Collection<LocationAndAllele>> haplotypeAlleleMap  = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
         readLikelihoods.alleles().forEach(h -> getAlleles(h).stream().filter(al -> !al.isReference()).forEach(jh -> haplotypeAlleleMap.get(h).add(jh)));
-        OccurrenceMatrix<Haplotype, LocationAndAllele> occm = new OccurrenceMatrix<Haplotype, LocationAndAllele>(haplotypeAlleleMap);
-        List<Set<LocationAndAllele>> independentAlleles = occm.getIndependentSets();
+        OccurrenceMatrix<Haplotype, LocationAndAllele> occm = new OccurrenceMatrix<>(haplotypeAlleleMap);
+        List<Pair<LocationAndAllele, LocationAndAllele>> nonCoOcurringAlleles = occm.nonCoOcurringColumns();
+        nonCoOcurringAlleles = filterByDistance(nonCoOcurringAlleles, 1, 20);
+        nonCoOcurringAlleles = filterSameUpToHmerPairs(nonCoOcurringAlleles, findReferenceHaplotype(readLikelihoods.alleles()), activeWindowStart);
+
+        List<Set<LocationAndAllele>> independentAlleles = occm.getIndependentSets(nonCoOcurringAlleles);
         List<LocationAndAllele> allRemovedAlleles = new ArrayList<>();
         Set<Haplotype> haplotypesToRemove = new HashSet<>();
+
 
         for ( Set<LocationAndAllele> alleleSet : independentAlleles) {
             Set<Haplotype> enabledHaplotypes = new HashSet<>();
@@ -155,6 +165,7 @@ public abstract class AlleleFiltering {
         return currentReadLikelihoods;
     }
 
+
     private LocationAndAllele identifyBadAllele(final List<Integer> collectedRPLs,final List<Double> collectedSORs, List<LocationAndAllele> alleles, double qual_threshold, double sor_threshold) {
         final Integer worstRPL = collectedRPLs.stream().max(Integer::compareTo).orElse(Integer.MIN_VALUE);
         final Double worstSOR = collectedSORs.stream().max(Double::compareTo).orElse(0.0);
@@ -178,6 +189,7 @@ public abstract class AlleleFiltering {
             return null;
     }
 
+
     private enum StrandsToUse {
         FORWARD(true),
         REVERSE(false);
@@ -192,6 +204,7 @@ public abstract class AlleleFiltering {
             return read.isReverseStrand() ^ useForwardStrand;
         }
     }
+
 
     private AlleleLikelihoods<GATKRead, Allele> getAlleleLikelihoodMatrix(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods,
                                                                                      final LocationAndAllele allele,
@@ -215,5 +228,72 @@ public abstract class AlleleFiltering {
 
     abstract int getAlleleLikelihood(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele);
     abstract double getAlleleSOR(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele);
+
+
+    static public List<Pair<LocationAndAllele, LocationAndAllele>> filterByDistance(List<Pair<LocationAndAllele, LocationAndAllele>> allelePairs,
+                                   int min_dist, int max_dist) {
+        logger.debug(String.format("FBD: input %d pairs ", allelePairs.size()));
+        allelePairs.removeIf(v -> Math.abs(v.getLeft().getLoc() - v.getRight().getLoc())>max_dist);
+        allelePairs.removeIf(v -> Math.abs(v.getLeft().getLoc() - v.getRight().getLoc())<min_dist);
+        logger.debug(String.format("FBD: output %d pairs ", allelePairs.size()));
+
+        return allelePairs;
+    }
+
+
+    public List<Pair<LocationAndAllele, LocationAndAllele>> filterSameUpToHmerPairs(List<Pair<LocationAndAllele,
+            LocationAndAllele>> allelePairs, Haplotype refHaplotype, int activeWindowStart) {
+        logger.debug(String.format("FSUHP: input %d pairs ", allelePairs.size()));
+
+        List<Pair<LocationAndAllele, LocationAndAllele>> result = new ArrayList<>();
+
+        for (Pair<LocationAndAllele, LocationAndAllele> allelePair: allelePairs) {
+
+            int commonPrefixLengthLeft = Math.abs(allelePair.getLeft().getAllele().length() - allelePair.getLeft().getRefAllele().length());
+            int commonPrefixLengthRight = Math.abs(allelePair.getRight().getAllele().length() - allelePair.getRight().getRefAllele().length());
+
+            Pair<Haplotype, Haplotype> modifiedHaplotypes = new ImmutablePair<>(
+                    refHaplotype.insertAllele(
+                            allelePair.getLeft().getRefAllele(),
+                            allelePair.getLeft().getAllele(),
+                            allelePair.getLeft().getLoc()-activeWindowStart,
+                            -1,
+                            commonPrefixLengthLeft),
+                    refHaplotype.insertAllele(
+                            allelePair.getRight().getRefAllele(),
+                            allelePair.getRight().getAllele(),
+                            allelePair.getRight().getLoc() - activeWindowStart,
+                            -1,
+                            commonPrefixLengthRight));
+
+            Pair<FlowBasedHaplotype, FlowBasedHaplotype> fbh = new ImmutablePair<>(haplotype2FlowHaplotype(modifiedHaplotypes.getLeft()),
+                                                                                   haplotype2FlowHaplotype(modifiedHaplotypes.getRight()));
+
+            if (fbh.getLeft().equalUpToHmerChange(fbh.getRight()))
+            {
+                result.add(allelePair);
+            }
+        }
+
+        logger.debug(String.format("FSUHP: output %d pairs ", result.size()));
+
+        return result;
+    }
+
+
+    private Haplotype findReferenceHaplotype( List<Haplotype> haplotypeList) {
+        for (Haplotype h: haplotypeList ) {
+            if (h.isReference()) {
+                return h;
+            }
+        }
+        return null;
+    }
+
+
+    private FlowBasedHaplotype haplotype2FlowHaplotype(Haplotype hap) {
+        FlowBasedHaplotype flowBasedHaplotype = new FlowBasedHaplotype(hap, "TACG");
+        return flowBasedHaplotype;
+    }
 
 }

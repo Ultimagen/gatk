@@ -260,7 +260,7 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
         if (MTAC.filterAlleles) {
             logger.debug("Filtering alleles");
             AlleleFilteringMutect alleleFilter = new AlleleFilteringMutect(MTAC, null, genotypingEngine);
-            subsettedReadLikelihoodsFinal = alleleFilter.filterAlleles(readLikelihoods);
+            subsettedReadLikelihoodsFinal = alleleFilter.filterAlleles(readLikelihoods, assemblyResult.getPaddedReferenceLoc().getStart());
         } else {
             logger.debug("Not filtering alleles");
             subsettedReadLikelihoodsFinal = readLikelihoods;
