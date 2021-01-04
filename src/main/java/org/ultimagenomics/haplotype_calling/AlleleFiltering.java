@@ -249,8 +249,8 @@ public abstract class AlleleFiltering {
 
         for (Pair<LocationAndAllele, LocationAndAllele> allelePair: allelePairs) {
 
-            int commonPrefixLengthLeft = Math.min(allelePair.getLeft().getAllele().length(), allelePair.getLeft().getRefAllele().length());
-            int commonPrefixLengthRight = Math.min(allelePair.getRight().getAllele().length(), allelePair.getRight().getRefAllele().length());
+            int commonPrefixLengthLeft = getCommonPrefixLength(allelePair.getLeft().getAllele(), allelePair.getLeft().getRefAllele());
+            int commonPrefixLengthRight = getCommonPrefixLength(allelePair.getRight().getAllele(), allelePair.getRight().getRefAllele());
 
             Pair<Haplotype, Haplotype> modifiedHaplotypes = new ImmutablePair<>(
                     refHaplotype.insertAllele(
@@ -298,6 +298,14 @@ public abstract class AlleleFiltering {
     private FlowBasedHaplotype haplotype2FlowHaplotype(Haplotype hap) {
         FlowBasedHaplotype flowBasedHaplotype = new FlowBasedHaplotype(hap, "TACG");
         return flowBasedHaplotype;
+    }
+
+    private int getCommonPrefixLength(Allele al1, Allele al2){
+        if (al1.length()!=al2.length()){
+            return Math.min(al1.length(), al2.length());
+        } else {
+            return 0;
+        }
     }
 
 }
