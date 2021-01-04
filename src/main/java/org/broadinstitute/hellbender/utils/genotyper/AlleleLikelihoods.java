@@ -784,10 +784,6 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
             final int sampleEvidenceCount = evidenceBySampleIndex.get(s).size();
             final double[][] oldSampleValues = valuesBySampleIndex[s];
             final double[][] newSampleValues = result[s] = new double[newAlleleCount][sampleEvidenceCount];
-            // We initiate all likelihoods to -Inf.
-//            for (int a = 0; a < newAlleleCount; a++) {
-//                Arrays.fill(newSampleValues[a], Double.NEGATIVE_INFINITY);
-//            }
 
             // For each old allele and unit of evidence we update the new table keeping the maximum likelihood.
             for (int newAllele = 0; newAllele < newAlleleCount; newAllele++) {

@@ -35,7 +35,7 @@ public class LocationAndAllele extends Allele {
         return 31 * loc + (this != null ? super.hashCode() : 0);
     }
 
-    public String toString() {return String.format("(%d) %s", loc, getBaseString());}
+    public String toString() {return String.format("(%d) %s/%s", loc, getBaseString(), getRefAllele().getBaseString());}
     public Allele getRefAllele() { return refAllele;}
 }
 
