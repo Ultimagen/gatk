@@ -249,8 +249,8 @@ public abstract class AlleleFiltering {
 
         for (Pair<LocationAndAllele, LocationAndAllele> allelePair: allelePairs) {
 
-            int commonPrefixLengthLeft = Math.abs(allelePair.getLeft().getAllele().length() - allelePair.getLeft().getRefAllele().length());
-            int commonPrefixLengthRight = Math.abs(allelePair.getRight().getAllele().length() - allelePair.getRight().getRefAllele().length());
+            int commonPrefixLengthLeft = Math.min(allelePair.getLeft().getAllele().length(), allelePair.getLeft().getRefAllele().length());
+            int commonPrefixLengthRight = Math.min(allelePair.getRight().getAllele().length(), allelePair.getRight().getRefAllele().length());
 
             Pair<Haplotype, Haplotype> modifiedHaplotypes = new ImmutablePair<>(
                     refHaplotype.insertAllele(
@@ -265,6 +265,10 @@ public abstract class AlleleFiltering {
                             allelePair.getRight().getLoc() - activeWindowStart,
                             -1,
                             commonPrefixLengthRight));
+            logger.debug("FSUHP: Insertion:");
+            logger.debug(String.format("FSUHP: refAllele: (%d) %s", refHaplotype.getStartPosition(), refHaplotype.toString()));
+            logger.debug(String.format("FSUHP: Replace: %s", allelePair.getRight().toString()));
+            logger.debug(String.format("FSUHP: result: %s", modifiedHaplotypes.getRight().toString()));
 
             Pair<FlowBasedHaplotype, FlowBasedHaplotype> fbh = new ImmutablePair<>(haplotype2FlowHaplotype(modifiedHaplotypes.getLeft()),
                                                                                    haplotype2FlowHaplotype(modifiedHaplotypes.getRight()));

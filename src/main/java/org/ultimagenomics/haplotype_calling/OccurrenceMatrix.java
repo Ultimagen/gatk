@@ -89,7 +89,7 @@ public class OccurrenceMatrix<R,C> {
         colNames.stream().forEach(x -> nonConnectedAllelesGraph.addVertex(x));
         nonCoOcurringColumns.stream().forEach(edge->nonConnectedAllelesGraph.addEdge(edge.getLeft(), edge.getRight()));
 
-        ConnectivityInspector ci = new ConnectivityInspector(nonConnectedAllelesGraph);
+        ConnectivityInspector<C, DefaultEdge> ci = new ConnectivityInspector<>(nonConnectedAllelesGraph);
         List<Set<C>> result = ci.connectedSets();
         logger.debug (String.format("Received %d alleles that generate %d connected components", colNames.size(), result.size()));
         return result;
