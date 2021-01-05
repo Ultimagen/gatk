@@ -94,4 +94,10 @@ public class OccurrenceMatrix<R,C> {
         logger.debug (String.format("Received %d alleles that generate %d connected components", colNames.size(), result.size()));
         return result;
     }
+
+    public Set<C> getAlleleSet(){
+        Set<C> result = new HashSet<>();
+        result.addAll(colNames);
+        return result;
+    }
 }
