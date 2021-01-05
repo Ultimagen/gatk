@@ -65,6 +65,8 @@ public abstract class AlleleFiltering {
         AlleleLikelihoods<GATKRead, Haplotype> currentReadLikelihoods = readLikelihoods;
         final Map<Haplotype, Collection<LocationAndAllele>> haplotypeAlleleMap  = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
         readLikelihoods.alleles().forEach(h -> getAlleles(h).stream().filter(al -> !al.isReference()).forEach(jh -> haplotypeAlleleMap.get(h).add(jh)));
+
+
         OccurrenceMatrix<Haplotype, LocationAndAllele> occm = new OccurrenceMatrix<>(haplotypeAlleleMap);
         List<Pair<LocationAndAllele, LocationAndAllele>> nonCoOcurringAlleles = occm.nonCoOcurringColumns();
         nonCoOcurringAlleles = filterByDistance(nonCoOcurringAlleles, 1, 20);
@@ -74,7 +76,7 @@ public abstract class AlleleFiltering {
         List<LocationAndAllele> allRemovedAlleles = new ArrayList<>();
         Set<Haplotype> haplotypesToRemove = new HashSet<>();
 
-
+        independentAlleles = Arrays.asList(occm.getAlleleSet());
         for ( Set<LocationAndAllele> alleleSet : independentAlleles) {
             Set<Haplotype> enabledHaplotypes = new HashSet<>();
 
@@ -134,7 +136,7 @@ public abstract class AlleleFiltering {
                 final AlleleLikelihoods<GATKRead, Haplotype> finalCurrentReadLikelihoods = currentReadLikelihoods;
                 logger.debug("GAL::start");
                 final List<AlleleLikelihoods<GATKRead, Allele>> alleleLikelihoods =
-                        allAlleles.stream().map(c -> getAlleleLikelihoodMatrix(finalCurrentReadLikelihoods, c, haplotypeAlleleMap)).collect(Collectors.toList());
+                        allAlleles.stream().map(c -> getAlleleLikelihoodMatrix(finalCurrentReadLikelihoods, c, haplotypeAlleleMap, enabledHaplotypes)).collect(Collectors.toList());
 
                 final List<Integer> collectedRPLs = IntStream.range(0, allAlleles.size()).mapToObj(i -> getAlleleLikelihood(alleleLikelihoods.get(i), allAlleles.get(i))).collect(Collectors.toList());
                 final List<Double> collectedSORs = IntStream.range(0, allAlleles.size()).mapToObj(i -> getAlleleSOR(alleleLikelihoods.get(i), allAlleles.get(i))).collect(Collectors.toList());
@@ -159,6 +161,7 @@ public abstract class AlleleFiltering {
         }
 
         Set<Haplotype> eventualAlleles = new HashSet<>();
+
         currentReadLikelihoods.alleles().stream().filter(al -> !haplotypesToRemove.contains(al)).forEach(al -> eventualAlleles.add(al));
         currentReadLikelihoods = currentReadLikelihoods.subsetToAlleles(eventualAlleles);
 
@@ -208,7 +211,8 @@ public abstract class AlleleFiltering {
 
     private AlleleLikelihoods<GATKRead, Allele> getAlleleLikelihoodMatrix(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods,
                                                                                      final LocationAndAllele allele,
-                                                                                     final Map<Haplotype, Collection<LocationAndAllele>> haplotypeAlleleMap
+                                                                                     final Map<Haplotype, Collection<LocationAndAllele>> haplotypeAlleleMap,
+                                                                                     Set<Haplotype> enabledHaplotypes
                                                                                      ){
         Map<Allele,List<Haplotype>> alleleHaplotypeMap = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
 
@@ -217,8 +221,8 @@ public abstract class AlleleFiltering {
         tmp.add(allele);
 
 
-        readLikelihoods.alleles().stream().filter(h->haplotypeAlleleMap.get(h).contains(allele)).forEach(alleleHaplotypeMap.get(allele)::add);
-        readLikelihoods.alleles().stream().filter(h -> !haplotypeAlleleMap.get(h).contains(allele)).forEach(alleleHaplotypeMap.get(notAllele)::add);
+        readLikelihoods.alleles().stream().filter(h->enabledHaplotypes.contains(h)).filter(h->haplotypeAlleleMap.get(h).contains(allele)).forEach(alleleHaplotypeMap.get(allele)::add);
+        readLikelihoods.alleles().stream().filter(h->enabledHaplotypes.contains(h)).filter(h -> !haplotypeAlleleMap.get(h).contains(allele)).forEach(alleleHaplotypeMap.get(notAllele)::add);
 
         final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods = readLikelihoods.marginalize(alleleHaplotypeMap);
         logger.debug(String.format("GALM: %s %d %d", allele.toString(), alleleHaplotypeMap.get(allele).size(), alleleHaplotypeMap.get(notAllele).size()));
