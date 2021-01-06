@@ -27,7 +27,7 @@ public class LocationAndAllele extends Allele {
         final org.ultimagenomics.haplotype_calling.LocationAndAllele that = (org.ultimagenomics.haplotype_calling.LocationAndAllele) o;
 
         if (loc != that.loc) return false;
-        return this != null ? super.equals(that) : that == null;
+        return this != null ? super.equals(that) && this.refAllele.equals(that.getRefAllele()) : that == null;
     }
 
     @Override
