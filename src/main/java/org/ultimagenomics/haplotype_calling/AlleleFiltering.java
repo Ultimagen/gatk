@@ -69,18 +69,18 @@ public abstract class AlleleFiltering {
 
         OccurrenceMatrix<Haplotype, LocationAndAllele> occm = new OccurrenceMatrix<>(haplotypeAlleleMap);
         List<Pair<LocationAndAllele, LocationAndAllele>> nonCoOcurringAlleles = occm.nonCoOcurringColumns();
-        nonCoOcurringAlleles = filterByDistance(nonCoOcurringAlleles, 1, 20);
-        nonCoOcurringAlleles = filterSameUpToHmerPairs(nonCoOcurringAlleles, findReferenceHaplotype(readLikelihoods.alleles()), activeWindowStart);
+        nonCoOcurringAlleles = filterByDistance(nonCoOcurringAlleles, 0, 20);
+        //nonCoOcurringAlleles = filterSameUpToHmerPairs(nonCoOcurringAlleles, findReferenceHaplotype(readLikelihoods.alleles()), activeWindowStart);
 
         List<Set<LocationAndAllele>> independentAlleles = occm.getIndependentSets(nonCoOcurringAlleles);
         List<LocationAndAllele> allRemovedAlleles = new ArrayList<>();
         Set<Haplotype> haplotypesToRemove = new HashSet<>();
 
-        independentAlleles = Arrays.asList(occm.getAlleleSet());
+        //independentAlleles = Arrays.asList(occm.getAlleleSet());
         for ( Set<LocationAndAllele> alleleSet : independentAlleles) {
             Set<Haplotype> enabledHaplotypes = new HashSet<>();
-
             for (Haplotype h : currentReadLikelihoods.alleles()) enabledHaplotypes.add(h);
+            removedHaplotype = true;
 
             while (removedHaplotype) {
                 // build map from contig to haplotype
