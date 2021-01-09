@@ -164,6 +164,9 @@ public final class ClipReads extends ReadWalker {
     public static final String READ_LONG_NAME = "read";
     public static final String READ_SHORT_NAME = READ_LONG_NAME;
     public static final String MIN_READ_LENGTH_TO_REPORT_LONG_NAME =  "min-read-length-to-output";
+    public static final String FIVE_PRIME_TRIMMING_TAG = "tf";
+    public static final String THREE_PRIME_TRIMMING_TAG = "tm";
+
 
 
     /**
@@ -509,19 +512,30 @@ public final class ClipReads extends ReadWalker {
             if ((xt != null) && (xt <= read.getLength())) { //XT is the location of the first nucleotide in the 3' adapter to be clipped (one-based)
                 ClippingOp xt_clip = new ClippingOp(xt - 1, read.getLength());
                 clipper.addOp(xt_clip);
+                addAdapterTag(clipper, FIVE_PRIME_TRIMMING_TAG);
                 data.incNAdapterClippedBases(read.getLength() - xt + 1);
             }
 
             if ((xf != null) && (xf > 1)) { // XF is the location of the first nucleotide to be not-clipped (one-based to be consistent with XT)
                 ClippingOp xf_clip = new ClippingOp(0, xf - 2); //stop is included
                 clipper.addOp(xf_clip);
+                addAdapterTag(clipper, THREE_PRIME_TRIMMING_TAG);
+
                 data.incNAdapterClippedBases(xf);
+
             }
         }
 
     }
 
-
+    private void addAdapterTag(ReadClipperWithData clipper,final String tag){
+        String curTagValue = clipper.getRead().getAttributeAsString(tag);
+        if (curTagValue == null ){
+            clipper.getRead().setAttribute(tag, "A");
+        } else if (!curTagValue.contains("A")){
+            clipper.getRead().setAttribute(tag, curTagValue + "A");
+        }
+    }
 
 
     private void accumulate(ReadClipperWithData clipper) {
