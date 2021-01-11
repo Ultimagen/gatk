@@ -76,7 +76,6 @@ public abstract class AlleleFiltering {
         List<LocationAndAllele> allRemovedAlleles = new ArrayList<>();
         Set<Haplotype> haplotypesToRemove = new HashSet<>();
 
-        //independentAlleles = Arrays.asList(occm.getAlleleSet());
         for ( Set<LocationAndAllele> alleleSet : independentAlleles) {
             Set<Haplotype> enabledHaplotypes = new HashSet<>();
             for (Haplotype h : currentReadLikelihoods.alleles()) enabledHaplotypes.add(h);
