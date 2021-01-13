@@ -4,7 +4,6 @@ import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
-import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.walkers.annotator.AnnotationUtils;
 import org.broadinstitute.hellbender.tools.walkers.annotator.InfoFieldAnnotation;
@@ -41,8 +40,10 @@ public class AS_HmerLength extends InfoFieldAnnotation implements AS_StandardAnn
             throw new UserException("Reference is required to calculate AS_HmerLength annotation.");
         }
 
-        final List<VariantContext> splitVcs = GATKVariantContextUtils.splitVariantContextToBiallelics(vc, true, GenotypeAssignmentMethod.BEST_MATCH_TO_ORIGINAL, false);
-        final SimpleInterval refWindowFromVcStart = new SimpleInterval (vc.getContig(), vc.getStart(), ref.getWindow().getEnd());
+        //Don't assume variants are left aligned or trimmed
+        final VariantContext fixedVc = GATKVariantContextUtils.leftAlignAndTrim(vc, ref, LeftAlignAndTrimVariants.DEFAULT_MAX_LEADING_BASES, true);
+        final List<VariantContext> splitVcs = GATKVariantContextUtils.splitVariantContextToBiallelics(fixedVc, true, GenotypeAssignmentMethod.BEST_MATCH_TO_ORIGINAL, false);
+        final SimpleInterval refWindowFromVcStart = new SimpleInterval (fixedVc.getContig(), fixedVc.getStart(), ref.getWindow().getEnd());
         final List<String> hmerLengths = new LinkedList<>();
 
         for (final VariantContext splitVariant : splitVcs) {
@@ -56,9 +57,6 @@ public class AS_HmerLength extends InfoFieldAnnotation implements AS_StandardAnn
             } else if (splitVariant.isSymbolic()) {
                 hmerLengths.add("");
             } else {
-                if (variantIsHmer(splitVariant) && !indelIsLeftAligned(splitVariant, ref)) {
-                    throw new UserException(String.format("H-mer indel at %s is not left aligned.", vc.toString()));
-                }
                 //INDELs are anchored on the left by an unchanged base, so the h-mer base in question is the second base from variant start in the longer allele.
                 final Allele longerAllele = splitVariant.getReference().length() > altAllele.length() ? splitVariant.getReference() : altAllele;
                 final byte base = longerAllele.getBases()[1];
@@ -127,21 +125,6 @@ public class AS_HmerLength extends InfoFieldAnnotation implements AS_StandardAnn
             }
         }
         return isHmer;
-    }
-
-    /**
-     * Checks if bialleleic INDEL is left aligned
-     *
-     * @param vc Bialleliic INDEL variant context
-     * @param ref reference context for this site
-     * @return
-     */
-    private Boolean indelIsLeftAligned(VariantContext vc, ReferenceContext ref) {
-        if (!vc.isBiallelic()){
-            throw new GATKException(String.format("Expected VariantContext to be biallelic: %s", vc.toString()));
-        }
-        VariantContext leftAligned = GATKVariantContextUtils.leftAlignAndTrim(vc, ref, LeftAlignAndTrimVariants.DEFAULT_MAX_LEADING_BASES, false);
-        return leftAligned.getReference() == vc.getReference() && leftAligned.getAlternateAllele(0) == leftAligned.getAlternateAllele(0);
     }
 
 }

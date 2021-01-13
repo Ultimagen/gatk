@@ -5,15 +5,12 @@ import htsjdk.variant.variantcontext.VariantContextBuilder;
 import org.broadinstitute.hellbender.GATKBaseTest;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.engine.ReferenceDataSource;
-import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeAssignmentMethod;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
-import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.io.File;
-import java.util.List;
 import java.util.Map;
 
 public class AS_HmerLengthUnitTest extends GATKBaseTest {
@@ -70,19 +67,17 @@ public class AS_HmerLengthUnitTest extends GATKBaseTest {
     }
 
     // REF:  G G - G G T C C C
-    // ALT1: G G G G G T C C C //not left aligned since there are G's to the left of this G insertion
-    // ALT2: G G - - G T C C C //not left aligned deletion
+    // ALT1: G G - - G T C C C //not left aligned deletion
+    // ALT2: G G G G G T C C C //not left aligned since there are G's to the left of this G insertion
     // ALT3: G G T G G T C C C // left aligned because it is anchored in non h-mer bases
     // ALT4: G G - - - - - C C //left aligned because it is anchored in non h-mer bases
     @Test
     public void testNonLeftAlignedIndel() {
-        VariantContext notLeftAlignedVc = new VariantContextBuilder().chr("2").start(10676).stop(10677).alleles("GG", "GGG", "G").make();
-        final List<VariantContext> splitVcs = GATKVariantContextUtils.splitVariantContextToBiallelics(notLeftAlignedVc, true, GenotypeAssignmentMethod.BEST_MATCH_TO_ORIGINAL, false);
+        VariantContext notLeftAlignedVc = new VariantContextBuilder().chr("2").start(10676).stop(10677).alleles("GG", "G", "GGG").make();
         ReferenceContext ref = new ReferenceContext(refSource, new SimpleInterval("2", 10676, 10680));
         AS_HmerLength annotation = new AS_HmerLength();
-        for (VariantContext splitVc : splitVcs) {
-            Assert.assertThrows(() -> annotation.annotate(ref, splitVc, null));
-        }
+        Map<String, Object> notLeftAlignedOutput = annotation.annotate(ref, notLeftAlignedVc, null);
+        Assert.assertEquals(notLeftAlignedOutput.get(GATKVCFConstants.AS_HMER_LENGTH_KEY), "4,5");
         VariantContext leftAlignedVc = new VariantContextBuilder().chr("2").start(10676).stop(10680).alleles("GGGTC", "GTGGTC", "G").make();
         Map<String, Object> output = annotation.annotate(ref, leftAlignedVc, null);
         Assert.assertEquals(output.get(GATKVCFConstants.AS_HMER_LENGTH_KEY), "1,0");
@@ -98,7 +93,8 @@ public class AS_HmerLengthUnitTest extends GATKBaseTest {
         VariantContext nonLeftAlignedVc = new VariantContextBuilder().chr("2").start(10679).stop(10679).alleles("T", "TT").make();
         ReferenceContext ref = new ReferenceContext(refSource, new SimpleInterval("2", 10679, 10680));
         AS_HmerLength annotation = new AS_HmerLength();
-        Assert.assertThrows(() -> annotation.annotate(ref, nonLeftAlignedVc, null));
+        Map<String, Object> output = annotation.annotate(ref, nonLeftAlignedVc, null);
+        Assert.assertEquals(output.get(GATKVCFConstants.AS_HMER_LENGTH_KEY), "2");
     }
 
     // REF:  G G G G - T C C C
@@ -110,5 +106,17 @@ public class AS_HmerLengthUnitTest extends GATKBaseTest {
         AS_HmerLength annotation = new AS_HmerLength();
         Map<String, Object> output = annotation.annotate(ref, vc, null);
         Assert.assertEquals(output.get(GATKVCFConstants.AS_HMER_LENGTH_KEY), "1");
+    }
+
+    // REF:        T C C C A
+    // REF allele: T C C C A   //untrimmed
+    // ALT allele: T C - - A //hmer length: 3
+    @Test
+    public void testUntrimmed() {
+        VariantContext vc = new VariantContextBuilder().chr("2").start(10679).stop(10682).alleles("TCCC", "TC").make();
+        ReferenceContext ref = new ReferenceContext(refSource, new SimpleInterval("2", 10679, 10682));
+        AS_HmerLength annotation = new AS_HmerLength();
+        Map<String, Object> output = annotation. annotate(ref, vc, null);
+        Assert.assertEquals(output.get(GATKVCFConstants.AS_HMER_LENGTH_KEY), "3");
     }
 }
