@@ -288,7 +288,7 @@ public abstract class AlleleFiltering {
     }
 
 
-    private Haplotype findReferenceHaplotype( List<Haplotype> haplotypeList) {
+    public static Haplotype findReferenceHaplotype( List<Haplotype> haplotypeList) {
         for (Haplotype h: haplotypeList ) {
             if (h.isReference()) {
                 return h;

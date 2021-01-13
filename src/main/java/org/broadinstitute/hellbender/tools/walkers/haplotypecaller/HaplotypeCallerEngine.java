@@ -674,40 +674,50 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
         // evaluate each sample's reads against all haplotypes
         final Map<String,List<GATKRead>> reads = AssemblyBasedCallerUtils.splitReadsBySample(samplesList, readsHeader, regionForGenotyping.getReads());
+        final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods;
 
         // Calculate the likelihoods: CPU intensive part.
-        final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods =
+        readLikelihoods =
                 likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads, true);
 
         alleleLikelihoodWriter.ifPresent(
                 writer -> writer.writeAlleleLikelihoods(readLikelihoods));
 
 
+
+        // Realign reads to their best haplotype.
+        final Map<GATKRead, GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(readLikelihoods, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner);
+        readLikelihoods.changeEvidence(readRealignments);
+        List<Haplotype> haplotypes = readLikelihoods.alleles();
+        final AlleleLikelihoods<GATKRead, Haplotype> uncollapsedReadLikelihoods;
+        if ( refView != null ) {
+
+            haplotypes = refView.uncollapseHaplotypesByRef(haplotypes, true, false, null);
+            logger.debug(String.format("%d haplotypes before uncollapsing", haplotypes.size()));
+            Map<Haplotype, List<Haplotype>> identicalHaplotypesMap = LHWRefView.identicalByUncollapingHaplotypeMap(haplotypes);
+            readLikelihoods.changeAlleles(haplotypes);
+            uncollapsedReadLikelihoods = readLikelihoods.marginalize(identicalHaplotypesMap);
+            logger.debug(String.format("%d haplotypes after uncollapsing", uncollapsedReadLikelihoods.numberOfAlleles()));
+        } else {
+            logger.debug(String.format("Not performing uncollapsing with %d haplotypes", readLikelihoods.numberOfAlleles()));
+            uncollapsedReadLikelihoods = readLikelihoods;
+        }
+
         final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
         if (hcArgs.filterAlleles) {
             logger.debug("Filtering alleles");
             AlleleFilteringHC alleleFilter = new AlleleFilteringHC(hcArgs, assemblyDebugOutStream, genotypingEngine);
             //need to update haplotypes to find the alleles
-            EventMap.buildEventMapsForHaplotypes(readLikelihoods.alleles(),
+            EventMap.buildEventMapsForHaplotypes(uncollapsedReadLikelihoods.alleles(),
                     assemblyResult.getFullReferenceWithPadding(),
                     assemblyResult.getPaddedReferenceLoc(),
                     hcArgs.assemblerArgs.debugAssembly,
                     hcArgs.maxMnpDistance);
-            subsettedReadLikelihoodsFinal = alleleFilter.filterAlleles(readLikelihoods, assemblyResult.getPaddedReferenceLoc().getStart());
+            subsettedReadLikelihoodsFinal = alleleFilter.filterAlleles(uncollapsedReadLikelihoods, assemblyResult.getPaddedReferenceLoc().getStart());
 
         } else {
             logger.debug("Not filtering alleles");
-            subsettedReadLikelihoodsFinal = readLikelihoods;
-        }
-
-        // Realign reads to their best haplotype.
-        final Map<GATKRead, GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(subsettedReadLikelihoodsFinal, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner);
-        subsettedReadLikelihoodsFinal.changeEvidence(readRealignments);
-        List<Haplotype> haplotypes = subsettedReadLikelihoodsFinal.alleles();
-
-        if ( refView != null ) {
-            haplotypes = refView.uncollapseHaplotypesByRef(haplotypes, true, false, null);
-            subsettedReadLikelihoodsFinal.changeAlleles(haplotypes);
+            subsettedReadLikelihoodsFinal = uncollapsedReadLikelihoods;
         }
 
 
@@ -716,7 +726,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         //  GLs.  In particular, for samples that are heterozygous non-reference (B/C) the marginalization for B treats the
         //  haplotype containing C as reference (and vice versa).  Now this is fine if all possible haplotypes are included
         //  in the genotyping, but we lose information if we select down to a few haplotypes.  [EB]
-
+        haplotypes = subsettedReadLikelihoodsFinal.alleles();
         final CalledHaplotypes calledHaplotypes = genotypingEngine.assignGenotypeLikelihoods(
                 haplotypes,
                 subsettedReadLikelihoodsFinal,
