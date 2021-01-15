@@ -4,6 +4,7 @@ import htsjdk.samtools.reference.ReferenceSequence;
 import htsjdk.samtools.reference.ReferenceSequenceFile;
 import htsjdk.samtools.reference.ReferenceSequenceFileFactory;
 import htsjdk.samtools.util.StringUtil;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -11,13 +12,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
-import org.broadinstitute.barclay.argparser.WorkflowProperties;
 import org.broadinstitute.barclay.argparser.WorkflowOutput;
+import org.broadinstitute.barclay.argparser.WorkflowProperties;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
-import org.broadinstitute.hellbender.engine.GATKPath;
-import picard.cmdline.programgroups.ReadDataManipulationProgramGroup;
 import org.broadinstitute.hellbender.engine.FeatureContext;
+import org.broadinstitute.hellbender.engine.GATKPath;
 import org.broadinstitute.hellbender.engine.ReadWalker;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.utils.BaseUtils;
@@ -26,6 +26,7 @@ import org.broadinstitute.hellbender.utils.clipping.ClippingRepresentation;
 import org.broadinstitute.hellbender.utils.clipping.ReadClipper;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.SAMFileGATKReadWriter;
+import picard.cmdline.programgroups.ReadDataManipulationProgramGroup;
 
 import java.io.File;
 import java.io.PrintStream;
@@ -69,6 +70,8 @@ import java.util.regex.Pattern;
  * filtering only bases whose sequence exactly matches SEQ.</p>
  *
  *
+ * <h4>Adapter locations</h4>
+ * <p>Only on uBAM: if adapter on five prime XF or adapter in three prime XT is given - clip it. </p>
  * <h3>Input</h3>
  * <p>Any number of SAM/BAM/CRAM files.</p>
  *
@@ -156,8 +159,15 @@ public final class ClipReads extends ReadWalker {
     public static final String CLIP_SEQUENCE_SHORT_NAME = "X";
     public static final String CLIP_REPRESENTATION_LONG_NAME = "clip-representation";
     public static final String CLIP_REPRESENTATION_SHORT_NAME = "CR";
+    public static final String CLIP_ADAPTER_LONG_NAME = "clip-adapter";
+    public static final String CLIP_ADAPTER_SHORT_NAME = "CA";
     public static final String READ_LONG_NAME = "read";
     public static final String READ_SHORT_NAME = READ_LONG_NAME;
+    public static final String MIN_READ_LENGTH_TO_REPORT_LONG_NAME =  "min-read-length-to-output";
+    public static final String FIVE_PRIME_TRIMMING_TAG = "tf";
+    public static final String THREE_PRIME_TRIMMING_TAG = "tm";
+
+
 
     /**
      * The output SAM/BAM/CRAM file will be written here
@@ -179,6 +189,7 @@ public final class ClipReads extends ReadWalker {
      */
     @Argument(fullName = Q_TRIMMING_THRESHOLD_LONG_NAME, shortName = Q_TRIMMING_THRESHOLD_SHORT_NAME, doc = "If provided, the Q-score clipper will be applied", optional = true)
     int qTrimmingThreshold = -1;
+
 
     /**
      * Clips machine cycles from the read. Accepts a string of ranges of the form start1-end1,start2-end2, etc.
@@ -211,6 +222,12 @@ public final class ClipReads extends ReadWalker {
 
     @Argument(fullName=READ_LONG_NAME, shortName = READ_SHORT_NAME, doc="", optional = true)
     String onlyDoRead = null;
+
+    @Argument(fullName = CLIP_ADAPTER_LONG_NAME, shortName = CLIP_ADAPTER_SHORT_NAME, doc = "Clip locations according to XF, XT tags")
+    boolean clipAdapter = false;
+
+    @Argument(fullName = MIN_READ_LENGTH_TO_REPORT_LONG_NAME, doc = "Shortest read to output")
+    private final Integer minReadLength = 0;
 
     /**
      * List of sequence that should be clipped from the reads
@@ -314,6 +331,7 @@ public final class ClipReads extends ReadWalker {
             clipBadQualityScores(clipper);
             clipCycles(clipper);
             clipSequences(clipper);
+            clipAdapter(clipper);
             accumulate(clipper);
         }
     }
@@ -401,6 +419,7 @@ public final class ClipReads extends ReadWalker {
             return new MutablePair<>(start, stop);
     }
 
+
     /**
      * clip bases at cycles between the ranges in cyclesToClip by adding appropriate ClippingOps to clipper.
      *
@@ -478,15 +497,63 @@ public final class ClipReads extends ReadWalker {
         clipper.setData(data);
     }
 
+    private void clipAdapter(ReadClipperWithData clipper) {
+        if (clipAdapter) {
+            GATKRead read = clipper.getRead();
+            ClippingData data = clipper.getData();
+            Integer xf = read.getAttributeAsInteger("XF");
+            Integer xt = read.getAttributeAsInteger("XT");
+            if ((xf != null) && (xt != null) && (xf == 0) && (xt == 0)) {
+                ClippingOp clip = new ClippingOp(0, read.getLength());
+                clipper.addOp(clip);
+                data.incNAdapterClippedBases((read.getLength()));
+                return;
+            }
+            if ((xt != null) && (xt <= read.getLength())) { //XT is the location of the first nucleotide in the 3' adapter to be clipped (one-based)
+                ClippingOp xt_clip = new ClippingOp(xt - 1, read.getLength());
+                clipper.addOp(xt_clip);
+                addAdapterTag(clipper, FIVE_PRIME_TRIMMING_TAG);
+                data.incNAdapterClippedBases(read.getLength() - xt + 1);
+            }
+
+            if ((xf != null) && (xf > 1)) { // XF is the location of the first nucleotide to be not-clipped (one-based to be consistent with XT)
+                ClippingOp xf_clip = new ClippingOp(0, xf - 2); //stop is included
+                clipper.addOp(xf_clip);
+                addAdapterTag(clipper, THREE_PRIME_TRIMMING_TAG);
+
+                data.incNAdapterClippedBases(xf);
+
+            }
+        }
+
+    }
+
+    private void addAdapterTag(ReadClipperWithData clipper,final String tag){
+        String curTagValue = clipper.getRead().getAttributeAsString(tag);
+        if (curTagValue == null ){
+            clipper.getRead().setAttribute(tag, "A");
+        } else if (!curTagValue.contains("A")){
+            clipper.getRead().setAttribute(tag, curTagValue + "A");
+        }
+    }
+
+
     private void accumulate(ReadClipperWithData clipper) {
         if ( clipper == null )
             return;
 
         GATKRead clippedRead = clipper.clipRead(clippingRepresentation);
-        outputBam.addRead(clippedRead);
-
+        if ( minReadLength > 0 ) {
+            if (clippedRead.isPaired()){
+                throw(new NotImplementedException("Limit on the read length is not implemented for PE reads"));
+            }
+        }
+        if (clippedRead.getLength() >= minReadLength) {
+            outputBam.addRead(clippedRead);
+        }
         accumulator.nTotalReads++;
         accumulator.nTotalBases += clipper.getRead().getLength();
+
         if (clipper.wasClipped()) {
             accumulator.nClippedReads++;
             accumulator.addData(clipper.getData());
@@ -521,6 +588,7 @@ public final class ClipReads extends ReadWalker {
         public long nQClippedBases = 0;
         public long nRangeClippedBases = 0;
         public long nSeqClippedBases = 0;
+        public long nAdapterClippedBases = 0;
 
         SortedMap<String, Long> seqClipCounts = new TreeMap<>();
 
@@ -540,6 +608,11 @@ public final class ClipReads extends ReadWalker {
             nClippedBases += n;
         }
 
+        public void incNAdapterClippedBases(int n){
+            nAdapterClippedBases += n;
+            nClippedBases +=n;
+        }
+
         public void incSeqClippedBases(final String seq, int n) {
             nSeqClippedBases += n;
             nClippedBases += n;
@@ -554,7 +627,7 @@ public final class ClipReads extends ReadWalker {
             nQClippedBases += data.nQClippedBases;
             nRangeClippedBases += data.nRangeClippedBases;
             nSeqClippedBases += data.nSeqClippedBases;
-
+            nAdapterClippedBases += data.nAdapterClippedBases;
             for (String seqClip : data.seqClipCounts.keySet()) {
                 Long count = data.seqClipCounts.get(seqClip);
                 if (seqClipCounts.containsKey(seqClip))
@@ -580,6 +653,7 @@ public final class ClipReads extends ReadWalker {
             for (Map.Entry<String, Long> elt : seqClipCounts.entrySet()) {
                 s.append(String.format("  %8d clip sites matching %s%n", elt.getValue(), elt.getKey()));
             }
+            s.append(String.format("Number of adapter clipped bases       %d%n", nAdapterClippedBases));
 
             s.append(StringUtils.repeat('-', 80) + "\n");
             return s.toString();
