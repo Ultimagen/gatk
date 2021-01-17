@@ -69,13 +69,13 @@ public abstract class AlleleFiltering {
 
         OccurrenceMatrix<Haplotype, LocationAndAllele> occm = new OccurrenceMatrix<>(haplotypeAlleleMap);
         List<Pair<LocationAndAllele, LocationAndAllele>> nonCoOcurringAlleles = occm.nonCoOcurringColumns();
+        List<Pair<LocationAndAllele, LocationAndAllele>> restrictiveNonCoOcurring = filterByDistance(nonCoOcurringAlleles, 0, 3);
         nonCoOcurringAlleles = filterByDistance(nonCoOcurringAlleles, 0, 20);
         nonCoOcurringAlleles = filterSameUpToHmerPairs(nonCoOcurringAlleles, findReferenceHaplotype(readLikelihoods.alleles()), activeWindowStart);
-
+        nonCoOcurringAlleles.addAll(restrictiveNonCoOcurring);
         List<Set<LocationAndAllele>> independentAlleles = occm.getIndependentSets(nonCoOcurringAlleles);
         List<LocationAndAllele> allRemovedAlleles = new ArrayList<>();
         Set<Haplotype> haplotypesToRemove = new HashSet<>();
-
         for ( Set<LocationAndAllele> alleleSet : independentAlleles) {
             Set<Haplotype> enabledHaplotypes = new HashSet<>();
             for (Haplotype h : currentReadLikelihoods.alleles()) enabledHaplotypes.add(h);
@@ -95,7 +95,7 @@ public abstract class AlleleFiltering {
                 for (LocationAndAllele al : alleleHaplotypeMap.keySet()) {
                     logger.debug("AHM::allele block ---> ");
                     for (Allele h : alleleHaplotypeMap.get(al)) {
-                        logger.debug(String.format("AHM:: (%d) %s: %s", al.getLoc(), al.getAllele().getBaseString(), h.getBaseString()));
+                        logger.debug(String.format("AHM:: (%d) %s/%s: %s", al.getLoc(), al.getAllele().getBaseString(), al.getRefAllele().getBaseString(), h.getBaseString()));
                     }
                     logger.debug("AHM::allele block ---< ");
 
@@ -153,6 +153,7 @@ public abstract class AlleleFiltering {
                     haplotypesWithAllele.removeIf(Allele::isReference);
                     for (Haplotype h: haplotypesWithAllele){
                         haplotypesToRemove.add(h);
+                        logger.debug(String.format("SHA:: Removing haplotype: %s", h.toString()));
                         enabledHaplotypes.remove(h);
                     }
                 }
@@ -160,8 +161,19 @@ public abstract class AlleleFiltering {
         }
 
         Set<Haplotype> eventualAlleles = new HashSet<>();
+        logger.debug("----- SHA list of removed haplotypes start ----");
+        for (Haplotype hap : haplotypesToRemove) {
+            logger.debug(String.format("SHA :: Removed haplotype : %s ", hap.toString()));
+        }
+        logger.debug("----- SHA list of removed haplotypes end ----");
 
         currentReadLikelihoods.alleles().stream().filter(al -> !haplotypesToRemove.contains(al)).forEach(al -> eventualAlleles.add(al));
+        logger.debug("----- SHA list of remaining haplotypes start ----");
+        for (Haplotype hap : eventualAlleles) {
+            logger.debug(String.format("SHA :: Remaining haplotype : %s ", hap.toString()));
+        }
+        logger.debug("----- SHA list of remaining haplotypes end ----");
+
         currentReadLikelihoods = currentReadLikelihoods.subsetToAlleles(eventualAlleles);
 
         return currentReadLikelihoods;
