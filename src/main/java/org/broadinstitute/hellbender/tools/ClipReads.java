@@ -166,6 +166,9 @@ public final class ClipReads extends ReadWalker {
     public static final String MIN_READ_LENGTH_TO_REPORT_LONG_NAME =  "min-read-length-to-output";
     public static final String FIVE_PRIME_TRIMMING_TAG = "tf";
     public static final String THREE_PRIME_TRIMMING_TAG = "tm";
+    public static final String FIVE_PRIME_ADAPTER_LOCATION_TAG = "XF";
+    public static final String THREE_PRIME_ADAPTER_LOCATION_TAG = "XT";
+
 
 
 
@@ -501,8 +504,8 @@ public final class ClipReads extends ReadWalker {
         if (clipAdapter) {
             GATKRead read = clipper.getRead();
             ClippingData data = clipper.getData();
-            Integer xf = read.getAttributeAsInteger("XF");
-            Integer xt = read.getAttributeAsInteger("XT");
+            Integer xf = read.getAttributeAsInteger(FIVE_PRIME_ADAPTER_LOCATION_TAG);
+            Integer xt = read.getAttributeAsInteger(THREE_PRIME_ADAPTER_LOCATION_TAG);
             if ((xf != null) && (xt != null) && (xf == 0) && (xt == 0)) {
                 ClippingOp clip = new ClippingOp(0, read.getLength());
                 clipper.addOp(clip);
@@ -512,15 +515,14 @@ public final class ClipReads extends ReadWalker {
             if ((xt != null) && (xt <= read.getLength())) { //XT is the location of the first nucleotide in the 3' adapter to be clipped (one-based)
                 ClippingOp xt_clip = new ClippingOp(xt - 1, read.getLength());
                 clipper.addOp(xt_clip);
-                addAdapterTag(clipper, FIVE_PRIME_TRIMMING_TAG);
+                addAdapterTag(clipper, THREE_PRIME_TRIMMING_TAG);
                 data.incNAdapterClippedBases(read.getLength() - xt + 1);
             }
 
             if ((xf != null) && (xf > 1)) { // XF is the location of the first nucleotide to be not-clipped (one-based to be consistent with XT)
                 ClippingOp xf_clip = new ClippingOp(0, xf - 2); //stop is included
                 clipper.addOp(xf_clip);
-                addAdapterTag(clipper, THREE_PRIME_TRIMMING_TAG);
-
+                addAdapterTag(clipper, FIVE_PRIME_TRIMMING_TAG);
                 data.incNAdapterClippedBases(xf);
 
             }
