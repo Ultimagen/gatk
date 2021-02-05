@@ -150,13 +150,16 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
 
         List<Pair<LocationAndAlleles, LocationAndAlleles>> exclusivePairs=null;
         Map<LocationAndAlleles, Set<LocationAndAlleles>> exclusivePairMap=null;
-        if (hcArgs.filterContigs) {
-            final HaplotypeAlleleMatrix coocurrence = new HaplotypeAlleleMatrix(haplotypes);
-            exclusivePairs = coocurrence.nonCoOcurringVariants();
-            exclusivePairs = HaplotypeAlleleMatrix.filterExclusivePairsByDistance(exclusivePairs, MAX_SAME_ALLELE_DIST);
-            exclusivePairs = coocurrence.filterSameUpToHmerPairs(exclusivePairs, refLoc.getStart());
-            exclusivePairMap = HaplotypeAlleleMatrix.getExclusiveAlleleMap(exclusivePairs);
-        }
+
+
+
+        //        if (hcArgs.filterAlleles && false) {
+        //            final HaplotypeAlleleMatrix coocurrence = new HaplotypeAlleleMatrix(haplotypes);
+        //            exclusivePairs = coocurrence.nonCoOcurringVariants();
+        //            exclusivePairs = HaplotypeAlleleMatrix.filterExclusivePairsByDistance(exclusivePairs, MAX_SAME_ALLELE_DIST);
+        //            exclusivePairs = coocurrence.filterSameUpToHmerPairs(exclusivePairs, refLoc.getStart());
+        //            exclusivePairMap = HaplotypeAlleleMatrix.getExclusiveAlleleMap(exclusivePairs);
+        //        }
 
 
         // Walk along each position in the key set and create each event to be outputted
@@ -184,12 +187,12 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
             final List<VariantContext> eventsAtThisLoc = AssemblyBasedCallerUtils.getVariantContextsFromActiveHaplotypes(loc,
                     haplotypes, !hcArgs.disableSpanningEventGenotyping);
 
-            List<VariantContext> possibleEquivalents = null;
-            if (hcArgs.filterContigs) {
-                //Adding all variants in the area that are possibly equivalent allele up to hmer indel
-                possibleEquivalents = getPossibleEquivalents(loc, eventsAtThisLoc,
-                        exclusivePairMap, haplotypes);
-            }
+//            List<VariantContext> possibleEquivalents = null;
+//            if (hcArgs.filterAlleles && false) {
+//                //Adding all variants in the area that are possibly equivalent allele up to hmer indel
+//                possibleEquivalents = getPossibleEquivalents(loc, eventsAtThisLoc,
+//                        exclusivePairMap, haplotypes);
+//            }
 
             final List<VariantContext> eventsAtThisLocWithSpanDelsReplaced = replaceSpanDels(eventsAtThisLoc,
                     Allele.create(ref[loc - refLoc.getStart()], true), loc);
@@ -202,8 +205,11 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
             
             int mergedAllelesListSizeBeforePossibleTrimming = mergedVC.getAlleles().size();
 
+            //disabled for AF hack
+//            final Map<Allele, List<Haplotype>> alleleMapper = AssemblyBasedCallerUtils.createAlleleMapper(mergedVC, loc,
+//                    possibleEquivalents, haplotypes);
             final Map<Allele, List<Haplotype>> alleleMapper = AssemblyBasedCallerUtils.createAlleleMapper(mergedVC, loc,
-                    possibleEquivalents, haplotypes, !hcArgs.disableSpanningEventGenotyping);
+                    null, haplotypes, !hcArgs.disableSpanningEventGenotyping);
 
             if( hcArgs.assemblerArgs.debugAssembly && logger != null ) {
                 logger.info("Genotyping event at " + loc + " with alleles = " + mergedVC.getAlleles());
@@ -273,6 +279,7 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
         return new CalledHaplotypes(phasedCalls, calledHaplotypes);
     }
 
+    // Note: this is used in VariantRecaller
     public Map<Integer,AlleleLikelihoods<GATKRead, Allele>> assignGenotypeLikelihoods2(final List<Haplotype> haplotypes,
                                                       final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods,
                                                       final Map<String, List<GATKRead>> perSampleFilteredReadList,
@@ -300,26 +307,7 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
         // that carry events among the haplotypes
         final SortedSet<Integer> startPosKeySet = EventMap.buildEventMapsForHaplotypes(haplotypes, ref, refLoc, hcArgs.assemblerArgs.debugAssembly, maxMnpDistance);
 
-        //Later addition (Jukebox) - looking for variants that seem to be the same up to hmer indel, yet are placed on different locations.
-        //These variants should be actually placed on the same location and their haplotypes should map to each other and not necessarily
-        //to the reference
-
-        List<Pair<LocationAndAlleles, LocationAndAlleles>> exclusivePairs=null;
-        Map<LocationAndAlleles, Set<LocationAndAlleles>> exclusivePairMap=null;
-        if (hcArgs.filterContigs) {
-            final HaplotypeAlleleMatrix coocurrence = new HaplotypeAlleleMatrix(haplotypes);
-            exclusivePairs = coocurrence.nonCoOcurringVariants();
-            exclusivePairs = HaplotypeAlleleMatrix.filterExclusivePairsByDistance(exclusivePairs, MAX_SAME_ALLELE_DIST);
-            exclusivePairs = coocurrence.filterSameUpToHmerPairs(exclusivePairs, refLoc.getStart());
-            exclusivePairMap = HaplotypeAlleleMatrix.getExclusiveAlleleMap(exclusivePairs);
-        }
-
-
-        // Walk along each position in the key set and create each event to be outputted
-        final Set<Haplotype> calledHaplotypes = new HashSet<>();
-        final List<VariantContext> returnCalls = new ArrayList<>();
         final int ploidy = configuration.genotypeArgs.samplePloidy;
-        final List<Allele> noCallAlleles = GATKVariantContextUtils.noCallAlleles(ploidy);
 
 
         if (withBamOut) {
@@ -336,12 +324,6 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
             final List<VariantContext> eventsAtThisLoc = AssemblyBasedCallerUtils.getVariantContextsFromActiveHaplotypes(loc,
                     haplotypes, true);
 
-            List<VariantContext> possibleEquivalents = null;
-            if (hcArgs.filterContigs) {
-                //Adding all variants in the area that are possibly equivalent allele up to hmer indel
-                possibleEquivalents = getPossibleEquivalents(loc, eventsAtThisLoc,
-                        exclusivePairMap, haplotypes);
-            }
 
             final List<VariantContext> eventsAtThisLocWithSpanDelsReplaced = replaceSpanDels(eventsAtThisLoc,
                     Allele.create(ref[loc - refLoc.getStart()], true), loc);
@@ -352,16 +334,13 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
                 continue;
             }
 
-            int mergedAllelesListSizeBeforePossibleTrimming = mergedVC.getAlleles().size();
 
             final Map<Allele, List<Haplotype>> alleleMapper = AssemblyBasedCallerUtils.createAlleleMapper(mergedVC, loc,
-                    possibleEquivalents, haplotypes);
+                    null, haplotypes);
 
             if( hcArgs.assemblerArgs.debugAssembly && logger != null ) {
                 logger.info("Genotyping event at " + loc + " with alleles = " + mergedVC.getAlleles());
             }
-
-            mergedVC = removeAltAllelesIfTooManyGenotypes(ploidy, alleleMapper, mergedVC);
 
             AlleleLikelihoods<GATKRead, Allele> readAlleleLikelihoods = readLikelihoods.marginalize(alleleMapper);
 
@@ -371,97 +350,43 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
         return result;
     }
 
-    private static List<VariantContext> getPossibleEquivalents(int loc,
-                                                               List<VariantContext> eventsAtThisLoc,
-                                                               Map<LocationAndAlleles, Set<LocationAndAlleles>> exclusivePairMap,
-                                                               List<Haplotype> haplotypes) {
-
-        Set<LocationAndAlleles> locationAndAllelesAtThiLocus = new HashSet<>();
-        for (VariantContext vc : eventsAtThisLoc ) {
-            locationAndAllelesAtThiLocus.add(new LocationAndAlleles(vc.getStart(), vc.getAlleles()));
-    /**
-     * If there is potential to use DRAGstr in the region based on the event map, then this method composes the
-     *   STR finder.
-     * @param haplotypes reconstructed haplotypes.
-     * @param ref the reference haplotype sequence.
-     * @param refLoc the interval of the sequence provided.
-     * @param startPosKeySet the location of events within the haplotypes on the reference sequence.
-     * @return {@code null} iff there is no chance that we would be using DRAGstr in this region based
-     *    on the reconstructed haplotypes.
-     */
-    private DragstrReferenceAnalyzer constructDragstrReferenceSTRAnalyzerIfNecessary(final List<Haplotype> haplotypes,
-                                                                                     final byte[] ref,
-                                                                                     final SimpleInterval refLoc,
-                                                                                     final SortedSet<Integer> startPosKeySet) {
-        if (isDragstrSTRAnalyzerNecessary(startPosKeySet, haplotypes)) {
-            final int offset = startPosKeySet.first() - refLoc.getStart();
-            final int to = startPosKeySet.last() - refLoc.getStart() + 2;
-                // +2 = +1+1
-                // where one +1 is because starPosKeySet indexes are 1-based and offset/to are 0-based.
-                //   and the other +1 is because we need to analyze/include one base after each event position including the last.
-            return  DragstrReferenceAnalyzer.of(ref, offset, to, dragstrParams.maximumPeriod());
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * Composes the appropriate test to determine if a read is to be retained for evidence/likelihood calculation for variants
-     * located in a target region.
-     * @param hcArgs configuration that may affect the criteria use to retain or filter-out reads.
-     * @return never {@code null}.
-     */
-    private BiPredicate<GATKRead, SimpleInterval> composeReadQualifiesForGenotypingPredicate(final HaplotypeCallerArgumentCollection hcArgs) {
-        if (hcArgs.applyBQD || hcArgs.applyFRD) {
-                return (read, target) -> softUnclippedReadOverlapsInterval(read, target);
-        } else {
-            // NOTE: we must make this comparison in target -> read order because occasionally realignment/assembly produces
-            // reads that consume no reference bases and this can cause them to overlap adjacent
-            return (read, target) -> target.overlaps(read);
-        }
-    }
-
-    /**
-     * Checks whether a read's extended mapping region (unclipping soft-clips) overlaps a given target interval
-     * even if it is only by one base. Adjacency is not good enough.
-     * @param read the read to test.
-     * @param target the interval to test.
-     * @return {@code true} iff there is an overlap.
-     */
-    private boolean softUnclippedReadOverlapsInterval(final GATKRead read, final Locatable target) {
-        return read.getContig().equalsIgnoreCase(target.getContig())
-                && read.getSoftStart() <= target.getEnd()
-                && read.getSoftEnd() >= target.getStart()
-                && read.getSoftStart() <= read.getSoftEnd(); // is this possible, ever? this test was performed before extracting this method so we keep it just in case.
-    }
-
-    /**
-     * Confirms whether there is the need to analyze the region's reference sequence for the presence of STRs.
-     * <p>
-     *     This is only the case when DRAGstr is activate, we are going to use their priors and there is some indel
-     *     amongst the haplotypes.
-     * </p>
-     */
-    private boolean isDragstrSTRAnalyzerNecessary(SortedSet<Integer> startPosKeySet, List<Haplotype> haplotypes) {
-        return !startPosKeySet.isEmpty() && dragstrParams != null
-                && !hcArgs.standardArgs.genotypeArgs.dontUseDragstrPriors &&
-                haplotypes.stream()
-                        .anyMatch(h -> h.getEventMap().getVariantContexts().stream()
-                                .anyMatch(GATKVariantContextUtils::containsInlineIndel));
-    }
-
-    private GenotypePriorCalculator resolveGenotypePriorCalculator(final DragstrReferenceAnalyzer strs, final int pos,
-                                                                   final double snpHeterozygosity, final double indelHeterozygosity) {
-       if (hcArgs.likelihoodArgs.dragstrParams == null || hcArgs.standardArgs.genotypeArgs.dontUseDragstrPriors) {
-            return GenotypePriorCalculator.assumingHW(Math.log10(snpHeterozygosity), Math.log10(indelHeterozygosity));
-        } else if (strs == null) {
-            return GenotypePriorCalculator.givenHetToHomRatio(Math.log10(snpHeterozygosity), Math.log10(indelHeterozygosity), Math.log10(Math.min(snpHeterozygosity, indelHeterozygosity)), hcArgs.likelihoodArgs.dragstrHetHomRatio);
-       } else {
-            final int period = strs.period(pos);
-            final int repeats = strs.repeatLength(pos);
-            return GenotypePriorCalculator.givenDragstrParams(dragstrParams, period, repeats, Math.log10(snpHeterozygosity), hcArgs.likelihoodArgs.dragstrHetHomRatio);
-        }
-    }
+//    private static List<VariantContext> getPossibleEquivalents(int loc,
+//                                                               List<VariantContext> eventsAtThisLoc,
+//                                                               Map<LocationAndAlleles, Set<LocationAndAlleles>> exclusivePairMap,
+//                                                               List<Haplotype> haplotypes) {
+//
+//        Set<LocationAndAlleles> locationAndAllelesAtThiLocus = new HashSet<>();
+//        for (VariantContext vc : eventsAtThisLoc ) {
+//            locationAndAllelesAtThiLocus.add(new LocationAndAlleles(vc.getStart(), vc.getAlleles()));
+//        }
+//
+//
+//        final Set<LocationAndAlleles> variantsToAdd = new HashSet<>();
+//
+//        for (VariantContext vc: eventsAtThisLoc) {
+//            LocationAndAlleles laa = new LocationAndAlleles(vc.getStart(), vc.getAlleles());
+//            if (exclusivePairMap.containsKey(laa)) {
+//                variantsToAdd.addAll(exclusivePairMap.get(laa));
+//            }
+//        }
+//
+//        final List<VariantContext> results = new ArrayList<>();
+//        final Set<LocationAndAlleles> uniqueLocationsAndAlleles = new HashSet<>();
+//
+//        haplotypes.stream()
+//                .flatMap(h -> Utils.stream(h.getEventMap().getVariantContexts()))
+//                .filter(Objects::nonNull)
+//                .filter(v -> (variantsToAdd.contains(new LocationAndAlleles(v.getStart(), v.getAlleles()))))
+//                .filter(v -> !(locationAndAllelesAtThiLocus.contains(new LocationAndAlleles(v.getStart(), v.getAlleles())))).collect(Collectors.toList())
+//                .forEach(v -> {
+//                    final LocationAndAlleles locationAndAlleles = new LocationAndAlleles(v.getStart(), v.getAlleles());
+//                    if (! uniqueLocationsAndAlleles.contains(locationAndAlleles)) {
+//                        uniqueLocationsAndAlleles.add(locationAndAlleles);
+//                        results.add(v);
+//                    }
+//                });
+//        return results;
+//    }
 
     @VisibleForTesting
     static List<VariantContext> replaceSpanDels(final List<VariantContext> eventsAtThisLoc, final Allele refAllele, final int loc) {

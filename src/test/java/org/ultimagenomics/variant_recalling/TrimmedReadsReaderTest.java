@@ -1,11 +1,8 @@
-package org.ultimagenomics.variant_calling;
+package org.ultimagenomics.variant_recalling;
 
-import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SamReader;
 import org.broadinstitute.hellbender.GATKBaseTest;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
-import org.broadinstitute.hellbender.utils.read.ArtificialReadUtils;
-import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import org.ultimagenomics.flow_based_read.read.FlowBasedRead;

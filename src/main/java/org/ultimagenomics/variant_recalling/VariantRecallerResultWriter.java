@@ -1,4 +1,4 @@
-package org.ultimagenomics.variant_calling;
+package org.ultimagenomics.variant_recalling;
 
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
@@ -13,18 +13,13 @@ import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyResul
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.genotyper.LikelihoodMatrix;
-import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
-import org.ultimagenomics.haplotype_calling.LHWRefView;
-import shaded.cloud_nio.com.google.errorprone.annotations.Var;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class VariantRecallerResultWriter {
     PrintWriter     pw;
