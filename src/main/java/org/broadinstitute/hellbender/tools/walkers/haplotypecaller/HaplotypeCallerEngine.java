@@ -34,6 +34,7 @@ import org.broadinstitute.hellbender.utils.downsampling.AlleleBiasedDownsampling
 import org.broadinstitute.hellbender.utils.dragstr.DragstrParamUtils;
 import org.broadinstitute.hellbender.utils.dragstr.DragstrParams;
 import org.broadinstitute.hellbender.utils.genotyper.*;
+import org.broadinstitute.hellbender.utils.haplotype.EventMap;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.haplotype.HaplotypeBAMWriter;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
@@ -48,7 +49,7 @@ import org.broadinstitute.hellbender.utils.variant.HomoSapiensConstants;
 import org.broadinstitute.hellbender.utils.variant.writers.GVCFWriter;
 import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
 import org.ultimagenomics.flow_based_read.tests.AlleleLikelihoodWriter;
-import org.ultimagenomics.haplotype_calling.ContigFilteringHC;
+import org.ultimagenomics.haplotype_calling.AlleleFilteringHC;
 import org.ultimagenomics.haplotype_calling.LHWRefView;
 
 import java.io.IOException;
@@ -257,7 +258,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                 hcArgs.refModelDelQual);
 
         //Allele-specific annotations are not yet supported in the VCF mode
-        if (isAlleleSpecificExceptHmerLengthMode(annotationEngine) && isVCFMode()){
+        if (isAlleleSpecificExceptHmerLength(annotationEngine) && isVCFMode()){
            throw new UserException("Allele-specific annotations are not yet supported in the VCF mode");
         }
 
@@ -271,12 +272,13 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         return hcArgs.emitReferenceConfidence == ReferenceConfidenceMode.NONE;
     }
 
-    private boolean isAlleleSpecificExceptHmerLengthMode(final VariantAnnotatorEngine annotationEngine) {
+    private boolean isAlleleSpecificExceptHmerLength(final VariantAnnotatorEngine annotationEngine) {
         //HACK. Note: we can't use subclass information from ReducibleAnnotation (which would be the obvious choice)
         // because RMSMappingQuality is both a reducible annotation and a standard annotation.
 
         return annotationEngine.getInfoAnnotations().stream()
                 .filter(infoFieldAnnotation -> !infoFieldAnnotation.getClass().getSimpleName().equals("AS_HmerLength"))
+                .filter(infoFieldAnnotation -> !infoFieldAnnotation.getClass().getSimpleName().equals("AS_StrandBiasMutectAnnotation"))
                 .anyMatch(infoFieldAnnotation -> infoFieldAnnotation.getClass().getSimpleName().startsWith("AS_")) ||
                 annotationEngine.getGenotypeAnnotations().stream()
                 .anyMatch(genotypeAnnotation -> genotypeAnnotation.getClass().getSimpleName().startsWith("AS_"));
@@ -714,6 +716,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
         // evaluate each sample's reads against all haplotypes
         final Map<String,List<GATKRead>> reads = AssemblyBasedCallerUtils.splitReadsBySample(samplesList, readsHeader, regionForGenotyping.getReads());
+        final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods;
 
         // uncollapse haplotypes
         List<Haplotype> uncollapsedAllHaplotypes = haplotypes;
@@ -737,31 +740,47 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
 
         // Calculate the likelihoods: CPU intensive part.
-        final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods =
+        readLikelihoods =
                 likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads, true);
 
         alleleLikelihoodWriter.ifPresent(
                 writer -> writer.writeAlleleLikelihoods(readLikelihoods));
 
 
-        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
-        if (hcArgs.filterContigs) {
-            logger.debug("Filtering contigs");
-            ContigFilteringHC contigFilter = new ContigFilteringHC(hcArgs, assemblyDebugOutStream, genotypingEngine);
-            subsettedReadLikelihoodsFinal = contigFilter.filterContigs(readLikelihoods);
-        } else {
-            logger.debug("Not filtering contigs");
-            subsettedReadLikelihoodsFinal = readLikelihoods;
-        }
 
         // Realign reads to their best haplotype.
-        final Map<GATKRead, GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(subsettedReadLikelihoodsFinal, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner);
-        subsettedReadLikelihoodsFinal.changeEvidence(readRealignments);
-        List<Haplotype> haplotypes = subsettedReadLikelihoodsFinal.alleles();
-
+        final Map<GATKRead, GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(readLikelihoods, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner);
+        readLikelihoods.changeEvidence(readRealignments);
+        List<Haplotype> haplotypes = readLikelihoods.alleles();
+        final AlleleLikelihoods<GATKRead, Haplotype> uncollapsedReadLikelihoods;
         if ( refView != null ) {
+
             haplotypes = refView.uncollapseHaplotypesByRef(haplotypes, true, false, null);
-            subsettedReadLikelihoodsFinal.changeAlleles(haplotypes);
+            logger.debug(String.format("%d haplotypes before uncollapsing", haplotypes.size()));
+            Map<Haplotype, List<Haplotype>> identicalHaplotypesMap = LHWRefView.identicalByUncollapsingHaplotypeMap(haplotypes);
+            readLikelihoods.changeAlleles(haplotypes);
+            uncollapsedReadLikelihoods = readLikelihoods.marginalize(identicalHaplotypesMap);
+            logger.debug(String.format("%d haplotypes after uncollapsing", uncollapsedReadLikelihoods.numberOfAlleles()));
+        } else {
+            logger.debug(String.format("Not performing uncollapsing with %d haplotypes", readLikelihoods.numberOfAlleles()));
+            uncollapsedReadLikelihoods = readLikelihoods;
+        }
+
+        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
+        if (hcArgs.filterAlleles) {
+            logger.debug("Filtering alleles");
+            AlleleFilteringHC alleleFilter = new AlleleFilteringHC(hcArgs, assemblyDebugOutStream, genotypingEngine);
+            //need to update haplotypes to find the alleles
+            EventMap.buildEventMapsForHaplotypes(uncollapsedReadLikelihoods.alleles(),
+                    assemblyResult.getFullReferenceWithPadding(),
+                    assemblyResult.getPaddedReferenceLoc(),
+                    hcArgs.assemblerArgs.debugAssembly,
+                    hcArgs.maxMnpDistance);
+            subsettedReadLikelihoodsFinal = alleleFilter.filterAlleles(uncollapsedReadLikelihoods, assemblyResult.getPaddedReferenceLoc().getStart());
+
+        } else {
+            logger.debug("Not filtering alleles");
+            subsettedReadLikelihoodsFinal = uncollapsedReadLikelihoods;
         }
 
 
@@ -770,6 +789,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         //  GLs.  In particular, for samples that are heterozygous non-reference (B/C) the marginalization for B treats the
         //  haplotype containing C as reference (and vice versa).  Now this is fine if all possible haplotypes are included
         //  in the genotyping, but we lose information if we select down to a few haplotypes.  [EB]
+        haplotypes = subsettedReadLikelihoodsFinal.alleles();
 
         if (HaplotypeCallerGenotypingDebugger.isEnabled()) {
             for (int counter = 0; counter < readLikelihoods.sampleEvidence(0).size(); counter++) {

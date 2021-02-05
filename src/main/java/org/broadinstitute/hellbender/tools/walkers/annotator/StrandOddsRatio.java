@@ -126,6 +126,7 @@ public final class StrandOddsRatio extends StrandBiasTest implements StandardAnn
     private static final double PSEUDOCOUNT = 1;
     private static final int MIN_COUNT = 0;
 
+
     @Override
     protected Map<String, Object> calculateAnnotationFromGTfield(final GenotypesContext genotypes){
         final int[][] tableFromPerSampleAnnotations = getTableFromSamples(genotypes, MIN_COUNT);
