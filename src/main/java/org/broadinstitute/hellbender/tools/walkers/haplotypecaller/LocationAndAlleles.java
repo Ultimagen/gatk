@@ -42,4 +42,5 @@ public class LocationAndAlleles {
         return 31 * loc + (alleles != null ? alleles.hashCode() : 0);
     }
 
+
 }
