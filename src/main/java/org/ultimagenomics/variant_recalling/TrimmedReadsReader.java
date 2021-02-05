@@ -1,4 +1,4 @@
-package org.ultimagenomics.variant_calling;
+package org.ultimagenomics.variant_recalling;
 
 import htsjdk.samtools.*;
 import htsjdk.samtools.util.Locatable;
