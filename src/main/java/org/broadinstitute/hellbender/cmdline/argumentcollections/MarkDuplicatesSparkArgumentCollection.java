@@ -6,6 +6,7 @@ import org.broadinstitute.hellbender.utils.read.markduplicates.MarkDuplicatesSco
 import picard.sam.markduplicates.MarkDuplicates;
 
 import java.io.Serializable;
+import java.util.List;
 
 
 /**
@@ -53,6 +54,10 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
     @Argument(doc = "Skip first N flows, when considering duplicates. Default 0.")
     public int FLOW_SKIP_START_HOMOPOLYMERS = 0;
 
-    @Argument(doc = "Emit additional debugging info specific to ultima flow. Default fase.")
+    @Argument(doc = "Emit additional debugging info specific to ultima flow. Default false.")
     public boolean DEBUG_ULTIMA_DUPS = false;
+
+    @Argument(doc = "Emit additional debugging info specific to ultima flow: read name. Default null", optional = true)
+    public List<String> DEBUG_ULTIMA_READ_NAME = null;
+
 }

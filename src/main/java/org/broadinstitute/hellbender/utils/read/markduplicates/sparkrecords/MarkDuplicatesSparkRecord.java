@@ -4,6 +4,7 @@ import htsjdk.samtools.SAMFileHeader;
 import org.broadinstitute.hellbender.cmdline.argumentcollections.MarkDuplicatesSparkArgumentCollection;
 import org.broadinstitute.hellbender.tools.spark.transforms.markduplicates.MarkDuplicatesSpark;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
+import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.read.markduplicates.MarkDuplicatesScoringStrategy;
 import org.broadinstitute.hellbender.utils.read.markduplicates.ReadsKey;
 
@@ -18,6 +19,9 @@ import java.util.Map;
 public abstract class MarkDuplicatesSparkRecord {
     protected final int partitionIndex;
     protected final String name;
+
+    protected int end = ReadUtils.FLOW_BASED_INSIGNIFICANT_END_UNCERTIANTY;
+
     MarkDuplicatesSparkRecord(int partitionIndex, String name) {
         this.name = name;
         this.partitionIndex = partitionIndex;
@@ -31,7 +35,11 @@ public abstract class MarkDuplicatesSparkRecord {
 
     // A fragment containing only one read without a mapped mate
     public static Fragment newFragment(final GATKRead first, final SAMFileHeader header, int partitionIndex, MarkDuplicatesScoringStrategy scoringStrategy, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
-        return new Fragment (first, header, partitionIndex, scoringStrategy, headerLibraryMap, mdArgs);
+        if ( !mdArgs.FLOW_END_LOCATION_SIGNIFICANT && !mdArgs.FLOW_QUALITY_SUM_STRATEGY ) {
+            return new Fragment(first, header, partitionIndex, scoringStrategy, headerLibraryMap, mdArgs);
+        } else {
+            return new FlowFragment(first, header, partitionIndex, scoringStrategy, headerLibraryMap, mdArgs);
+        }
     }
 
     // An optimization for reducing the serialized data passed around when indicating that there was a mapped read at a location
@@ -60,5 +68,9 @@ public abstract class MarkDuplicatesSparkRecord {
 
     public enum Type {
         FRAGMENT, PAIR, PASSTHROUGH, EMPTY_FRAGMENT
+    }
+
+    public int getEnd() {
+        return end;
     }
 }
