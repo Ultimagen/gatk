@@ -4,7 +4,6 @@ import htsjdk.samtools.SAMFileHeader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.cmdline.argumentcollections.MarkDuplicatesSparkArgumentCollection;
-import org.broadinstitute.hellbender.tools.spark.transforms.markduplicates.MarkDuplicatesSpark;
 import org.broadinstitute.hellbender.tools.spark.transforms.markduplicates.MarkDuplicatesSparkUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
@@ -23,6 +22,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * during the processing step of MarkDuplicatesSpark
  */
 public class Fragment extends TransientFieldPhysicalLocation {
+
+    private final static Logger logger = LogManager.getLogger(Fragment.class);
+
     protected transient ReadsKey key;
 
     private final boolean R1R;
@@ -33,26 +35,14 @@ public class Fragment extends TransientFieldPhysicalLocation {
         super(partitionIndex, first.getName());
 
         int        start = first.isReverseStrand() ? ReadUtils.getSelectedRecordEnd(first, null, header, mdArgs) : ReadUtils.getSelectedRecordStart(first, null, header, mdArgs);
-        int        end = 0;
-        int        endUncert = 0;
-        if ( mdArgs.FLOW_END_LOCATION_SIGNIFICANT ) {
-            AtomicInteger endUncertainty = new AtomicInteger(mdArgs.ENDS_READ_UNCERTAINTY);
-            end = !first.isReverseStrand() ? ReadUtils.getSelectedRecordEnd(first, endUncertainty, header, mdArgs) : ReadUtils.getSelectedRecordStart(first, endUncertainty, header, mdArgs);
-            endUncert = endUncertainty.intValue();
-        }
-        if ( mdArgs.DEBUG_ULTIMA_DUPS )
-            System.out.println(String.format("[%s %b] : %d %d : %d %d : %d %d %d",
-                    first.getName(), first.isReverseStrand(),
-                    first.getUnclippedStart(), first.getUnclippedEnd(),
-                    first.getStart(), first.getEnd(),
-                    start, end, endUncert));
 
-        this.score = scoringStrategy.score(first);
         this.R1R = first.isReverseStrand();
-        this.key = ReadsKey.getKeyForFragment(start, end, endUncert,
+        this.key = ReadsKey.getKeyForFragment(start,
                 isRead1ReverseStrand(),
                 (short)ReadUtils.getReferenceIndex(first, header),
-                headerLibraryMap.get(MarkDuplicatesSparkUtils.getLibraryForRead(first, header, LibraryIdGenerator.UNKNOWN_LIBRARY)));
+                headerLibraryMap.get(MarkDuplicatesSparkUtils.getLibraryForRead(first, header, LibraryIdGenerator.UNKNOWN_LIBRARY)),
+                mdArgs);
+        this.score = scoringStrategy.score(first);
     }
 
     @Override

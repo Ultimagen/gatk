@@ -34,6 +34,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public final class ReadUtils {
 
+    static final public int     FLOW_BASED_INSIGNIFICANT_END_UNCERTIANTY = 0;
+
     private ReadUtils() {
     }
 
@@ -334,9 +336,13 @@ public final class ReadUtils {
             int     start = rec.getUnclippedStart() + hmerSize;
             return mdArgs.FLOW_USE_CLIPPED_LOCATIONS ? Math.max(start, rec.getStart()) : start;
         }
-        else if ( mdArgs.FLOW_USE_CLIPPED_LOCATIONS )
+        else if ( tmTagIddicatesUnclipped(rec) ) {
+            return rec.getUnclippedStart();
+        } else if ( endUncertainty != null && tmTagIddicatesNoUncertianty(rec) ) {
+            return FLOW_BASED_INSIGNIFICANT_END_UNCERTIANTY;
+        } else if ( mdArgs.FLOW_USE_CLIPPED_LOCATIONS ) {
             return rec.getStart();
-        else
+        } else
             return rec.getUnclippedStart();
     }
 
@@ -380,17 +386,40 @@ public final class ReadUtils {
             int     end = rec.getUnclippedEnd() - hmerSize;
             return mdArgs.FLOW_USE_CLIPPED_LOCATIONS ? Math.min(end, rec.getEnd()) : end;
         }
-        else if ( mdArgs.FLOW_USE_CLIPPED_LOCATIONS )
-            return rec.getEnd();
-        else
+        else if ( tmTagIddicatesUnclipped(rec) ) {
             return rec.getUnclippedEnd();
+        } else if ( endUncertainty != null && tmTagIddicatesNoUncertianty(rec) ) {
+            return FLOW_BASED_INSIGNIFICANT_END_UNCERTIANTY;
+        } else if ( mdArgs.FLOW_USE_CLIPPED_LOCATIONS ) {
+            return rec.getEnd();
+        } else
+            return rec.getUnclippedEnd();
+    }
+
+    public static boolean tmTagIddicatesNoUncertianty(final GATKRead rec) {
+        final String        tm = rec.getAttributeAsString("tm");
+        if ( tm == null ) {
+            return false;
+        } else {
+            return tm.indexOf('Q') >= 0 || tm.indexOf('Z') >= 0;
+        }
+    }
+
+    public static boolean tmTagIddicatesUnclipped(final GATKRead rec) {
+        final String        tm = rec.getAttributeAsString("tm");
+        if ( tm == null ) {
+            return false;
+        } else {
+            return tm.indexOf('A') >= 0;
+        }
     }
 
     private static byte[] getFlowOrder(final SAMFileHeader header) {
         for ( SAMReadGroupRecord rg : header.getReadGroups() ) {
             String      flowOrder = rg.getFlowOrder();
-            if ( flowOrder != null )
+            if ( flowOrder != null ) {
                 return flowOrder.getBytes();
+            }
         }
         return null;
     }
@@ -1246,11 +1275,6 @@ public final class ReadUtils {
      * <p>
      *     In most cases for mapped reads, this is typically equal to the sum of the size of soft-clipping at the
      *     beginning of the alignment.
-     * </p>
-     * <p>
-     *     Notice that this index makes reference to the offset of that first base in the array returned by {@link GATKRead#getBases()}, If you
-     *     are after the first base in the original unclipped and not reverse-complemented read, you must use
-     *     {@link #getFirstAlignedReadPosition} instead.
      * </p>
      *
      * @throws IllegalArgumentException if the input {@code read} is {@code null} or does not have any base aligned

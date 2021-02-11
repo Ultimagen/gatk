@@ -22,9 +22,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  * during the processing step of MarkDuplicatesSpark
  */
 public final class EmptyFragment extends PairedEnds {
+
+    private final static Logger logger = LogManager.getLogger(EmptyFragment.class);
+
     protected transient ReadsKey key;
 
     private final boolean R1R;
+
+    private final short score;
 
     /**
      * special constructor for creating empty fragments
@@ -35,25 +40,14 @@ public final class EmptyFragment extends PairedEnds {
         super(0, null);
 
         int        start = read.isReverseStrand() ? ReadUtils.getSelectedRecordEnd(read, null, header, mdArgs) : ReadUtils.getSelectedRecordStart(read, null, header, mdArgs);
-        int        end = 0;
-        int        endUncert = 0;
-        if ( mdArgs.FLOW_END_LOCATION_SIGNIFICANT ) {
-            AtomicInteger endUncertainty = new AtomicInteger(mdArgs.ENDS_READ_UNCERTAINTY);
-            end = !read.isReverseStrand() ? ReadUtils.getSelectedRecordEnd(read, endUncertainty, header, mdArgs) : ReadUtils.getSelectedRecordStart(read, endUncertainty, header, mdArgs);
-            endUncert = endUncertainty.intValue();
-        }
-        if ( mdArgs.DEBUG_ULTIMA_DUPS )
-            System.out.println(String.format("[%s %b] : %d %d : %d %d : %d %d %d",
-                    read.getName(), read.isReverseStrand(),
-                    read.getUnclippedStart(), read.getUnclippedEnd(),
-                    read.getStart(), read.getEnd(),
-                    start, end, endUncert));
-
         this.R1R = read.isReverseStrand();
-        this.key = ReadsKey.getKeyForFragment(start, end, endUncert,
+        this.key = ReadsKey.getKeyForFragment(start,
                 isRead1ReverseStrand(),
                 ReadUtils.getReferenceIndex(read, header),
-                headerLibraryMap.get(MarkDuplicatesSparkUtils.getLibraryForRead(read, header, LibraryIdGenerator.UNKNOWN_LIBRARY)));
+                headerLibraryMap.get(MarkDuplicatesSparkUtils.getLibraryForRead(read, header, LibraryIdGenerator.UNKNOWN_LIBRARY)),
+                mdArgs);
+
+        score = 0;
     }
 
     @Override
@@ -62,7 +56,7 @@ public final class EmptyFragment extends PairedEnds {
     }
     @Override
     public short getScore() {
-        return 0;
+        return score;
     }
     @Override
     // NOTE: This is transient and thus may not exist if the object gets serialized
