@@ -1,6 +1,7 @@
 package org.broadinstitute.hellbender.utils.read.markduplicates;
 
 import htsjdk.samtools.SAMFileHeader;
+import org.broadinstitute.hellbender.cmdline.argumentcollections.MarkDuplicatesSparkArgumentCollection;
 import org.broadinstitute.hellbender.tools.spark.transforms.markduplicates.MarkDuplicatesSparkUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
@@ -31,10 +32,10 @@ public abstract class ReadsKey {
     }
 
     public static ReadsKey getKeyForFragment(int start, int end, boolean reverseStrand, int referenceIndex, byte library) {
-        return new KeyForFragment(longKeyForFragment(start, reverseStrand, referenceIndex, library), end, 0);
+        return new KeyForFragment(longKeyForFragment(start, reverseStrand, referenceIndex, library));
     }
-    public static ReadsKey getKeyForFragment(int start, int end, int endUncertainty, boolean reverseStrand, int referenceIndex, byte library) {
-        return new KeyForFragment(longKeyForFragment(start, reverseStrand, referenceIndex, library), end, endUncertainty);
+    public static ReadsKey getKeyForFragment(int start, boolean reverseStrand, int referenceIndex, byte library, MarkDuplicatesSparkArgumentCollection mdArgs) {
+        return new KeyForFragment(longKeyForFragment(start, reverseStrand, referenceIndex, library));
     }
 
     public static ReadsKey getKeyForPair(final SAMFileHeader header, final GATKRead first, final GATKRead second, final Map<String, Byte> libraryKeyMap) {
@@ -56,18 +57,11 @@ public abstract class ReadsKey {
      *       be accessed by {@link org.broadinstitute.hellbender.engine.spark.GATKRegistrator} for kryo serialization
      */
     public static class KeyForFragment extends ReadsKey {
+
         final long keyValue;
-        final int endKeyValue;
-        final int endKeyUncertainty;
 
         KeyForFragment(final long key) {
-            this(key, 0, 0);
-        }
-
-        KeyForFragment(final long key, final int endKey, final int endKeyUncertainty) {
             this.keyValue = key;
-            this.endKeyValue = endKey;
-            this.endKeyUncertainty = endKeyUncertainty;
         }
 
         @Override
@@ -75,13 +69,10 @@ public abstract class ReadsKey {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             KeyForFragment that = (KeyForFragment) o;
-            if ( keyValue != that.keyValue )
-                return false;
-            int     endDelta = endKeyValue - that.endKeyValue;
-            if ( Math.abs(endDelta) <= endKeyUncertainty )
-                endDelta = 0;
-            return endDelta == 0;
+
+            return keyValue == that.keyValue;
         }
+
         @Override
         public int hashCode() {
             return Objects.hash(keyValue);
@@ -126,6 +117,7 @@ public abstract class ReadsKey {
         public String toString() {
             return firstReadKeyValue + " " + secondReadKeyValue;
         }
+
     }
 
     // Helper methods for generating summary longs

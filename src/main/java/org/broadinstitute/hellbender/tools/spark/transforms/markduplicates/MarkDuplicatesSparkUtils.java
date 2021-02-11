@@ -196,7 +196,7 @@ public class MarkDuplicatesSparkUtils {
 
         final JavaPairRDD<ReadsKey, Iterable<MarkDuplicatesSparkRecord>> keyedPairs = pairedEnds.groupByKey(); //TODO evaluate replacing this with a smart aggregate by key.
 
-        return markDuplicateRecords(keyedPairs, finder, markOpticalDups);
+        return markDuplicateRecords(keyedPairs, finder, markOpticalDups, mdArgs.FLOW_END_LOCATION_SIGNIFICANT, mdArgs.ENDS_READ_UNCERTAINTY);
     }
 
     /**
@@ -286,7 +286,8 @@ public class MarkDuplicatesSparkUtils {
      */
     @SuppressWarnings("unchecked")
     private static JavaPairRDD<IndexPair<String>, Integer> markDuplicateRecords(final JavaPairRDD<ReadsKey, Iterable<MarkDuplicatesSparkRecord>> keyedPairs,
-                                                                                final OpticalDuplicateFinder finder, final boolean markOpticalDups) {
+                                                                                final OpticalDuplicateFinder finder, final boolean markOpticalDups,
+                                                                                final boolean flowEndLocationSignificant, final int flowEndUncert) {
         return keyedPairs.flatMapToPair(keyedPair -> {
             Iterable<MarkDuplicatesSparkRecord> pairGroups = keyedPair._2();
 
@@ -302,8 +303,13 @@ public class MarkDuplicatesSparkUtils {
             //empty MarkDuplicatesSparkRecord signify that a pair has a mate somewhere else
             // If there are any non-fragment placeholders at this site, mark everything as duplicates, otherwise compute the best score
             if (Utils.isNonEmpty(fragments) && !Utils.isNonEmpty(emptyFragments)) {
-                final Tuple2<IndexPair<String>, Integer> bestFragment = handleFragments(fragments, finder);
-                nonDuplicates.add(bestFragment);
+                if ( !flowEndLocationSignificant ) {
+                    final Tuple2<IndexPair<String>, Integer> bestFragment = handleFragments(fragments, finder);
+                    nonDuplicates.add(bestFragment);
+                } else {
+                    nonDuplicates.addAll(handleFlowFragments(fragments, finder, flowEndUncert));
+                }
+
             }
 
             if (Utils.isNonEmpty(pairs)) {
@@ -343,6 +349,74 @@ public class MarkDuplicatesSparkUtils {
         return passthroughs.stream()
                 .map(pair -> new Tuple2<>(new IndexPair<>(pair.getName(), pair.getPartitionIndex()), MarkDuplicatesSpark.NO_OPTICAL_MARKER))
                 .collect(Collectors.toList());
+    }
+
+    private static List<Tuple2<IndexPair<String>, Integer>> handleFlowFragments(List<MarkDuplicatesSparkRecord> duplicateFragmentGroup, OpticalDuplicateFinder finder, final int endUncert) {
+
+        // easy case?
+        if (duplicateFragmentGroup.size() == 1) {
+            return Collections.singletonList(new Tuple2<>(new IndexPair<>(duplicateFragmentGroup.get(0).getName(), duplicateFragmentGroup.get(0).getPartitionIndex()), 0));
+        }
+
+        // sort on end to create/ensure consistency
+        duplicateFragmentGroup.sort(new Comparator<MarkDuplicatesSparkRecord>() {
+            @Override
+            public int compare(MarkDuplicatesSparkRecord o1, MarkDuplicatesSparkRecord o2) {
+                return o1.getEnd() - o2.getEnd();
+            }
+        });
+
+        // this will accumulate the primary from each subgroup
+        List<Tuple2<IndexPair<String>, Integer>> output = new ArrayList<>();
+
+        // loop on fragments, break into subgroups
+        List<MarkDuplicatesSparkRecord> subGroup = new LinkedList<>();
+        int         subGroupMinEnd = 0;
+        int         subGroupMaxEnd = 0;
+        for ( MarkDuplicatesSparkRecord fragment : duplicateFragmentGroup ) {
+
+            final int         end = fragment.getEnd();
+
+            if ( subGroup.size() == 0 ) {
+                // first one?
+                subGroup.add(fragment);
+                if ( end != ReadUtils.FLOW_BASED_INSIGNIFICANT_END_UNCERTIANTY ) {
+                    subGroupMinEnd = end - endUncert;
+                    subGroupMaxEnd = end + endUncert;
+                }
+            } else if ( end == ReadUtils.FLOW_BASED_INSIGNIFICANT_END_UNCERTIANTY )  {
+                // insignificant end, simply accumulate
+                subGroup.add(fragment);
+            } else if ( subGroupMinEnd == 0 ) {
+                // first significant, make it dominate end range
+                subGroup.add(fragment);
+                subGroupMinEnd = end - endUncert;
+                subGroupMaxEnd = end + endUncert;
+            } else if ( end >= subGroupMinEnd && end <= subGroupMaxEnd ) {
+                // fits into existing group w/ proper end
+                subGroup.add(fragment);
+                subGroupMinEnd = Math.min(subGroupMinEnd, end - endUncert);
+                subGroupMaxEnd = Math.max(subGroupMaxEnd, end + endUncert);
+            } else {
+                // does not belong to subgroup, pick best from existing and start new
+                output.add(handleFragments(subGroup, finder));
+                subGroup.clear();
+                subGroup.add(fragment);
+                if ( end != ReadUtils.FLOW_BASED_INSIGNIFICANT_END_UNCERTIANTY ) {
+                    subGroupMinEnd = end - endUncert;
+                    subGroupMaxEnd = end + endUncert;
+                } else {
+                    subGroupMinEnd = 0;
+                    subGroupMaxEnd = 0;
+                }
+            }
+        }
+
+        // handle leftovers
+        if ( subGroup.size() != 0 )
+            output.add(handleFragments(subGroup, finder));
+
+        return output;
     }
 
     private static List<Tuple2<IndexPair<String>, Integer>> handlePairs(final List<Pair> pairs, final OpticalDuplicateFinder finder, final boolean markOpticalDups) {
