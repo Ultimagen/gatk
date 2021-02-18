@@ -154,8 +154,7 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     public double strandBiasPileupPValue = 0.0;
 
     /**
-     * This parameter is determining the deletion quality in the reference confidence model. In JB data we currently recommend
-     * to set it to 20, although it should be determined dynamically. Ilmn model has 30
+     * This parameter is determining the deletion quality in the reference confidence model.
      */
     @Advanced
     @Argument(fullName = "reference-model-deletion-quality", doc = "The quality of deletion in the reference model", optional = true)
