@@ -13,6 +13,7 @@ import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.help.HelpConstants;
+import org.broadinstitute.hellbender.utils.logging.OneShotLogger;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
@@ -32,12 +33,17 @@ import java.util.*;
  */
 @DocumentedFeature(groupName= HelpConstants.DOC_CAT_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_ANNOTATORS_SUMMARY, summary="Allele-specific length of homopolymer (longer of either ref or alt)")
 public class AS_HmerLength extends InfoFieldAnnotation implements AS_StandardAnnotation, AlleleSpecificAnnotation {
+    protected final OneShotLogger warning = new OneShotLogger(this.getClass());
     @Override
     public Map<String, Object> annotate(ReferenceContext ref, VariantContext vc, AlleleLikelihoods<GATKRead, Allele> likelihoods) {
         Utils.nonNull(vc, "vc is null");
-        Utils.nonNull(ref, "ref is null");
+        if (ref == null) {
+            warning.warn("AS_HmerLength requires the reference to annotate, none was provided");
+            return Collections.emptyMap();
+        }
         if (!ref.hasBackingDataSource()) {
-            throw new UserException("Reference is required to calculate AS_HmerLength annotation.");
+            warning.warn("Reference is required to calculate AS_HmerLength annotation.");
+            return Collections.emptyMap();
         }
 
         //Don't assume variants are left aligned or trimmed
