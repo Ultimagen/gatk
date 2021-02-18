@@ -254,6 +254,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
                 "-O", outputPath,
                 "--" + AssemblyBasedCallerArgumentCollection.EMIT_REF_CONFIDENCE_LONG_NAME, ReferenceConfidenceMode.GVCF.toString(),
                 "-pairHMM", "AVX_LOGLESS_CACHING",
+                "--standard-min-confidence-threshold-for-calling","0",
                 "--" + StandardArgumentDefinitions.ADD_OUTPUT_VCF_COMMANDLINE, "false"
         };
 
@@ -290,6 +291,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
                 "-ERC", "GVCF",
                 "-pairHMM", "AVX_LOGLESS_CACHING",
                 "--disable-sequence-graph-simplification",
+                "--standard-min-confidence-threshold-for-calling","0",
                 "--" + AssemblyBasedCallerArgumentCollection.ALLELE_EXTENSION_LONG_NAME, "2",
                 "--" + StandardArgumentDefinitions.ADD_OUTPUT_VCF_COMMANDLINE, "false"
         };
@@ -364,6 +366,8 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
                 "--" + AssemblyBasedCallerArgumentCollection.EMIT_REF_CONFIDENCE_LONG_NAME, ReferenceConfidenceMode.GVCF.toString(),
                 "--" + AssemblyBasedCallerArgumentCollection.ALLELE_EXTENSION_LONG_NAME, "2",
                 "-pairHMM", "AVX_LOGLESS_CACHING",
+                "--standard-min-confidence-threshold-for-calling","0",
+
         };
 
         runCommandLine(args);
@@ -397,6 +401,8 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
                 "--" + AssemblyBasedCallerArgumentCollection.EMIT_REF_CONFIDENCE_LONG_NAME, ReferenceConfidenceMode.GVCF.toString(),
                 "--" + AssemblyBasedCallerArgumentCollection.ALLELE_EXTENSION_LONG_NAME, "2",
                 "-pairHMM", "AVX_LOGLESS_CACHING",
+                "--standard-min-confidence-threshold-for-calling","0"
+
         };
 
         runCommandLine(args);
@@ -425,7 +431,9 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
                 "--" + GenotypeCalculationArgumentCollection.NUM_REF_SAMPLES_LONG_NAME, "2500",
                 "-pairHMM", "AVX_LOGLESS_CACHING",
                 "--" + AssemblyBasedCallerArgumentCollection.ALLELE_EXTENSION_LONG_NAME, "2",
-                "--" + StandardArgumentDefinitions.ADD_OUTPUT_VCF_COMMANDLINE, "false"
+                "--" + StandardArgumentDefinitions.ADD_OUTPUT_VCF_COMMANDLINE, "false",
+                "--standard-min-confidence-threshold-for-calling","0"
+
         };
 
         runCommandLine(args);
@@ -462,7 +470,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         .addInterval(new SimpleInterval("20:10009880-10012631"))
         .add(StandardArgumentDefinitions.ADD_OUTPUT_VCF_COMMANDLINE, false)
         .add(AssemblyBasedCallerArgumentCollection.ALLELE_EXTENSION_LONG_NAME, "2")
-
+        .add("standard-min-confidence-threshold-for-calling","0")
         .add("pairHMM", "AVX_LOGLESS_CACHING")
         .addFlag("floor-blocks")
         .add("ERC", "GVCF")
@@ -508,6 +516,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
                 "--" + StandardArgumentDefinitions.ADD_OUTPUT_VCF_COMMANDLINE, "false",
                 "--" + AssemblyBasedCallerArgumentCollection.FORCE_CALL_ALLELES_LONG_NAME, forceCallingVcf.getAbsolutePath(),
                 "--" + AssemblyBasedCallerArgumentCollection.ALLELE_EXTENSION_LONG_NAME, "2",
+                "--standard-min-confidence-threshold-for-calling","0",
                 "-ERC", "GVCF"
         };
 
@@ -1024,6 +1033,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
                 "-O", uncorrectedOutput.getAbsolutePath(),
                 "--" + AssemblyBasedCallerArgumentCollection.EMIT_REF_CONFIDENCE_LONG_NAME, (gvcfMode ? ReferenceConfidenceMode.GVCF.toString() : ReferenceConfidenceMode.NONE.toString()),
                 "--" + AssemblyBasedCallerArgumentCollection.ALLELE_EXTENSION_LONG_NAME, "2",
+                "--standard-min-confidence-threshold-for-calling",gvcfMode ? "0" : "30"
         };
         Utils.resetRandomGenerator();
         runCommandLine(noContaminationCorrectionArgs);
@@ -1037,6 +1047,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
                 "-contamination", Double.toString(contaminationFraction),
                 "--" + AssemblyBasedCallerArgumentCollection.EMIT_REF_CONFIDENCE_LONG_NAME, (gvcfMode ? ReferenceConfidenceMode.GVCF.toString() : ReferenceConfidenceMode.NONE.toString()),
                 "--" + AssemblyBasedCallerArgumentCollection.ALLELE_EXTENSION_LONG_NAME, "2",
+                "--standard-min-confidence-threshold-for-calling", gvcfMode ? "0" : "30"
         };
         Utils.resetRandomGenerator();
         runCommandLine(contaminationCorrectionArgs);
@@ -1050,6 +1061,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
                 "-contamination-file", contaminationFile,
                 "--" + AssemblyBasedCallerArgumentCollection.EMIT_REF_CONFIDENCE_LONG_NAME, (gvcfMode ? ReferenceConfidenceMode.GVCF.toString() : ReferenceConfidenceMode.NONE.toString()),
                 "--" + AssemblyBasedCallerArgumentCollection.ALLELE_EXTENSION_LONG_NAME, "2",
+                "--standard-min-confidence-threshold-for-calling",gvcfMode ? "0" : "30"
         };
         Utils.resetRandomGenerator();
         runCommandLine(contaminationCorrectionFromFileArgs);

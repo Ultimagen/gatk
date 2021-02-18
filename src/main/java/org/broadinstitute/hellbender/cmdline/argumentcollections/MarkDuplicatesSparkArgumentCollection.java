@@ -27,15 +27,18 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
     @Argument(fullName = MarkDuplicatesSparkArgumentCollection.DO_NOT_MARK_UNMAPPED_MATES_LONG_NAME, doc = "Enabling this option will mean unmapped mates of duplicate marked reads will not be marked as duplicates.")
     public boolean dontMarkUnmappedMates = false;
 
-    // added params
-    @Argument(doc = "tagging policy settings. values: DontTag, OpticalOnly, All. default: DontTag")
+
+    @Argument(fullName = MarkDuplicatesSparkArgumentCollection.DUPLICATE_TAGGING_POLICY_LONG_NAME, doc = "Determines how duplicate types are recorded in the DT optional attribute.", optional = true,
+            mutex = {REMOVE_ALL_DUPLICATE_READS, REMOVE_SEQUENCING_DUPLICATE_READS})
     public MarkDuplicates.DuplicateTaggingPolicy taggingPolicy = MarkDuplicates.DuplicateTaggingPolicy.DontTag;
 
-    @Argument(doc = "removeSequencingDuplicates. defualt: false")
-    public boolean removeSequencingDuplicates = false;
-
-    @Argument(doc = "removeAllDuplicates. default: false")
+    @Argument(fullName = MarkDuplicatesSparkArgumentCollection.REMOVE_ALL_DUPLICATE_READS, doc = "If true do not write duplicates to the output file instead of writing them with appropriate flags set.",
+            mutex = {MarkDuplicatesSparkArgumentCollection.DUPLICATE_TAGGING_POLICY_LONG_NAME, MarkDuplicatesSparkArgumentCollection.REMOVE_SEQUENCING_DUPLICATE_READS}, optional = true)
     public boolean removeAllDuplicates = false;
+
+    @Argument(fullName = MarkDuplicatesSparkArgumentCollection.REMOVE_SEQUENCING_DUPLICATE_READS, doc = "If true do not write optical/sequencing duplicates to the output file instead of writing them with appropriate flags set.",
+            mutex = {MarkDuplicatesSparkArgumentCollection.DUPLICATE_TAGGING_POLICY_LONG_NAME, MarkDuplicatesSparkArgumentCollection.REMOVE_ALL_DUPLICATE_READS}, optional = true)
+    public boolean removeSequencingDuplicates = false;
 
     @Argument(doc = "Use specific quality summing strategy for flow based reads. The strategy ensures that the same " +
             "(and correct) quality value is used for all bases of the same homopolymer. Default false.")
