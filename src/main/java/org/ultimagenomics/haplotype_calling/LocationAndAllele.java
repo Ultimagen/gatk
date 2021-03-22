@@ -1,19 +1,29 @@
 package org.ultimagenomics.haplotype_calling;
 import htsjdk.variant.variantcontext.Allele;
 
+/**
+ * This class is similar to {@link org.broadinstitute.hellbender.tools.walkers.haplotypecaller.LocationAndAlleles} but
+ * allows to keep only an allele/ref pair rather than a list of alleles. The comparison is done on allele by allele basis and
+ * not in the way it is done on LocationAndAlleles
+ */
+
 public class LocationAndAllele extends Allele {
     final static public long serialVersionUID = 1L;
     private final int loc;
+    private final String contig;
     private final Allele refAllele;
-    public LocationAndAllele(final int loc, final Allele allele, final Allele refAllele) {
+    public LocationAndAllele(final String contig, final int loc, final Allele allele, final Allele refAllele) {
         super(allele, false);
         this.loc = loc;
+        this.contig = contig;
         this.refAllele = refAllele;
     }
 
     public int getLoc() {
         return loc;
     }
+
+    public String getContig() { return contig; }
 
     public Allele getAllele() {
         return this;

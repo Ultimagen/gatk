@@ -44,7 +44,7 @@ public final class GATKVCFConstants {
     public static final String AS_FISHER_STRAND_KEY =               "AS_FS";
     public static final String AS_SB_TABLE_KEY =                    "AS_SB_TABLE";
     public static final String AS_SBP_TABLE_KEY =                   "AS_SBP_TABLE";
-
+    public static final String POSSIBLE_FP_ADJACENT_TP_KEY =        "SUSP_NOISY_ADJACENT_TP_VARIANT";
     public static final String SB_TABLE_KEY =                       "SB_TABLE";
     public static final String GQ_MEAN_KEY =                        "GQ_MEAN";
     public static final String GQ_STDEV_KEY =                       "GQ_STDDEV";

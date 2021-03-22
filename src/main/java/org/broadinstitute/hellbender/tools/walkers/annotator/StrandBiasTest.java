@@ -137,6 +137,32 @@ public abstract class StrandBiasTest extends InfoFieldAnnotation {
         return getContingencyTable(likelihoods, ref, alts, minCount, likelihoods.samples());
     }
 
+
+    /**
+     * Generates a contingency table where the strand bias of an allele is estimated relative to all alleles
+     * (total coverage) in the location. Useful when the question is about strand bias of an allele rather
+     * than of a location (like in AlleleFiltering)
+     * @param likelihoods likelihood matrix
+     * @param ref reference allele
+     * @param alts alternative alleles
+     * @param minCount minimal count (pseudocount)
+     * @return 2x2 contingency table
+     */
+    public static int[][] getContingencyTableWrtAll( final AlleleLikelihoods<GATKRead, Allele> likelihoods,
+                                               final Allele ref,
+                                               final List<Allele> alts,
+                                               final int minCount) {
+        int [][] table = getContingencyTable(likelihoods, ref, alts, minCount);
+        for (int i =0 ; i < ARRAY_DIM; i ++ ) {
+            for (int j = 1; j < ARRAY_DIM; j++) {
+                table[0][i] += table[j][i];
+            }
+        }
+        return table;
+    }
+
+
+
     /**
      Allocate and fill a 2x2 strand contingency table.  In the end, it'll look something like this:
      *             fw      rc
