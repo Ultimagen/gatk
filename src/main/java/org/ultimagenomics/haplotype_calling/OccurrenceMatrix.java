@@ -4,7 +4,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jgrapht.UndirectedGraph;
+import org.jgrapht.Graph;
 import org.jgrapht.alg.ConnectivityInspector;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.SimpleGraph;
@@ -12,6 +12,17 @@ import org.jgrapht.graph.SimpleGraph;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Class to work with exclusive pairs of elements, example - pairs of alleles that do not occur in the haplotypes
+ * @param <R> rows of matrix (e.g. haplotypes)
+ * @param <C> columns of matrix (e.g. alleles)
+ *
+ * The class keeps a binary matrix of rows x columns and looks for columns that never have 1 in the same row. (e.g.
+ *           alleles that never occur in the same haplotype.
+ *           It then allows to generate a graph with edges: a non-coocurence relationship and find connected components
+ *           in ths graph. This is useful for AlleleFiltering where we are basing on clusters of exclusive alleles.
+ *
+ */
 public class OccurrenceMatrix<R,C> {
     protected static final Logger logger = LogManager.getLogger(OccurrenceMatrix.class);
 
@@ -22,6 +33,10 @@ public class OccurrenceMatrix<R,C> {
     private int nCols;
     private boolean[][] occurrenceMatrix;
 
+    /**
+     *
+     * @param input_map input appearance map between R -> C (haplotype to alleles that it contains)
+     */
     public OccurrenceMatrix(final Map<R, Collection<C>> input_map){
         nRows = input_map.size();
         rowNames = input_map.keySet().stream().collect(Collectors.toList());
@@ -54,6 +69,7 @@ public class OccurrenceMatrix<R,C> {
         }
     }
 
+
     public List<Pair<C, C>> nonCoOcurringColumns() {
 
         List<Pair<Integer, Integer>> result = new ArrayList<>();
@@ -80,13 +96,26 @@ public class OccurrenceMatrix<R,C> {
     }
 
     public List<Set<C>> getIndependentSets(List<Pair<C,C>> nonCoOcurringColumns){
-        UndirectedGraph<C, DefaultEdge> nonConnectedAllelesGraph = new SimpleGraph<>(DefaultEdge.class);
+        Graph<C, DefaultEdge> nonConnectedAllelesGraph = new SimpleGraph<>(DefaultEdge.class);
         colNames.stream().forEach(x -> nonConnectedAllelesGraph.addVertex(x));
         nonCoOcurringColumns.stream().forEach(edge->nonConnectedAllelesGraph.addEdge(edge.getLeft(), edge.getRight()));
 
         ConnectivityInspector<C, DefaultEdge> ci = new ConnectivityInspector<>(nonConnectedAllelesGraph);
         List<Set<C>> result = ci.connectedSets();
-        logger.debug (String.format("Received %d alleles that generate %d connected components", colNames.size(), result.size()));
+        logger.debug (() -> String.format("GIS: Received %d alleles that generate %d connected components", colNames.size(), result.size()));
+        logger.debug ("GIS: Here are the components:");
+
+        for (int i = 0 ; i < result.size(); i++) {
+            String str = new String();
+            for ( C allele: result.get(i)){
+                str += " ";
+                str += allele.toString();
+            }
+            final int tmp_i = i;
+            final String tmp_str = str;
+            logger.debug(() -> String.format("---- GIS: (%d) %s", tmp_i, tmp_str)); //is this the right way to convert i to final/essentially final?
+        }
+
         return result;
     }
 
