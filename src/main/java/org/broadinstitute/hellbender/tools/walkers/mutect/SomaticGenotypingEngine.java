@@ -75,7 +75,8 @@ public class SomaticGenotypingEngine {
             final List<VariantContext> givenAlleles,
             final SAMFileHeader header,
             final boolean withBamOut,
-            final boolean emitRefConf) {
+            final boolean emitRefConf,
+            final Set<Integer> suspiciousLocations) {
         Utils.nonNull(logReadLikelihoods);
         Utils.validateArg(logReadLikelihoods.numberOfSamples() > 0, "likelihoods have no samples");
         Utils.nonNull(activeRegionWindow);

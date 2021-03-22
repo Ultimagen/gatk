@@ -168,20 +168,46 @@ public abstract class AssemblyBasedCallerArgumentCollection {
             optional = true)
     public int informativeReadOverlapMargin = 2;
 
+    /**
+     * Specific parameters for the reads in flow space
+     */
+
+
     @Advanced
     @Argument(fullName="flow-assembly-collapse-hmer-size", doc="Collapse reference regions with >Nhmer during assembly, normal value when used is 12", optional = true)
     public int flowAssemblyCollapseHKerSize = 0;
 
     @Advanced
-    @Argument(fullName="flow-matrix-mods", doc="Modifications to perform on the read flow matrix. For now only supported mod is copy. Format is a list of src,dst,src,dst.... Operation is triggered when src is written. Example: 8,12,11,12", optional = true)
+    @Argument(fullName="flow-matrix-mods", doc="Modifications to perform on the read flow matrix. Format is a list of src,dst,src,dst.... Operation is triggered when src is written. Example: 8,12,11,12", optional = true)
     public String flowMatrixMods = null;
+
+    /**
+     * These are the parameters that control allele filtering / haplotype pruning behaviour. The goal of this step is to
+     * filter out alleles that are coming from true allele + sequencing error. Those alleles affect the quality and the SOR
+     * of the true allele especially if aligner places them on a different locations.
+     *
+     * The filtering happens if --flow-filter-alleles tag is toggled.
+     * For every active region we cluster close variants that may affect each other in genotyping (see AlleleFiltering)
+     * and calculate quality of each allele relative to all other alleles in the cluster.
+     * The weakest allele (that has quality lower than flow-filter-alleles-qual-threshold) is removed and then the process
+     * is repeated (note that if two alleles "compete" with each other, e.g. SNP and INDEL+SNP, once the worse allele
+     * is filtered, the quality of the other allele increases). After filtering out all alleles with quality lower than
+     * the threshold, we iteratively filter alleles with SOR higher than flow-filter-alleles-sor-threshold (this filters
+     * out false positives due to biased sequencing error that usually occur on a single strand).
+     *
+     * The filtering is done by removing all haplotypes that contribute this allele.
+     */
 
     public final float PREFILTER_QUAL_THRESHOLD = 30;
     public final float PREFILTER_SOR_THRESHOLD = 3;
 
+
     public final String FILTER_ALLELES = "flow-filter-alleles";
     public final String FILTER_ALLELES_QUAL_THRESHOLD = "flow-filter-alleles-qual-threshold";
     public final String FILTER_ALLELES_SOR_THRESHOLD = "flow-filter-alleles-sor-threshold";
+
+
+    public final String FILTER_ALLELES_DEBUG_GRAPH = "flow-filter-alleles-debug-graphs";
 
 
     @Advanced
@@ -200,5 +226,12 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     @Argument(fullName = FILTER_ALLELES_SOR_THRESHOLD, doc = "Threshold for prefiltering alleles on SOR", optional=true)
     public float prefilterSorThreshold=PREFILTER_SOR_THRESHOLD;
 
+    /* This is a debugging printout - printing how much each allele affects other allele (i.e. how much
+     * quality of an allele is affected by removing other allele */
+
+    @Advanced
+    @Hidden
+    @Argument(fullName = FILTER_ALLELES_DEBUG_GRAPH, doc = "Write an interaction graph in allele filtering", optional=true)
+    public boolean writeFilteringGraphs = false;
 
 }

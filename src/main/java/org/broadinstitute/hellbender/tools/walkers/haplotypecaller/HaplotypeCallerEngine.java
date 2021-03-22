@@ -251,7 +251,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                 hcArgs.refModelDelQual);
 
         //Allele-specific annotations are not yet supported in the VCF mode
-        if (isAlleleSpecificExceptHmerLength(annotationEngine) && isVCFMode()){
+        if (isAlleleSpecificExceptHmerLengthOrStrandBiasMode(annotationEngine) && isVCFMode()){
            throw new UserException("Allele-specific annotations are not yet supported in the VCF mode");
         }
 
@@ -265,7 +265,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         return hcArgs.emitReferenceConfidence == ReferenceConfidenceMode.NONE;
     }
 
-    private boolean isAlleleSpecificExceptHmerLength(final VariantAnnotatorEngine annotationEngine) {
+    private boolean isAlleleSpecificExceptHmerLengthOrStrandBiasMode(final VariantAnnotatorEngine annotationEngine) {
         //HACK. Note: we can't use subclass information from ReducibleAnnotation (which would be the obvious choice)
         // because RMSMappingQuality is both a reducible annotation and a standard annotation.
 
@@ -449,6 +449,9 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             headerInfo.add(GATKVCFHeaderLines.getInfoLine(GATKVCFConstants.EXT_COLLAPSED_KEY));
         }
 
+        if (hcArgs.filterAlleles) {
+            headerInfo.add(GATKVCFHeaderLines.getInfoLine(GATKVCFConstants.POSSIBLE_FP_ADJACENT_TP_KEY));
+        }
 
         if ( emitReferenceConfidence() ) {
             headerInfo.addAll(referenceConfidenceModel.getVCFHeaderLines());
@@ -705,7 +708,9 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             uncollapsedReadLikelihoods = readLikelihoods;
         }
 
+
         final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
+        Set<Integer> suspiciousLocations = new HashSet<>();
         if (hcArgs.filterAlleles) {
             logger.debug("Filtering alleles");
             AlleleFilteringHC alleleFilter = new AlleleFilteringHC(hcArgs, assemblyDebugOutStream, genotypingEngine);
@@ -715,7 +720,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                     assemblyResult.getPaddedReferenceLoc(),
                     hcArgs.assemblerArgs.debugAssembly,
                     hcArgs.maxMnpDistance);
-            subsettedReadLikelihoodsFinal = alleleFilter.filterAlleles(uncollapsedReadLikelihoods, assemblyResult.getPaddedReferenceLoc().getStart());
+            subsettedReadLikelihoodsFinal = alleleFilter.filterAlleles(uncollapsedReadLikelihoods, assemblyResult.getPaddedReferenceLoc().getStart(), suspiciousLocations);
 
         } else {
             logger.debug("Not filtering alleles");
@@ -741,7 +746,8 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                 emitReferenceConfidence(),
                 hcArgs.maxMnpDistance,
                 readsHeader,
-                haplotypeBAMWriter.isPresent());
+                haplotypeBAMWriter.isPresent(),
+                suspiciousLocations);
 
         if ( haplotypeBAMWriter.isPresent() ) {
             final Set<Haplotype> calledHaplotypeSet = new HashSet<>(calledHaplotypes.getCalledHaplotypes());

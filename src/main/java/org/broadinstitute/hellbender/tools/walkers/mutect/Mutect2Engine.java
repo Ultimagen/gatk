@@ -277,6 +277,7 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
 
         final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
 
+        Set<Integer> suspiciousLocations = new HashSet<>();
         if (MTAC.filterAlleles) {
             logger.debug("Filtering alleles");
             AlleleFilteringMutect alleleFilter = new AlleleFilteringMutect(MTAC, null, genotypingEngine);
@@ -287,7 +288,7 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
                     MTAC.maxMnpDistance);
 
             subsettedReadLikelihoodsFinal = alleleFilter.filterAlleles(uncollapsedReadLikelihoods,
-                    assemblyResult.getPaddedReferenceLoc().getStart());
+                    assemblyResult.getPaddedReferenceLoc().getStart(), suspiciousLocations);
         } else {
             logger.debug("Not filtering alleles");
             subsettedReadLikelihoodsFinal = uncollapsedReadLikelihoods;
@@ -298,7 +299,8 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
         final CalledHaplotypes calledHaplotypes = genotypingEngine.callMutations(
                 subsettedReadLikelihoodsFinal, assemblyResult, referenceContext,
                 regionForGenotyping.getSpan(), featureContext, givenAlleles,
-                header, haplotypeBAMWriter.isPresent(), emitReferenceConfidence());
+                header, haplotypeBAMWriter.isPresent(), emitReferenceConfidence(),
+                suspiciousLocations);
         writeBamOutput(assemblyResult, subsettedReadLikelihoodsFinal, calledHaplotypes, regionForGenotyping.getSpan());
 
         if (emitReferenceConfidence()) {

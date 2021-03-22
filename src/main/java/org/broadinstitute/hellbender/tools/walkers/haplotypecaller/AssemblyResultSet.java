@@ -172,8 +172,6 @@ public final class AssemblyResultSet {
                 fixedHap.setGenomeLocation(h.getGenomeLocation());
                 fixedHap.setScore(h.getScore());
                 fixedHap.setAlignmentStartHapwrtRef(h.getAlignmentStartHapwrtRef());
-                //TODO: need to trim this down as well.
-                fixedHap.contigs=h.contigs;
                 fixedOriginalByTrimmedHaplotypes.put(fixedHap, originalByTrimmedHaplotypes.get(h));
             } else {
                 fixedOriginalByTrimmedHaplotypes.put(h, originalByTrimmedHaplotypes.get(h));
@@ -300,8 +298,7 @@ public final class AssemblyResultSet {
         if (haplotypes.contains(h)) {
             haplotypes.stream()
                     .filter(e->e.equals(h))
-                    .findFirst()
-                    .ifPresent(hh->hh.contigs=h.contigs);
+                    .findFirst();
 
             final AssemblyResult previousAr = assemblyResultByHaplotype.get(h);
             if (previousAr == null) {

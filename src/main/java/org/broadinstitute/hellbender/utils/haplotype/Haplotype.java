@@ -7,7 +7,6 @@ import htsjdk.samtools.util.Locatable;
 import htsjdk.variant.variantcontext.Allele;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
-//import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.BaseEdge;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.read.AlignmentUtils;
@@ -16,8 +15,6 @@ import org.broadinstitute.hellbender.utils.read.ReadUtils;
 
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.List;
-//import java.util.List;
 
 public final class Haplotype extends Allele {
     private static final long serialVersionUID = 1L;
@@ -34,7 +31,6 @@ public final class Haplotype extends Allele {
     private Cigar cigar;
     private int alignmentStartHapwrtRef;
     private double score = Double.NaN;
-    public List<? extends Allele> contigs = null;
 
     private boolean isCollapsed;
     private int     diffMatter;
@@ -145,8 +141,6 @@ public final class Haplotype extends Allele {
         ret.setGenomeLocation(loc);
         ret.setScore(score);
         ret.setAlignmentStartHapwrtRef(newStart + getAlignmentStartHapwrtRef());
-        //TODO: need to trim this down as well.
-        ret.contigs=contigs;
         return ret;
     }
 

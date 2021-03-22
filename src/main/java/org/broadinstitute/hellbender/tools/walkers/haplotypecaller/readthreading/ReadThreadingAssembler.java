@@ -5,7 +5,6 @@ import com.google.common.collect.Lists;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMFileHeader;
-import htsjdk.variant.variantcontext.Allele;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.gatk.nativebindings.smithwaterman.SWOverhangStrategy;
@@ -29,7 +28,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
@@ -202,10 +200,6 @@ public final class ReadThreadingAssembler {
 
         // add assembled alt haplotypes to the {@code resultSet}
         findBestPaths(nonRefSeqGraphs, assemblyResultBySeqGraph, refHaplotype, refLoc, activeRegionExtendedLocation, resultSet, aligner);
-
-        for (Haplotype h: resultSet.getHaplotypeList())
-            if (h.contigs==null)
-                continue;
     }
 
     /**
@@ -328,7 +322,6 @@ public final class ReadThreadingAssembler {
                     assemblyResult.setContainsSuspectHaplotypes(true);
                 }
                 final Haplotype h = kBestHaplotype.haplotype();
-                h.contigs = getContigs(kBestHaplotype);
 
                 if (!returnHaplotypes.contains(h)) {
                     // TODO this score seems to be irrelevant at this point...
@@ -390,7 +383,6 @@ public final class ReadThreadingAssembler {
             if (!returnHaplotypes.isEmpty()){
 
 
-                refHaplotype.contigs = getRefHaplotypesContigs(refHaplotype,returnHaplotypes);
                 if ( returnHaplotypes.contains((tmpRefHaplotype))){
                     returnHaplotypes.remove(tmpRefHaplotype);
                 }
@@ -401,13 +393,6 @@ public final class ReadThreadingAssembler {
                 }
             }
 
-
-            if (resultSet!=null) {
-                for (Haplotype h : resultSet.getHaplotypeList()) {
-                    if (h.isReference() && (h.contigs == null))
-                        h.contigs = getRefHaplotypesContigs(h, returnHaplotypes);
-                }
-            }
 
             // uncollapse haplotypes now?
             if ( resultSet != null && resultSet.getRefView() != null ) {
@@ -439,45 +424,6 @@ public final class ReadThreadingAssembler {
         return new ArrayList<>(returnHaplotypes);
     }
 
-
-    private List<? extends Allele> getRefHaplotypesContigs(final Haplotype refHaplotype, final Set<Haplotype> returnHaplotypes) {
-        List<Allele> contigs = new ArrayList<>();
-        String refString = refHaplotype.toString();
-        Map<Haplotype,? extends Allele> candidateHaplotypesToNextContig = returnHaplotypes.stream().collect(Collectors.toMap(Function.identity(), h -> h.contigs.get(0)));
-
-        while (refString.length() > 0) {
-            final String startString = refString;
-            final Set<? extends Allele> contigsWithGoodStart = candidateHaplotypesToNextContig
-                    .values()
-                    .stream()
-                    .filter(c -> startString.startsWith(c.getBaseString()))
-                    .collect(Collectors.toSet());
-
-            if(contigsWithGoodStart.size() > 1) {
-                logger.warn("Found more than one contig candidate to create the reference haplotype for position " + refHaplotype.getLocation().toString() + ". Results may be inaccurate here.");
-                contigs.addAll(returnHaplotypes);
-                return contigs;
-            }
-            if (contigsWithGoodStart.isEmpty()) {
-                logger.warn("couldn't find contigs to continue reference haplotype for position " + refHaplotype.getLocation().toString());
-                return contigs;
-            }
-            final Allele contig = contigsWithGoodStart.iterator().next();
-            contigs.add(contig);
-            refString = refString.substring(contig.toString().length());
-            candidateHaplotypesToNextContig = returnHaplotypes.stream()
-                    .filter(h -> h.contigs.contains(contig) && h.contigs.indexOf(contig) < h.contigs.size() - 1)
-                    .collect(Collectors.toMap(Function.identity(), h -> h.contigs.get(1 + h.contigs.indexOf(contig))));
-        }
-        return contigs;
-    }
-
-    private <E extends BaseEdge, V extends BaseVertex> List<BaseVertexBackedAllele<V>> getContigs(final KBestHaplotype<V, E> kBestHaplotype) {
-
-        return kBestHaplotype.getVertices().stream()
-                .map(BaseVertexBackedAllele::new)
-                .collect(Collectors.toList());
-    }
 
     /**
      * We use CigarOperator.N as the signal that an incomplete or too divergent bubble was found during bubble traversal
