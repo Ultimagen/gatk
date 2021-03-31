@@ -38,10 +38,11 @@ import org.broadinstitute.hellbender.utils.read.*;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
-import org.ultimagenomics.flow_based_read.alignment.FlowBasedAlignmentEngine;
-import org.ultimagenomics.flow_based_read.tests.AlleleLikelihoodWriter;
-import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
-import org.ultimagenomics.haplotype_calling.LHWRefView;
+import org.ultimagen.flowBasedRead.alignment.FlowBasedAlignmentEngine;
+import org.ultimagen.flowBasedRead.read.FlowBasedRead;
+import org.ultimagen.flowBasedRead.tests.AlleleLikelihoodWriter;
+import org.ultimagen.flowBasedRead.utils.FlowBasedAlignmentArgumentCollection;
+import org.ultimagen.haplotypeCalling.LHWRefView;
 
 import java.io.File;
 import java.util.*;
@@ -124,6 +125,8 @@ public final class AssemblyBasedCallerUtils {
                                       final SAMFileHeader readsHeader,
                                       final SampleList samplesList,
                                       final boolean correctOverlappingBaseQualities,
+                                      final FlowBasedAlignmentArgumentCollection fbargs) {
+                                      final boolean correctOverlappingBaseQualities,
                                       final boolean softClipLowQualityEnds) {
         if ( region.isFinalized() ) {
             return;
@@ -135,8 +138,9 @@ public final class AssemblyBasedCallerUtils {
         for (GATKRead originalRead : region.getReads()) {
             // TODO unclipping soft clips may introduce bases that aren't in the extended region if the unclipped bases
             // TODO include a deletion w.r.t. the reference.  We must remove kmers that occur before the reference haplotype start
-            GATKRead read = (dontUseSoftClippedBases || ! ReadUtils.hasWellDefinedFragmentSize(originalRead) ?
-                    ReadClipper.hardClipSoftClippedBases(originalRead) : ReadClipper.revertSoftClippedBases(originalRead));
+            GATKRead read = FlowBasedRead.isFlowBasedData(readsHeader, read) ? FlowBasedRead.hardClipUncertainBases(originalRead, readsHeader, fbargs):originalRead;
+            read =  skipSoftClips || ! ( overrideSoftclipFragmentCheck || ReadUtils.hasWellDefinedFragmentSize(read)) ?
+                    ReadClipper.hardClipSoftClippedBases(read) : ReadClipper.revertSoftClippedBases(read));
             read = (softClipLowQualityEnds ? ReadClipper.softClipLowQualEnds(read, minTailQualityToUse) :
                     ReadClipper.hardClipLowQualEnds(read, minTailQualityToUse));
 
@@ -298,6 +302,10 @@ public final class AssemblyBasedCallerUtils {
                                                   final ReferenceSequenceFile referenceReader,
                                                   final ReadThreadingAssembler assemblyEngine,
                                                   final SmithWatermanAligner aligner,
+                                                  final boolean correctOverlappingBaseQualities,
+                                                  final FlowBasedAlignmentArgumentCollection fbargs){
+        finalizeRegion(region, argumentCollection.assemblerArgs.errorCorrectReads, argumentCollection.dontUseSoftClippedBases,
+                argumentCollection.overrideSoftclipFragmentCheck, (byte)(argumentCollection.minBaseQualityScore - 1), header, sampleList, correctOverlappingBaseQualities, fbargs);
                                                   final boolean correctOverlappingBaseQualities){
         finalizeRegion(region, argumentCollection.assemblerArgs.errorCorrectReads, argumentCollection.dontUseSoftClippedBases, (byte)(argumentCollection.minBaseQualityScore - 1), header, sampleList, correctOverlappingBaseQualities, argumentCollection.softClipLowQualityEnds);
         if( argumentCollection.assemblerArgs.debugAssembly) {
@@ -321,6 +329,7 @@ public final class AssemblyBasedCallerUtils {
         final SWParameters haplotypeToReferenceSWParameters = argumentCollection.getHaplotypeToReferenceSWParameters();
 
         // estblish reference mapper, if needed
+
         final LHWRefView refView = (argumentCollection.flowAssemblyCollapseHKerSize > 0 && LHWRefView.needsCollapsing(refHaplotype.getBases(), argumentCollection.flowAssemblyCollapseHKerSize, logger, argumentCollection.assemblerArgs.debugAssembly))
                                             ? new LHWRefView(argumentCollection.flowAssemblyCollapseHKerSize, fullReferenceWithPadding,
                 paddedReferenceLoc, logger, argumentCollection.assemblerArgs.debugAssembly, aligner)
