@@ -54,8 +54,8 @@ import org.broadinstitute.hellbender.utils.reference.ReferenceUtils;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
-import org.ultimagenomics.haplotype_calling.AlleleFilteringMutect;
-import org.ultimagenomics.haplotype_calling.LHWRefView;
+import org.ultimagen.haplotypeCalling.AlleleFilteringMutect;
+import org.ultimagen.haplotypeCalling.LHWRefView;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 
 import java.io.File;
@@ -155,7 +155,7 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
 
         annotationEngine = Utils.nonNull(annotatorEngine);
         assemblyEngine = MTAC.createReadThreadingAssembler();
-        likelihoodCalculationEngine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(MTAC.likelihoodArgs, true);
+        likelihoodCalculationEngine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(MTAC.likelihoodArgs, MTAC.fbargs);
         genotypingEngine = new SomaticGenotypingEngine(MTAC, normalSamples, annotationEngine);
         haplotypeBAMWriter = AssemblyBasedCallerUtils.createBamWriter(MTAC, createBamOutIndex, createBamOutMD5, header);
         trimmer = new AssemblyRegionTrimmer(assemblyRegionArgs, header.getSequenceDictionary());
@@ -250,7 +250,7 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
         final List<VariantContext> givenAlleles = featureContext.getValues(MTAC.alleles).stream()
                 .filter(vc -> MTAC.forceCallFiltered || vc.isNotFiltered()).collect(Collectors.toList());
 
-        final AssemblyResultSet untrimmedAssemblyResult = AssemblyBasedCallerUtils.assembleReads(originalAssemblyRegion, givenAlleles, MTAC, header, samplesList, logger, referenceReader, assemblyEngine, aligner, false);
+        final AssemblyResultSet untrimmedAssemblyResult = AssemblyBasedCallerUtils.assembleReads(originalAssemblyRegion, givenAlleles, MTAC, header, samplesList, logger, referenceReader, assemblyEngine, aligner, false, MTAC.fbargs);
         ReadThreadingAssembler.addAssembledVariantsToEventMapOutput(untrimmedAssemblyResult, assembledEventMapVariants, MTAC.maxMnpDistance, assembledEventMapVcfOutputWriter);
         final LHWRefView refView = untrimmedAssemblyResult.getRefView();
 
@@ -536,7 +536,7 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
      */
     private List<VariantContext> referenceModelForNoVariation(final AssemblyRegion region) {
         // don't correct overlapping base qualities because we did that upstream
-        AssemblyBasedCallerUtils.finalizeRegion(region, false, true, (byte)9, header, samplesList, false, false);  //take off soft clips and low Q tails before we calculate likelihoods
+        AssemblyBasedCallerUtils.finalizeRegion(region, false, true, (byte)9, header, samplesList, false, false, MTAC.fbargs);  //take off soft clips and low Q tails before we calculate likelihoods
         final SimpleInterval paddedLoc = region.getPaddedSpan();
         final Haplotype refHaplotype = AssemblyBasedCallerUtils.createReferenceHaplotype(region, paddedLoc, referenceReader);
         final List<Haplotype> haplotypes = Collections.singletonList(refHaplotype);

@@ -16,7 +16,6 @@ import org.broadinstitute.hellbender.utils.QualityUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.recalibration.EventType;
-import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
 
 import java.io.BufferedInputStream;
 import java.io.File;
