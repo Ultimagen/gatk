@@ -9,7 +9,7 @@ import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.argumentcollections.DbsnpArgumentCollection;
 import org.broadinstitute.hellbender.engine.FeatureInput;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.StandardCallerArgumentCollection;
-import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
+import org.ultimagen.flowBasedRead.utils.FlowBasedAlignmentArgumentCollection;
 
 import java.io.Serializable;
 import java.util.ArrayList;

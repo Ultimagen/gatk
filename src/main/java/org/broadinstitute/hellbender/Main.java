@@ -101,7 +101,7 @@ public class Main {
         final List<String> packageList = new ArrayList<>();
         packageList.addAll(Arrays.asList("org.broadinstitute.hellbender"));
         packageList.addAll(Arrays.asList("picard"));
-        packageList.addAll(Arrays.asList("org.ultimagenomics"));
+        packageList.addAll(Arrays.asList("org.ultimagen"));
         return packageList;
     }
 

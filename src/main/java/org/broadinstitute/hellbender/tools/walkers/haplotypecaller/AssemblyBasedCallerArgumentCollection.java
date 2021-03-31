@@ -109,6 +109,10 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     @Argument(fullName = DONT_USE_SOFT_CLIPPED_BASES_LONG_NAME, doc = "Do not analyze soft clipped bases in the reads", optional = true)
     public boolean dontUseSoftClippedBases = false;
 
+    @Advanced
+    @Argument(fullName = "override-fragment-softclip-check", doc = "Use softclipped bases for assembly even when fragment size is ambiguous", optional = true)
+    public boolean overrideSoftclipFragmentCheck = false;
+
     // Parameters to control read error correction
 
     /**

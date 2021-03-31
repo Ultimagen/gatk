@@ -22,7 +22,7 @@ import org.broadinstitute.hellbender.utils.param.ParamUtils;
 import org.broadinstitute.hellbender.utils.read.CigarUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
-import org.ultimagenomics.haplotype_calling.LHWRefView;
+import org.ultimagen.haplotypeCalling.LHWRefView;
 
 import java.io.File;
 import java.io.IOException;

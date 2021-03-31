@@ -568,4 +568,5 @@ public class ReadClipper {
     public static GATKRead softClipByReadCoordinates(final GATKRead read, final int start, final int stop) {
         return (new ReadClipper(read)).softClipByReadCoordinates(start, stop);
     }
+
 }

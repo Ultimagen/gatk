@@ -12,7 +12,7 @@ import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.haplotype.EventMap;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.param.ParamUtils;
-import org.ultimagenomics.haplotype_calling.LHWRefView;
+import org.ultimagen.haplotypeCalling.LHWRefView;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;

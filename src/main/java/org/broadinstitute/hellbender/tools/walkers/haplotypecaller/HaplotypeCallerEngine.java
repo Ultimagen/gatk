@@ -48,10 +48,10 @@ import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.broadinstitute.hellbender.utils.variant.HomoSapiensConstants;
 import org.broadinstitute.hellbender.utils.variant.writers.GVCFWriter;
-import org.ultimagenomics.flow_based_read.read.FlowBasedRead;
-import org.ultimagenomics.flow_based_read.tests.AlleleLikelihoodWriter;
-import org.ultimagenomics.haplotype_calling.AlleleFilteringHC;
-import org.ultimagenomics.haplotype_calling.LHWRefView;
+import org.ultimagen.flowBasedRead.read.FlowBasedRead;
+import org.ultimagen.flowBasedRead.tests.AlleleLikelihoodWriter;
+import org.ultimagen.haplotypeCalling.AlleleFilteringHC;
+import org.ultimagen.haplotypeCalling.LHWRefView;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -259,6 +259,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         alleleLikelihoodWriter = AssemblyBasedCallerUtils.createAlleleLikelihoodWriter(hcArgs);
         assemblyEngine = hcArgs.createReadThreadingAssembler();
         likelihoodCalculationEngine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(hcArgs.likelihoodArgs, hcArgs.fbargs);
+
     }
 
     private boolean isVCFMode() {
@@ -627,7 +628,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
 
         // run the local assembler, getting back a collection of information on how we should proceed
-        final AssemblyResultSet untrimmedAssemblyResult =  AssemblyBasedCallerUtils.assembleReads(region, givenAlleles, hcArgs, readsHeader, samplesList, logger, referenceReader, assemblyEngine, aligner, !hcArgs.doNotCorrectOverlappingBaseQualities);
+        final AssemblyResultSet untrimmedAssemblyResult =  AssemblyBasedCallerUtils.assembleReads(region, givenAlleles, hcArgs, readsHeader, samplesList, logger, referenceReader, assemblyEngine, aligner, !hcArgs.doNotCorrectOverlappingBaseQualities, hcArgs.fbargs);
         final LHWRefView refView = untrimmedAssemblyResult.getRefView();
 
         if (assemblyDebugOutStream != null) {
@@ -807,11 +808,13 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
      * @return a list of variant contexts (can be empty) to emit for this ref region
      */
     private List<VariantContext> referenceModelForNoVariation(final AssemblyRegion region, final boolean needsToBeFinalized, final List<VariantContext> VCpriors) {
+
         if ( emitReferenceConfidence() ) {
             //TODO - why the activeRegion cannot manage its own one-time finalization and filtering?
             //TODO - perhaps we can remove the last parameter of this method and the three lines below?
             if ( needsToBeFinalized ) {
-                AssemblyBasedCallerUtils.finalizeRegion(region, hcArgs.assemblerArgs.errorCorrectReads, hcArgs.dontUseSoftClippedBases, minTailQuality, readsHeader, samplesList, ! hcArgs.doNotCorrectOverlappingBaseQualities);
+                AssemblyBasedCallerUtils.finalizeRegion(region, hcArgs.assemblerArgs.errorCorrectReads, hcArgs.dontUseSoftClippedBases, hcArgs.overrideSoftclipFragmentCheck,
+                        minTailQuality, readsHeader, samplesList, ! hcArgs.doNotCorrectOverlappingBaseQualities, hcArgs.fbargs);
             }
             filterNonPassingReads(region);
 

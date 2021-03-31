@@ -37,10 +37,11 @@ import org.broadinstitute.hellbender.utils.read.*;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
-import org.ultimagenomics.flow_based_read.alignment.FlowBasedAlignmentEngine;
-import org.ultimagenomics.flow_based_read.tests.AlleleLikelihoodWriter;
-import org.ultimagenomics.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
-import org.ultimagenomics.haplotype_calling.LHWRefView;
+import org.ultimagen.flowBasedRead.alignment.FlowBasedAlignmentEngine;
+import org.ultimagen.flowBasedRead.read.FlowBasedRead;
+import org.ultimagen.flowBasedRead.tests.AlleleLikelihoodWriter;
+import org.ultimagen.flowBasedRead.utils.FlowBasedAlignmentArgumentCollection;
+import org.ultimagen.haplotypeCalling.LHWRefView;
 
 import java.io.File;
 import java.util.*;
@@ -98,19 +99,23 @@ public final class AssemblyBasedCallerUtils {
     public static void finalizeRegion(final AssemblyRegion region,
                                       final boolean errorCorrectReads,
                                       final boolean skipSoftClips,
+                                      final boolean overrideSoftclipFragmentCheck,
                                       final byte minTailQuality,
                                       final SAMFileHeader readsHeader,
                                       final SampleList samplesList,
-                                      final boolean correctOverlappingBaseQualities) {
+                                      final boolean correctOverlappingBaseQualities,
+                                      final FlowBasedAlignmentArgumentCollection fbargs) {
         if ( region.isFinalized() ) {
             return;
         }
 
         final byte minTailQualityToUse = errorCorrectReads ? HaplotypeCallerEngine.MIN_TAIL_QUALITY_WITH_ERROR_CORRECTION : minTailQuality;
+
         final List<GATKRead> readsToUse = region.getReads().stream()
                 // TODO unclipping soft clips may introduce bases that aren't in the extended region if the unclipped bases
                 // TODO include a deletion w.r.t. the reference.  We must remove kmers that occur before the reference haplotype start
-                .map(read -> skipSoftClips || ! ReadUtils.hasWellDefinedFragmentSize(read) ?
+                .map(read -> FlowBasedRead.isFlowBasedData(readsHeader, read) ? FlowBasedRead.hardClipUncertainBases(read, readsHeader, fbargs):read)
+                .map(read -> skipSoftClips || ! ( overrideSoftclipFragmentCheck || ReadUtils.hasWellDefinedFragmentSize(read)) ?
                     ReadClipper.hardClipSoftClippedBases(read) : ReadClipper.revertSoftClippedBases(read))
                 .map(read -> ReadClipper.hardClipLowQualEnds(read, minTailQualityToUse))
                 .filter(read -> read.getStart() <= read.getEnd())
@@ -275,8 +280,10 @@ public final class AssemblyBasedCallerUtils {
                                                   final ReferenceSequenceFile referenceReader,
                                                   final ReadThreadingAssembler assemblyEngine,
                                                   final SmithWatermanAligner aligner,
-                                                  final boolean correctOverlappingBaseQualities){
-        finalizeRegion(region, argumentCollection.assemblerArgs.errorCorrectReads, argumentCollection.dontUseSoftClippedBases, (byte)(argumentCollection.minBaseQualityScore - 1), header, sampleList, correctOverlappingBaseQualities);
+                                                  final boolean correctOverlappingBaseQualities,
+                                                  final FlowBasedAlignmentArgumentCollection fbargs){
+        finalizeRegion(region, argumentCollection.assemblerArgs.errorCorrectReads, argumentCollection.dontUseSoftClippedBases,
+                argumentCollection.overrideSoftclipFragmentCheck, (byte)(argumentCollection.minBaseQualityScore - 1), header, sampleList, correctOverlappingBaseQualities, fbargs);
         if( argumentCollection.assemblerArgs.debugAssembly) {
             logger.info("Assembling " + region.getSpan() + " with " + region.size() + " reads:    (with overlap region = " + region.getPaddedSpan() + ")");
         }
@@ -296,6 +303,7 @@ public final class AssemblyBasedCallerUtils {
                 : new PileupReadErrorCorrector(argumentCollection.assemblerArgs.pileupErrorCorrectionLogOdds, header);
 
         // estblish reference mapper, if needed
+
         final LHWRefView refView = (argumentCollection.flowAssemblyCollapseHKerSize > 0 && LHWRefView.needsCollapsing(refHaplotype.getBases(), argumentCollection.flowAssemblyCollapseHKerSize, logger, argumentCollection.assemblerArgs.debugAssembly))
                                             ? new LHWRefView(argumentCollection.flowAssemblyCollapseHKerSize, fullReferenceWithPadding,
                 paddedReferenceLoc, logger, argumentCollection.assemblerArgs.debugAssembly, aligner)

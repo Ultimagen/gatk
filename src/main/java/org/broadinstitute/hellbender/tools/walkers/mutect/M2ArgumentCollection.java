@@ -13,6 +13,7 @@ import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.readthreading
 import org.broadinstitute.hellbender.tools.walkers.mutect.filtering.FilterMutectCalls;
 import org.broadinstitute.hellbender.tools.walkers.readorientation.CollectF1R2CountsArgumentCollection;
 import org.broadinstitute.hellbender.utils.MathUtils;
+import org.ultimagen.flow_based_read.utils.FlowBasedAlignmentArgumentCollection;
 
 import java.io.File;
 import java.io.Serializable;
@@ -89,6 +90,9 @@ public class M2ArgumentCollection extends AssemblyBasedCallerArgumentCollection 
 
     @ArgumentCollection
     public CollectF1R2CountsArgumentCollection f1r2Args = new CollectF1R2CountsArgumentCollection();
+
+    @ArgumentCollection
+    public FlowBasedAlignmentArgumentCollection fbargs = new FlowBasedAlignmentArgumentCollection();
 
     @Argument(fullName = F1R2_TAR_GZ_NAME, doc = "If specified, collect F1R2 counts and output files into this tar.gz file", optional = true)
     public File f1r2TarGz;
