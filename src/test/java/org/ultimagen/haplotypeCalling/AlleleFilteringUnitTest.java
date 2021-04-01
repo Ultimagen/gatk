@@ -1,4 +1,4 @@
-package org.ultimagenomics.haplotype_calling;
+package org.ultimagen.haplotypeCalling;
 
 import htsjdk.samtools.TextCigarCodec;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerArgumentCollection;
