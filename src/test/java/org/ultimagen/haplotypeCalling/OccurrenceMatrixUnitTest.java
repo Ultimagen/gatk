@@ -1,4 +1,4 @@
-package org.ultimagenomics.haplotype_calling;
+package org.ultimagen.haplotypeCalling;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
