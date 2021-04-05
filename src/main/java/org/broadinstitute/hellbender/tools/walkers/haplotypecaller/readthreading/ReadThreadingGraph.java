@@ -47,7 +47,7 @@ public class ReadThreadingGraph extends AbstractReadThreadingGraph {
      */
     @VisibleForTesting
     protected ReadThreadingGraph(final int kmerSizeFromString, final EdgeFactory<MultiDeBruijnVertex, MultiSampleEdge> edgeFactory) {
-        super(kmerSizeFromString, new SingleMultiplicityEdgeFactory(1));
+        super(kmerSizeFromString, new MyEdgeFactory(1));
         nonUniqueKmers = null;
     }
 

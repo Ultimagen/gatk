@@ -172,13 +172,13 @@ public class SharedVertexSequenceSplitterUnitTest extends GATKBaseTest {
         if ( hasTop ) {
             graph.addVertex(top);
             for ( final SeqVertex vi : v )
-                graph.addEdge(top, vi, new BaseEdge(vi == first, edgeWeight++, edgeWeight));
+                graph.addEdge(top, vi, new BaseEdge(vi == first, edgeWeight++));
         }
 
         if ( hasBot ) {
             graph.addVertex(bot);
             for ( final SeqVertex vi : v )
-                graph.addEdge(vi, bot, new BaseEdge(vi == first, edgeWeight++,edgeWeight));
+                graph.addEdge(vi, bot, new BaseEdge(vi == first, edgeWeight++));
         }
 
         final List<KBestHaplotype<SeqVertex, BaseEdge>> originalPaths = new GraphBasedKBestHaplotypeFinder<>(graph.clone()).findBestHaplotypes();

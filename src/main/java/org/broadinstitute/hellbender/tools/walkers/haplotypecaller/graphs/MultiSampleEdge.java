@@ -4,9 +4,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.broadinstitute.hellbender.utils.Utils;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import java.util.PriorityQueue;
 
 /**
@@ -30,42 +28,32 @@ import java.util.PriorityQueue;
  * </pre>
  */
 public final class MultiSampleEdge extends BaseEdge {
-    private BaseEdge currentSingleSampleEdge;
+    private int currentSingleSampleMultiplicity;
     private final int singleSampleCapacity;
-    private final PriorityQueue<BaseEdge> singleSampleMultiplicities;
+    private final PriorityQueue<Integer> singleSampleMultiplicities;
 
     private final List<Integer> referencePathIndexes = new ArrayList<>(2);
 
     /**
      * Create a new MultiSampleEdge with weight multiplicity and, if isRef == true, indicates a path through the reference
      *
-     * @param isRef                indicates whether this edge is a path through the reference
-     * @param forwardMult          the number of forward observations of this edge
-     * @param reverseMult          the number of reverse observations of this edge
+     * @param isRef indicates whether this edge is a path through the reference
+     * @param multiplicity the number of observations of this edge in this sample
      * @param singleSampleCapacity the max number of samples to track edge multiplicities
      */
-    public MultiSampleEdge(final boolean isRef, final int forwardMult, final int reverseMult, final int singleSampleCapacity) {
-        super(isRef, forwardMult, reverseMult);
+    public MultiSampleEdge(final boolean isRef, final int multiplicity, final int singleSampleCapacity) {
+        super(isRef, multiplicity);
 
         Utils.validateArg( singleSampleCapacity > 0, () -> "singleSampleCapacity must be > 0 but found: " + singleSampleCapacity);
-        singleSampleMultiplicities = new PriorityQueue<>(singleSampleCapacity, new BaseEdgeComparator());
-        singleSampleMultiplicities.add(new BaseEdge(false, forwardMult,reverseMult));
-
-        currentSingleSampleEdge = new BaseEdge(isRef, forwardMult,reverseMult);
-
+        singleSampleMultiplicities = new PriorityQueue<>(singleSampleCapacity);
+        singleSampleMultiplicities.add(multiplicity);
+        currentSingleSampleMultiplicity = multiplicity;
         this.singleSampleCapacity = singleSampleCapacity;
-    }
-
-    private static class BaseEdgeComparator implements Comparator<BaseEdge> {
-        @Override
-        public int compare(final BaseEdge o1, final BaseEdge o2) {
-            return o1.getPruningMultiplicity() - o2.getPruningMultiplicity();
-        }
     }
 
     @Override
     public MultiSampleEdge copy() {
-        return new MultiSampleEdge(isRef(), forwardMultiplicity, reverseMultiplicity,singleSampleCapacity); // TODO -- should I copy values for other features?
+        return new MultiSampleEdge(isRef(), getMultiplicity(), singleSampleCapacity); // TODO -- should I copy values for other features?
     }
 
     /**
@@ -73,37 +61,34 @@ public final class MultiSampleEdge extends BaseEdge {
      * reset the current single sample multiplicity to 0.
      */
     public void flushSingleSampleMultiplicity() {
-        singleSampleMultiplicities.add(currentSingleSampleEdge);
-        if (singleSampleMultiplicities.size() == singleSampleCapacity + 1) {
+        singleSampleMultiplicities.add(currentSingleSampleMultiplicity);
+        if( singleSampleMultiplicities.size() == singleSampleCapacity + 1 ) {
             singleSampleMultiplicities.poll(); // remove the lowest multiplicity from the list
-        } else if (singleSampleMultiplicities.size() > singleSampleCapacity + 1) {
+        } else if( singleSampleMultiplicities.size() > singleSampleCapacity + 1 ) {
             throw new IllegalStateException("Somehow the per sample multiplicity list has grown too big: " + singleSampleMultiplicities);
         }
-        currentSingleSampleEdge = new BaseEdge(isRef(), 0, 0);
+        currentSingleSampleMultiplicity = 0;
     }
 
     @Override
-    public void incMultiplicity(final int incr, final boolean fromReverseStrand) {
-        super.incMultiplicity(incr, fromReverseStrand);
-        currentSingleSampleEdge.incMultiplicity(incr,fromReverseStrand);
+    public void incMultiplicity(final int incr) {
+        super.incMultiplicity(incr);
+        currentSingleSampleMultiplicity += incr;
     }
 
     @Override
     public int getPruningMultiplicity() {
-        return currentSingleSampleEdge.getPruningMultiplicity() +
-                Optional.ofNullable(singleSampleMultiplicities.peek())
-                        .orElse(new BaseEdge(isRef(), 0, 0))
-                        .getPruningMultiplicity();
+        return singleSampleMultiplicities.peek();
     }
 
     @Override
     public String getDotLabel() {
-        return super.getDotLabel() + "->" + getPruningMultiplicity();
+        return super.getDotLabel() + '/' + getPruningMultiplicity();
     }
 
     @VisibleForTesting
     int getCurrentSingleSampleMultiplicity() {
-        return currentSingleSampleEdge.getMultiplicity();
+        return currentSingleSampleMultiplicity;
     }
 
     public void addReferenceIndex(int i) {

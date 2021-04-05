@@ -14,7 +14,6 @@ import org.apache.logging.log4j.Logger;
 import org.broadinstitute.gatk.nativebindings.smithwaterman.SWOverhangStrategy;
 import org.broadinstitute.hellbender.engine.AlignmentContext;
 import org.broadinstitute.hellbender.engine.AssemblyRegion;
-import org.broadinstitute.hellbender.engine.GATKPath;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.walkers.ReferenceConfidenceVariantContextMerger;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.readthreading.ReadThreadingAssembler;
@@ -60,7 +59,6 @@ public final class AssemblyBasedCallerUtils {
     public static final String CALLABLE_REGION_TAG = "CR";
     public static final String ALIGNMENT_REGION_TAG = "AR";
     public static final String EXT_COLLAPSED_TAG = "XC";
-    public static final String READ_ORIGINAL_ALIGNMENT_KEY = "originalAlignment";
     public static final Function<Haplotype, Double> HAPLOTYPE_ALIGNMENT_TIEBREAKING_PRIORITY = h -> {
         final Cigar cigar = h.getCigar();
         final int referenceTerm = (h.isReference() ? 1 : 0);
@@ -124,9 +122,9 @@ public final class AssemblyBasedCallerUtils {
                                       final SAMFileHeader readsHeader,
                                       final SampleList samplesList,
                                       final boolean correctOverlappingBaseQualities,
+                                      final boolean softClipLowQualityEnds,
+                                      final boolean overrideSoftclipFragmentCheck,
                                       final FlowBasedAlignmentArgumentCollection fbargs) {
-                                      final boolean correctOverlappingBaseQualities,
-                                      final boolean softClipLowQualityEnds) {
         if ( region.isFinalized() ) {
             return;
         }
@@ -137,9 +135,9 @@ public final class AssemblyBasedCallerUtils {
         for (GATKRead originalRead : region.getReads()) {
             // TODO unclipping soft clips may introduce bases that aren't in the extended region if the unclipped bases
             // TODO include a deletion w.r.t. the reference.  We must remove kmers that occur before the reference haplotype start
-            GATKRead read = FlowBasedRead.isFlowBasedData(readsHeader, read) ? FlowBasedRead.hardClipUncertainBases(originalRead, readsHeader, fbargs):originalRead;
-            read =  skipSoftClips || ! ( overrideSoftclipFragmentCheck || ReadUtils.hasWellDefinedFragmentSize(read)) ?
-                    ReadClipper.hardClipSoftClippedBases(read) : ReadClipper.revertSoftClippedBases(read));
+            GATKRead read = FlowBasedRead.isFlowBasedData(readsHeader, originalRead) ? FlowBasedRead.hardClipUncertainBases(originalRead, readsHeader, fbargs):originalRead;
+            read =  dontUseSoftClippedBases || ! ( overrideSoftclipFragmentCheck || ReadUtils.hasWellDefinedFragmentSize(read)) ?
+                    ReadClipper.hardClipSoftClippedBases(read) : ReadClipper.revertSoftClippedBases(read);
             read = (softClipLowQualityEnds ? ReadClipper.softClipLowQualEnds(read, minTailQualityToUse) :
                     ReadClipper.hardClipLowQualEnds(read, minTailQualityToUse));
 
@@ -251,7 +249,7 @@ public final class AssemblyBasedCallerUtils {
                 likelihoodArgs.BASE_QUALITY_SCORE_THRESHOLD, likelihoodArgs.enableDynamicReadDisqualification, likelihoodArgs.readDisqualificationThresholdConstant,
                 likelihoodArgs.expectedErrorRatePerBase, !likelihoodArgs.disableSymmetricallyNormalizeAllelesToReference, likelihoodArgs.disableCapReadQualitiesToMapQ, handleSoftclips);
             case FlowBased:
-                return new FlowBasedAlignmentEngine(flowBasedArgs, log10GlobalReadMismappingRate, likelihoodArgs.expectedErrorPerBase);
+                return new FlowBasedAlignmentEngine(flowBasedArgs, log10GlobalReadMismappingRate, likelihoodArgs.expectedErrorRatePerBase);
             default:
                 throw new UserException("Unsupported likelihood calculation engine.");
         }
@@ -303,11 +301,19 @@ public final class AssemblyBasedCallerUtils {
                                                   final SmithWatermanAligner aligner,
                                                   final boolean correctOverlappingBaseQualities,
                                                   final FlowBasedAlignmentArgumentCollection fbargs){
-        finalizeRegion(region, argumentCollection.assemblerArgs.errorCorrectReads, argumentCollection.dontUseSoftClippedBases,
-                argumentCollection.overrideSoftclipFragmentCheck, (byte)(argumentCollection.minBaseQualityScore - 1), header, sampleList, correctOverlappingBaseQualities, fbargs);
-                                                  final boolean correctOverlappingBaseQualities){
-        finalizeRegion(region, argumentCollection.assemblerArgs.errorCorrectReads, argumentCollection.dontUseSoftClippedBases, (byte)(argumentCollection.minBaseQualityScore - 1), header, sampleList, correctOverlappingBaseQualities, argumentCollection.softClipLowQualityEnds);
-        if( argumentCollection.assemblerArgs.debugAssembly) {
+        finalizeRegion(region,
+                argumentCollection.assemblerArgs.errorCorrectReads,
+                argumentCollection.dontUseSoftClippedBases,
+                (byte)(argumentCollection.minBaseQualityScore - 1),
+                header,
+                sampleList,
+                correctOverlappingBaseQualities,
+                argumentCollection.softClipLowQualityEnds,
+                argumentCollection.overrideSoftclipFragmentCheck,
+                fbargs);
+
+
+            if( argumentCollection.assemblerArgs.debugAssembly) {
             logger.info("Assembling " + region.getSpan() + " with " + region.size() + " reads:    (with overlap region = " + region.getPaddedSpan() + ")");
         }
 
@@ -742,7 +748,6 @@ public final class AssemblyBasedCallerUtils {
     /**
      * Construct the mapping from call (variant context) to phase set ID
      *
-     * @param totalAvailableHaplotypes the total number haplotypes that support alternate alleles of called variants
      * @param originalCalls    the original unphased calls
      * @param haplotypeMap     mapping from alternate allele to the set of haplotypes that contain that allele
      * @return a map from each variant context to a pair with the phase set ID and phase group of the alt allele

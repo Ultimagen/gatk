@@ -8,10 +8,7 @@ import org.broadinstitute.hellbender.utils.Utils;
 import org.jgrapht.EdgeFactory;
 
 import java.io.File;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.function.Supplier;
+import java.util.*;
 
 /**
  * A graph that contains base sequence at each node
@@ -20,7 +17,7 @@ public class SeqGraph extends BaseGraph<SeqVertex, BaseEdge> {
 
     private final Logger logger = LogManager.getLogger(SeqGraph.class);
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1l;
 
     @Override
     public SeqGraph clone() {
@@ -33,11 +30,11 @@ public class SeqGraph extends BaseGraph<SeqVertex, BaseEdge> {
     private static class MyEdgeFactory implements EdgeFactory<SeqVertex, BaseEdge> {
         @Override
         public BaseEdge createEdge(final SeqVertex sourceVertex, final SeqVertex targetVertex) {
-            return new BaseEdge(false, 1,1);
+            return new BaseEdge(false, 1);
         }
     }
 
-    private static final boolean PRINT_SIMPLIFY_GRAPHS = true;
+    private static final boolean PRINT_SIMPLIFY_GRAPHS = false;
 
     /**
      * How many cycles of the graph simplifications algorithms will we run before
@@ -57,20 +54,17 @@ public class SeqGraph extends BaseGraph<SeqVertex, BaseEdge> {
         super(kmer, new MyEdgeFactory());
     }
 
-    public void simplifyGraph() {
-        simplifyGraph(Integer.MAX_VALUE,()->"");
-    }
     /**
      * Simplify this graph, merging vertices together and restructuring the graph in an
      * effort to minimize the number of overall vertices in the graph without changing
      * in any way the sequences implied by a complex enumeration of all paths through the graph.
      */
-    public void simplifyGraph(final Supplier<String> baseName) {
-        simplifyGraph(Integer.MAX_VALUE,baseName);
+    public void simplifyGraph() {
+        simplifyGraph(Integer.MAX_VALUE);
     }
 
     @VisibleForTesting
-    void simplifyGraph(final int maxCycles, final Supplier<String> baseFile) {
+    void simplifyGraph(final int maxCycles) {
         // start off with one round of zipping of chains for performance reasons
         zipLinearChains();
 
@@ -78,11 +72,11 @@ public class SeqGraph extends BaseGraph<SeqVertex, BaseEdge> {
         for( int i = 0; i < maxCycles; i++ ) {
             if ( i > MAX_REASONABLE_SIMPLIFICATION_CYCLES ) {
                 logger.warn("Infinite loop detected in simpliciation routines.  Writing current graph to debugMeMark.dot");
-//                printGraph(new File("debugMeMark.dot"), 0);
+                printGraph(new File("debugMeMark.dot"), 0);
                 throw new IllegalStateException("Infinite loop detected in simplification routines for kmer graph " + getKmerSize());
             }
 
-            final boolean didSomeWork = simplifyGraphOnce(i,baseFile);
+            final boolean didSomeWork = simplifyGraphOnce(i);
             if ( ! didSomeWork )
                 // no simplification algorithm could run, so stop
             {
@@ -107,27 +101,26 @@ public class SeqGraph extends BaseGraph<SeqVertex, BaseEdge> {
      * Run one full cycle of the graph simplification algorithms
      * @return true if any algorithms said they did some simplification
      */
-    private boolean simplifyGraphOnce(final int iteration, final Supplier<String> baseFile) {
+    private boolean simplifyGraphOnce(final int iteration) {
         //logger.info("simplifyGraph iteration " + i);
         // iterate until we haven't don't anything useful
-//        printGraph(new File(baseFile.get() + ".simplifyGraph." + iteration + ".1.dot"),0);
+        printGraphSimplification(new File("simplifyGraph." + iteration + ".1.dot"));
         boolean didSomeWork = false;
         didSomeWork |= new MergeDiamonds(this).transformUntilComplete();
-//        printGraph(new File(baseFile.get() + ".simplifyGraph." + iteration + ".2.diamonds.dot"),0);
         didSomeWork |= new MergeTails(this).transformUntilComplete();
-//        printGraph(new File(baseFile.get() + ".simplifyGraph." + iteration + ".3.tails.dot"),0);
+        printGraphSimplification(new File("simplifyGraph." + iteration + ".2.diamonds_and_tails.dot"));
 
         didSomeWork |= new SplitCommonSuffices(this).transformUntilComplete();
-//        printGraph(new File(baseFile.get() + ".simplifyGraph." + iteration + ".4.split_suffix.dot"),0);
+        printGraphSimplification(new File("simplifyGraph." + iteration + ".3.split_suffix.dot"));
         didSomeWork |= new MergeCommonSuffices(this).transformUntilComplete();
-//        printGraph(new File(baseFile.get() + ".simplifyGraph." + iteration + ".5.merge_suffix.dot"),0);
+        printGraphSimplification(new File("simplifyGraph." + iteration + ".4.merge_suffix.dot"));
 
         didSomeWork |= zipLinearChains();
         return didSomeWork;
     }
 
     /**
-     * Print simplification step of this graph, if PRINT_SIMPLIFY_GRAPHS is enabled
+     * Print simplication step of this graph, if PRINT_SIMPLIFY_GRAPHS is enabled
      * @param file the destination for the graph DOT file
      */
     private void printGraphSimplification(final File file) {
