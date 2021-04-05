@@ -57,7 +57,7 @@ public class AlleleFilteringUnitTest {
         }
 
         HaplotypeCallerArgumentCollection hcArgs = new HaplotypeCallerArgumentCollection();
-        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples, ! hcArgs.doNotRunPhysicalPhasing);
+        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples, ! hcArgs.doNotRunPhysicalPhasing, false);
 
 
         AlleleFiltering alleleFiltering = new AlleleFilteringHC(hcArgs, null, genotypingEngine);
@@ -118,7 +118,7 @@ public class AlleleFilteringUnitTest {
         }
 
         HaplotypeCallerArgumentCollection hcArgs = new HaplotypeCallerArgumentCollection();
-        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples, ! hcArgs.doNotRunPhysicalPhasing);
+        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples, ! hcArgs.doNotRunPhysicalPhasing, false);
 
 
         AlleleFiltering alleleFiltering = new AlleleFilteringHC(hcArgs, null, genotypingEngine);
@@ -179,7 +179,7 @@ public class AlleleFilteringUnitTest {
         }
 
         HaplotypeCallerArgumentCollection hcArgs = new HaplotypeCallerArgumentCollection();
-        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples, ! hcArgs.doNotRunPhysicalPhasing);
+        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples, ! hcArgs.doNotRunPhysicalPhasing, false);
 
 
         AlleleFiltering alleleFiltering = new AlleleFilteringHC(hcArgs, null, genotypingEngine);
@@ -240,7 +240,7 @@ public class AlleleFilteringUnitTest {
         }
 
         HaplotypeCallerArgumentCollection hcArgs = new HaplotypeCallerArgumentCollection();
-        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples, ! hcArgs.doNotRunPhysicalPhasing);
+        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples, ! hcArgs.doNotRunPhysicalPhasing, false);
 
 
         AlleleFiltering alleleFiltering = new AlleleFilteringHC(hcArgs, null, genotypingEngine);
