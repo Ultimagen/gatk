@@ -6,11 +6,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.broadinstitute.gatk.nativebindings.smithwaterman.SWParameters;
 import org.broadinstitute.hellbender.testutils.BaseTest;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.Kmer;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.GraphBasedKBestHaplotypeFinder;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.JunctionTreeKBestHaplotypeFinder;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.KBestHaplotype;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.LowWeightChainPruner;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.MultiSampleEdge;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.*;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.read.ArtificialReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
@@ -22,13 +18,7 @@ import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
@@ -47,7 +37,7 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
     @Test (dataProvider = "loopingReferences")
     public void testRecoveryOfLoopingReferenceSequences(final String ref, final int kmerSize) {
         final JunctionTreeLinkedDeBruijnGraph assembler = new JunctionTreeLinkedDeBruijnGraph(kmerSize);
-        assembler.addSequence("anonymous", getBytes(ref), true, false);
+        assembler.addSequence("anonymous", getBytes(ref), true);
         assembler.buildGraphIfNecessary();
         List<MultiDeBruijnVertex> refVertexes = assembler.getReferencePath(ReadThreadingGraph.TraversalDirection.downwards);
         final StringBuilder builder = new StringBuilder(refVertexes.get(0).getSequenceString());
@@ -62,12 +52,12 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         final String ref = "AACTGGGCTAGAGAGCGTT";
         final String loopingDanglingHead = "TTCGAAGGTCGAAG"; // "TCGAA" is repeated, causing dangling head recovery to fail
 
-        assembler.addSequence("anonymous", getBytes(ref), true, false);
-        assembler.addSequence("anonymous", getBytes(ref), false, false);
+        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(ref), false);
         // Coverage = 3, thus above the prune factor of 2
-        assembler.addSequence("loopingUnconnectedHead", getBytes(loopingDanglingHead), false,false);
-        assembler.addSequence("loopingUnconnectedHead", getBytes(loopingDanglingHead), false,false);
-        assembler.addSequence("loopingUnconnectedHead", getBytes(loopingDanglingHead), false,false);
+        assembler.addSequence("loopingUnconecetedHead", getBytes(loopingDanglingHead), false);
+        assembler.addSequence("loopingUnconecetedHead", getBytes(loopingDanglingHead), false);
+        assembler.addSequence("loopingUnconecetedHead", getBytes(loopingDanglingHead), false);
 
         // This graph should have generated 3 junction trees (one at GAAAA, one at TCGGG, and one at AATCG)
         assembler.buildGraphIfNecessary();
@@ -87,12 +77,12 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         final String loopingDanglingHeadShortened = "TTCGAAGGTC"; // "TCGAA" is repeated, causing dangling head recovery to fail
 
 
-        assembler.addSequence("anonymous", getBytes(ref), true, false);
-        assembler.addSequence("anonymous", getBytes(ref), false, false);
-        assembler.addSequence("loopingUnconnectedHead", getBytes(loopingDanglingHead), false, false);
-        assembler.addSequence("loopingUnconnectedHead", getBytes(loopingDanglingHead), false, false);
-        // Now the some of the kmers in the infinite loop should have < 3 coverage, causing pruning to kick in
-        assembler.addSequence("loopingUnconnectedHead", getBytes(loopingDanglingHeadShortened), false, false);
+        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(ref), false);
+        assembler.addSequence("loopingUnconecetedHead", getBytes(loopingDanglingHead), false);
+        assembler.addSequence("loopingUnconecetedHead", getBytes(loopingDanglingHead), false);
+        // Now the some of the kimers in the infinite loop should have < 3 coverage, causing pruning to kick in
+        assembler.addSequence("loopingUnconecetedHead", getBytes(loopingDanglingHeadShortened), false);
 
         // This graph should have generated 3 junction trees (one at GAAAA, one at TCGGG, and one at AATCG)
         assembler.buildGraphIfNecessary();
@@ -108,8 +98,8 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         final JunctionTreeLinkedDeBruijnGraph assembler = new JunctionTreeLinkedDeBruijnGraph(5);
         String ref = "ACTGATTTCGATGCGATGCGATGCCACGGTGG"; // a loop of length 3 in the middle
 
-        assembler.addSequence("anonymous", getBytes(ref), true, false);
-        assembler.addSequence("anonymous", getBytes(ref), false, false);
+        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(ref), false);
 
         // This graph should have generated 3 junction trees (one at GAAAA, one at TCGGG, and one at AATCG)
         assembler.buildGraphIfNecessary();
@@ -131,12 +121,12 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         String altRead4 = "TTTTTGAAAA";
         String altRead5 = "TTTTTG";
 
-        assembler.addSequence("anonymous", getBytes(ref), true, false);
-        assembler.addSequence("anonymous", getBytes(altRead1), false, false);
-        assembler.addSequence("anonymous", getBytes(altRead2), false, false);
-        assembler.addSequence("anonymous", getBytes(altRead3), false, false);
-        assembler.addSequence("anonymous", getBytes(altRead4), false, false);
-        assembler.addSequence("anonymous", getBytes(altRead5), false, false);
+        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(altRead1), false);
+        assembler.addSequence("anonymous", getBytes(altRead2), false);
+        assembler.addSequence("anonymous", getBytes(altRead3), false);
+        assembler.addSequence("anonymous", getBytes(altRead4), false);
+        assembler.addSequence("anonymous", getBytes(altRead5), false);
 
         // This graph should have generated 3 junction trees (one at GAAAA, one at TCGGG, and one at AATCG)
         assembler.buildGraphIfNecessary();
@@ -169,11 +159,11 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         String altRead1 = "GGAAATGTC";
         String altRead2 = "GGAAATGTCCCGGG";
 
-        assembler.addSequence("anonymous", getBytes(ref), true, false);
-        assembler.addSequence("anonymous", getBytes(refRead1), false, false);
-        assembler.addSequence("anonymous", getBytes(refRead2), false, false);
-        assembler.addSequence("anonymous", getBytes(altRead1), false, false);
-        assembler.addSequence("anonymous", getBytes(altRead2), false, false);
+        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(refRead1), false);
+        assembler.addSequence("anonymous", getBytes(refRead2), false);
+        assembler.addSequence("anonymous", getBytes(altRead1), false);
+        assembler.addSequence("anonymous", getBytes(altRead2), false);
 
         assembler.buildGraphIfNecessary();
         assembler.generateJunctionTrees();
@@ -208,10 +198,10 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         String read1 = "AAAACAC"+"CCGA"+"CTGTGGGG"+"C"+"GGGTT"; // CGAC merges with the below read
         String read2 = "AAAACAC"+"TCGA"+"CTGTGGGG"+"C"+"GGGTT"; // CGAC merges with the above read
 
-        assembler.addSequence("anonymous", getBytes(ref), true, false);
-        assembler.addSequence("anonymous", getBytes(refRead1), false, false);
-        assembler.addSequence("anonymous", getBytes(read1), false, false);
-        assembler.addSequence("anonymous", getBytes(read2), false, false);
+        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(refRead1), false);
+        assembler.addSequence("anonymous", getBytes(read1), false);
+        assembler.addSequence("anonymous", getBytes(read2), false);
 
         assembler.buildGraphIfNecessary();
         assembler.generateJunctionTrees();
@@ -241,8 +231,8 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         // A simple snip het
         String refRead = "AAATCTTCGGGGGGGGGGGGGGTTTCTGGG";
 
-        assembler.addSequence("anonymous", getBytes(ref), true, false);
-        assembler.addSequence("anonymous", getBytes(refRead), false, false);
+        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(refRead), false);
 
         assembler.buildGraphIfNecessary();
         assembler.generateJunctionTrees();
@@ -285,11 +275,11 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         String altRead1 = "GGAAATGTC";
         String altRead2 = "GGAAATGTCCCGGG";
 
-        assembler.addSequence("anonymous", getBytes(ref), true, false);
-        assembler.addSequence("anonymous", getBytes(refRead1), false, false);
-        assembler.addSequence("anonymous", getBytes(refRead2), false, false);
-        assembler.addSequence("anonymous", getBytes(altRead1), false, false);
-        assembler.addSequence("anonymous", getBytes(altRead2), false, false);
+        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(refRead1), false);
+        assembler.addSequence("anonymous", getBytes(refRead2), false);
+        assembler.addSequence("anonymous", getBytes(altRead1), false);
+        assembler.addSequence("anonymous", getBytes(altRead2), false);
 
         assembler.buildGraphIfNecessary();
         assembler.generateJunctionTrees();
@@ -311,11 +301,11 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         String altTRead1 = "GGAAATGTC"; // Replaces a T with a G
         String altTRead2 = "GGAAATGTCCCGGG";
 
-        assembler.addSequence("anonymous", getBytes(ref), true, false);
-        assembler.addSequence("anonymous", getBytes(altTRead1), false, false);
-        assembler.addSequence("anonymous", getBytes(altTRead2), false, false);
-        assembler.addSequence("anonymous", getBytes(altARead1), false, false);
-        assembler.addSequence("anonymous", getBytes(altARead2), false, false);
+        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(altTRead1), false);
+        assembler.addSequence("anonymous", getBytes(altTRead2), false);
+        assembler.addSequence("anonymous", getBytes(altARead1), false);
+        assembler.addSequence("anonymous", getBytes(altARead2), false);
 
         assembler.buildGraphIfNecessary();
         assembler.generateJunctionTrees();
@@ -347,11 +337,11 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         String altTRead1 = "GGAAATGTC"; // Replaces a T with a G
         String altTRead2 = "GGAAATGTCCCGGG";
 
-        assembler.addSequence("anonymous", getBytes(ref), true, false);
-        assembler.addSequence("anonymous", getBytes(altTRead1), false, false);
-        assembler.addSequence("anonymous", getBytes(altTRead2), false, false);
-        assembler.addSequence("anonymous", getBytes(altARead1), false, false);
-        assembler.addSequence("anonymous", getBytes(altARead2), false, false);
+        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(altTRead1), false);
+        assembler.addSequence("anonymous", getBytes(altTRead2), false);
+        assembler.addSequence("anonymous", getBytes(altARead1), false);
+        assembler.addSequence("anonymous", getBytes(altARead2), false);
 
         assembler.buildGraphIfNecessary();
         assembler.generateJunctionTrees();
@@ -383,11 +373,11 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         String altTCRead1 = "GAAAT"+"T"+"TCCGGC"+"C"+"CGTTTA"; // Keeps the T, then replaces a T with a C
         String altTCRead2 = "GAAAT"+"T"+"TCCGGC"+"C"+"CGTTTA"; // Keeps the T, then replaces a T with a C
 
-        assembler.addSequence("anonymous", getBytes(ref), true, false);
-        assembler.addSequence("anonymous", getBytes(altAARead1), false, false);
-        assembler.addSequence("anonymous", getBytes(altAARead2), false, false);
-        assembler.addSequence("anonymous", getBytes(altTCRead1), false, false);
-        assembler.addSequence("anonymous", getBytes(altTCRead2), false, false);
+        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(altAARead1), false);
+        assembler.addSequence("anonymous", getBytes(altAARead2), false);
+        assembler.addSequence("anonymous", getBytes(altTCRead1), false);
+        assembler.addSequence("anonymous", getBytes(altTCRead2), false);
 
         assembler.buildGraphIfNecessary();
         assembler.generateJunctionTrees();
@@ -413,9 +403,9 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         final JunctionTreeLinkedDeBruijnGraph assembler = new JunctionTreeLinkedDeBruijnGraph(5);
         String ref = "ATGGTTAGGGGAAATTTAAATTTAAAGCGCCCCCG"; // AAATT, AATTT, ATTTA, TTTAA, and TTAAA are all repeated in a loop
 
-        assembler.addSequence("reference", getBytes(ref), true, false);
+        assembler.addSequence("reference", getBytes(ref), true);
         for (int i = 0; i + 20 < ref.length(); i++) {
-            assembler.addSequence("anonymous", getBytes(ref.substring(i, i + 20)), false, false);
+            assembler.addSequence("anonymous", getBytes(ref.substring(i, i + 20)), false);
         }
         assembler.buildGraphIfNecessary();
         assembler.generateJunctionTrees();
@@ -442,10 +432,10 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         final JunctionTreeLinkedDeBruijnGraph assembler = new JunctionTreeLinkedDeBruijnGraph(5);
         String ref = "ATGGTTAGGGGAAATTTAAATTTAAATTTAAAGCGCCCCCG"; // AAATT, AATTT, ATTTA, TTTAA, and TTAAA are all repeated in a loop
 
-        assembler.addSequence("reference", getBytes(ref), true, false);
+        assembler.addSequence("reference", getBytes(ref), true);
         for (int i = 0; i + 23 < ref.length(); i++) {
             // 20 bases should be exactly enough to recover the whole path through the loop (from GGAAAT to TTAAAG)
-            assembler.addSequence("anonymous", getBytes(ref.substring(i, i + 23)), false, false);
+            assembler.addSequence("anonymous", getBytes(ref.substring(i, i + 23)), false);
         }
         assembler.buildGraphIfNecessary();
         assembler.generateJunctionTrees();
@@ -488,8 +478,8 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         final JunctionTreeLinkedDeBruijnGraph assembler = new JunctionTreeLinkedDeBruijnGraph(11);
         final String ref   = "CATGCACTTTAAAACTTGCCTTTTTAACAAGACTTCCAGATG";
         final String alt   = "CATGCACTTTAAAACTTGCCGTTTTAACAAGACTTCCAGATG";
-        assembler.addSequence("anonymous", getBytes(ref), true, false);
-        assembler.addSequence("anonymous", getBytes(alt), false, false);
+        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(alt), false);
         assembler.buildGraphIfNecessary();
         Assert.assertNotEquals(ref.length() - 11 + 1, assembler.vertexSet().size(), "the number of vertex in the graph is the same as if there was no alternative sequence");
         Assert.assertEquals(ref.length() - 11 + 1 + 11, assembler.vertexSet().size(), "the number of vertex in the graph is not the same as if there is an alternative sequence");
@@ -504,12 +494,12 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         final String supportedAlt   = "AAAAAAAAAAACCCCCC"+"T"+"CCCCCTTTTTTTTTTTGGGGGGG"+"A"+"GGGGTGTGTGTGTGCCCGTGTGT"+"A"+"ATATATATAATAT";
         // This path has an undersupported edge that gets pruned, we want to assert that we can recover the proper junction tree weights regardless
         final String unSupportedAlt = "AAAAAAAAAAACCCCCC"+"T"+"CCCCCTTTTTTTTTTTGGGGGGG"+"C"+"GGGGTGTGTGTGTGCCCGTGTGT"+"C"+"ATATATATAATAT";
-        assembler.addSequence("anonymous", getBytes(ref), true, false);
-        assembler.addSequence("anonymous", getBytes(supportedAlt), false, false);
-        assembler.addSequence("anonymous", getBytes(supportedAlt), false, false);
-        assembler.addSequence("anonymous", getBytes(supportedAlt), false, false);
+        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(supportedAlt), false);
+        assembler.addSequence("anonymous", getBytes(supportedAlt), false);
+        assembler.addSequence("anonymous", getBytes(supportedAlt), false);
         // Only provide a single instance of the path so that its middle C variant gets pruned
-        assembler.addSequence("anonymous", getBytes(unSupportedAlt), false, false);
+        assembler.addSequence("anonymous", getBytes(unSupportedAlt), false);
         assembler.buildGraphIfNecessary();
         new LowWeightChainPruner<MultiDeBruijnVertex, MultiSampleEdge>(2).pruneLowWeightChains(assembler);
         assembler.generateJunctionTrees();
@@ -529,12 +519,12 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         final String supportedAlt   = "AAAAAAAAAAACCCCCC"+"T"+"CCCCCTTTTTTTTTTTGGGGGGG"+"A"+"GGGGTGTGTGTGTGCCCGTGTGT"+"A"+"ATATATATAATAT";
         // This path has an undersupported edge that gets pruned, we want to assert that we can recover the proper junction tree weights regardless
         final String unSupportedAlt = "AAAAAAAAAAACCCCCC"+"T"+"CCCCCTTTTTTTTTTTGGGGGGG"+"CAAT"+"GGGGTGTGTGTGTGCCCGTGTGT"+"C"+"ATATATATAATAT";
-        assembler.addSequence("anonymous", getBytes(ref), true, false);
-        assembler.addSequence("anonymous", getBytes(supportedAlt), false, false);
-        assembler.addSequence("anonymous", getBytes(supportedAlt), false, false);
-        assembler.addSequence("anonymous", getBytes(supportedAlt), false, false);
+        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(supportedAlt), false);
+        assembler.addSequence("anonymous", getBytes(supportedAlt), false);
+        assembler.addSequence("anonymous", getBytes(supportedAlt), false);
         // Only provide a single instance of the path so that its middle C variant gets pruned
-        assembler.addSequence("anonymous", getBytes(unSupportedAlt), false, false);
+        assembler.addSequence("anonymous", getBytes(unSupportedAlt), false);
         assembler.buildGraphIfNecessary();
         new LowWeightChainPruner<MultiDeBruijnVertex, MultiSampleEdge>(2).pruneLowWeightChains(assembler);
         assembler.generateJunctionTrees();
@@ -554,12 +544,12 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         final String supportedAlt   = "AAAAAAAAAAACCCCCC"+"T"+"CCCCCCTTTTTT"+"A"+"TTTTTGGGGGGG"+"A"+"GGGGTGTGTGTGTGCCCGTGTGT"+"A"+"ATATATATAATAT";
         // This path has two unsupported edges which should be pruned, however they are more than kmer size apart so the junction tree code should still work to recover the connectivity
         final String unSupportedAlt = "AAAAAAAAAAACCCCCC"+"T"+"CCCCCCTTTTTT"+"G"+"TTTTTGGGGGGG"+"T"+"GGGGTGTGTGTGTGCCCGTGTGT"+"C"+"ATATATATAATAT";
-        assembler.addSequence("anonymous", getBytes(ref), true, false);
-        assembler.addSequence("anonymous", getBytes(supportedAlt), false, false);
-        assembler.addSequence("anonymous", getBytes(supportedAlt), false, false);
-        assembler.addSequence("anonymous", getBytes(supportedAlt), false, false);
+        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(supportedAlt), false);
+        assembler.addSequence("anonymous", getBytes(supportedAlt), false);
+        assembler.addSequence("anonymous", getBytes(supportedAlt), false);
         // Only provide a single instance of the path so that its middle C variant gets pruned
-        assembler.addSequence("anonymous", getBytes(unSupportedAlt), false, false);
+        assembler.addSequence("anonymous", getBytes(unSupportedAlt), false);
         assembler.buildGraphIfNecessary();
         new LowWeightChainPruner<MultiDeBruijnVertex, MultiSampleEdge>(2).pruneLowWeightChains(assembler);
         assembler.generateJunctionTrees();
@@ -579,12 +569,12 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         final String supportedAlt   = "AAAAAAAAAAACCCCCC"+"T"+"CCCCCCTTTTTT"+"A"+"TTTTGGGG"+"A"+"GGGGTGTGTGTGTGCCCGTGTGT"+"A"+"ATATATATAATAT";
         // This path has two unsupported edges which should be pruned, however they are less than a kmer size apart and should result in the path being unable to find
         final String unSupportedAlt = "AAAAAAAAAAACCCCCC"+"T"+"CCCCCCTTTTTT"+"G"+"TTTTGGGG"+"T"+"GGGGTGTGTGTGTGCCCGTGTGT"+"C"+"ATATATATAATAT";
-        assembler.addSequence("anonymous", getBytes(ref), true, false);
-        assembler.addSequence("anonymous", getBytes(supportedAlt), false, false);
-        assembler.addSequence("anonymous", getBytes(supportedAlt), false, false);
-        assembler.addSequence("anonymous", getBytes(supportedAlt), false, false);
+        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(supportedAlt), false);
+        assembler.addSequence("anonymous", getBytes(supportedAlt), false);
+        assembler.addSequence("anonymous", getBytes(supportedAlt), false);
         // Only provide a single instance of the path so that its middle C variant gets pruned
-        assembler.addSequence("anonymous", getBytes(unSupportedAlt), false, false);
+        assembler.addSequence("anonymous", getBytes(unSupportedAlt), false);
         assembler.buildGraphIfNecessary();
         new LowWeightChainPruner<MultiDeBruijnVertex, MultiSampleEdge>(2).pruneLowWeightChains(assembler);
         assembler.generateJunctionTrees();
@@ -606,12 +596,12 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
 
         // This path shold be pruned, but if we aren't careful might end up pairing the first SNP with the middle SNP at this site
         final String unSupportedAltWithError = "AAAAAAAAAAACCCCCC"+"G"+"CCCCCCTTTTTT"+"C"+"TTGG"+"C"+"GGG"+"A"+"GTGTGTGTGTGCCCGTGTGT"+"C"+"ATATATATAATAT";
-        assembler.addSequence("anonymous", getBytes(ref), true, false);
-        assembler.addSequence("anonymous", getBytes(ref), false, false);
-        assembler.addSequence("anonymous", getBytes(ref), false, false);
-        assembler.addSequence("anonymous", getBytes(supportedAlt),  false, false);
-        assembler.addSequence("anonymous", getBytes(supportedAlt),  false, false);
-        assembler.addSequence("anonymous", getBytes(unSupportedAltWithError), 1, false, false);
+        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(ref), false);
+        assembler.addSequence("anonymous", getBytes(ref), false);
+        assembler.addSequence("anonymous", getBytes(supportedAlt),  false);
+        assembler.addSequence("anonymous", getBytes(supportedAlt),  false);
+        assembler.addSequence("anonymous", getBytes(unSupportedAltWithError), 1, false);
         assembler.buildGraphIfNecessary();
         new LowWeightChainPruner<MultiDeBruijnVertex, MultiSampleEdge>(2).pruneLowWeightChains(assembler);
         assembler.generateJunctionTrees();
@@ -632,9 +622,9 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         final String ref   = "GACACACAGTCA";
         final String read1 = "GACAC---GTCA";
         final String read2 =   "CAC---GTCA";
-        assembler.addSequence(getBytes(ref), true, false);
-        assembler.addSequence(getBytes(read1), false, false);
-        assembler.addSequence(getBytes(read2), false, false);
+        assembler.addSequence(getBytes(ref), true);
+        assembler.addSequence(getBytes(read1), false);
+        assembler.addSequence(getBytes(read2), false);
         assertNonUniqueKmersInvolveLoops(assembler, "ACA", "CAC");
     }
 
@@ -644,9 +634,9 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         final String ref   = "GCAC--GTCA"; // CAC is unique
         final String read1 = "GCACACGTCA"; // makes CAC non unique because it has a duplication
         final String read2 =    "CACGTCA"; // shouldn't be allowed to match CAC as start
-        assembler.addSequence(getBytes(ref), true, false);
-        assembler.addSequence(getBytes(read1), false, false);
-        assembler.addSequence(getBytes(read2), false, false);
+        assembler.addSequence(getBytes(ref), true);
+        assembler.addSequence(getBytes(read1), false);
+        assembler.addSequence(getBytes(read2), false);
 //        assembler.convertToSequenceGraph().printGraph(new File("test.dot"), 0);
 
         assertNonUniqueKmersInvolveLoops(assembler, "CAC");
@@ -660,8 +650,8 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         final String ref   = "NNNGTCAAA"; // ref has some bases before start
         final String read1 =    "GTCAAA"; // starts at first non N base
 
-        assembler.addSequence(getBytes(ref), true, false);
-        assembler.addSequence(getBytes(read1), false, false);
+        assembler.addSequence(getBytes(ref), true);
+        assembler.addSequence(getBytes(read1), false);
         assembler.buildGraphIfNecessary();
 //        assembler.printGraph(new File("test.dot"), 0);
 
@@ -685,9 +675,9 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         final String alt1  = "NNNCTCAXX"; // alt1 has SNP right after N
         final String read  =     "TCAXX"; // starts right after SNP, but merges right before branch
 
-        assembler.addSequence(getBytes(ref), true, false);
-        assembler.addSequence(getBytes(alt1), false, false);
-        assembler.addSequence(getBytes(read), false, false);
+        assembler.addSequence(getBytes(ref), true);
+        assembler.addSequence(getBytes(alt1), false);
+        assembler.addSequence(getBytes(read), false);
         assembler.buildGraphIfNecessary();
         assembler.printGraph(createTempFile("test",".dot"), 0);
 
@@ -723,7 +713,7 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
 
         // test that there are cycles detected for small kmer
         final JunctionTreeLinkedDeBruijnGraph rtgraph25 = new JunctionTreeLinkedDeBruijnGraph(25);
-        rtgraph25.addSequence("ref", ref.getBytes(), true, false);
+        rtgraph25.addSequence("ref", ref.getBytes(), true);
         final SAMFileHeader header = ArtificialReadUtils.createArtificialSamHeader();
         for ( final GATKRead read : reads ) {
             rtgraph25.addRead(read, header);
@@ -733,7 +723,7 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
 
         // test that there are no cycles detected for large kmer
         final JunctionTreeLinkedDeBruijnGraph rtgraph75 = new JunctionTreeLinkedDeBruijnGraph(75);
-        rtgraph75.addSequence("ref", ref.getBytes(), true, false);
+        rtgraph75.addSequence("ref", ref.getBytes(), true);
         for ( final GATKRead read : reads ) {
             rtgraph75.addRead(read, header);
         }
@@ -759,7 +749,7 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
 
         // test that there are cycles detected for small kmer
         final JunctionTreeLinkedDeBruijnGraph rtgraph25 = new JunctionTreeLinkedDeBruijnGraph(25);
-        rtgraph25.addSequence("ref", ref.getBytes(), true, false);
+        rtgraph25.addSequence("ref", ref.getBytes(), true);
         final SAMFileHeader header = ArtificialReadUtils.createArtificialSamHeader();
         for ( final GATKRead read : reads ) {
             rtgraph25.addRead(read, header);
@@ -775,7 +765,7 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         final byte[] ref = Utils.dupBytes((byte) 'A', length);
 
         final JunctionTreeLinkedDeBruijnGraph rtgraph = new JunctionTreeLinkedDeBruijnGraph(25);
-        rtgraph.addSequence("ref", ref, true, false);
+        rtgraph.addSequence("ref", ref, true);
 
         // add reads with Ns at any position
         final SAMFileHeader header = ArtificialReadUtils.createArtificialSamHeader();
@@ -869,7 +859,7 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
 
         // create the graph and populate it
         final JunctionTreeLinkedDeBruijnGraph rtgraph = new JunctionTreeLinkedDeBruijnGraph(kmerSize);
-        rtgraph.addSequence("ref", ref.getBytes(), true, false);
+        rtgraph.addSequence("ref", ref.getBytes(), true);
         final GATKRead read = ArtificialReadUtils.createArtificialRead(alt.getBytes(), Utils.dupBytes((byte) 30, alt.length()), alt.length() + "M");
         final SAMFileHeader header = ArtificialReadUtils.createArtificialSamHeader();
         rtgraph.addRead(read, header);
@@ -935,7 +925,7 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
 
         // create the graph and populate it
         final JunctionTreeLinkedDeBruijnGraph rtgraph = new JunctionTreeLinkedDeBruijnGraph(kmerSize);
-        rtgraph.addSequence("ref", ref.getBytes(), true, false);
+        rtgraph.addSequence("ref", ref.getBytes(), true);
         final GATKRead read1 = ArtificialReadUtils.createArtificialRead(alt1.getBytes(), Utils.dupBytes((byte) 30, alt1.length()), alt1.length() + "M");
         final GATKRead read2 = ArtificialReadUtils.createArtificialRead(alt2.getBytes(), Utils.dupBytes((byte) 30, alt2.length()), alt2.length() + "M");
         final SAMFileHeader header = ArtificialReadUtils.createArtificialSamHeader();
@@ -986,7 +976,7 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
         final String testString = "AATGGGGCAATACTA";
 
         final JunctionTreeLinkedDeBruijnGraph graph = new JunctionTreeLinkedDeBruijnGraph(kmerSize);
-        graph.addSequence(testString.getBytes(), true, false);
+        graph.addSequence(testString.getBytes(), true);
         graph.buildGraphIfNecessary();
 
         final List<MultiDeBruijnVertex> vertexes = new ArrayList<>();
@@ -1032,7 +1022,7 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
 
         // create the graph and populate it
         final JunctionTreeLinkedDeBruijnGraph rtgraph = new JunctionTreeLinkedDeBruijnGraph(kmerSize);
-        rtgraph.addSequence("ref", ref.getBytes(), true, false);
+        rtgraph.addSequence("ref", ref.getBytes(), true);
         final GATKRead read = ArtificialReadUtils.createArtificialRead(alt.getBytes(), Utils.dupBytes((byte) 30, alt.length()), alt.length() + "M");
         final SAMFileHeader header = ArtificialReadUtils.createArtificialSamHeader();
         rtgraph.addRead(read, header);
@@ -1084,7 +1074,7 @@ public class JunctionTreeLinkedDeBruijnGraphUnitTest extends BaseTest {
 
         // create the graph and populate it
         final JunctionTreeLinkedDeBruijnGraph rtgraph = new JunctionTreeLinkedDeBruijnGraph(kmerSize);
-        rtgraph.addSequence("ref", ref.getBytes(), true, false);
+        rtgraph.addSequence("ref", ref.getBytes(), true);
         final GATKRead read = ArtificialReadUtils.createArtificialRead(alt.getBytes(), Utils.dupBytes((byte) 30, alt.length()), alt.length() + "M");
         final SAMFileHeader header = ArtificialReadUtils.createArtificialSamHeader();
         rtgraph.addRead(read, header);

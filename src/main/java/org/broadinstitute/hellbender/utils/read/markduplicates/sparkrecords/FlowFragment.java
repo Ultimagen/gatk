@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * during the processing step of MarkDuplicatesSpark
  */
 public class FlowFragment extends Fragment {
-
+    static final long serialVersionUID = 1L;
     protected final short flowScore;
 
     private final static Logger logger = LogManager.getLogger(FlowFragment.class);
