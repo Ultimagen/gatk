@@ -27,6 +27,8 @@ import java.util.function.ToDoubleFunction;
 public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine {
     private double log10globalReadMismappingRate;
     private final double expectedErrorRatePerBase;
+    private final boolean symmetricallyNormalizeAllelesToReference;
+
     private static final int ALIGNMENT_UNCERTAINTY = 4;
     final FlowBasedAlignmentArgumentCollection fbargs;
     private final Logger logger = LogManager.getLogger(this.getClass());
@@ -41,7 +43,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         this.fbargs = flowBasedArgs;
         this.log10globalReadMismappingRate = log10globalReadMismappingRate;
         this.expectedErrorRatePerBase = expectedErrorRatePerBase;
-
+        this.symmetricallyNormalizeAllelesToReference = false;
     }
 
     /**
@@ -73,7 +75,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         }
 
 
-        result.normalizeLikelihoods(log10globalReadMismappingRate);
+        result.normalizeLikelihoods(log10globalReadMismappingRate, symmetricallyNormalizeAllelesToReference);
         if ( filterPoorly )
             result.filterPoorlyModeledEvidence(log10MinTrueLikelihood(expectedErrorRatePerBase));
 
@@ -355,7 +357,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             computeReadLikelihoods(result.sampleMatrix(i), null);
         }
 
-        result.normalizeLikelihoods(log10globalReadMismappingRate);
+        result.normalizeLikelihoods(log10globalReadMismappingRate, symmetricallyNormalizeAllelesToReference);
         if ( filterPoorly )
             result.filterPoorlyModeledEvidence(log10MinTrueLikelihood(expectedErrorRatePerBase));
 

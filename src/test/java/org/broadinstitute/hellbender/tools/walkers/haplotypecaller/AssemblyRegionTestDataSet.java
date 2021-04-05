@@ -64,9 +64,9 @@ public final class AssemblyRegionTestDataSet {
     public AssemblyResultSet assemblyResultSet() {
         if (assemblyResultSet == null) {
             final ReadThreadingGraph rtg = new ReadThreadingGraph(kmerSize);
-            rtg.addSequence("anonymous", getReference().getBytes(), true, false);
+            rtg.addSequence("anonymous", getReference().getBytes(), true);
             for (final String haplotype : haplotypesStrings()) {
-                rtg.addSequence("anonymous", haplotype.getBytes(), false, false);
+                rtg.addSequence("anonymous", haplotype.getBytes(), false);
             }
             rtg.buildGraphIfNecessary();
             if (rtg.hasCycles())

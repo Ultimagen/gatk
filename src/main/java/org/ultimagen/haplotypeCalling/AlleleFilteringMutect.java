@@ -9,12 +9,13 @@ import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.genotyper.LikelihoodMatrix;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 
 
 public class AlleleFilteringMutect extends AlleleFiltering {
     private SomaticGenotypingEngine genotypingEngine;
-    public AlleleFilteringMutect(M2ArgumentCollection _m2args, PrintStream assemblyDebugStream, SomaticGenotypingEngine _genotypingEngine){
+    public AlleleFilteringMutect(M2ArgumentCollection _m2args, OutputStreamWriter assemblyDebugStream, SomaticGenotypingEngine _genotypingEngine){
         super(_m2args, assemblyDebugStream);
         genotypingEngine = _genotypingEngine;
     }
