@@ -7,9 +7,12 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.walkers.annotator.StrandOddsRatio;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyBasedCallerArgumentCollection;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerGenotypingEngine;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.InverseAllele;
+import org.broadinstitute.hellbender.utils.dragstr.DragstrReferenceAnalyzer;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
@@ -20,10 +23,7 @@ import org.jgrapht.io.DOTExporter;
 import org.jgrapht.io.IntegerComponentNameProvider;
 import org.ultimagen.flowBasedRead.read.FlowBasedHaplotype;
 
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.io.Writer;
+import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -40,9 +40,9 @@ public abstract class AlleleFiltering {
 
     protected static final Logger logger = LogManager.getLogger(AlleleFiltering.class);
     private AssemblyBasedCallerArgumentCollection hcArgs;
-    private PrintStream assemblyDebugOutStream;
+    private OutputStreamWriter assemblyDebugOutStream;
 
-    AlleleFiltering(AssemblyBasedCallerArgumentCollection _hcargs, PrintStream _assemblyDebugOutStream){
+    AlleleFiltering(AssemblyBasedCallerArgumentCollection _hcargs, OutputStreamWriter _assemblyDebugOutStream){
         hcArgs = _hcargs;
         assemblyDebugOutStream = _assemblyDebugOutStream;
     }
@@ -68,14 +68,25 @@ public abstract class AlleleFiltering {
 
     public AlleleLikelihoods<GATKRead, Haplotype> filterAlleles(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods,
                                                                 final int activeWindowStart, Set<Integer> suspiciousLocations){
+
         AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
         logger.debug("SHA:: filter alleles - start");
         subsettedReadLikelihoodsFinal = subsetHaplotypesByAlleles(readLikelihoods, hcArgs, activeWindowStart, suspiciousLocations);
         logger.debug("SHA:: filter alleles - end");
 
         if (assemblyDebugOutStream != null) {
-            assemblyDebugOutStream.println("\nThere were " + subsettedReadLikelihoodsFinal.alleles().size() + " haplotypes found after subsetting by alleles. Here they are:");
-            subsettedReadLikelihoodsFinal.alleles().stream().map(Haplotype::toString).sorted().forEach(assemblyDebugOutStream::println);
+            try {
+                assemblyDebugOutStream.write("\nThere were " + subsettedReadLikelihoodsFinal.alleles().size() + " haplotypes found after subsetting by alleles. Here they are:");
+                subsettedReadLikelihoodsFinal.alleles().stream().map(Haplotype::toString).sorted().forEach( h -> {
+                    try {
+                        assemblyDebugOutStream.write(h);
+                    } catch (IOException e) {
+                        throw new UserException("Error writing to debug output stream", e);
+                    }
+                });
+            } catch (IOException e) {
+                throw new UserException("Error writing to debug output stream", e);
+            }
         }
 
         return subsettedReadLikelihoodsFinal;
