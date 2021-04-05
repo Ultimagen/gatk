@@ -17,7 +17,6 @@ import org.testng.annotations.Test;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public final class ReadThreadingGraphUnitTest extends GATKBaseTest {
     private static final boolean DEBUG = false;
@@ -39,8 +38,8 @@ public final class ReadThreadingGraphUnitTest extends GATKBaseTest {
         final ReadThreadingGraph assembler = new ReadThreadingGraph(11);
         final String ref   = "CATGCACTTTAAAACTTGCCTTTTTAACAAGACTTCCAGATG";
         final String alt   = "CATGCACTTTAAAACTTGCCGTTTTAACAAGACTTCCAGATG";
-        assembler.addSequence("anonymous", getBytes(ref), true, false);
-        assembler.addSequence("anonymous", getBytes(alt), false, false);
+        assembler.addSequence("anonymous", getBytes(ref), true);
+        assembler.addSequence("anonymous", getBytes(alt), false);
         assembler.buildGraphIfNecessary();
         Assert.assertNotEquals(ref.length() - 11 + 1, assembler.vertexSet().size(), "the number of vertex in the graph is the same as if there was no alternative sequence");
         Assert.assertEquals(ref.length() - 11 + 1 + 11, assembler.vertexSet().size(), "the number of vertex in the graph is not the same as if there is an alternative sequence");
@@ -54,9 +53,9 @@ public final class ReadThreadingGraphUnitTest extends GATKBaseTest {
         final String ref   = "GACACACAGTCA";
         final String read1 = "GACAC---GTCA";
         final String read2 =   "CAC---GTCA";
-        assembler.addSequence(getBytes(ref), true, false);
-        assembler.addSequence(getBytes(read1), false, false);
-        assembler.addSequence(getBytes(read2), false, false);
+        assembler.addSequence(getBytes(ref), true);
+        assembler.addSequence(getBytes(read1), false);
+        assembler.addSequence(getBytes(read2), false);
         assertNonUniques(assembler, "ACA", "CAC");
     }
 
@@ -66,9 +65,9 @@ public final class ReadThreadingGraphUnitTest extends GATKBaseTest {
         final String ref   = "GCAC--GTCA"; // CAC is unique
         final String read1 = "GCACACGTCA"; // makes CAC non unique because it has a duplication
         final String read2 =    "CACGTCA"; // shouldn't be allowed to match CAC as start
-        assembler.addSequence(getBytes(ref), true, false);
-        assembler.addSequence(getBytes(read1), false, false);
-        assembler.addSequence(getBytes(read2), false, false);
+        assembler.addSequence(getBytes(ref), true);
+        assembler.addSequence(getBytes(read1), false);
+        assembler.addSequence(getBytes(read2), false);
 //        assembler.convertToSequenceGraph().printGraph(new File("test.dot"), 0);
 
         assertNonUniques(assembler, "CAC");
@@ -81,8 +80,8 @@ public final class ReadThreadingGraphUnitTest extends GATKBaseTest {
         final String ref   = "NNNGTCAAA"; // ref has some bases before start
         final String read1 =    "GTCAAA"; // starts at first non N base
 
-        assembler.addSequence(getBytes(ref), true, false);
-        assembler.addSequence(getBytes(read1), false, false);
+        assembler.addSequence(getBytes(ref), true);
+        assembler.addSequence(getBytes(read1), false);
         assembler.buildGraphIfNecessary();
 //        assembler.printGraph(new File("test.dot"), 0);
 
@@ -106,9 +105,9 @@ public final class ReadThreadingGraphUnitTest extends GATKBaseTest {
         final String alt1  = "NNNCTCAXX"; // alt1 has SNP right after N
         final String read  =     "TCAXX"; // starts right after SNP, but merges right before branch
 
-        assembler.addSequence(getBytes(ref), true, false);
-        assembler.addSequence(getBytes(alt1), false, false);
-        assembler.addSequence(getBytes(read), false, false);
+        assembler.addSequence(getBytes(ref), true);
+        assembler.addSequence(getBytes(alt1), false);
+        assembler.addSequence(getBytes(read), false);
         assembler.buildGraphIfNecessary();
         assembler.printGraph(createTempFile("test",".dot"), 0);
 
@@ -139,7 +138,7 @@ public final class ReadThreadingGraphUnitTest extends GATKBaseTest {
 
         // test that there are cycles detected for small kmer
         final ReadThreadingGraph rtgraph25 = new ReadThreadingGraph(25);
-        rtgraph25.addSequence("ref", ref.getBytes(), true, false);
+        rtgraph25.addSequence("ref", ref.getBytes(), true);
         final SAMFileHeader header = ArtificialReadUtils.createArtificialSamHeader();
         for ( final GATKRead read : reads ) {
             rtgraph25.addRead(read, header);
@@ -149,7 +148,7 @@ public final class ReadThreadingGraphUnitTest extends GATKBaseTest {
 
         // test that there are no cycles detected for large kmer
         final ReadThreadingGraph rtgraph75 = new ReadThreadingGraph(75);
-        rtgraph75.addSequence("ref", ref.getBytes(), true, false);
+        rtgraph75.addSequence("ref", ref.getBytes(), true);
         for ( final GATKRead read : reads ) {
             rtgraph75.addRead(read, header);
         }
@@ -175,7 +174,7 @@ public final class ReadThreadingGraphUnitTest extends GATKBaseTest {
 
         // test that there are cycles detected for small kmer
         final ReadThreadingGraph rtgraph25 = new ReadThreadingGraph(25);
-        rtgraph25.addSequence("ref", ref.getBytes(), true, false);
+        rtgraph25.addSequence("ref", ref.getBytes(), true);
         final SAMFileHeader header = ArtificialReadUtils.createArtificialSamHeader();
         for ( final GATKRead read : reads ) {
             rtgraph25.addRead(read, header);
@@ -190,7 +189,7 @@ public final class ReadThreadingGraphUnitTest extends GATKBaseTest {
         final byte[] ref = Utils.dupBytes((byte) 'A', length);
 
         final ReadThreadingGraph rtgraph = new ReadThreadingGraph(25);
-        rtgraph.addSequence("ref", ref, true, false);
+        rtgraph.addSequence("ref", ref, true);
 
         // add reads with Ns at any position
         final SAMFileHeader header = ArtificialReadUtils.createArtificialSamHeader();
@@ -290,7 +289,7 @@ public final class ReadThreadingGraphUnitTest extends GATKBaseTest {
 
         // create the graph and populate it
         final ReadThreadingGraph rtgraph = new ReadThreadingGraph(kmerSize);
-        rtgraph.addSequence("ref", ref.getBytes(), true, false);
+        rtgraph.addSequence("ref", ref.getBytes(), true);
         final GATKRead read = ArtificialReadUtils.createArtificialRead(alt.getBytes(), Utils.dupBytes((byte) 30, alt.length()), alt.length() + "M");
         final SAMFileHeader header = ArtificialReadUtils.createArtificialSamHeader();
         rtgraph.addRead(read, header);
@@ -301,12 +300,12 @@ public final class ReadThreadingGraphUnitTest extends GATKBaseTest {
         MultiDeBruijnVertex altSink = null;
         for ( final MultiDeBruijnVertex v : rtgraph.vertexSet() ) {
             if ( rtgraph.isSink(v) && !rtgraph.isReferenceNode(v) ) {
-                Assert.assertNull(altSink, "We found more than one non-reference sink");
+                Assert.assertTrue(altSink == null, "We found more than one non-reference sink");
                 altSink = v;
             }
         }
 
-        Assert.assertNotNull(altSink, "We did not find a non-reference sink");
+        Assert.assertTrue(altSink != null, "We did not find a non-reference sink");
 
         // confirm that the SW alignment agrees with our expectations
         final ReadThreadingGraph.DanglingChainMergeHelper result = rtgraph.generateCigarAgainstDownwardsReferencePath(altSink, 0, 4, false, SmithWatermanJavaAligner
@@ -317,7 +316,7 @@ public final class ReadThreadingGraphUnitTest extends GATKBaseTest {
             return;
         }
 
-        Assert.assertEquals(result.cigar.toString(), cigar, "SW generated cigar = " + result.cigar.toString());
+        Assert.assertTrue(cigar.equals(result.cigar.toString()), "SW generated cigar = " + result.cigar.toString());
 
         // confirm that the goodness of the cigar agrees with our expectations
         Assert.assertEquals(ReadThreadingGraph.cigarIsOkayToMerge(result.cigar, false, true), cigarIsGood);
@@ -403,7 +402,7 @@ public final class ReadThreadingGraphUnitTest extends GATKBaseTest {
 
         // create the graph and populate it
         final ReadThreadingGraph rtgraph = new ReadThreadingGraph(kmerSize);
-        rtgraph.addSequence("ref", ref.getBytes(), true, false);
+        rtgraph.addSequence("ref", ref.getBytes(), true);
         final GATKRead read1 = ArtificialReadUtils.createArtificialRead(alt1.getBytes(), Utils.dupBytes((byte) 30, alt1.length()), alt1.length() + "M");
         final GATKRead read2 = ArtificialReadUtils.createArtificialRead(alt2.getBytes(), Utils.dupBytes((byte) 30, alt2.length()), alt2.length() + "M");
         final SAMFileHeader header = ArtificialReadUtils.createArtificialSamHeader();
@@ -426,11 +425,11 @@ public final class ReadThreadingGraphUnitTest extends GATKBaseTest {
 
             // confirm that the tail merging works as expected
             final int mergeResult = rtgraph.mergeDanglingTail(result);
-            Assert.assertEquals(mergeResult, 1);
+            Assert.assertTrue(mergeResult == 1);
         }
 
         final SeqGraph seqGraph = rtgraph.toSequenceGraph();
-        seqGraph.simplifyGraph(()->"test");
+        seqGraph.simplifyGraph();
 
         final List<String> paths = new GraphBasedKBestHaplotypeFinder<>(seqGraph).findBestHaplotypes().stream()
                 .map(kBestHaplotype -> new String(kBestHaplotype.getBases()))
@@ -439,7 +438,7 @@ public final class ReadThreadingGraphUnitTest extends GATKBaseTest {
                 .collect(Collectors.toList());
 
         Assert.assertEquals(paths.size(), 3);
-        Assert.assertEquals(paths, Stream.of(ref, alt1, alt2).sorted().collect(Collectors.toList()));
+        Assert.assertEquals(paths, Arrays.asList(ref, alt1, alt2).stream().sorted().collect(Collectors.toList()));
     }
 
     @Test
@@ -457,7 +456,7 @@ public final class ReadThreadingGraphUnitTest extends GATKBaseTest {
         final String testString = "AATGGGGCAATACTA";
 
         final ReadThreadingGraph graph = new ReadThreadingGraph(kmerSize);
-        graph.addSequence(testString.getBytes(), true, false);
+        graph.addSequence(testString.getBytes(), true);
         graph.buildGraphIfNecessary();
 
         final List<MultiDeBruijnVertex> vertexes = new ArrayList<>();
@@ -523,7 +522,7 @@ public final class ReadThreadingGraphUnitTest extends GATKBaseTest {
 
         // create the graph and populate it
         final ReadThreadingGraph rtgraph = new ReadThreadingGraph(kmerSize);
-        rtgraph.addSequence("ref", ref.getBytes(), true, false);
+        rtgraph.addSequence("ref", ref.getBytes(), true);
         final GATKRead read = ArtificialReadUtils.createArtificialRead(alt.getBytes(), Utils.dupBytes((byte) 30, alt.length()), alt.length() + "M");
         final SAMFileHeader header = ArtificialReadUtils.createArtificialSamHeader();
         rtgraph.addRead(read, header);
@@ -534,12 +533,12 @@ public final class ReadThreadingGraphUnitTest extends GATKBaseTest {
         MultiDeBruijnVertex altSource = null;
         for ( final MultiDeBruijnVertex v : rtgraph.vertexSet() ) {
             if ( rtgraph.isSource(v) && !rtgraph.isReferenceNode(v) ) {
-                Assert.assertNull(altSource, "We found more than one non-reference source");
+                Assert.assertTrue(altSource == null, "We found more than one non-reference source");
                 altSource = v;
             }
         }
 
-        Assert.assertNotNull(altSource, "We did not find a non-reference source");
+        Assert.assertTrue(altSource != null, "We did not find a non-reference source");
 
         // confirm that the SW alignment agrees with our expectations
         final ReadThreadingGraph.DanglingChainMergeHelper result = rtgraph.generateCigarAgainstUpwardsReferencePath(altSource, 0, 1, false, SmithWatermanJavaAligner

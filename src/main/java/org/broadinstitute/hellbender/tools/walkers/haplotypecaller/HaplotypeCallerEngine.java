@@ -19,6 +19,7 @@ import org.broadinstitute.hellbender.engine.filters.WellformedReadFilter;
 import org.broadinstitute.hellbender.engine.spark.AssemblyRegionArgumentCollection;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.walkers.annotator.*;
+import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeAssignmentMethod;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.MinimalGenotypingEngine;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.OutputMode;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.StandardCallerArgumentCollection;
@@ -37,7 +38,6 @@ import org.broadinstitute.hellbender.utils.genotyper.*;
 import org.broadinstitute.hellbender.utils.haplotype.EventMap;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.haplotype.HaplotypeBAMWriter;
-import org.broadinstitute.hellbender.utils.io.IOUtils;
 import org.broadinstitute.hellbender.utils.read.AlignmentUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
@@ -47,6 +47,7 @@ import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.broadinstitute.hellbender.utils.variant.HomoSapiensConstants;
 import org.broadinstitute.hellbender.utils.variant.writers.GVCFWriter;
+import org.broadinstitute.hellbender.utils.genotyper.SampleList;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
 import org.ultimagen.flowBasedRead.tests.AlleleLikelihoodWriter;
 import org.ultimagen.haplotypeCalling.AlleleFilteringHC;
@@ -569,38 +570,6 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             isActiveProb = vcOut == null ? 0.0 : QualityUtils.qualToProb(vcOut.getPhredScaledQual());
         }
 
-        if (hcArgs.strandBiasPileupPValue > 0 && isActiveProb > 0) {
-            int altFwd = 0;
-            int altRev = 0;
-            int refFwd = 0;
-            int refRev = 0;
-            for (final PileupElement pe : context.getBasePileup()) {
-                final boolean reverse = pe.getRead().isReverseStrand();
-                if (ReferenceConfidenceModel.isAltBeforeAssembly(pe, ref.getBase())) {
-                    if (reverse) {
-                        altRev++;
-                    } else {
-                        altFwd++;
-                    }
-                } else {
-                    if (reverse) {
-                        refRev++;
-                    } else {
-                        refFwd++;
-                    }
-                }
-            }
-
-            final int minAlt = Math.min(altFwd, altRev);
-            final int maxAlt = Math.max(altFwd, altRev);
-
-            final boolean isStrandArtifact = !(minAlt > STRAND_RATIO_TO_AUTOMATICALLY_ACCEPT_ACTIVE_PILEUP * maxAlt) &&
-                    (minAlt < STRAND_RATIO_TO_AUTOMATICALLY_REJECT_ACTIVE_PILEUP * maxAlt || FisherStrand.pValueForContingencyTable(new int[][] { {refFwd, refRev}, {altFwd, altRev}}) < hcArgs.strandBiasPileupPValue);
-
-            if (isStrandArtifact) {
-                return new ActivityProfileState(ref.getInterval(), 0.0);
-            }
-        }
         return new ActivityProfileState(ref.getInterval(), isActiveProb, averageHQSoftClips.mean() > AVERAGE_HQ_SOFTCLIPS_HQ_BASES_THRESHOLD ? ActivityProfileState.Type.HIGH_QUALITY_SOFT_CLIPS : ActivityProfileState.Type.NONE, averageHQSoftClips.mean() );
 
     }
@@ -720,12 +689,8 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         // evaluate each sample's reads against all haplotypes
         final Map<String,List<GATKRead>> reads = AssemblyBasedCallerUtils.splitReadsBySample(samplesList, readsHeader, regionForGenotyping.getReads());
         final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods;
+        List<Haplotype> haplotypes = assemblyResult.getHaplotypeList();
 
-        // uncollapse haplotypes
-        List<Haplotype> uncollapsedAllHaplotypes = haplotypes;
-        if ( refView != null ) {
-            uncollapsedAllHaplotypes = refView.uncollapseHaplotypesByRef(haplotypes);
-        }
 
         if (HaplotypeCallerGenotypingDebugger.isEnabled()) {
             HaplotypeCallerGenotypingDebugger.println("\nUnclipped Haplotypes("+haplotypes.size()+"):");
@@ -749,12 +714,10 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         alleleLikelihoodWriter.ifPresent(
                 writer -> writer.writeAlleleLikelihoods(readLikelihoods));
 
-
-
         // Realign reads to their best haplotype.
         final Map<GATKRead, GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(readLikelihoods, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner);
         readLikelihoods.changeEvidence(readRealignments);
-        List<Haplotype> haplotypes = readLikelihoods.alleles();
+        haplotypes = readLikelihoods.alleles();
         final AlleleLikelihoods<GATKRead, Haplotype> uncollapsedReadLikelihoods;
         if ( refView != null ) {
 
@@ -889,11 +852,13 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                 AssemblyBasedCallerUtils.finalizeRegion(region,
                         hcArgs.assemblerArgs.errorCorrectReads,
                         hcArgs.dontUseSoftClippedBases,
-                        hcArgs.overrideSoftclipFragmentCheck,
                         minTailQuality, readsHeader, samplesList,
                         ! hcArgs.doNotCorrectOverlappingBaseQualities,
+                        hcArgs.softClipLowQualityEnds,
+                        hcArgs.overrideSoftclipFragmentCheck,
                         hcArgs.fbargs);
             }
+
             filterNonPassingReads(region);
 
             final SimpleInterval paddedLoc = region.getPaddedSpan();

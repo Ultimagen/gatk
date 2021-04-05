@@ -12,12 +12,13 @@ import org.broadinstitute.hellbender.utils.genotyper.AlleleList;
 import org.broadinstitute.hellbender.utils.genotyper.IndexedAlleleList;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.util.Arrays;
 
 public class AlleleFilteringHC extends AlleleFiltering {
     private HaplotypeCallerGenotypingEngine genotypingEngine;
-    public AlleleFilteringHC(HaplotypeCallerArgumentCollection _hcargs, PrintStream assemblyDebugStream, HaplotypeCallerGenotypingEngine _genotypingEngine){
+    public AlleleFilteringHC(HaplotypeCallerArgumentCollection _hcargs, OutputStreamWriter assemblyDebugStream, HaplotypeCallerGenotypingEngine _genotypingEngine){
         super(_hcargs, assemblyDebugStream);
         genotypingEngine = _genotypingEngine;
     }
@@ -34,7 +35,8 @@ public class AlleleFilteringHC extends AlleleFiltering {
 
         AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(allele, notAllele));
 
-        final GenotypingLikelihoods<Allele> genotypingLikelihoods = genotypesModel.calculateLikelihoods(alleleList, genotypingData);
+        final GenotypingLikelihoods<Allele> genotypingLikelihoods = genotypesModel.calculateLikelihoods(alleleList,
+                genotypingData, null, 0, null);
 
         final int[] asPL = genotypingLikelihoods.sampleLikelihoods(0).getAsPLs();
         final int retVal;

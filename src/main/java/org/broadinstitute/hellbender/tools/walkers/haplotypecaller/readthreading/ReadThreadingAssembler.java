@@ -495,7 +495,7 @@ public final class ReadThreadingAssembler {
         if (debugGraphTransformations) {
             printDebugGraphTransform(seqGraph, refHaplotype.getLocation() + "-sequenceGraph." + seqGraph.getKmerSize() + ".1.2.pruned.dot");
         }
-        seqGraph.simplifyGraph(()-> refHaplotype.getLocation() + "-sequenceGraph.post_prune." + seqGraph.getKmerSize() + ".1");
+        seqGraph.simplifyGraph();
 
         if (debugGraphTransformations) {
             printDebugGraphTransform(seqGraph, refHaplotype.getLocation() + "-sequenceGraph."+seqGraph.getKmerSize()+".1.3.merged.dot");
@@ -509,7 +509,7 @@ public final class ReadThreadingAssembler {
         }
 
         seqGraph.removePathsNotConnectedToRef();
-        seqGraph.simplifyGraph(() -> refHaplotype.getLocation() + "-sequenceGraph.post_merge." + seqGraph.getKmerSize() + ".2");
+        seqGraph.simplifyGraph();
         if ( seqGraph.vertexSet().size() == 1 ) {
             // we've perfectly assembled into a single reference haplotype, add a empty seq vertex to stop
             // the code from blowing up.
@@ -517,7 +517,7 @@ public final class ReadThreadingAssembler {
             final SeqVertex complete = seqGraph.vertexSet().iterator().next();
             final SeqVertex dummy = new SeqVertex("");
             seqGraph.addVertex(dummy);
-            seqGraph.addEdge(complete, dummy, new BaseEdge(true, 0, 0));
+            seqGraph.addEdge(complete, dummy, new BaseEdge(true, 0));
         }
         if (debugGraphTransformations) {
             printDebugGraphTransform(seqGraph, refHaplotype.getLocation() + "-sequenceGraph." + seqGraph.getKmerSize() + ".1.4.final.dot");
@@ -640,7 +640,9 @@ public final class ReadThreadingAssembler {
             return new AssemblyResult(AssemblyResult.Status.FAILED, null, null);
         }
 
-        if ( !allowNonUniqueKmersInRef && !ReadThreadingGraph.determineNonUniqueKmers(new ReadThreadingGraph.SequenceForKmers("ref", refHaplotype.getBases(), 0, refHaplotype.getBases().length, 1, true, false), kmerSize).isEmpty() ) {
+        if ( !allowNonUniqueKmersInRef && !ReadThreadingGraph.determineNonUniqueKmers(
+                new ReadThreadingGraph.SequenceForKmers("ref", refHaplotype.getBases(), 0,
+                        refHaplotype.getBases().length, 1, true), kmerSize).isEmpty() ) {
             if ( debug ) {
                 logger.info("Not using kmer size of " + kmerSize + " in read threading assembler because reference contains non-unique kmers");
             }
@@ -654,7 +656,7 @@ public final class ReadThreadingAssembler {
         rtgraph.setThreadingStartOnlyAtExistingVertex(!recoverDanglingBranches);
 
         // add the reference sequence to the graph
-        rtgraph.addSequence("ref", refHaplotype.getBases(), 1, true, false);
+        rtgraph.addSequence("ref", refHaplotype.getBases(), 1, true);
 
         // Next pull kmers out of every read and throw them on the graph
         for( final GATKRead read : reads ) {

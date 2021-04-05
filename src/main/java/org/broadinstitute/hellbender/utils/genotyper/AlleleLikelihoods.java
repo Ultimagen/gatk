@@ -203,6 +203,7 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
                 new IndexedAlleleList<>(subsetOfAlleles),
                 this.samples,
                 evidenceBySampleIndex,
+                filteredEvidenceBySampleIndex,
                 values);
     }
 
@@ -251,6 +252,7 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
                 new IndexedAlleleList<>(alleles()),
                 samples,
                 evidenceBySampleIndex,
+                filteredEvidenceBySampleIndex,
                 values);
     }
 
@@ -1183,6 +1185,7 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
         return evidenceBySampleIndex.get(sampleIndex).size();
     }
 
+
     /**
      * Remove those reads that do not comply with a requirement.
      *
@@ -1238,6 +1241,9 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
         return subsettedGenomicLoc;
     }
 
+    public void changeAlleles(List<A> newAlleles) {
+        alleles = new IndexedAlleleList<>(newAlleles);
+    }
     /**
      * Contains information about the best allele for a unit of evidence.
      */

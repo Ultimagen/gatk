@@ -13,7 +13,7 @@ public final class ReadDirectionAwareEdge extends BaseEdge {
      * @param isRef indicates whether this edge is a path through the reference
      */
     public ReadDirectionAwareEdge(final boolean isRef, final int forwardMultiplicity, final int reverseMultiplicity) {
-        super(isRef, forwardMultiplicity, reverseMultiplicity);
+        super(isRef, forwardMultiplicity + reverseMultiplicity);
         Utils.validateArg(forwardMultiplicity > 0, () -> "forwardMultiplicity must be > 0 but found: " + forwardMultiplicity);
         Utils.validateArg(reverseMultiplicity > 0, () -> "reverseMultiplicity must be > 0 but found: " + reverseMultiplicity);
         this.forwardMultiplicity = forwardMultiplicity;
