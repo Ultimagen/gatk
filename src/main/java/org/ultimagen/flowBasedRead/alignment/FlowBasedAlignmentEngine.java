@@ -43,7 +43,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         this.fbargs = flowBasedArgs;
         this.log10globalReadMismappingRate = log10globalReadMismappingRate;
         this.expectedErrorRatePerBase = expectedErrorRatePerBase;
-        this.symmetricallyNormalizeAllelesToReference = false;
+        this.symmetricallyNormalizeAllelesToReference = true;
     }
 
     /**
