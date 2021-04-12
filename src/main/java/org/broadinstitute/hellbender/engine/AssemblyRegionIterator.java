@@ -137,6 +137,7 @@ public class AssemblyRegionIterator implements Iterator<AssemblyRegion> {
             final FeatureContext pileupFeatureContext = new FeatureContext(features, pileupInterval);
 
             final ActivityProfileState profile = evaluator.isActive(pileup, pileupRefContext, pileupFeatureContext);
+            logger.debug(() -> profile.toString());
             activityProfile.add(profile);
 
             // A pending region only becomes ready once our locus iterator has advanced beyond the end of its extended span
