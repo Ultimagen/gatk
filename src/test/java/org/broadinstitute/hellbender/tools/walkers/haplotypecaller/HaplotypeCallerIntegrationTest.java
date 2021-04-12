@@ -398,6 +398,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
                 "-AX", "AS_StrandOddsRatioProbabilistic",
                 "--" + AssemblyBasedCallerArgumentCollection.EMIT_REF_CONFIDENCE_LONG_NAME, ReferenceConfidenceMode.GVCF.toString(),
                 "-pairHMM", "AVX_LOGLESS_CACHING",
+                "--standard-min-confidence-threshold-for-calling","0",
                 "--" + AssemblyBasedCallerArgumentCollection.ALLELE_EXTENSION_LONG_NAME, "2",
                 "--" + StandardArgumentDefinitions.ADD_OUTPUT_VCF_COMMANDLINE, "false"
         };
