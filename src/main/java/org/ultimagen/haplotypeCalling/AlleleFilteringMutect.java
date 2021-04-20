@@ -20,6 +20,7 @@ public class AlleleFilteringMutect extends AlleleFiltering {
         genotypingEngine = _genotypingEngine;
     }
 
+
     int getAlleleLikelihood(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele) {
         final LikelihoodMatrix<GATKRead, Allele> initialMatrix = alleleLikelihoods.sampleMatrix(0);
         final LikelihoodMatrix<GATKRead, Allele> logMatrixWithoutThisAllele = SubsettedLikelihoodMatrix.excludingAllele(alleleLikelihoods.sampleMatrix(0), allele);

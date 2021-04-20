@@ -15,6 +15,7 @@ import org.broadinstitute.hellbender.utils.IndexRange;
 import org.broadinstitute.hellbender.utils.MathUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleList;
+import org.ultimagen.haplotypeCalling.LocationAndAllele;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -127,10 +128,19 @@ public final class AlleleFrequencyCalculator {
         final int numAlleles = gls.numberOfAlleles();
         final List<Allele> alleles = gls.asListOfAlleles();
 
-        final int refLength = alleles.get(0).length();
+        final List<Integer> alleleLengths = new ArrayList<>();
+        for (Allele al : gls.asListOfAlleles()) {
+            if (al instanceof LocationAndAllele) {
+                alleleLengths.add(((LocationAndAllele) al).maxAlleleLength());
+            } else {
+                alleleLengths.add(al.length());
+            }
+        }
+        final int alleleLength = alleleLengths.stream().max(Integer::compare).get();
+
         final List<String> samples = gls.asListOfSamples();
         final List<Genotype> genotypes = IntStream.range(0, samples.size()).mapToObj(idx -> new GenotypeBuilder(samples.get(idx)).alleles(alleles).PL(gls.sampleLikelihoods(idx).getAsPLs()).make()).collect(Collectors.toList());
-        return calculate(numAlleles, alleles, genotypes, defaultPloidy, refLength);
+        return calculate(numAlleles, alleles, genotypes, defaultPloidy, alleleLength);
     }
 
 

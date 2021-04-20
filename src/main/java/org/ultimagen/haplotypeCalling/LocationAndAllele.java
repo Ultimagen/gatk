@@ -47,5 +47,8 @@ public class LocationAndAllele extends Allele {
 
     public String toString() {return String.format("(%d) %s/%s", loc, getBaseString(), getRefAllele().getBaseString());}
     public Allele getRefAllele() { return refAllele;}
+    public int maxAlleleLength() {
+        return Math.max(getAllele().length(), refAllele.length());
+    }
 }
 
