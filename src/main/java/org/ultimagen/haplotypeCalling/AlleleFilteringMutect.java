@@ -40,19 +40,22 @@ public class AlleleFilteringMutect extends AlleleFiltering {
                 .mapToObj(alleleLikelihoods::sampleMatrix)
                 .collect(Collectors.toList());
         final AlleleList<Allele> alleleList = tumorMatrices.get(0);
-        final LikelihoodMatrix<GATKRead, Allele> logTumorMatrix = genotypingEngine.combinedLikelihoodMatrix(tumorMatrices, alleleList);
+        final LikelihoodMatrix<GATKRead, Allele> logTumorMatrix = SomaticGenotypingEngine.combinedLikelihoodMatrix(tumorMatrices, alleleList);
+        double normalLogOdds;
+        if (genotypingEngine.normalSamples.size()>0) {
+            final List<LikelihoodMatrix<GATKRead, Allele>> normalMatrices = IntStream.range(0, alleleLikelihoods.numberOfSamples())
+                    .filter(n -> genotypingEngine.normalSamples.contains(alleleLikelihoods.getSample(n)))
+                    .mapToObj(alleleLikelihoods::sampleMatrix)
+                    .collect(Collectors.toList());
 
-        final List<LikelihoodMatrix<GATKRead, Allele>> normalMatrices = IntStream.range(0, alleleLikelihoods.numberOfSamples())
-                .filter(n -> genotypingEngine.normalSamples.contains(alleleLikelihoods.getSample(n)))
-                .mapToObj(alleleLikelihoods::sampleMatrix)
-                .collect(Collectors.toList());
-        final LikelihoodMatrix<GATKRead, Allele> logNormalMatrix = genotypingEngine.combinedLikelihoodMatrix(normalMatrices, alleleList);
-
+            final LikelihoodMatrix<GATKRead, Allele> logNormalMatrix = SomaticGenotypingEngine.combinedLikelihoodMatrix(normalMatrices, alleleList);
+            normalLogOdds = diploidAltLogOdds(logNormalMatrix);
+        }else{
+            normalLogOdds = 0;
+        }
 
         final LikelihoodMatrix<GATKRead, Allele> initialMatrix = logTumorMatrix;
         final LikelihoodMatrix<GATKRead, Allele> logMatrixWithoutThisAllele = SubsettedLikelihoodMatrix.excludingAllele(logTumorMatrix, allele);
-        final double normalLogOdds = diploidAltLogOdds(logNormalMatrix);
-
 
         final double logEvidenceWithoutThisAllele = logMatrixWithoutThisAllele.evidenceCount() == 0 ? 0 :
                 SomaticLikelihoodsEngine.logEvidence(SomaticGenotypingEngine.getAsRealMatrix(logMatrixWithoutThisAllele),
@@ -60,40 +63,12 @@ public class AlleleFilteringMutect extends AlleleFiltering {
         final double logEvidenceWithAllAlleles= initialMatrix.evidenceCount() == 0 ? 0 :
                 SomaticLikelihoodsEngine.logEvidence(SomaticGenotypingEngine.getAsRealMatrix(initialMatrix),
                         genotypingEngine.makePriorPseudocounts(initialMatrix.numberOfAlleles()));
+        double tumorLogOdds = (-logEvidenceWithAllAlleles + logEvidenceWithoutThisAllele);
 
         logger.debug(() -> String.format("GAL:: %s: %f %f %d", allele.toString(), logEvidenceWithAllAlleles,
                 logEvidenceWithoutThisAllele,
-                (int)(10*(-logEvidenceWithAllAlleles + logEvidenceWithoutThisAllele))));
-
-        return (int)(10*(-logEvidenceWithAllAlleles + logEvidenceWithoutThisAllele));
-
-
-
-        final PerAlleleCollection<Double> tumorLogOdds = somaticLogOdds(logTumorMatrix);
-
-        final PerAlleleCollection<Double> normalArtifactLogOdds = somaticLogOdds(logNormalMatrix);
-
-
-        final Set<Allele> forcedAlleles = AssemblyBasedCallerUtils.getAllelesConsistentWithGivenAlleles(givenAlleles, mergedVC);
-        final List<Allele> tumorAltAlleles = mergedVC.getAlternateAlleles().stream()
-                .filter(allele -> forcedAlleles.contains(allele) || tumorLogOdds.getAlt(allele) > MTAC.getEmissionLogOdds())
-                .collect(Collectors.toList());
-
-        final long somaticAltCount = tumorAltAlleles.stream()
-                .filter(allele -> forcedAlleles.contains(allele) || !hasNormal || MTAC.genotypeGermlineSites || normalLogOdds.getAlt(allele) > MathUtils.log10ToLog(MTAC.normalLog10Odds))
-                .count();
-
-        // if every alt allele is germline, skip this variant.  However, if some alt alleles are germline and others
-        // are not we emit them all so that the filtering engine can see them
-        if (somaticAltCount == 0) {
-            continue;
-        }
-
-        final List<Allele> allAllelesToEmit = ListUtils.union(Arrays.asList(mergedVC.getReference()), tumorAltAlleles);
-
-
-
-
+                (int)(10*tumorLogOdds)));
+        return (int)(10*tumorLogOdds - 10*normalLogOdds) ;
     }
 
     /**

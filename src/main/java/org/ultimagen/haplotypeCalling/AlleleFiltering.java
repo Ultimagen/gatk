@@ -39,7 +39,7 @@ import java.util.stream.IntStream;
 public abstract class AlleleFiltering {
 
     protected static final Logger logger = LogManager.getLogger(AlleleFiltering.class);
-    private AssemblyBasedCallerArgumentCollection hcArgs;
+    protected AssemblyBasedCallerArgumentCollection hcArgs;
     private OutputStreamWriter assemblyDebugOutStream;
 
     AlleleFiltering(AssemblyBasedCallerArgumentCollection _hcargs, OutputStreamWriter _assemblyDebugOutStream){
