@@ -41,7 +41,8 @@ public class AlleleFilteringMutect extends AlleleFiltering {
                 .collect(Collectors.toList());
         final AlleleList<Allele> alleleList = tumorMatrices.get(0);
         final LikelihoodMatrix<GATKRead, Allele> logTumorMatrix = SomaticGenotypingEngine.combinedLikelihoodMatrix(tumorMatrices, alleleList);
-        double normalLogOdds;
+        double normalGermlineLogOdds;
+        double normalArtefactLogOdds;
         if (genotypingEngine.normalSamples.size()>0) {
             final List<LikelihoodMatrix<GATKRead, Allele>> normalMatrices = IntStream.range(0, alleleLikelihoods.numberOfSamples())
                     .filter(n -> genotypingEngine.normalSamples.contains(alleleLikelihoods.getSample(n)))
@@ -49,26 +50,17 @@ public class AlleleFilteringMutect extends AlleleFiltering {
                     .collect(Collectors.toList());
 
             final LikelihoodMatrix<GATKRead, Allele> logNormalMatrix = SomaticGenotypingEngine.combinedLikelihoodMatrix(normalMatrices, alleleList);
-            normalLogOdds = diploidAltLogOdds(logNormalMatrix);
+            normalGermlineLogOdds = diploidAltLogOdds(logNormalMatrix);
+            normalArtefactLogOdds = somaticAltLogOdds(logNormalMatrix);
         }else{
-            normalLogOdds = 0;
+            normalGermlineLogOdds = 0;
+            normalArtefactLogOdds = 0;
         }
 
-        final LikelihoodMatrix<GATKRead, Allele> initialMatrix = logTumorMatrix;
-        final LikelihoodMatrix<GATKRead, Allele> logMatrixWithoutThisAllele = SubsettedLikelihoodMatrix.excludingAllele(logTumorMatrix, allele);
+        double tumorLogOdds = somaticAltLogOdds(logTumorMatrix);
 
-        final double logEvidenceWithoutThisAllele = logMatrixWithoutThisAllele.evidenceCount() == 0 ? 0 :
-                SomaticLikelihoodsEngine.logEvidence(SomaticGenotypingEngine.getAsRealMatrix(logMatrixWithoutThisAllele),
-                        genotypingEngine.makePriorPseudocounts(logMatrixWithoutThisAllele.numberOfAlleles()));
-        final double logEvidenceWithAllAlleles= initialMatrix.evidenceCount() == 0 ? 0 :
-                SomaticLikelihoodsEngine.logEvidence(SomaticGenotypingEngine.getAsRealMatrix(initialMatrix),
-                        genotypingEngine.makePriorPseudocounts(initialMatrix.numberOfAlleles()));
-        double tumorLogOdds = (-logEvidenceWithAllAlleles + logEvidenceWithoutThisAllele);
-
-        logger.debug(() -> String.format("GAL:: %s: %f %f %d", allele.toString(), logEvidenceWithAllAlleles,
-                logEvidenceWithoutThisAllele,
-                (int)(10*tumorLogOdds)));
-        return (int)(10*tumorLogOdds - 10*normalLogOdds) ;
+        logger.debug(() -> String.format("GAL:: %s: %f %f %f", allele.toString(), tumorLogOdds, normalGermlineLogOdds, normalArtefactLogOdds));
+        return (int)(10*tumorLogOdds - 10*Math.max(normalGermlineLogOdds, normalArtefactLogOdds));
     }
 
     /**
@@ -78,8 +70,8 @@ public class AlleleFilteringMutect extends AlleleFiltering {
      * @param matrix a matrix of log likelihoods
      */
     private double diploidAltLogOdds(final LikelihoodMatrix<GATKRead, Allele> matrix) {
-        final int refIndex = 0;
-        final int altIndex = 1;
+        final int refIndex = 1;
+        final int altIndex = 0;
         final int numReads = matrix.evidenceCount();
 
         final double homRefLogLikelihood = new IndexRange(0, numReads).sum(r -> matrix.get(refIndex,r));
@@ -90,4 +82,24 @@ public class AlleleFilteringMutect extends AlleleFiltering {
         return homRefLogLikelihood - Math.max(hetLogLikelihood, homAltLogLikelihood);
     }
 
+    /**
+     * Calculate the log likelihoods of the ref/alt het genotype for each alt allele, then subtracts
+     * these from the hom ref log likelihood to get the log-odds.
+     *
+     * @param matrix a matrix of log likelihoods
+     */
+    private double somaticAltLogOdds(final LikelihoodMatrix<GATKRead, Allele> matrix) {
+
+        final LikelihoodMatrix<GATKRead, Allele> initialMatrix = matrix;
+        final LikelihoodMatrix<GATKRead, Allele> logMatrixWithoutThisAllele = SubsettedLikelihoodMatrix.excludingAllele(matrix, matrix.getAllele(0));
+
+        final double logEvidenceWithoutThisAllele = logMatrixWithoutThisAllele.evidenceCount() == 0 ? 0 :
+                SomaticLikelihoodsEngine.logEvidence(SomaticGenotypingEngine.getAsRealMatrix(logMatrixWithoutThisAllele),
+                        genotypingEngine.makePriorPseudocounts(logMatrixWithoutThisAllele.numberOfAlleles()));
+        final double logEvidenceWithAllAlleles= initialMatrix.evidenceCount() == 0 ? 0 :
+                SomaticLikelihoodsEngine.logEvidence(SomaticGenotypingEngine.getAsRealMatrix(initialMatrix),
+                        genotypingEngine.makePriorPseudocounts(initialMatrix.numberOfAlleles()));
+        double tumorLogOdds = (-logEvidenceWithAllAlleles + logEvidenceWithoutThisAllele);
+        return tumorLogOdds;
+    }
 }
