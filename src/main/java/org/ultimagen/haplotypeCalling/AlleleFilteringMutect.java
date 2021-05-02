@@ -60,7 +60,7 @@ public class AlleleFilteringMutect extends AlleleFiltering {
         double tumorLogOdds = somaticAltLogOdds(logTumorMatrix);
 
         logger.debug(() -> String.format("GAL:: %s: %f %f %f", allele.toString(), tumorLogOdds, normalGermlineLogOdds, normalArtefactLogOdds));
-        return (int)(10*tumorLogOdds - 10*Math.max(normalGermlineLogOdds, normalArtefactLogOdds));
+        return (int)(10*tumorLogOdds - 10*Math.min(normalGermlineLogOdds, -normalArtefactLogOdds));
     }
 
     /**
