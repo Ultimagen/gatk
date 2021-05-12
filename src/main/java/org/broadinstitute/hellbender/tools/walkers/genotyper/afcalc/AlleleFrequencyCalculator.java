@@ -4,10 +4,18 @@ import htsjdk.variant.variantcontext.*;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import org.apache.commons.collections4.ListUtils;
+import org.apache.commons.lang.math.IntRange;
 import org.apache.commons.math3.special.Gamma;
 import org.apache.commons.math3.util.MathArrays;
 import org.broadinstitute.hellbender.utils.*;
+import org.broadinstitute.hellbender.tools.walkers.genotyper.*;
 import org.broadinstitute.hellbender.utils.dragstr.DragstrParams;
+import org.broadinstitute.hellbender.utils.Dirichlet;
+import org.broadinstitute.hellbender.utils.IndexRange;
+import org.broadinstitute.hellbender.utils.MathUtils;
+import org.broadinstitute.hellbender.utils.Utils;
+import org.broadinstitute.hellbender.utils.genotyper.AlleleList;
+import org.ultimagen.haplotypeCalling.LocationAndAllele;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeAlleleCounts;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeCalculationArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeLikelihoodCalculator;
@@ -27,8 +35,8 @@ import java.util.stream.IntStream;
 public final class AlleleFrequencyCalculator {
 
     private static final GenotypeLikelihoodCalculators GL_CALCS = new GenotypeLikelihoodCalculators();
-    private static final double THRESHOLD_FOR_ALLELE_COUNT_CONVERGENCE = 0.1;
-    private static final int HOM_REF_GENOTYPE_INDEX = 0;
+    public static final double THRESHOLD_FOR_ALLELE_COUNT_CONVERGENCE = 0.1;
+    public static final int HOM_REF_GENOTYPE_INDEX = 0;
 
     private final double refPseudocount;
     private final double snpPseudocount;
@@ -75,6 +83,7 @@ public final class AlleleFrequencyCalculator {
      * @return
      */
     private static double[] log10NormalizedGenotypePosteriors(final Genotype g, final GenotypeLikelihoodCalculator glCalc, final double[] log10AlleleFrequencies) {
+
         final double[] log10Likelihoods;
         if (g.hasLikelihoods()) {
             log10Likelihoods = g.getLikelihoods().getAsVector();
@@ -132,16 +141,57 @@ public final class AlleleFrequencyCalculator {
         final int numAlleles = vc.getNAlleles();
         final List<Allele> alleles = vc.getAlleles();
         Utils.validateArg( numAlleles > 1, () -> "VariantContext has only a single reference allele, but getLog10PNonRef requires at least one at all " + vc);
+        return calculate(numAlleles, alleles, vc.getGenotypes(), defaultPloidy, vc.getReference().length());
+
+    }
+
+    /**
+     * Identical to AlleleFrequencyCalculator but does not require VariantContext, and assumes only a single alternative allele
+     *
+     * @param gls the GenotyplingLikelihoods holding the alleles and sample information.
+     * @return result (for programming convenience)
+     */
+    public AFCalculationResult calculate(final GenotypingLikelihoods<Allele> gls, final int defaultPloidy) {
+        Utils.nonNull(gls, "Likelihoods can only be non-null");
+        Utils.validateArg(gls.numberOfAlleles()==2, "Only case of two alleles is supported");
+        final int numAlleles = gls.numberOfAlleles();
+        final List<Allele> alleles = gls.asListOfAlleles();
+
+        final List<Integer> alleleLengths = new ArrayList<>();
+        for (Allele al : gls.asListOfAlleles()) {
+            if (al instanceof LocationAndAllele) {
+                alleleLengths.add(((LocationAndAllele) al).maxAlleleLength());
+            } else {
+                alleleLengths.add(al.length());
+            }
+        }
+        final int alleleLength = alleleLengths.stream().max(Integer::compare).get();
+
+        final List<String> samples = gls.asListOfSamples();
+        final List<Genotype> genotypes = IntStream.range(0, samples.size()).mapToObj(idx -> new GenotypeBuilder(samples.get(idx)).alleles(alleles).PL(gls.sampleLikelihoods(idx).getAsPLs()).make()).collect(Collectors.toList());
+        return calculate(numAlleles, alleles, genotypes, defaultPloidy, alleleLength);
+    }
+
+
+    /**
+     * Private function that actually calculates allele frequencies etc.
+     *
+     */
+    private AFCalculationResult calculate(final int numAlleles,
+                                          final List<Allele> alleles,
+                                          final List<Genotype> genotypes,
+                                          final int defaultPloidy,
+                                          final int refLength) {
 
         final double[] priorPseudocounts = alleles.stream()
-                .mapToDouble(a -> a.isReference() ? refPseudocount : (a.length() == vc.getReference().length() ? snpPseudocount : indelPseudocount)).toArray();
+                .mapToDouble(a -> a.isReference() ? refPseudocount : (a.length() == refLength ? snpPseudocount : indelPseudocount)).toArray();
 
         double[] alleleCounts = new double[numAlleles];
         final double flatLog10AlleleFrequency = -MathUtils.log10(numAlleles); // log10(1/numAlleles)
         double[] log10AlleleFrequencies = new IndexRange(0, numAlleles).mapToDouble(n -> flatLog10AlleleFrequency);
 
-        for (double alleleCountsMaximumDifference = Double.POSITIVE_INFINITY; alleleCountsMaximumDifference > THRESHOLD_FOR_ALLELE_COUNT_CONVERGENCE; ) {
-            final double[] newAlleleCounts = effectiveAlleleCounts(vc, log10AlleleFrequencies);
+        for (double alleleCountsMaximumDifference = Double.POSITIVE_INFINITY; alleleCountsMaximumDifference > AlleleFrequencyCalculator.THRESHOLD_FOR_ALLELE_COUNT_CONVERGENCE; ) {
+            final double[] newAlleleCounts = effectiveAlleleCounts(genotypes, log10AlleleFrequencies);
             alleleCountsMaximumDifference = Arrays.stream(MathArrays.ebeSubtract(alleleCounts, newAlleleCounts)).map(Math::abs).max().getAsDouble();
             alleleCounts = newAlleleCounts;
             final double[] posteriorPseudocounts = MathArrays.ebeAdd(priorPseudocounts, alleleCounts);
@@ -161,7 +211,7 @@ public final class AlleleFrequencyCalculator {
 
         // re-usable buffers of the log10 genotype posteriors of genotypes missing each allele
         final List<DoubleArrayList> log10AbsentPosteriors = IntStream.range(0,numAlleles).mapToObj(n -> new DoubleArrayList()).collect(Collectors.toList());
-        for (final Genotype g : vc.getGenotypes()) {
+        for (final Genotype g : genotypes) {
             if (!GenotypeUtils.genotypeIsUsableForAFCalculation(g)) {
                 continue;
             }
@@ -172,7 +222,7 @@ public final class AlleleFrequencyCalculator {
 
             //the total probability
             if (!spanningDeletionPresent) {
-                log10PNoVariant += log10GenotypePosteriors[HOM_REF_GENOTYPE_INDEX];
+                log10PNoVariant += log10GenotypePosteriors[AlleleFrequencyCalculator.HOM_REF_GENOTYPE_INDEX];
             } else {
                 nonVariantIndicesByPloidy.computeIfAbsent(ploidy, p -> genotypeIndicesWithOnlyRefAndSpanDel(p, alleles));
                 final int[] nonVariantIndices = nonVariantIndicesByPloidy.get(ploidy);
@@ -224,6 +274,8 @@ public final class AlleleFrequencyCalculator {
         return new AFCalculationResult(integerAltAlleleCounts, alleles, log10PNoVariant, log10PRefByAllele);
     }
 
+
+
     /**
      * Calculate the posterior probability that a single biallelic genotype is non-ref
      *
@@ -251,12 +303,12 @@ public final class AlleleFrequencyCalculator {
     // for numerical stability we will do this in log space:
     // count = SUM 10^(log (n_g p_g)) = SUM 10^(log n_g + log p_g)
     // thanks to the log-sum-exp trick this lets us work with log posteriors alone
-    private double[] effectiveAlleleCounts(final VariantContext vc, final double[] log10AlleleFrequencies) {
-        final int numAlleles = vc.getNAlleles();
+    private double[] effectiveAlleleCounts(List<Genotype> genotypes, final double[] log10AlleleFrequencies) {
+        final int numAlleles = log10AlleleFrequencies.length;
         Utils.validateArg(numAlleles == log10AlleleFrequencies.length, "number of alleles inconsistent");
         final double[] log10Result = new double[numAlleles];
         Arrays.fill(log10Result, Double.NEGATIVE_INFINITY);
-        for (final Genotype g : vc.getGenotypes()) {
+        for (final Genotype g : genotypes) {
             if (!GenotypeUtils.genotypeIsUsableForAFCalculation(g)) {
                 continue;
             }
@@ -265,9 +317,10 @@ public final class AlleleFrequencyCalculator {
             final double[] log10GenotypePosteriors = log10NormalizedGenotypePosteriors(g, glCalc, log10AlleleFrequencies);
 
             new IndexRange(0, glCalc.genotypeCount()).forEach(genotypeIndex ->
-                glCalc.genotypeAlleleCountsAt(genotypeIndex).forEachAlleleIndexAndCount((alleleIndex, count) ->
-                        log10Result[alleleIndex] = MathUtils.log10SumLog10(log10Result[alleleIndex], log10GenotypePosteriors[genotypeIndex] + MathUtils.log10(count))));
+                    glCalc.genotypeAlleleCountsAt(genotypeIndex).forEachAlleleIndexAndCount((alleleIndex, count) ->
+                            log10Result[alleleIndex] = MathUtils.log10SumLog10(log10Result[alleleIndex], log10GenotypePosteriors[genotypeIndex] + MathUtils.log10(count))));
         }
         return MathUtils.applyToArrayInPlace(log10Result, x -> Math.pow(10.0, x));
     }
+
 }
