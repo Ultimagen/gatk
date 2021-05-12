@@ -39,7 +39,7 @@ import java.util.stream.IntStream;
 public abstract class AlleleFiltering {
 
     protected static final Logger logger = LogManager.getLogger(AlleleFiltering.class);
-    private AssemblyBasedCallerArgumentCollection hcArgs;
+    protected AssemblyBasedCallerArgumentCollection hcArgs;
     private OutputStreamWriter assemblyDebugOutStream;
 
     AlleleFiltering(AssemblyBasedCallerArgumentCollection _hcargs, OutputStreamWriter _assemblyDebugOutStream){
@@ -76,10 +76,11 @@ public abstract class AlleleFiltering {
 
         if (assemblyDebugOutStream != null) {
             try {
-                assemblyDebugOutStream.write("\nThere were " + subsettedReadLikelihoodsFinal.alleles().size() + " haplotypes found after subsetting by alleles. Here they are:");
+                assemblyDebugOutStream.write("\nThere were " + subsettedReadLikelihoodsFinal.alleles().size() + " haplotypes found after subsetting by alleles. Here they are:\n");
                 subsettedReadLikelihoodsFinal.alleles().stream().map(Haplotype::toString).sorted().forEach( h -> {
                     try {
                         assemblyDebugOutStream.write(h);
+                        assemblyDebugOutStream.append("\n");
                     } catch (IOException e) {
                         throw new UserException("Error writing to debug output stream", e);
                     }

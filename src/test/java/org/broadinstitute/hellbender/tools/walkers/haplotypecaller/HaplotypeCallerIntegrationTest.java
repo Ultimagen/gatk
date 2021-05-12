@@ -1512,6 +1512,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
                 .add("flow-filter-alleles-sor-threshold", 40)
                 .add("flow-assembly-collapse-hmer-size", 12)
                 .add("flow-matrix-mods", "10,12,11,12")
+                .add("flow-likelihood-optimized-comp", true)
                 .add("ERC", "GVCF")
                 .add(StandardArgumentDefinitions.ADD_OUTPUT_VCF_COMMANDLINE, false);
 
