@@ -36,7 +36,7 @@ import java.util.stream.IntStream;
 public class SomaticGenotypingEngine {
 
     private final M2ArgumentCollection MTAC;
-    private final Set<String> normalSamples;
+    public final Set<String> normalSamples;
     final boolean hasNormal;
     protected VariantAnnotatorEngine annotationEngine;
 
@@ -153,7 +153,9 @@ public class SomaticGenotypingEngine {
             final List<Allele> allAllelesToEmit = ListUtils.union(Arrays.asList(mergedVC.getReference()), tumorAltAlleles);
 
 
-            final Map<String, Object> negativeLogPopulationAFAnnotation = getNegativeLogPopulationAFAnnotation(featureContext.getValues(MTAC.germlineResource, loc), allAllelesToEmit, MTAC.getDefaultAlleleFrequency());
+            final Map<String, Object> negativeLogPopulationAFAnnotation =
+                    getNegativeLogPopulationAFAnnotation(featureContext.getValues(MTAC.germlineResource, loc),
+                            allAllelesToEmit, MTAC.getDefaultAlleleFrequency());
 
             final VariantContextBuilder callVcb = new VariantContextBuilder(mergedVC)
                     .alleles(allAllelesToEmit)
@@ -307,7 +309,7 @@ public class SomaticGenotypingEngine {
         return result;
     }
 
-    private static <EVIDENCE extends Locatable> LikelihoodMatrix<EVIDENCE, Allele> combinedLikelihoodMatrix(final List<LikelihoodMatrix<EVIDENCE, Allele>> matrices, final AlleleList<Allele> alleleList) {
+    public static <EVIDENCE extends Locatable> LikelihoodMatrix<EVIDENCE, Allele> combinedLikelihoodMatrix(final List<LikelihoodMatrix<EVIDENCE, Allele>> matrices, final AlleleList<Allele> alleleList) {
         final List<EVIDENCE> reads = matrices.stream().flatMap(m -> m.evidence().stream()).collect(Collectors.toList());
         final AlleleLikelihoods<EVIDENCE, Allele> combinedLikelihoods = new AlleleLikelihoods<>(SampleList.singletonSampleList("COMBINED"), alleleList, ImmutableMap.of("COMBINED", reads));
 
