@@ -23,13 +23,16 @@ import org.broadinstitute.hellbender.utils.param.ParamUtils;
 import org.broadinstitute.hellbender.utils.read.CigarUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
+import org.ultimagen.flowBasedRead.alignment.AlignmentThreadingUtils;
 import org.ultimagen.haplotypeCalling.LHWRefView;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static java.lang.String.format;
 
@@ -77,12 +80,16 @@ public final class ReadThreadingAssembler {
     private Histogram haplotypeHistogram = null;
     private Histogram kmersUsedHistogram = null;
 
+    private ForkJoinPool threadPool;
+    private long monitorNano;
+
     public ReadThreadingAssembler(final int maxAllowedPathsForReadThreadingAssembler, final List<Integer> kmerSizes,
                                   final boolean dontIncreaseKmerSizesForCycles, final boolean allowNonUniqueKmersInRef,
                                   final int numPruningSamples, final int pruneFactor, final boolean useAdaptivePruning,
                                   final double initialErrorRateForPruning, final double pruningLogOddsThreshold,
                                   final double pruningSeedingLogOddsThreshold, final int maxUnprunedVariants, final boolean useLinkedDebruijnGraphs,
-                                  final boolean enableLegacyGraphCycleDetection, final int minMachingBasesToDanglingEndRecovery) {
+                                  final boolean enableLegacyGraphCycleDetection, final int minMachingBasesToDanglngEndRecovery,
+                                  final int flowAssemblerParallelThreads) {
         Utils.validateArg( maxAllowedPathsForReadThreadingAssembler >= 1, "numBestHaplotypesPerGraph should be >= 1 but got " + maxAllowedPathsForReadThreadingAssembler);
         this.kmerSizes = kmerSizes.stream().sorted(Integer::compareTo).collect(Collectors.toList());
         this.dontIncreaseKmerSizesForCycles = dontIncreaseKmerSizesForCycles;
@@ -99,11 +106,14 @@ public final class ReadThreadingAssembler {
                 new LowWeightChainPruner<>(pruneFactor);
         numBestHaplotypesPerGraph = maxAllowedPathsForReadThreadingAssembler;
         this.minMatchingBasesToDanglingEndRecovery = minMachingBasesToDanglingEndRecovery;
+        if ( flowAssemblerParallelThreads > 0 ) {
+            threadPool = new ForkJoinPool(flowAssemblerParallelThreads);
+        }
     }
 
     @VisibleForTesting
     ReadThreadingAssembler(final int maxAllowedPathsForReadThreadingAssembler, final List<Integer> kmerSizes, final int pruneFactor) {
-        this(maxAllowedPathsForReadThreadingAssembler, kmerSizes, true, true, 1, pruneFactor, false, 0.001, 2, 2, Integer.MAX_VALUE, false, false, 3);
+        this(maxAllowedPathsForReadThreadingAssembler, kmerSizes, true, true, 1, pruneFactor, false, 0.001, 2, 2, Integer.MAX_VALUE, false, false, 3, 0);
     }
 
     @VisibleForTesting
@@ -327,68 +337,79 @@ public final class ReadThreadingAssembler {
             final V sink = graph.getReferenceSinkVertex();
             Utils.validateArg(source != null && sink != null, () -> "Both source and sink cannot be null but got " + source + " and sink " + sink + " for graph " + graph);
 
-            for (final KBestHaplotype<V, E> kBestHaplotype :
-                    (generateSeqGraph ?
-                            new GraphBasedKBestHaplotypeFinder<>(graph, source, sink) :
-                            new JunctionTreeKBestHaplotypeFinder<>(graph, source, sink, JunctionTreeKBestHaplotypeFinder.DEFAULT_OUTGOING_JT_EVIDENCE_THRESHOLD_TO_BELEIVE, recoverHaplotypesFromEdgesNotCoveredInJunctionTrees))
-                            .findBestHaplotypes(numBestHaplotypesPerGraph)) {
-                // TODO for now this seems like the solution, perhaps in the future it will be to excise the haplotype completely)
-                if (kBestHaplotype instanceof JTBestHaplotype && ((JTBestHaplotype<V, E>) kBestHaplotype).isWasPoorlyRecovered()) {
-                    assemblyResult.setContainsSuspectHaplotypes(true);
-                }
-                final Haplotype h = kBestHaplotype.haplotype();
-                h.setKmerSize(kBestHaplotype.getGraph().getKmerSize());
+            List<KBestHaplotype<V, E>>  bestHaplotypes = (generateSeqGraph ?
+                    new GraphBasedKBestHaplotypeFinder<>(graph, source, sink) :
+                    new JunctionTreeKBestHaplotypeFinder<>(graph, source, sink, JunctionTreeKBestHaplotypeFinder.DEFAULT_OUTGOING_JT_EVIDENCE_THRESHOLD_TO_BELEIVE, recoverHaplotypesFromEdgesNotCoveredInJunctionTrees))
+                    .findBestHaplotypes(numBestHaplotypesPerGraph);
 
-                if (!returnHaplotypes.contains(h)) {
-                    // TODO this score seems to be irrelevant at this point...
-                    if (kBestHaplotype.isReference()) {
-                        refHaplotype.setScore(kBestHaplotype.score());
+            long            startedNano = System.nanoTime();
+            if ( threadPool == null ) {
+                for (final KBestHaplotype<V, E> kBestHaplotype : bestHaplotypes) {
+                    // TODO for now this seems like the solution, perhaps in the future it will be to excise the haplotype completely)
+                    if (kBestHaplotype instanceof JTBestHaplotype && ((JTBestHaplotype<V, E>) kBestHaplotype).isWasPoorlyRecovered()) {
+                        assemblyResult.setContainsSuspectHaplotypes(true);
                     }
-                    final Cigar cigar = CigarUtils.calculateCigar(refHaplotype.getBases(), h.getBases(), aligner, SWOverhangStrategy.SOFTCLIP);
+                    final Haplotype h = kBestHaplotype.haplotype();
 
-                    if (cigar == null) {
-                        failedCigars++; // couldn't produce a meaningful alignment of haplotype to reference, fail quietly
-                        continue;
-                    } else if (cigar.isEmpty()) {
-                        throw new IllegalStateException("Smith-Waterman alignment failure. Cigar = " + cigar + " with reference length " + cigar.getReferenceLength() +
-                                " but expecting reference length of " + refHaplotype.getCigar().getReferenceLength());
-                    } else if (pathIsTooDivergentFromReference(cigar) || cigar.getReferenceLength() < MIN_HAPLOTYPE_REFERENCE_LENGTH) {
-                        // N cigar elements means that a bubble was too divergent from the reference so skip over this path
-                        continue;
-                    } else if (cigar.getReferenceLength() != refHaplotype.getCigar().getReferenceLength()) { // SW failure
-                        final Cigar cigarWithIndelStrategy = CigarUtils.calculateCigar(refHaplotype.getBases(), h.getBases(), aligner, SWOverhangStrategy.INDEL);
-                        // the SOFTCLIP strategy can produce a haplotype cigar that matches the beginning of the reference and
-                        // skips the latter part of the reference.  For example, when padded haplotype = NNNNNNNNNN[sequence 1]NNNNNNNNNN
-                        // and padded ref = NNNNNNNNNN[sequence 1][sequence 2]NNNNNNNNNN, the alignment may choose to align only sequence 1.
-                        // If aligning with an indel strategy produces a cigar with deletions for sequence 2 (which is reflected in the
-                        // reference length of the cigar matching the reference length of the ref haplotype), then the assembly window was
-                        // simply too small to reliably resolve the deletion; it should only throw an IllegalStateException when aligning
-                        // with the INDEL strategy still produces discrepant reference lengths.
-                        // You might wonder why not just use the INDEL strategy from the beginning.  This is because the SOFTCLIP strategy only fails
-                        // when there is insufficient flanking sequence to resolve the cigar unambiguously.  The INDEL strategy would produce
-                        // valid but most likely spurious indel cigars.
-                        if (cigarWithIndelStrategy.getReferenceLength() == refHaplotype.getCigar().getReferenceLength()) {
-                            failedCigars++;
+                    if (!returnHaplotypes.contains(h)) {
+                        // TODO this score seems to be irrelevant at this point...
+                        if (kBestHaplotype.isReference()) {
+                            refHaplotype.setScore(kBestHaplotype.score());
+                        }
+                        final Cigar cigar = CigarUtils.calculateCigar(refHaplotype.getBases(), h.getBases(), aligner, SWOverhangStrategy.SOFTCLIP);
+
+                        if (cigar == null) {
+                            failedCigars++; // couldn't produce a meaningful alignment of haplotype to reference, fail quietly
                             continue;
-                        } else {
-                            throw new IllegalStateException("Smith-Waterman alignment failure. Cigar = " + cigar + " with reference length "
-                                    + cigar.getReferenceLength() + " but expecting reference length of " + refHaplotype.getCigar().getReferenceLength()
-                                    + " ref = " + refHaplotype + " path " + new String(h.getBases()));
+                        } else if (cigar.isEmpty()) {
+                            throw new IllegalStateException("Smith-Waterman alignment failure. Cigar = " + cigar + " with reference length " + cigar.getReferenceLength() +
+                                    " but expecting reference length of " + refHaplotype.getCigar().getReferenceLength());
+                        } else if (pathIsTooDivergentFromReference(cigar) || cigar.getReferenceLength() < MIN_HAPLOTYPE_REFERENCE_LENGTH) {
+                            // N cigar elements means that a bubble was too divergent from the reference so skip over this path
+                            continue;
+                        } else if (cigar.getReferenceLength() != refHaplotype.getCigar().getReferenceLength()) { // SW failure
+                            final Cigar cigarWithIndelStrategy = CigarUtils.calculateCigar(refHaplotype.getBases(), h.getBases(), aligner, SWOverhangStrategy.INDEL);
+                            // the SOFTCLIP strategy can produce a haplotype cigar that matches the beginning of the reference and
+                            // skips the latter part of the reference.  For example, when padded haplotype = NNNNNNNNNN[sequence 1]NNNNNNNNNN
+                            // and padded ref = NNNNNNNNNN[sequence 1][sequence 2]NNNNNNNNNN, the alignment may choose to align only sequence 1.
+                            // If aligning with an indel strategy produces a cigar with deletions for sequence 2 (which is reflected in the
+                            // reference length of the cigar matching the reference length of the ref haplotype), then the assembly window was
+                            // simply too small to reliably resolve the deletion; it should only throw an IllegalStateException when aligning
+                            // with the INDEL strategy still produces discrepant reference lengths.
+                            // You might wonder why not just use the INDEL strategy from the beginning.  This is because the SOFTCLIP strategy only fails
+                            // when there is insufficient flanking sequence to resolve the cigar unambiguously.  The INDEL strategy would produce
+                            // valid but most likely spurious indel cigars.
+                            if (cigarWithIndelStrategy.getReferenceLength() == refHaplotype.getCigar().getReferenceLength()) {
+                                failedCigars++;
+                                continue;
+                            } else {
+                                throw new IllegalStateException("Smith-Waterman alignment failure. Cigar = " + cigar + " with reference length "
+                                        + cigar.getReferenceLength() + " but expecting reference length of " + refHaplotype.getCigar().getReferenceLength()
+                                        + " ref = " + refHaplotype + " path " + new String(h.getBases()));
+                            }
+                        }
+
+                        h.setCigar(cigar);
+                        h.setAlignmentStartHapwrtRef(activeRegionStart);
+                        h.setGenomeLocation(activeRegionWindow);
+                        returnHaplotypes.add(h);
+                        if (resultSet != null) {
+                            resultSet.add(h);
+                        }
+
+                        if (debug) {
+                            logger.info("Adding haplotype " + h.getCigar() + " from graph with kmer " + assemblyResult.getKmerSize());
                         }
                     }
-
-                    h.setCigar(cigar);
-                    h.setAlignmentStartHapwrtRef(activeRegionStart);
-                    h.setGenomeLocation(activeRegionWindow);
-                    returnHaplotypes.add(h);
-                    if (resultSet != null) {
-                        resultSet.add(h);
-                    }
-
-                    if (debug) {
-                        logger.info("Adding haplotype " + h.getCigar() + " from graph with kmer " + assemblyResult.getKmerSize());
-                    }
                 }
+            } else {
+                failedCigars = parallelAlignmentProc(bestHaplotypes, refHaplotype, resultSet, returnHaplotypes, aligner
+                        ,activeRegionStart, activeRegionWindow, assemblyResult);
+            }
+            long        elapseNano = System.nanoTime() - startedNano;
+            monitorNano += elapseNano;
+            if ( logger.isDebugEnabled() ) {
+                logger.info("bestHaplotypes alignment took " + elapseNano + " nano seconds. overall msec: " + (monitorNano / 1000000.0));
             }
 
             // Make sure that the ref haplotype is amongst the return haplotypes and calculate its score as
@@ -438,6 +459,103 @@ public final class ReadThreadingAssembler {
         }
 
         return new ArrayList<>(returnHaplotypes);
+    }
+
+    private <V extends BaseVertex, E extends BaseEdge> int parallelAlignmentProc(final List<KBestHaplotype<V, E>> bestHaplotypes,
+                                                                                 final Haplotype refHaplotype,
+                                                                                 final AssemblyResultSet resultSet,
+                                                                                 final Set<Haplotype> returnHaplotypes,
+                                                                                 final SmithWatermanAligner aligner,
+                                                                                 final int activeRegionStart,
+                                                                                 final SimpleInterval activeRegionWindow,
+                                                                                 final AssemblyResult assemblyResult) {
+        try {
+            Callable<Integer> callable = () -> {
+
+                return bestHaplotypes.stream().parallel().map(kBestHaplotype -> {
+                    return singleAlignmentProc(kBestHaplotype, refHaplotype, resultSet, returnHaplotypes, aligner
+                            , activeRegionStart, activeRegionWindow, assemblyResult);
+                }).reduce(0, Integer::sum);
+            };
+
+            return threadPool.submit(callable).get();
+        } catch (InterruptedException | ExecutionException e) {
+            logger.error("parallelAlignmentProc", e);
+            return 0;
+        }
+    }
+
+    private <V extends BaseVertex, E extends BaseEdge> int singleAlignmentProc(KBestHaplotype<V, E> kBestHaplotype, Haplotype refHaplotype, AssemblyResultSet resultSet, Set<Haplotype> returnHaplotypes, SmithWatermanAligner aligner, int activeRegionStart, SimpleInterval activeRegionWindow, final AssemblyResult assemblyResult) {
+
+        // access thread specific aligner. this is thread safe ...
+        SmithWatermanAligner    threadAligner = AlignmentThreadingUtils.getSimilarAlignerForCurrentThread(aligner);
+
+        // TODO for now this seems like the solution, perhaps in the future it will be to excise the haplotype completely)
+        if (kBestHaplotype instanceof JTBestHaplotype && ((JTBestHaplotype<V, E>) kBestHaplotype).isWasPoorlyRecovered()) {
+            synchronized (assemblyResult) { assemblyResult.setContainsSuspectHaplotypes(true);}
+        }
+        final Haplotype h = kBestHaplotype.haplotype();
+        final int  refHaplotypeCigarLength;
+        final boolean returnHaplotypesContains;
+
+        synchronized (refHaplotype) {
+            refHaplotypeCigarLength = refHaplotype.getCigar().getReferenceLength();
+        }
+        synchronized (returnHaplotypes) {
+            returnHaplotypesContains = returnHaplotypes.contains(h);
+        }
+
+        if (!returnHaplotypesContains) {
+            // TODO this score seems to be irrelevant at this point...
+            if (kBestHaplotype.isReference()) {
+                synchronized (refHaplotype) {refHaplotype.setScore(kBestHaplotype.score());}
+            }
+            final Cigar cigar = CigarUtils.calculateCigar(refHaplotype.getBases(), h.getBases(), threadAligner, SWOverhangStrategy.SOFTCLIP);
+
+            if (cigar == null) {
+                return 1; // couldn't produce a meaningful alignment of haplotype to reference, fail quietly
+            } else if (cigar.isEmpty()) {
+                throw new IllegalStateException("Smith-Waterman alignment failure. Cigar = " + cigar + " with reference length " + cigar.getReferenceLength() +
+                        " but expecting reference length of " + refHaplotypeCigarLength);
+            } else if (pathIsTooDivergentFromReference(cigar) || cigar.getReferenceLength() < MIN_HAPLOTYPE_REFERENCE_LENGTH) {
+                // N cigar elements means that a bubble was too divergent from the reference so skip over this path
+                return 0;
+            } else if (cigar.getReferenceLength() != refHaplotypeCigarLength) { // SW failure
+                final Cigar cigarWithIndelStrategy = CigarUtils.calculateCigar(refHaplotype.getBases(), h.getBases(), threadAligner, SWOverhangStrategy.INDEL);
+                // the SOFTCLIP strategy can produce a haplotype cigar that matches the beginning of the reference and
+                // skips the latter part of the reference.  For example, when padded haplotype = NNNNNNNNNN[sequence 1]NNNNNNNNNN
+                // and padded ref = NNNNNNNNNN[sequence 1][sequence 2]NNNNNNNNNN, the alignment may choose to align only sequence 1.
+                // If aligning with an indel strategy produces a cigar with deletions for sequence 2 (which is reflected in the
+                // reference length of the cigar matching the reference length of the ref haplotype), then the assembly window was
+                // simply too small to reliably resolve the deletion; it should only throw an IllegalStateException when aligning
+                // with the INDEL strategy still produces discrepant reference lengths.
+                // You might wonder why not just use the INDEL strategy from the beginning.  This is because the SOFTCLIP strategy only fails
+                // when there is insufficient flanking sequence to resolve the cigar unambiguously.  The INDEL strategy would produce
+                // valid but most likely spurious indel cigars.
+                if (cigarWithIndelStrategy.getReferenceLength() == refHaplotypeCigarLength) {
+                    return 1;
+                } else {
+                    throw new IllegalStateException("Smith-Waterman alignment failure. Cigar = " + cigar + " with reference length "
+                            + cigar.getReferenceLength() + " but expecting reference length of " + refHaplotypeCigarLength
+                            + " ref = " + refHaplotype + " path " + new String(h.getBases()));
+                }
+            }
+
+            h.setCigar(cigar);
+            h.setAlignmentStartHapwrtRef(activeRegionStart);
+            h.setGenomeLocation(activeRegionWindow);
+            synchronized (returnHaplotypes) { returnHaplotypes.add(h);}
+            if (resultSet != null) {
+                synchronized (resultSet) { resultSet.add(h);}
+            }
+
+            if (debug) {
+                logger.info("Adding haplotype " + h.getCigar() + " from graph with kmer " + assemblyResult.getKmerSize());
+            }
+        }
+
+        // if here, did not fail
+        return 0;
     }
 
 
