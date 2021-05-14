@@ -58,6 +58,7 @@ import org.ultimagen.haplotypeCalling.LHWRefView;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.*;
+import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 
 import static org.broadinstitute.hellbender.utils.activityprofile.ActivityProfileState.Type.HIGH_QUALITY_SOFT_CLIPS;
@@ -174,6 +175,8 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
     private static final Allele FAKE_REF_ALLELE = Allele.create("N", true); // used in isActive function to call into UG Engine. Should never appear anywhere in a VCF file
     private static final Allele FAKE_ALT_ALLELE = Allele.create("<FAKE_ALT>", false); // used in isActive function to call into UG Engine. Should never appear anywhere in a VCF file
 
+    private ForkJoinPool assemblerThreadPool;
+
     /**
      * Create and initialize a new HaplotypeCallerEngine given a collection of HaplotypeCaller arguments, a reads header,
      * and a reference file
@@ -213,6 +216,10 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
         trimmer = new AssemblyRegionTrimmer(assemblyRegionArgs, readsHeader.getSequenceDictionary());
         initialize(createBamOutIndex, createBamOutMD5);
+
+        if ( hcArgs.assemblerArgs.flowAssemblerParallelThreads > 0 ) {
+            assemblerThreadPool = new ForkJoinPool(hcArgs.assemblerArgs.flowAssemblerParallelThreads);
+        }
     }
 
     /**
@@ -765,8 +772,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                 writer -> writer.writeAlleleLikelihoods(readLikelihoods));
 
         // Realign reads to their best haplotype.
-        final SWParameters readToHaplotypeSWParameters = hcArgs.getReadToHaplotypeSWParameters();
-        final Map<GATKRead, GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(readLikelihoods, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner, readToHaplotypeSWParameters);
+        final Map<GATKRead, GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(readLikelihoods, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner, assemblerThreadPool, readToHaplotypeSWParameters);
         readLikelihoods.changeEvidence(readRealignments);
         haplotypes = readLikelihoods.alleles();
         final AlleleLikelihoods<GATKRead, Haplotype> uncollapsedReadLikelihoods;

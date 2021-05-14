@@ -223,5 +223,10 @@ public abstract class ReadThreadingAssemblerArgumentCollection implements Serial
     @Argument(fullName="min-observations-for-kmer-to-be-solid", doc = "A k-mer must be seen at least these times for it considered to be solid", optional = true)
     public int minObservationsForKmerToBeSolid = 20;
 
+    @Hidden
+    @Argument(fullName="flow-assembler-parallel-threads", doc="number of threads to allocate for the assembly", optional = true)
+    public int flowAssemblerParallelThreads = 0;
+
+
     public abstract ReadThreadingAssembler makeReadThreadingAssembler();
 }

@@ -376,7 +376,8 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     }
 
     public double getProb(final int flow, final int hmer) {
-        return flowMatrix[Math.min(hmer, maxHmer)][flow];
+        double prob = flowMatrix[hmer < maxHmer ? hmer : maxHmer][flow];
+        return (prob <= 1) ? prob : 1;
     }
 
     // this applies clipping when the flow matrix is in flow space. Does nothing in base space
