@@ -189,6 +189,10 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     @Argument(fullName="flow-matrix-mods", doc="Modifications to perform on the read flow matrix. Format is a list of src,dst,src,dst.... Operation is triggered when src is written. Example: 8,12,11,12", optional = true)
     public String flowMatrixMods = null;
 
+    @Advanced
+    @Argument(fullName="flow-assembly-collapse-partial-mode", doc="Collapse only up to difference in reference", optional = true)
+    public boolean flowAssemblyCollapsePartialMode = false;
+
     /**
      * These are the parameters that control allele filtering / haplotype pruning behaviour. The goal of this step is to
      * filter out alleles that are coming from true allele + sequencing error. Those alleles affect the quality and the SOR
