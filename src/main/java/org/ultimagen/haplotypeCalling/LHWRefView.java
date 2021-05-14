@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class LHWRefView {
 
     final private int             hmerSizeThreshold;
+    final private boolean         partialMode;
 
     final private byte[]          fullRef;
     final private Locatable       refLoc;
@@ -25,9 +26,10 @@ public class LHWRefView {
     final private boolean         debug;
     final private SmithWatermanAligner aligner;
 
-    public LHWRefView(final int hmerSizeThreshold, final byte[] fullRef, final Locatable refLoc, final Logger logger, final boolean debug, final SmithWatermanAligner aligner) {
+    public LHWRefView(final int hmerSizeThreshold, final boolean partialMode, final byte[] fullRef, final Locatable refLoc, final Logger logger, final boolean debug, final SmithWatermanAligner aligner) {
 
         this.hmerSizeThreshold = hmerSizeThreshold;
+        this.partialMode = partialMode;
         this.fullRef = fullRef;
         this.refLoc = refLoc;
         this.logger = logger;
@@ -282,16 +284,24 @@ public class LHWRefView {
 
 
                     // check for a delete at the end of an hmer or at the beginning
-                    if (onHomoPolymer(ref, refOfs - hmerSizeThreshold, ref[refOfs], hmerSizeThreshold, 1)) {
+                    if (onHomoPolymer(ref, refOfs - hmerSizeThreshold, ref[refOfs], hmerSizeThreshold)) {
                         // fill with base until end of homopolymer on the ref
-                        for (int size = 0; (size < c.getLength()) /*&& (ref[refOfs + size] == base)*/; size++)
-                            result[resultOfs++] = ref[refOfs + size];
+                        byte            base = ref[refOfs];
+                        for (int size = 0; (size < c.getLength()) ; size++) {
+                            if ( partialMode && ref[refOfs + size] != base )
+                                break;
+                            result[resultOfs++] = base;
+                        }
                         didCollapse.set(true);
 
-                    } else if (onHomoPolymer(ref, refOfs + c.getLength(), ref[refOfs + c.getLength() - 1], hmerSizeThreshold, -1)) {
+                    } else if (onHomoPolymer(ref, refOfs + c.getLength(), ref[refOfs + c.getLength() - 1], hmerSizeThreshold)) {
                         // fill with base until start of homopolymer on the ref
-                        for (int size = 0; (size < c.getLength()) /*&& (ref[refOfs + c.getLength() - 1 - size] == base)*/; size++)
-                            result[resultOfs++] = ref[refOfs + c.getLength() - 1 - size];
+                        byte            base = ref[refOfs + c.getLength() - 1];
+                        for (int size = 0; (size < c.getLength()) ; size++) {
+                            if ( partialMode && ref[refOfs + c.getLength() - 1 - size] != base )
+                                break;
+                            result[resultOfs++] = base;
+                        }
                         didCollapse.set(true);
                     }
                 }
@@ -317,7 +327,7 @@ public class LHWRefView {
         return finalResult;
     }
 
-    private boolean onHomoPolymer(byte[] bases, int ofs, byte base, int length, int direction)
+    private boolean onHomoPolymer(byte[] bases, int ofs, byte base, int length)
     {
         for ( int tick = 0 ; tick < hmerSizeThreshold ; tick++ ) {
             if ( sameBase(bases, ofs + tick, base, length) )
