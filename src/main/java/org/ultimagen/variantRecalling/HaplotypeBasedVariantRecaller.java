@@ -123,7 +123,7 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                     if ( (hcArgs.flowAssemblyCollapseHKerSize > 0)
                                     && LHWRefView.needsCollapsing(refBases, hcArgs.flowAssemblyCollapseHKerSize, logger, false) ) {
                         refView = new LHWRefView(hcArgs.flowAssemblyCollapseHKerSize, hcArgs.flowAssemblyCollapsePartialMode, refBases, haplotypeSpan, logger, false,
-                                SmithWatermanAligner.getAligner(SmithWatermanAligner.Implementation.FASTEST_AVAILABLE));
+                                SmithWatermanAligner.getAligner(SmithWatermanAligner.Implementation.FASTEST_AVAILABLE), 0);
                         processedHaplotypes.addAll(refView.uncollapseHaplotypesByRef(bestHaplotypes, false, true, refBases));
                     }
                     else

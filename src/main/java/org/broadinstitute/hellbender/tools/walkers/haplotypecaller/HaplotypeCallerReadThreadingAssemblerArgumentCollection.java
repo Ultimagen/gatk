@@ -33,12 +33,13 @@ public class HaplotypeCallerReadThreadingAssemblerArgumentCollection extends Rea
     @Argument(fullName="recover-dangling-heads", doc="This argument is deprecated since version 3.3", optional = true)
     public boolean DEPRECATED_RecoverDanglingHeads = false;
 
+
     @Override
     public ReadThreadingAssembler makeReadThreadingAssembler() {
         final ReadThreadingAssembler assemblyEngine = new ReadThreadingAssembler(maxNumHaplotypesInPopulation, Collections.unmodifiableList(kmerSizes),
                 dontIncreaseKmerSizesForCycles, allowNonUniqueKmersInRef, numPruningSamples, useAdaptivePruning ? 0 : minPruneFactor,
                 useAdaptivePruning, initialErrorRateForPruning, pruningLogOddsThreshold, pruningSeedingLogOddsThreshold, maxUnprunedVariants, useLinkedDeBruijnGraph,
-                enableLegacyGraphCycleDetection, minMatchingBasesToDanglingEndRecovery);
+                enableLegacyGraphCycleDetection, minMatchingBasesToDanglingEndRecovery, flowAssemblerParallelThreads);
         assemblyEngine.setDebugGraphTransformations(debugGraphTransformations);
         assemblyEngine.setRecoverDanglingBranches(!doNotRecoverDanglingBranches);
         assemblyEngine.setRecoverAllDanglingBranches(recoverAllDanglingBranches);

@@ -23,6 +23,9 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     private static final String FLOW_ORDER_CYCLE_LENGTH = "flow-order-cycle-length";
     private static final String NUM_UNCERTAIN_FLOWS = "flow-number-of-uncertain-flows-to-clip";
     private static final String FIRST_UNCERTAIN_FLOW = "flow-nucleotide-of-first-uncertain-flow";
+    private static final String FLOW_LIKELIHOOD_PARALLEL_THREADS = "flow-likelihood-parallel-threads";
+    private static final String FLOW_LIKELIHOOD_OPTIMIZED_COMP = "flow-likelihood-optimized-comp";
+
 
     private static final double DEFAULT_RATIO_THRESHOLD = 0.003;
     private static final double DEFAULT_FILLING_VALUE = 0.001;
@@ -97,6 +100,16 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     @Hidden
     @Argument(fullName = FIRST_UNCERTAIN_FLOW, doc = "Nucleotide that is being read in the first uncertain (5') flow", optional=true)
     public String flowFirstUncertainFlowBase = DEFAULT_FIRST_UNCERTAIN_FLOW;
+
+    @Advanced
+    @Hidden
+    @Argument(fullName = FLOW_LIKELIHOOD_PARALLEL_THREADS, doc = "Number of threads to parallelize likelihood computation inner (read) loop with", optional=true)
+    public int flowLikelihoodParallelThreads = 0;
+
+    @Advanced
+    @Hidden
+    @Argument(fullName = FLOW_LIKELIHOOD_OPTIMIZED_COMP, doc = "Use optimized likelihood computation version", optional=true)
+    public boolean flowLikelihoodOptimizedComp = false;
 
     public FlowBasedAlignmentArgumentCollection() {}
 

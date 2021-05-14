@@ -19,6 +19,7 @@ import org.broadinstitute.hellbender.utils.param.ParamUtils;
 import org.broadinstitute.hellbender.utils.pileup.PileupElement;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAlignment;
+import org.ultimagen.flowBasedRead.alignment.AlignmentThreadingUtils;
 
 import java.util.*;
 import java.util.stream.IntStream;
@@ -64,7 +65,7 @@ public final class AlignmentUtils {
         // compute the smith-waterman alignment of read -> haplotype //TODO use more efficient than the read clipper here
         final GATKRead readMinusSoftClips = ReadClipper.hardClipSoftClippedBases(originalRead);
         final int softClippedBases = originalRead.getLength() - readMinusSoftClips.getLength();
-        final SmithWatermanAlignment readToHaplotypeSWAlignment = aligner.align(haplotype.getBases(), readMinusSoftClips.getBases(), readToHaplotypeSWParameters, SWOverhangStrategy.SOFTCLIP);
+        final SmithWatermanAlignment readToHaplotypeSWAlignment = AlignmentThreadingUtils.getSimilarAlignerForCurrentThread(aligner).align(haplotype.getBases(), readMinusSoftClips.getBases(), readToHaplotypeSWParameters, SWOverhangStrategy.SOFTCLIP);
         if ( readToHaplotypeSWAlignment.getAlignmentOffset() == -1 ) {
             // sw can fail (reasons not clear) so if it happens just don't realign the read
             return originalRead;

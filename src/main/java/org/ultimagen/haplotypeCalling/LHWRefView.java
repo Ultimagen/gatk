@@ -10,10 +10,14 @@ import org.broadinstitute.gatk.nativebindings.smithwaterman.SWOverhangStrategy;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAlignment;
+import org.ultimagen.flowBasedRead.alignment.AlignmentThreadingUtils;
 
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class LHWRefView {
 
@@ -26,7 +30,10 @@ public class LHWRefView {
     final private boolean         debug;
     final private SmithWatermanAligner aligner;
 
-    public LHWRefView(final int hmerSizeThreshold, final boolean partialMode, final byte[] fullRef, final Locatable refLoc, final Logger logger, final boolean debug, final SmithWatermanAligner aligner) {
+    final private ForkJoinPool    threadPool;
+    private static long           monitorNano;
+
+    public LHWRefView(final int hmerSizeThreshold, final boolean partialMode, final byte[] fullRef, final Locatable refLoc, final Logger logger, final boolean debug, final SmithWatermanAligner aligner, final int threadCount) {
 
         this.hmerSizeThreshold = hmerSizeThreshold;
         this.partialMode = partialMode;
@@ -38,6 +45,11 @@ public class LHWRefView {
         if ( debug ) {
             logger.info("LHWRefView: >" + hmerSizeThreshold + "hmer, refLoc: " + refLoc + " fullRef:");
             logger.info(basesAsString(fullRef));
+        }
+        if ( threadCount > 0 ) {
+            threadPool = new ForkJoinPool(threadCount);
+        } else {
+            threadPool = null;
         }
     }
 
@@ -101,63 +113,74 @@ public class LHWRefView {
         final List<Haplotype>       result = new LinkedList<>();
         final Map<Locatable, byte[]> refMap = new LinkedHashMap<>();
         int                         alignmentStartHapwrtRef = 0;
+        long                        startedNano = System.nanoTime();
 
-        // locate reference haplotype, if needed
-        if ( refBases == null )
-            for ( Haplotype h : haplotypes )
-                if ( h.isReference() ) {
+        // locate reference haplotype, if needed, also collect refMap
+        for ( Haplotype h : haplotypes ) {
+            if (h.isReference()) {
+                if (refBases == null) {
                     refBases = h.getBases();
                     alignmentStartHapwrtRef = h.getAlignmentStartHapwrtRef();
-                    break;
                 }
-
-        // uncollapse haplotypes
-        for ( Haplotype h : haplotypes )
-        {
-            // by default
-            Haplotype   alignedHaplotype = h;
-
-            if ( !h.isReference() ) {
-
-                // find ref for this location
+            } else {
                 byte[] ref = refMap.get(h.getGenomeLocation());
                 if (ref == null) {
                     ref = uncollapsedPartialRef(h.getGenomeLocation());
                     refMap.put(h.getGenomeLocation(), ref);
                 }
-                AtomicInteger       offset = new AtomicInteger();
-                AtomicBoolean       didCollapse = new AtomicBoolean(false);
-                AtomicBoolean       didCollapseRev = new AtomicBoolean(false);
-                byte[] alignedBases = uncollapseByRef(h.getBases(), ref, offset, false, didCollapse);
-                byte[] alignedBases1 = uncollapseByRef(h.getBases(), ref, offset, true, didCollapseRev);
-                if ( alignedBases1.length > alignedBases.length ) {
-                    alignedBases = alignedBases1;
-                    didCollapse.set(didCollapseRev.get());
-                }
-
-                byte[] orgAlignedBases = alignedBases;
-                if ( limit )
-                    alignedBases = collapseBases(orgAlignedBases);
-                alignedHaplotype = new Haplotype(alignedBases, h.isReference());
-                alignedHaplotype.setScore(h.getScore());
-                alignedHaplotype.setGenomeLocation(h.getGenomeLocation());
-                alignedHaplotype.setEventMap(h.getEventMap());
-                alignedHaplotype.setAlignmentStartHapwrtRef(offset.get());
-                alignedHaplotype.setCollapsed(didCollapse.get());
-                alignedHaplotype.setDiffMatter(result.size());
             }
-
-            result.add(alignedHaplotype);
         }
+
+        // uncollapse haplotypes
+        if ( threadPool == null ) {
+            for (Haplotype h : haplotypes) {
+                // by default
+                Haplotype alignedHaplotype = uncollapseSingleHaplotypeByRef(h, limit, refMap);
+                alignedHaplotype.setDiffMatter(result.size());
+                result.add(alignedHaplotype);
+            }
+        } else {
+
+            try {
+                List<Haplotype> list = threadPool.submit(() -> {
+                    return haplotypes.stream().parallel().map(h -> uncollapseSingleHaplotypeByRef(h, limit, refMap)).collect(Collectors.toList());
+                }).get();
+                for ( Haplotype h : list ) {
+                    h.setDiffMatter(result.size());
+                    result.add(h);
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
 
         // if we had a reference, generate cigar against it
         if ( refBases != null ) {
-            for ( Haplotype h : result ) {
-                if ( !h.isReference() ) {
-                    SmithWatermanAlignment  alignment = aligner.align(refBases, h.getBases(), SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
-                    h.setCigar(alignment.getCigar());
-                    h.setAlignmentStartHapwrtRef(alignment.getAlignmentOffset() + alignmentStartHapwrtRef);
+            if ( threadPool == null ) {
+                for (Haplotype h : result) {
+                    if (!h.isReference()) {
+                        SmithWatermanAlignment alignment = aligner.align(refBases, h.getBases(), SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
+                        h.setCigar(alignment.getCigar());
+                        h.setAlignmentStartHapwrtRef(alignment.getAlignmentOffset() + alignmentStartHapwrtRef);
+                    }
                 }
+            } else {
+               final byte[] finalRefBases = refBases;
+               final int finalAlignmentStartHapwrtRef = alignmentStartHapwrtRef;
+               try {
+                   threadPool.submit(()-> {
+                       result.stream().parallel().forEach(h -> {
+                           if (!h.isReference()) {
+                               SmithWatermanAlignment alignment = AlignmentThreadingUtils.getSimilarAlignerForCurrentThread(aligner).align(finalRefBases, h.getBases(), SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
+                               h.setCigar(alignment.getCigar());
+                               h.setAlignmentStartHapwrtRef(alignment.getAlignmentOffset() + finalAlignmentStartHapwrtRef);
+                        }
+                    });
+                }).get();
+               } catch (InterruptedException | ExecutionException e) {
+                   throw new RuntimeException(e);
+               }
             }
         }
 
@@ -170,8 +193,49 @@ public class LHWRefView {
                 logHaplotype(h, "UNCOL_" + (limit ? "P1_" : "P2_"), i++);
         }
 
+        long        elapseNano = System.nanoTime() - startedNano;
+        monitorNano += elapseNano;
+        if ( logger.isDebugEnabled() ) {
+            logger.info("uncollapseHaplotypesByRef took " + elapseNano + " nano seconds. overall msec: " + (monitorNano / 1000000.0));
+        }
 
         return result;
+    }
+
+    private Haplotype uncollapseSingleHaplotypeByRef(final Haplotype h, boolean limit, Map<Locatable, byte[]> refMap) {
+
+        if ( !h.isReference() ) {
+
+            // find ref for this location
+            byte[] ref = refMap.get(h.getGenomeLocation());
+            if (ref == null) {
+                ref = uncollapsedPartialRef(h.getGenomeLocation());
+                refMap.put(h.getGenomeLocation(), ref);
+            }
+            AtomicInteger offset = new AtomicInteger();
+            AtomicBoolean didCollapse = new AtomicBoolean(false);
+            AtomicBoolean didCollapseRev = new AtomicBoolean(false);
+            byte[] alignedBases = uncollapseByRef(h.getBases(), ref, offset, false, didCollapse);
+            byte[] alignedBases1 = uncollapseByRef(h.getBases(), ref, offset, true, didCollapseRev);
+            if (alignedBases1.length > alignedBases.length) {
+                alignedBases = alignedBases1;
+                didCollapse.set(didCollapseRev.get());
+            }
+
+            byte[] orgAlignedBases = alignedBases;
+            if (limit)
+                alignedBases = collapseBases(orgAlignedBases);
+            Haplotype alignedHaplotype = new Haplotype(alignedBases, h.isReference());
+            alignedHaplotype.setScore(h.getScore());
+            alignedHaplotype.setGenomeLocation(h.getGenomeLocation());
+            alignedHaplotype.setEventMap(h.getEventMap());
+            alignedHaplotype.setAlignmentStartHapwrtRef(offset.get());
+            alignedHaplotype.setCollapsed(didCollapse.get());
+
+            return alignedHaplotype;
+        } else {
+            return h;
+        }
     }
 
     private byte[] collapseBases(byte[] fullBases) {
@@ -246,7 +310,7 @@ public class LHWRefView {
         }
 
         // use aligner to get CIGAR
-        SmithWatermanAlignment alignment = aligner.align(ref, bases, SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
+        SmithWatermanAlignment alignment = AlignmentThreadingUtils.getSimilarAlignerForCurrentThread(aligner).align(ref, bases, SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
         if ( debug )
             logger.info("alignment.offset: " + alignment.getAlignmentOffset() + ", cigar: " + alignment.getCigar());
 
