@@ -44,7 +44,11 @@ import org.ultimagen.flowBasedRead.utils.FlowBasedAlignmentArgumentCollection;
 import org.ultimagen.haplotypeCalling.LHWRefView;
 
 import java.io.File;
+import java.rmi.UnexpectedException;
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -102,18 +106,37 @@ public final class AssemblyBasedCallerUtils {
      * </p>
      * @return never {@code null}
      */
-    public static Map<GATKRead, GATKRead> realignReadsToTheirBestHaplotype(final AlleleLikelihoods<GATKRead, Haplotype> originalReadLikelihoods, final Haplotype refHaplotype, final Locatable paddedReferenceLoc, final SmithWatermanAligner aligner, final SWParameters readToHaplotypeSWParameters) {
+    public static Map<GATKRead, GATKRead> realignReadsToTheirBestHaplotype(final AlleleLikelihoods<GATKRead, Haplotype> originalReadLikelihoods, final Haplotype refHaplotype, final Locatable paddedReferenceLoc, final SmithWatermanAligner aligner, final ForkJoinPool threadPool, final SWParameters readToHaplotypeSWParameters) {
         final Collection<AlleleLikelihoods<GATKRead, Haplotype>.BestAllele> bestAlleles = originalReadLikelihoods.bestAllelesBreakingTies(HAPLOTYPE_ALIGNMENT_TIEBREAKING_PRIORITY);
         final Map<GATKRead, GATKRead> result = new HashMap<>(bestAlleles.size());
 
-        for (final AlleleLikelihoods<GATKRead, Haplotype>.BestAllele bestAllele : bestAlleles) {
-            final GATKRead originalRead = bestAllele.evidence;
-            final Haplotype bestHaplotype = bestAllele.allele;
-            final boolean isInformative = bestAllele.isInformative();
-            final GATKRead realignedRead = AlignmentUtils.createReadAlignedToRef(originalRead, bestHaplotype, refHaplotype, paddedReferenceLoc.getStart(), isInformative, aligner, readToHaplotypeSWParameters);
-            result.put(originalRead, realignedRead);
+        if ( threadPool == null ) {
+
+            for (final AlleleLikelihoods<GATKRead, Haplotype>.BestAllele bestAllele : bestAlleles) {
+                final GATKRead originalRead = bestAllele.evidence;
+                final Haplotype bestHaplotype = bestAllele.allele;
+                final boolean isInformative = bestAllele.isInformative();
+                final GATKRead realignedRead = AlignmentUtils.createReadAlignedToRef(originalRead, bestHaplotype, refHaplotype, paddedReferenceLoc.getStart(), isInformative, aligner, readToHaplotypeSWParameters);
+                result.put(originalRead, realignedRead);
+            }
+            return result;
+        } else {
+
+            Callable<Map<GATKRead, GATKRead>>   callable = () -> {
+                return bestAlleles.stream().parallel().collect(Collectors.toMap(bestAllele->bestAllele.evidence, bestAllele->{
+                    final GATKRead originalRead = bestAllele.evidence;
+                    final Haplotype bestHaplotype = bestAllele.allele;
+                    final boolean isInformative = bestAllele.isInformative();
+                    final GATKRead realignedRead = AlignmentUtils.createReadAlignedToRef(originalRead, bestHaplotype, refHaplotype, paddedReferenceLoc.getStart(), isInformative, aligner);
+                    return realignedRead;
+                }));
+            };
+            try {
+                return threadPool.submit(callable).get();
+            } catch (InterruptedException| ExecutionException e) {
+                throw new RuntimeException(e);
+            }
         }
-        return result;
     }
 
     public static void finalizeRegion(final AssemblyRegion region,
@@ -338,7 +361,7 @@ public final class AssemblyBasedCallerUtils {
 
         final LHWRefView refView = (argumentCollection.flowAssemblyCollapseHKerSize > 0 && LHWRefView.needsCollapsing(refHaplotype.getBases(), argumentCollection.flowAssemblyCollapseHKerSize, logger, argumentCollection.assemblerArgs.debugAssembly))
                                             ? new LHWRefView(argumentCollection.flowAssemblyCollapseHKerSize, argumentCollection.flowAssemblyCollapsePartialMode, fullReferenceWithPadding,
-                paddedReferenceLoc, logger, argumentCollection.assemblerArgs.debugAssembly, aligner)
+                paddedReferenceLoc, logger, argumentCollection.assemblerArgs.debugAssembly, aligner, argumentCollection.assemblerArgs.flowAssemblerParallelThreads)
                                             : null;
         if ( refView != null )
             logger.debug("deploying refView on " + paddedReferenceLoc + ", region: " + region);
