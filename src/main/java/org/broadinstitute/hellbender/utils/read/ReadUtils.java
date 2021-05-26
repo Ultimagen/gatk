@@ -335,7 +335,7 @@ public final class ReadUtils {
             int     start = rec.getUnclippedStart() + hmerSize;
             return mdArgs.FLOW_USE_CLIPPED_LOCATIONS ? Math.max(start, rec.getStart()) : start;
         }
-        else if ( tmTagIddicatesUnclipped(rec) ) {
+        else if ( tmTagIddicatesUnclipped(rec, mdArgs.FLOW_Q_IS_KNOWN_END) ) {
             return rec.getUnclippedStart();
         } else if ( endUncertainty != null && tmTagIddicatesNoUncertianty(rec) ) {
             return FLOW_BASED_INSIGNIFICANT_END_UNCERTIANTY;
@@ -385,7 +385,7 @@ public final class ReadUtils {
             int     end = rec.getUnclippedEnd() - hmerSize;
             return mdArgs.FLOW_USE_CLIPPED_LOCATIONS ? Math.min(end, rec.getEnd()) : end;
         }
-        else if ( tmTagIddicatesUnclipped(rec) ) {
+        else if ( tmTagIddicatesUnclipped(rec, mdArgs.FLOW_Q_IS_KNOWN_END) ) {
             return rec.getUnclippedEnd();
         } else if ( endUncertainty != null && tmTagIddicatesNoUncertianty(rec) ) {
             return FLOW_BASED_INSIGNIFICANT_END_UNCERTIANTY;
@@ -404,12 +404,12 @@ public final class ReadUtils {
         }
     }
 
-    public static boolean tmTagIddicatesUnclipped(final GATKRead rec) {
+    public static boolean tmTagIddicatesUnclipped(final GATKRead rec, boolean FLOW_Q_IS_KNOWN_END) {
         final String        tm = rec.getAttributeAsString("tm");
         if ( tm == null ) {
             return false;
         } else {
-            return tm.indexOf('A') >= 0;
+            return (tm.indexOf('A') >= 0) || (FLOW_Q_IS_KNOWN_END && (tm.indexOf('Q') >= 0));
         }
     }
 
