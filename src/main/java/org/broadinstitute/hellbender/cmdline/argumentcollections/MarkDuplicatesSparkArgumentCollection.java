@@ -57,6 +57,9 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
     @Argument(doc = "Skip first N flows, when considering duplicates. Default 0.")
     public int FLOW_SKIP_START_HOMOPOLYMERS = 0;
 
+    @Argument(doc = "Treat tm:Q as tm:Q.")
+    public boolean FLOW_Q_IS_KNOWN_END = false;
+
     @Argument(doc = "Emit additional debugging info specific to ultima flow. Default false.")
     public boolean DEBUG_ULTIMA_DUPS = false;
 
