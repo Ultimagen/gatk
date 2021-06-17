@@ -80,7 +80,7 @@ public class TrimmedReadsReader {
                 int read_end = fbr.getEnd();
                 int diff_left = span.getStart() - read_start;
                 int diff_right = read_end - span.getEnd();
-                fbr.applyBaseClipping(Math.max(0, diff_left), Math.max(diff_right, 0));
+                fbr.applyBaseClipping(Math.max(0, diff_left), Math.max(diff_right, 0), true);
 
                 // check if read is valid. it is possible that read was made invalid by applyBaseClipping
                 // if so, ignore it (see FlowBasedRead.java:478 valid_key=false;
