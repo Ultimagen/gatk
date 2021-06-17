@@ -61,6 +61,8 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private final Logger logger = LogManager.getLogger(this.getClass());
     static private int[] flowMatrixModsInstructions = new int[MAXIMAL_MAXHMER];
 
+    static private int minimalReadLength = MINIMAL_READ_LENGTH;
+
     /**
      * Creating flow based read when the argument collection is not defined.
      * @param samRecord Record
@@ -399,7 +401,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         final int clipRight = clipRightPair[0];
         final int rightHmerClip = clipRightPair[1];
 
-        applyClipping(clipLeft, leftHmerClip, clipRight, rightHmerClip);
+        applyClipping(clipLeft, leftHmerClip, clipRight, rightHmerClip, true);
 
         setDirection(Direction.REFERENCE);
 
@@ -666,27 +668,27 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     }
 
     //trims base-spaced reads. Usually not needed, but kept for completeness
-    public void applyBaseClipping(final int clipLeftBase, final int clipRightBase){
+    public void applyBaseClipping(final int clipLeftBase, final int clipRightBase, boolean spread){
         final int[] clipLeftPair = findLeftClipping(clipLeftBase);
         final int[] clipRightPair = findRightClipping(clipRightBase);
         final int clipLeft = clipLeftPair[0];
         final int leftHmerClip = clipLeftPair[1];
         final int clipRight = clipRightPair[0];
         final int rightHmerClip = clipRightPair[1];
-        if (getLength() - clipLeftBase - clipRightBase < MINIMAL_READ_LENGTH) {
+        if (getLength() - clipLeftBase - clipRightBase < minimalReadLength) {
             trimmedToHaplotype = true;
             validKey =false;
             trimLeftBase =clipLeftBase;
             trimRightBase = clipRightBase;
         } else {
-            applyClipping(clipLeft, leftHmerClip, clipRight, rightHmerClip);
+            applyClipping(clipLeft, leftHmerClip, clipRight, rightHmerClip, spread);
             trimmedToHaplotype = true;
             trimLeftBase = clipLeftBase;
             trimRightBase = clipRightBase;
         }
     }
 
-    private void applyClipping(int clipLeft, final int leftHmerClip, int clipRight, final int rightHmerClip){
+    private void applyClipping(int clipLeft, final int leftHmerClip, int clipRight, final int rightHmerClip, final boolean spread){
         if ((clipLeft < 0) || (clipRight < 0)  || (clipLeft >= getKeyLength() ) || ( clipRight >= getKeyLength())) {
             throw new GATKException.ShouldNeverReachHereException("Weird read clip calculated");
             //return 1;
@@ -736,8 +738,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         //Spread boundary flow probabilities for the boundary hmers of the read
         //in this case the value of the genome hmer is uncertain
-        _spreadFlowProbs(findFirstNonZero(key));
-        _spreadFlowProbs(findLastNonZero(key));
+        if ( spread ) {
+            _spreadFlowProbs(findFirstNonZero(key));
+            _spreadFlowProbs(findLastNonZero(key));
+        }
     }
 
     private int[] findLeftClipping() {
@@ -1229,6 +1233,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             result += key[i];
         }
         return result;
+    }
+
+    public static void setMinimalReadLength(int minimalReadLength) {
+        FlowBasedRead.minimalReadLength = minimalReadLength;
     }
 }
 

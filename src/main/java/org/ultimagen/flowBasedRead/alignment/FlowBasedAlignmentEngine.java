@@ -197,7 +197,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             final int diffRight = readEnd - haplotypeEnd;
             //It is rare that this function is applied, maybe just some boundary cases
             //in general reads are already trimmed to the haplotype starts and ends so diff_left <= 0 and diff_right <= 0
-            fbr.applyBaseClipping(Math.max(0, diffLeft), Math.max(diffRight, 0));
+            fbr.applyBaseClipping(Math.max(0, diffLeft), Math.max(diffRight, 0), true);
         }
 
         for (int i = 0; i < likelihoods.numberOfAlleles(); i++){
@@ -248,7 +248,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
      * @return
      * @throws GATKException
      */
-    private double haplotypeReadMatching(final FlowBasedHaplotype haplotype, final FlowBasedRead read) throws GATKException {
+    public double haplotypeReadMatching(final FlowBasedHaplotype haplotype, final FlowBasedRead read) throws GATKException {
 
         if (read.getDirection() != Direction.REFERENCE ) {
             throw new GATKException.ShouldNeverReachHereException("Read should be aligned with the reference");
