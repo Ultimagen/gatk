@@ -92,7 +92,8 @@ public final class ReadThreadingAssembler {
                                   final int numPruningSamples, final int pruneFactor, final boolean useAdaptivePruning,
                                   final double initialErrorRateForPruning, final double pruningLogOddsThreshold,
                                   final double pruningSeedingLogOddsThreshold, final int maxUnprunedVariants, final boolean useLinkedDebruijnGraphs,
-                                  final boolean enableLegacyGraphCycleDetection, final int minMachingBasesToDanglngEndRecovery,
+                                  final boolean enableLegacyGraphCycleDetection,
+                                  final int minMatchingBasesToDanglngEndRecovery,
                                   final int flowAssemblerParallelThreads) {
         Utils.validateArg( maxAllowedPathsForReadThreadingAssembler >= 1, "numBestHaplotypesPerGraph should be >= 1 but got " + maxAllowedPathsForReadThreadingAssembler);
         this.kmerSizes = kmerSizes.stream().sorted(Integer::compareTo).collect(Collectors.toList());
@@ -109,7 +110,7 @@ public final class ReadThreadingAssembler {
         chainPruner = useAdaptivePruning ? new AdaptiveChainPruner<>(initialErrorRateForPruning, pruningLogOddsThreshold, pruningSeedingLogOddsThreshold, maxUnprunedVariants) :
                 new LowWeightChainPruner<>(pruneFactor);
         numBestHaplotypesPerGraph = maxAllowedPathsForReadThreadingAssembler;
-        this.minMatchingBasesToDanglingEndRecovery = minMachingBasesToDanglingEndRecovery;
+        this.minMatchingBasesToDanglingEndRecovery = minMatchingBasesToDanglngEndRecovery;
         if ( flowAssemblerParallelThreads > 0 ) {
             threadPool = new ForkJoinPool(flowAssemblerParallelThreads);
         }
