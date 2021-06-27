@@ -155,7 +155,7 @@ public final class FlowFeatureMapper extends ReadWalker {
 
         if ( hcArgs.emitReferenceConfidence == ReferenceConfidenceMode.GVCF ) {
             try {
-                writer = new GVCFWriter(writer, new ArrayList<Number>(hcArgs.GVCFGQBands), hcArgs.standardArgs.genotypeArgs.samplePloidy, hcArgs.floorBlocks);
+                writer = new GVCFWriter(writer, new ArrayList<Number>(hcArgs.GVCFGQBands), hcArgs.floorBlocks);
             } catch ( IllegalArgumentException e ) {
                 throw new CommandLineException.BadArgumentValue("GQBands", "are malformed: " + e.getMessage());
             }

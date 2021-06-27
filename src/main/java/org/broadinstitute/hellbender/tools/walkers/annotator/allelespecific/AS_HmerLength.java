@@ -32,7 +32,7 @@ import java.util.*;
  * drop the annotation.
  */
 @DocumentedFeature(groupName= HelpConstants.DOC_CAT_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_ANNOTATORS_SUMMARY, summary="Allele-specific length of homopolymer (longer of either ref or alt)")
-public class AS_HmerLength extends InfoFieldAnnotation implements AS_StandardAnnotation, AlleleSpecificAnnotation {
+public class AS_HmerLength implements InfoFieldAnnotation, AS_StandardAnnotation, AlleleSpecificAnnotation {
     protected final OneShotLogger warning = new OneShotLogger(this.getClass());
     @Override
     public Map<String, Object> annotate(ReferenceContext ref, VariantContext vc, AlleleLikelihoods<GATKRead, Allele> likelihoods) {
