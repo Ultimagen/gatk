@@ -1,6 +1,7 @@
 package org.ultimagen.flowBasedRead.tests;
 
 import htsjdk.samtools.SAMFileHeader;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.PairHMMLikelihoodCalculationEngine;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.ultimagen.flowBasedRead.alignment.FlowBasedAlignmentEngine;
 import org.ultimagen.flowBasedRead.read.FlowBasedHaplotype;
@@ -65,7 +66,7 @@ public class test_haplotype_matching {
             fbhs.add(new FlowBasedHaplotype(hap, "TACG"));
         }
 
-        FlowBasedAlignmentEngine fbe = new FlowBasedAlignmentEngine(new FlowBasedAlignmentArgumentCollection(), -5, 0.02);
+        FlowBasedAlignmentEngine fbe = new FlowBasedAlignmentEngine(new FlowBasedAlignmentArgumentCollection(), -5, 0.02, false, PairHMMLikelihoodCalculationEngine.DEFAULT_DYNAMIC_DISQUALIFICATION_SCALE_FACTOR);
 
         final AlleleLikelihoods<GATKRead, Haplotype> haplotypeReadLikelihoods =
                 fbe.computeReadLikelihoods(haplotypes, reads, true);
