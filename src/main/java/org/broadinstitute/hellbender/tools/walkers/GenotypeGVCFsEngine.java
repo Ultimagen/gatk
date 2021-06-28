@@ -66,21 +66,24 @@ public class GenotypeGVCFsEngine
 
     final VCFHeader inputVCFHeader;
 
+    final boolean   keepSB;
+
     /**
      * Create and initialize a new GenotypeGVCFsEngine given a collection of GenotypeGVCF arguments and a VCF header
-     *
-     * @param annotationEngine variantAnnotatorEngine with annotations to process already added
+     *  @param annotationEngine variantAnnotatorEngine with annotations to process already added
      * @param genotypeArgs command-line arguments for the GenotypeGVCFs caller
      * @param includeNonVariants true to save INFO header names that require alt alleles
      * @param inputVCFHeader header for the VCF
+     * @param keepSB
      */
     public GenotypeGVCFsEngine(final VariantAnnotatorEngine annotationEngine, final GenotypeCalculationArgumentCollection genotypeArgs,
-                               final boolean includeNonVariants, final VCFHeader inputVCFHeader)
+                               final boolean includeNonVariants, final VCFHeader inputVCFHeader, boolean keepSB)
     {
         this.annotationEngine = annotationEngine;
         this.genotypeArgs = genotypeArgs;
         this.includeNonVariants = includeNonVariants;
         this.inputVCFHeader = inputVCFHeader;
+        this.keepSB = keepSB;
         initialize();
     }
 
@@ -183,7 +186,7 @@ public class GenotypeGVCFsEngine
             //don't count sites with no depth and no confidence towards things like AN and InbreedingCoeff
             vcBuilder.genotypes(assignNoCallsAnnotationExcludedGenotypes(result.getGenotypes()));
             VariantContext annotated = annotationEngine.annotateContext(vcBuilder.make(), features, ref, null, a -> true);
-            return new VariantContextBuilder(annotated).genotypes(cleanupGenotypeAnnotations(result, false)).make();
+            return new VariantContextBuilder(annotated).genotypes(cleanupGenotypeAnnotations(result, false, keepSB)).make();
         } else if (includeNonVariants) {
             // For monomorphic sites we need to make sure e.g. the hom ref genotypes are created and only then are passed to the annotation engine.
             VariantContext preannotated = new VariantContextBuilder(result).genotypes(cleanupGenotypeAnnotations(result, true)).make();
@@ -433,6 +436,10 @@ public class GenotypeGVCFsEngine
      */
     @VisibleForTesting
     static List<Genotype> cleanupGenotypeAnnotations(final VariantContext vc, final boolean createRefGTs) {
+        return cleanupGenotypeAnnotations(vc, createRefGTs, false);
+    }
+    @VisibleForTesting
+    static List<Genotype> cleanupGenotypeAnnotations(final VariantContext vc, final boolean createRefGTs, final boolean keepSB) {
         final GenotypesContext oldGTs = vc.getGenotypes();
         final List<Genotype> recoveredGs = new ArrayList<>(oldGTs.size());
         for ( final Genotype oldGT : oldGTs ) {
@@ -448,7 +455,9 @@ public class GenotypeGVCFsEngine
                 attrs.remove(GATKVCFConstants.MIN_DP_FORMAT_KEY);
             }
 
-            attrs.remove(GATKVCFConstants.STRAND_BIAS_BY_SAMPLE_KEY);
+            if ( !keepSB ) {
+                attrs.remove(GATKVCFConstants.STRAND_BIAS_BY_SAMPLE_KEY);
+            }
 
             // update PGT for hom vars
             if ( oldGT.isHomVar() && oldGT.hasExtendedAttribute(GATKVCFConstants.HAPLOTYPE_CALLER_PHASING_GT_KEY) ) {
