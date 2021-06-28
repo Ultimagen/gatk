@@ -40,6 +40,8 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
 
     private final double commonProbValue = 0.001;
     private final double commonProbValueLog10 = Math.log10(commonProbValue);
+    private final boolean dynamicReadDisqualification;
+    private final double readDisqualificationScale;
 
     private ForkJoinPool    threadPool;
     static Map<Double, Double> probLog10 = new ConcurrentHashMap<>();
@@ -55,10 +57,12 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
      * @param log10globalReadMismappingRate - probability for wrong mapping (maximal contribution of the read to data likelihood)
      * @param expectedErrorRatePerBase - the expected rate of random sequencing errors for a read originating from its true haplotype.
      */
-    public FlowBasedAlignmentEngine(final FlowBasedAlignmentArgumentCollection flowBasedArgs, final double log10globalReadMismappingRate, final double expectedErrorRatePerBase) {
+    public FlowBasedAlignmentEngine(final FlowBasedAlignmentArgumentCollection flowBasedArgs, final double log10globalReadMismappingRate, final double expectedErrorRatePerBase, final boolean dynamicReadDisqualification, final double readDisqualificationScale) {
         this.fbargs = flowBasedArgs;
         this.log10globalReadMismappingRate = log10globalReadMismappingRate;
         this.expectedErrorRatePerBase = expectedErrorRatePerBase;
+        this.readDisqualificationScale = readDisqualificationScale;
+        this.dynamicReadDisqualification = dynamicReadDisqualification;
         this.symmetricallyNormalizeAllelesToReference = true;
 
         if ( fbargs.flowLikelihoodParallelThreads > 0 ) {
@@ -96,8 +100,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
 
 
         result.normalizeLikelihoods(log10globalReadMismappingRate, symmetricallyNormalizeAllelesToReference);
-        if ( filterPoorly )
-            result.filterPoorlyModeledEvidence(log10MinTrueLikelihood(expectedErrorRatePerBase));
+        ReadLikelihoodCalculationEngine.filterPoorlyModeledEvidence(result, dynamicReadDisqualification, expectedErrorRatePerBase, readDisqualificationScale);
 
         return result;
     }

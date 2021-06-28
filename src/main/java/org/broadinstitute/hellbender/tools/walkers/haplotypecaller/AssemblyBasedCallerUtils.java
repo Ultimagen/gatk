@@ -267,13 +267,14 @@ public final class AssemblyBasedCallerUtils {
                 : QualityUtils.qualToErrorProbLog10(likelihoodArgs.phredScaledGlobalReadMismappingRate);
 
         switch ( likelihoodArgs.likelihoodEngineImplementation) {
+            // TODO these constructors should eventually be matched so they both incorporate all the same ancilliary arguments
             case PairHMM:
                 return new PairHMMLikelihoodCalculationEngine((byte) likelihoodArgs.gcpHMM, likelihoodArgs.dontUseDragstrPairHMMScores ? null : DragstrParamUtils.parse(likelihoodArgs.dragstrParams),
                 likelihoodArgs.pairHMMNativeArgs.getPairHMMArgs(), likelihoodArgs.pairHMM, log10GlobalReadMismappingRate, likelihoodArgs.pcrErrorModel,
                 likelihoodArgs.BASE_QUALITY_SCORE_THRESHOLD, likelihoodArgs.enableDynamicReadDisqualification, likelihoodArgs.readDisqualificationThresholdConstant,
                 likelihoodArgs.expectedErrorRatePerBase, !likelihoodArgs.disableSymmetricallyNormalizeAllelesToReference, likelihoodArgs.disableCapReadQualitiesToMapQ, handleSoftclips);
             case FlowBased:
-                return new FlowBasedAlignmentEngine(flowBasedArgs, log10GlobalReadMismappingRate, likelihoodArgs.expectedErrorRatePerBase);
+                return new FlowBasedAlignmentEngine(flowBasedArgs, log10GlobalReadMismappingRate, likelihoodArgs.expectedErrorRatePerBase, likelihoodArgs.enableDynamicReadDisqualification, likelihoodArgs.readDisqualificationThresholdConstant);
             default:
                 throw new UserException("Unsupported likelihood calculation engine.");
         }
