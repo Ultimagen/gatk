@@ -29,6 +29,7 @@ import org.broadinstitute.hellbender.utils.*;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Perform joint genotyping on one or more samples pre-called with HaplotypeCaller
@@ -257,7 +258,8 @@ public final class GenotypeGVCFs extends VariantLocusWalker {
         intervals = hasUserSuppliedIntervals() ? intervalArgumentCollection.getIntervals(getBestAvailableSequenceDictionary()) :
                 Collections.emptyList();
 
-        annotationEngine = new VariantAnnotatorEngine(makeVariantAnnotations(), dbsnp.dbsnp, Collections.emptyList(), false, keepCombined);
+        Collection<Annotation>  variantAnnotations = makeVariantAnnotations();
+        annotationEngine = new VariantAnnotatorEngine(variantAnnotations, dbsnp.dbsnp, Collections.emptyList(), false, keepCombined);
 
         merger = new ReferenceConfidenceVariantContextMerger(annotationEngine, getHeaderForVariants(), somaticInput);
 
@@ -266,7 +268,8 @@ public final class GenotypeGVCFs extends VariantLocusWalker {
         vcfWriter = createVCFWriter(outputFile);
 
         //create engine object
-        gvcfEngine = new GenotypeGVCFsEngine(annotationEngine, genotypeArgs, includeNonVariants, inputVCFHeader);
+        final boolean   keepSB = variantAnnotations.stream().map(a -> a.getClass().getSimpleName()).collect(Collectors.toList()).contains("StrandBiasBySample");
+        gvcfEngine = new GenotypeGVCFsEngine(annotationEngine, genotypeArgs, includeNonVariants, inputVCFHeader, keepSB);
 
         //call initialize method in engine class that creates VCFWriter object and writes a header to it
         vcfWriter = gvcfEngine.setupVCFWriter(defaultToolVCFHeaderLines, keepCombined, dbsnp, vcfWriter);
