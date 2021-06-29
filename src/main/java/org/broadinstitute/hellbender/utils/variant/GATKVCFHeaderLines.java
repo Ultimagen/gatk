@@ -239,6 +239,9 @@ public class GATKVCFHeaderLines {
         addInfoLine(new VCFInfoHeaderLine(ALIGNMENT_SCORE_DIFFERENCE_KEY, 1, VCFHeaderLineType.Integer, "Difference in alignment score between best and next-best alignment"));
         addInfoLine(new VCFInfoHeaderLine(EXT_COLLAPSED_KEY,1, VCFHeaderLineType.Integer, "Indicates collapsing took place"));
         addInfoLine(new VCFInfoHeaderLine(POSSIBLE_FP_ADJACENT_TP_KEY,1, VCFHeaderLineType.Flag, "Indicates a locus where false positive allele might be affecting a true positive allele"));
+
+        // ultima annotations
+        addFormatLine(new VCFFormatHeaderLine(ULTIMA_DEVEL_ANNOTATION_1, 1, VCFHeaderLineType.Integer, "Development test annotation #1."));
         addInfoLine(new VCFInfoHeaderLine(REFERENCE_BASES_KEY, 1, VCFHeaderLineType.String, "local reference bases."));
         addInfoLine(new VCFInfoHeaderLine(HAPLOTYPE_EQUIVALENCE_COUNTS_KEY, VCFHeaderLineCount.UNBOUNDED, VCFHeaderLineType.Integer, "Counts of support for haplotype groups excluding difference at the site in question."));
         addInfoLine(new VCFInfoHeaderLine(HAPLOTYPE_COMPLEXITY_KEY, VCFHeaderLineCount.A, VCFHeaderLineType.Integer, "Edit distances of each alt allele's most common supporting haplotype from closest germline haplotype, excluding differences at the site in question."));

@@ -145,6 +145,9 @@ public final class GATKVCFConstants {
     public static final String HAPLOTYPE_DOMINANCE_KEY =            "HAPDOM";
     public final static String TRANSMISSION_PROBABILITY_KEY =       "TP"; //PhaseByTransmission
 
+    // ultima annotations
+    public final static String ULTIMA_DEVEL_ANNOTATION_1 =          "X-DA-1";
+
     // M2-specific FORMAT keys
     public static final String ALLELE_FRACTION_KEY =                "AF";
 
