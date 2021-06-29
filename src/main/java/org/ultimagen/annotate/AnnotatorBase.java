@@ -13,10 +13,16 @@ public abstract class AnnotatorBase implements VariantContextAnnotator {
     protected final String   A_LEFT_MOTIF = "left_motif";
     protected final String   A_RIGHT_MOTIF = "right_motif";
     protected final String   A_GC_CONTENT = "gc_content";
+    protected final String   A_CYCLESKIP_STATUS = "cycleskip_status";
 
     // additional constants
     protected final String   C_INSERT = "ins";
     protected final String   C_DELETE = "del";
+    protected final String   C_CSS_NA = "NA";
+    protected final String   C_CSS_CS = "cycle-skip";
+    protected final String   C_CSS_PCS = "possible-cycle-skip";
+    protected final String   C_CSS_NS = "non-skip";
+
 
     // bean fields
     private ReferenceSequenceFile referenceSequenceFile;

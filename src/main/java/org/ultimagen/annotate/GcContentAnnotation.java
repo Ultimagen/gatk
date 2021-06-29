@@ -22,12 +22,12 @@ public class GcContentAnnotation extends AnnotatorBase {
         seqGC = seq.replace('A', '').replace('T', '')
         return float(len(seqGC)) / len(seq)
          */
-        int         begin = vc.getStart() - (int)(windowSize / 2);
+        int         begin = vc.getStart() - (windowSize / 2);
         int         end = begin + windowSize;
         String      seq = getReferenceMotif(vc.getContig(), begin, end);
         int         gcCount = 0;
         for ( byte b : seq.getBytes() ) {
-            if ( b == (char)'G' || b == (char)'C' ) {
+            if ( b == 'G' || b == 'C' ) {
                 gcCount++;
             }
         }
