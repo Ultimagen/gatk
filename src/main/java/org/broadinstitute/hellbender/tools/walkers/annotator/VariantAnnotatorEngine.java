@@ -377,11 +377,27 @@ public final class VariantAnnotatorEngine {
         final GenotypesContext genotypes = GenotypesContext.create(vc.getNSamples());
         for ( final Genotype genotype : vc.getGenotypes() ) {
             final GenotypeBuilder gb = new GenotypeBuilder(genotype);
-            genotypeAnnotations.stream().filter(addAnnot).forEach(annot -> annot.annotate(ref, vc, genotype, gb, likelihoods));
+            for ( final GenotypeAnnotation annotation : genotypeAnnotations) {
 
-            if (fragmentLikelihoods.isPresent() && haplotypeLikelihoods.isPresent()) {
-                jumboGenotypeAnnotations.stream().filter(addAnnot).forEach(annot ->
-                        annot.annotate(ref, features, vc, genotype, gb, likelihoods, fragmentLikelihoods.get(), haplotypeLikelihoods.get()));
+                genotypeAnnotations.stream().filter(addAnnot).forEach(annot -> annot.annotate(ref, vc, genotype, gb, likelihoods));
+
+                if (fragmentLikelihoods.isPresent() && haplotypeLikelihoods.isPresent()) {
+                    jumboGenotypeAnnotations.stream().filter(addAnnot).forEach(annot ->
+                            annot.annotate(ref, features, vc, genotype, gb, likelihoods, fragmentLikelihoods.get(), haplotypeLikelihoods.get()));
+                }
+
+
+                if (addAnnot.test(annotation)) {
+                    //do not recalculate StrandBiasBySampleKey when likielihhods is null (in genotypeGVCF), there is a request to
+                    // recalculate it and the variant already has StrandBiasTable. In this case it will be impossible to calculate anyway
+                    if ((annotation.getKeyNames().get(0).equals(GATKVCFConstants.STRAND_BIAS_BY_SAMPLE_KEY)) &&
+                            genotype.hasExtendedAttribute(GATKVCFConstants.STRAND_BIAS_BY_SAMPLE_KEY) &&
+                            (likelihoods == null)){
+                        continue;
+                    }
+
+                    annotation.annotate(ref, vc, genotype, gb, likelihoods);
+                }
             }
             genotypes.add(gb.make());
         }
