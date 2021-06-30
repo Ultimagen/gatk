@@ -242,6 +242,14 @@ public class GATKVCFHeaderLines {
 
         // ultima annotations
         addFormatLine(new VCFFormatHeaderLine(ULTIMA_DEVEL_ANNOTATION_1, 1, VCFHeaderLineType.Integer, "Development test annotation #1."));
+        addFormatLine(new VCFFormatHeaderLine(ULTIMA_INDEL_CLASSIFY, 1, VCFHeaderLineType.String, "ULTIMA_INDEL_CLASSIFY"));
+        addFormatLine(new VCFFormatHeaderLine(ULTIMA_INDEL_LENGTH, 1, VCFHeaderLineType.Integer, "ULTIMA_INDEL_LENGTH"));
+        addFormatLine(new VCFFormatHeaderLine(ULTIMA_HMER_INDEL_LENGTH, 1, VCFHeaderLineType.Integer, "ULTIMA_HMER_INDEL_LENGTH"));
+        addFormatLine(new VCFFormatHeaderLine(ULTIMA_HMER_INDEL_NUC, 1, VCFHeaderLineType.String, "ULTIMA_HMER_INDEL_NUC"));
+        addFormatLine(new VCFFormatHeaderLine(ULTIMA_LEFT_MOTIF, 1, VCFHeaderLineType.String, "ULTIMA_LEFT_MOTIF"));
+        addFormatLine(new VCFFormatHeaderLine(ULTIMA_RIGHT_MOTIF, 1, VCFHeaderLineType.String, "ULTIMA_RIGHT_MOTIF"));
+        addFormatLine(new VCFFormatHeaderLine(ULTIMA_GC_CONTENT, 1, VCFHeaderLineType.Float, "ULTIMA_GC_CONTENT"));
+        addFormatLine(new VCFFormatHeaderLine(ULTIMA_CYCLESKIP_STATUS, 1, VCFHeaderLineType.String, "ULTIMA_CYCLESKIP_STATUS"));
         addInfoLine(new VCFInfoHeaderLine(REFERENCE_BASES_KEY, 1, VCFHeaderLineType.String, "local reference bases."));
         addInfoLine(new VCFInfoHeaderLine(HAPLOTYPE_EQUIVALENCE_COUNTS_KEY, VCFHeaderLineCount.UNBOUNDED, VCFHeaderLineType.Integer, "Counts of support for haplotype groups excluding difference at the site in question."));
         addInfoLine(new VCFInfoHeaderLine(HAPLOTYPE_COMPLEXITY_KEY, VCFHeaderLineCount.A, VCFHeaderLineType.Integer, "Edit distances of each alt allele's most common supporting haplotype from closest germline haplotype, excluding differences at the site in question."));
