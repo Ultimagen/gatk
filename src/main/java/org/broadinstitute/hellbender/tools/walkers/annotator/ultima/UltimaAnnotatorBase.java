@@ -1,6 +1,5 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator.ultima;
 
-import htsjdk.samtools.reference.ReferenceSequenceFile;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.GenotypeBuilder;
@@ -14,8 +13,8 @@ import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 
-import java.util.Collections;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 public abstract class UltimaAnnotatorBase extends GenotypeAnnotation implements StandardMutectAnnotation {
@@ -28,12 +27,6 @@ public abstract class UltimaAnnotatorBase extends GenotypeAnnotation implements 
     protected final String   C_CSS_PCS = "possible-cycle-skip";
     protected final String   C_CSS_NS = "non-skip";
 
-    // annotation actions
-    interface Annotator {
-        void annotate(final String name, final Object value);
-    }
-
-
     @Override
     public void annotate(final ReferenceContext ref,
                          final VariantContext vc,
@@ -44,12 +37,9 @@ public abstract class UltimaAnnotatorBase extends GenotypeAnnotation implements 
         Utils.nonNull(g);
         Utils.nonNull(gb);
 
-        annotate(vc, new Annotator() {
-            @Override
-            public void annotate(String name, Object value) {
-                if ( value != null )
-                    gb.attribute(name, value);
-            }
+        annotate(vc, (name, value) -> {
+            if ( value != null )
+                gb.attribute(name, value);
         });
     }
 
@@ -58,5 +48,5 @@ public abstract class UltimaAnnotatorBase extends GenotypeAnnotation implements 
         return getKeyNames().stream().map(s -> GATKVCFHeaderLines.getFormatLine(s)).collect(Collectors.toList());
     }
 
-    public abstract void annotate(final VariantContext vc, Annotator annotator);
+    public abstract void annotate(final VariantContext vc, BiConsumer<String, Object> annotator);
 }

@@ -1,6 +1,5 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator.ultima;
 
-import htsjdk.samtools.reference.ReferenceSequenceFile;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -12,8 +11,8 @@ import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.ultimagen.annotate.AnnotatorBase;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+import java.util.function.BiConsumer;
 
 @DocumentedFeature(groupName=HelpConstants.DOC_CAT_ULTIMA_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_ULTIMA_ANNOTATORS_SUMMARY, summary="UltimaClassifyIndel")
 public class UltimaClassifyIndel extends UltimaAnnotatorBase {
@@ -27,7 +26,7 @@ public class UltimaClassifyIndel extends UltimaAnnotatorBase {
 
     // "indel_classify" and "indel_length"
     @Override
-    public void annotate(final VariantContext vc, final Annotator annotator) {
+    public void annotate(final VariantContext vc, final BiConsumer<String, Object> annotator) {
 
         if ( vc.isIndel() ) {
 
@@ -42,13 +41,13 @@ public class UltimaClassifyIndel extends UltimaAnnotatorBase {
                     .filter(allele -> !allele.isReference())
                     .map(allele -> allele.length())
                     .max(Integer::compare).get();
-            annotator.annotate(GATKVCFConstants.ULTIMA_INDEL_CLASSIFY, (vc.getReference().length() < maxAlleleLength) ? C_INSERT : C_DELETE);
+            annotator.accept(GATKVCFConstants.ULTIMA_INDEL_CLASSIFY, (vc.getReference().length() < maxAlleleLength) ? C_INSERT : C_DELETE);
 
             /*
             lambda x: max([abs(len(y) - len(x['ref'])) for y in x['alleles']])
              */
             final int refLength = vc.getReference().length();
-            annotator.annotate(GATKVCFConstants.ULTIMA_INDEL_LENGTH, vc.getAlleles().stream()
+            annotator.accept(GATKVCFConstants.ULTIMA_INDEL_LENGTH, vc.getAlleles().stream()
                     .filter(allele -> !allele.isReference())
                     .map(allele -> Math.abs(refLength - allele.length()))
                     .max(Integer::compare).get());
