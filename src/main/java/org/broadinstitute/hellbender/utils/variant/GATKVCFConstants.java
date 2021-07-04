@@ -146,7 +146,6 @@ public final class GATKVCFConstants {
     public final static String TRANSMISSION_PROBABILITY_KEY =       "TP"; //PhaseByTransmission
 
     // ultima annotations
-    public final static String ULTIMA_DEVEL_ANNOTATION_1 =          "X-DA-1";
     public final static String ULTIMA_INDEL_CLASSIFY =              "X-IC";
     public final static String ULTIMA_INDEL_LENGTH =                "X-IL";
     public final static String ULTIMA_HMER_INDEL_LENGTH =           "X-HIL";

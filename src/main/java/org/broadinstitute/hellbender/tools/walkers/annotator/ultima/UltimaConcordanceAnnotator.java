@@ -1,5 +1,6 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator.ultima;
 
+import com.google.common.annotations.VisibleForTesting;
 import htsjdk.samtools.util.Locatable;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
@@ -16,13 +17,12 @@ import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.help.HelpConstants;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
+import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
@@ -391,4 +391,16 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
         return length;
 
     }
+
+    @VisibleForTesting
+    static Map<String, Object> annotateForTesting(final ReferenceContext ref, final VariantContext vc) {
+
+        GenotypeBuilder             gb = new GenotypeBuilder();
+        UltimaConcordanceAnnotator  annotator = new UltimaConcordanceAnnotator();
+
+        annotator.annotate(ref, vc, null, gb, null);
+
+        return gb.make().getExtendedAttributes();
+    }
+
 }
