@@ -26,10 +26,6 @@ public final class HelpConstants {
     public final static String DOC_CAT_ANNOTATORS_SUMMARY = "Available to HaplotypeCaller, Mutect2, VariantAnnotator and GenotypeGVCFs. " +
             "See https://software.broadinstitute.org/gatk/documentation/article?id=10836";
 
-    public final static String DOC_CAT_ULTIMA_ANNOTATORS = "Ultima Variant Annotations";
-    public final static String DOC_CAT_ULTIMA_ANNOTATORS_SUMMARY = "Available to HaplotypeCaller, Mutect2, VariantAnnotator and GenotypeGVCFs. " +
-            "(Ultima specific)";
-
     public final static String DOC_CAT_COVERAGE_ANALYSIS = "Coverage Analysis";
     public final static String DOC_CAT_COVERAGE_ANALYSIS_SUMMARY = "Tools that count coverage, e.g. depth per allele";
 
