@@ -43,8 +43,8 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
     protected final String   FLOW_ORDER_DEFAULT = "TACG";
 
     static class LocalAttributes {
-        byte[]      refBases;
-        Locatable   refWindow;
+        ReferenceContext ref;
+        GenotypeBuilder gb;
         String      flowOrder;
 
         String      indel;
@@ -66,21 +66,18 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
 
         // some annotators share results
         LocalAttributes         la = new LocalAttributes();
-
-        // prepare for extracting motifs, makes sure that we only read referecne once
-        int           padding = Math.max(MOTIF_SIZE, GC_CONTENT_SIZE / 2);
-        la.refBases = ref.getBases(padding, padding);
-        la.refWindow = ref.getWindow();
+        la.ref = ref;
+        la.gb = gb;
 
         // establish flow order
         la.flowOrder = establishFlowOrder(likelihoods);
 
         // call annotatotrs
-        indelClassify(vc, gb, la);
-        isHmerIndel(vc, gb, la);
-        getMotif(vc, gb, la);
-        gcContent(vc, gb, la);
-        cycleSkip(vc, gb, la);
+        indelClassify(vc, la);
+        isHmerIndel(vc, la);
+        getMotif(vc, la);
+        gcContent(vc, la);
+        cycleSkip(vc, la);
     }
 
     private String establishFlowOrder(AlleleLikelihoods<GATKRead, Allele> likelihoods) {
@@ -116,7 +113,7 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
     }
 
     // "indel_classify" and "indel_length"
-    private void indelClassify(final VariantContext vc, GenotypeBuilder gb, final LocalAttributes la) {
+    private void indelClassify(final VariantContext vc, final LocalAttributes la) {
 
         if ( vc.isIndel() ) {
 
@@ -131,13 +128,13 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
                     .filter(allele -> !allele.isReference())
                     .map(allele -> allele.length())
                     .max(Integer::compare).get();
-            gb.attribute(GATKVCFConstants.ULTIMA_INDEL_CLASSIFY, la.indel = (vc.getReference().length() < maxAlleleLength) ? C_INSERT : C_DELETE);
+            la.gb.attribute(GATKVCFConstants.ULTIMA_INDEL_CLASSIFY, la.indel = (vc.getReference().length() < maxAlleleLength) ? C_INSERT : C_DELETE);
 
             /*
             lambda x: max([abs(len(y) - len(x['ref'])) for y in x['alleles']])
              */
             final int refLength = vc.getReference().length();
-            gb.attribute(GATKVCFConstants.ULTIMA_INDEL_LENGTH, la.indelLength = vc.getAlleles().stream()
+            la.gb.attribute(GATKVCFConstants.ULTIMA_INDEL_LENGTH, la.indelLength = vc.getAlleles().stream()
                     .filter(allele -> !allele.isReference())
                     .map(allele -> Math.abs(refLength - allele.length()))
                     .max(Integer::compare).get());
@@ -145,7 +142,7 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
     }
 
     // "hmer_indel_length" and "hmer_indel_nuc"
-    private void isHmerIndel(final VariantContext vc, GenotypeBuilder gb, final LocalAttributes la) {
+    private void isHmerIndel(final VariantContext vc, final LocalAttributes la) {
 
         if ( vc.isIndel() ) {
             List<Allele> alt = vc.getAlleles().stream()
@@ -165,8 +162,8 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
                         return (utils.hmer_length(fasta_idx[rec['chrom']], rec['pos']), alt[0])
                      */
                     if (getReferenceNucleoid(la, vc.getStart()) == altAllele.getBases()[0]) {
-                        gb.attribute(GATKVCFConstants.ULTIMA_HMER_INDEL_LENGTH, la.hmerIndelLength = hmerLength(la, vc.getStart()));
-                        gb.attribute(GATKVCFConstants.ULTIMA_HMER_INDEL_NUC, Character.toString((char) altAllele.getBases()[0]));
+                        la.gb.attribute(GATKVCFConstants.ULTIMA_HMER_INDEL_LENGTH, la.hmerIndelLength = hmerLength(la, vc.getStart()));
+                        la.gb.attribute(GATKVCFConstants.ULTIMA_HMER_INDEL_NUC, Character.toString((char) altAllele.getBases()[0]));
                     }
 
                 } else if (C_DELETE.equals(la.indel)) {
@@ -180,26 +177,26 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
                         return (len(del_seq) + utils.hmer_length(fasta_idx[rec['chrom']],
                      */
                     if (getReferenceNucleoid(la,vc.getStart() + vc.getReference().length() - 1) == altAllele.getBases()[0]) {
-                        gb.attribute(GATKVCFConstants.ULTIMA_HMER_INDEL_LENGTH, la.hmerIndelLength = altAllele.length() + hmerLength(la, vc.getStart() + vc.getReference().length() - 1));
-                        gb.attribute(GATKVCFConstants.ULTIMA_HMER_INDEL_NUC, Character.toString((char) altAllele.getBases()[0]));
+                        la.gb.attribute(GATKVCFConstants.ULTIMA_HMER_INDEL_LENGTH, la.hmerIndelLength = altAllele.length() + hmerLength(la, vc.getStart() + vc.getReference().length() - 1));
+                        la.gb.attribute(GATKVCFConstants.ULTIMA_HMER_INDEL_NUC, Character.toString((char) altAllele.getBases()[0]));
                     }
                 }
             }
         }
     }
 
-    private void getMotif(final VariantContext vc, GenotypeBuilder gb, final LocalAttributes la) {
+    private void getMotif(final VariantContext vc, final LocalAttributes la) {
 
         if ( la.indel != null && la.hmerIndelLength > 0 ) {
-            annotateMotifAroundHherIndel(vc, gb, la, la.hmerIndelLength);
+            annotateMotifAroundHherIndel(vc, la, la.hmerIndelLength);
         } else if ( la.indel != null && la.hmerIndelLength == 0 ) {
-            annotateMotifAroundNonHherIndel(vc, gb, la);
+            annotateMotifAroundNonHherIndel(vc, la);
         } else {
-            annotateMotifAroundSnp(vc, gb, la);
+            annotateMotifAroundSnp(vc, la);
         }
     }
 
-    private void gcContent(final VariantContext vc, GenotypeBuilder gb, final LocalAttributes la) {
+    private void gcContent(final VariantContext vc, final LocalAttributes la) {
 
         /*
         chrom = faidx[rec['chrom']]
@@ -218,10 +215,10 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
                 gcCount++;
             }
         }
-        gb.attribute(GATKVCFConstants.ULTIMA_GC_CONTENT, (float)gcCount / seq.length());
+        la.gb.attribute(GATKVCFConstants.ULTIMA_GC_CONTENT, (float)gcCount / seq.length());
     }
 
-    private void cycleSkip(final VariantContext vc, GenotypeBuilder gb, final LocalAttributes la) {
+    private void cycleSkip(final VariantContext vc, final LocalAttributes la) {
 
         /*
         #gt_field is None
@@ -290,7 +287,7 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
                 css = C_CSS_NS;
         }
 
-        gb.attribute(GATKVCFConstants.ULTIMA_CYCLESKIP_STATUS, css);
+        la.gb.attribute(GATKVCFConstants.ULTIMA_CYCLESKIP_STATUS, css);
     }
 
     private int[] generateKeyFromSequence(final String sequence, final String flowOrder) {
@@ -338,50 +335,52 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
         return key.stream().mapToInt(i->i).toArray();
     }
 
-    private void annotateMotifAroundHherIndel(final VariantContext vc, GenotypeBuilder gb, final LocalAttributes la, final int hmerLength) {
+    private void annotateMotifAroundHherIndel(final VariantContext vc, final LocalAttributes la, final int hmerLength) {
         /*
         chrom = faidx[rec['chrom']]
         pos = rec['pos']
         hmer_length = rec['hmer_indel_length']
         return chrom[pos - size:pos].seq.upper(), chrom[pos + hmer_length:pos + hmer_length + size].seq.upper()
          */
-        gb.attribute(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getReferenceMotif(la,vc.getStart() - MOTIF_SIZE, vc.getStart()));
-        gb.attribute(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getReferenceMotif(la, vc.getStart() + hmerLength, vc.getStart() + hmerLength + MOTIF_SIZE));
+        la.gb.attribute(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getReferenceMotif(la,vc.getStart() - MOTIF_SIZE, vc.getStart()));
+        la.gb.attribute(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getReferenceMotif(la, vc.getStart() + hmerLength, vc.getStart() + hmerLength + MOTIF_SIZE));
     }
 
-    private void annotateMotifAroundNonHherIndel(final VariantContext vc, GenotypeBuilder gb, final LocalAttributes la) {
+    private void annotateMotifAroundNonHherIndel(final VariantContext vc, final LocalAttributes la) {
         /*
         return chrom[pos - size:pos].seq.upper(),\
             chrom[pos + len(rec['ref']) - 1:pos +
                   len(rec['ref']) - 1 + size].seq.upper()
          */
         int         refLength = vc.getReference().length();
-        gb.attribute(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getReferenceMotif(la, vc.getStart() - MOTIF_SIZE, vc.getStart()));
-        gb.attribute(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getReferenceMotif(la, vc.getStart() + refLength - 1, vc.getStart() + refLength - 1 + MOTIF_SIZE));
+        la.gb.attribute(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getReferenceMotif(la, vc.getStart() - MOTIF_SIZE, vc.getStart()));
+        la.gb.attribute(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getReferenceMotif(la, vc.getStart() + refLength - 1, vc.getStart() + refLength - 1 + MOTIF_SIZE));
     }
 
-    private void annotateMotifAroundSnp(final VariantContext vc, GenotypeBuilder gb, final LocalAttributes la) {
+    private void annotateMotifAroundSnp(final VariantContext vc, final LocalAttributes la) {
         /*
         return chrom[pos - size - 1:pos - 1].seq.upper(), chrom[pos:pos + size].seq.upper()
          */
-        gb.attribute(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getReferenceMotif(la, vc.getStart() - MOTIF_SIZE - 1, vc.getStart() - 1));
-        gb.attribute(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getReferenceMotif(la, vc.getStart(), vc.getStart() + MOTIF_SIZE));
+        la.gb.attribute(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getReferenceMotif(la, vc.getStart() - MOTIF_SIZE - 1, vc.getStart() - 1));
+        la.gb.attribute(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getReferenceMotif(la, vc.getStart(), vc.getStart() + MOTIF_SIZE));
     }
 
     // get a single nucleoid from reference
     private byte getReferenceNucleoid(final LocalAttributes la, final int start) {
-        int         index = start - la.refWindow.getStart();
-        Utils.validIndex(index, la.refBases.length);
-        return la.refBases[index];
+        int         index = start - la.ref.getWindow().getStart();
+        byte[]      bases = la.ref.getBases();
+        Utils.validIndex(index, bases.length);
+        return bases[index];
     }
 
     // get motif from reference
     private String getReferenceMotif(final LocalAttributes la, final int start, final int end) {
-        int         startIndex = start - la.refWindow.getStart();
-        int         endIndex = end - la.refWindow.getStart();
-        Utils.validIndex(startIndex, la.refBases.length);
-        Utils.validIndex(endIndex, la.refBases.length);
-        return new String(Arrays.copyOfRange(la.refBases, startIndex, endIndex));
+        int         startIndex = start - la.ref.getWindow().getStart();
+        int         endIndex = end - la.ref.getWindow().getStart();
+        byte[]      bases = la.ref.getBases();
+        Utils.validIndex(startIndex, bases.length);
+        Utils.validIndex(endIndex, bases.length);
+        return new String(Arrays.copyOfRange(bases, startIndex, endIndex));
     }
 
     private int hmerLength(final LocalAttributes la, final int start) {
