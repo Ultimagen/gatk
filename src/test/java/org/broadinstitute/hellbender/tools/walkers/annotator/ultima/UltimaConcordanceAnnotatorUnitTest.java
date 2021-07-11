@@ -14,6 +14,7 @@ import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.read.ArtificialReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.reference.ReferenceBases;
+import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -26,18 +27,34 @@ public class UltimaConcordanceAnnotatorUnitTest {
     @Test
     public void testBasic() {
 
-        // prepare
-        final ReferenceContext      ref = buildReferenceContext("GTATCATCATCGGA", 6, 6);
-        final VariantContext        vc = buildVariantContext(ref, "A", "AATC");
+        final Object[][]        testData = {
+                {
+                    // for now only a basic test isd defined. more could be added below using the same format
+                    "GTATCATCATCGGA", 6, 6, "A", "AATC",                // refbases, start, stop, refAllele, altAllele
+                    UltimaConcordanceAnnotator.C_INSERT, 3, 1, "A",     // indel-classify, indel-lenfth, hmer-indel-length, hmer-indel-nuc
+                    "GTATC", "TCATC", (float)0.3, UltimaConcordanceAnnotator.C_CSS_NA // left-motif, right-motif, gc-content, cycleskip-status
+                }
+        };
 
-        // invoke
-        final Map<String, Object>   attrs = UltimaConcordanceAnnotator.annotateForTesting(ref, vc);
-        Assert.assertNotNull(attrs);
+        // should be in same order as test data!!!!
+        final List<String>      expectedAttrs = (new UltimaConcordanceAnnotator()).getKeyNames();
 
-        // check that all expected attributes are there
-        List<String>    expectedAttrs = (new UltimaConcordanceAnnotator()).getKeyNames();
-        for ( String expectedAttr : expectedAttrs )
-            Assert.assertTrue(attrs.containsKey(expectedAttr));
+        // loop on test data
+        for ( Object[] data : testData ) {
+
+            // prepare
+            final ReferenceContext ref = buildReferenceContext(data[0].toString(), Integer.parseInt(data[1].toString()), Integer.parseInt(data[2].toString()));
+            final VariantContext vc = buildVariantContext(ref, data[3].toString(), data[4].toString());
+
+            // invoke
+            final Map<String, Object> attrs = UltimaConcordanceAnnotator.annotateForTesting(ref, vc);
+            Assert.assertNotNull(attrs);
+
+            // check that all expected attributes are there
+            for ( int n = 0 ; n < 8 ; n++ ) {
+                Assert.assertEquals(attrs.get(expectedAttrs.get(n)), data[5+n]);
+            }
+        }
     }
 
     private ReferenceContext buildReferenceContext(String refBases, int start, int stop) {

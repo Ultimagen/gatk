@@ -31,16 +31,16 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
     private final static Logger logger = LogManager.getLogger(UltimaConcordanceAnnotator.class);
 
     // additional constants
-    protected final String   C_INSERT = "ins";
-    protected final String   C_DELETE = "del";
-    protected final String   C_CSS_NA = "NA";
-    protected final String   C_CSS_CS = "cycle-skip";
-    protected final String   C_CSS_PCS = "possible-cycle-skip";
-    protected final String   C_CSS_NS = "non-skip";
+    protected static final String   C_INSERT = "ins";
+    protected static final String   C_DELETE = "del";
+    protected static final String   C_CSS_NA = "NA";
+    protected static final String   C_CSS_CS = "cycle-skip";
+    protected static final String   C_CSS_PCS = "possible-cycle-skip";
+    protected static final String   C_CSS_NS = "non-skip";
 
-    protected final int      MOTIF_SIZE = 5;
-    protected final int      GC_CONTENT_SIZE = 10;
-    protected final String   FLOW_ORDER_DEFAULT = "TACG";
+    protected static final int      MOTIF_SIZE = 5;
+    protected static final int      GC_CONTENT_SIZE = 10;
+    protected static final String   FLOW_ORDER_DEFAULT = "TACG";
 
     static class LocalAttributes {
         ReferenceContext ref;
