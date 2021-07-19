@@ -294,8 +294,7 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
 
         if ( sequence == null )
             return null;
-        List<Integer>       key = new ArrayList<>(sequence.length() * (flowOrder.length() - 1));
-
+        int[]         key = new int[sequence.length() * 4];
         /*
         key = []
         pos = 0
@@ -315,24 +314,27 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
         byte[]      seq = sequence.getBytes();
         byte[]      flow = flowOrder.getBytes();
         int         pos = 0;
+        int         keySize = 0;
         for ( int flowPos = 0 ; ; flowPos = (flowPos + 1) % flow.length ) {
             byte    base = flow[flowPos];
             int     hcount = 0;
             for ( int i = pos ; i < seq.length ; i++ ) {
-                if ( seq[i] == base )
+                if ( seq[i] == 'N')
+                    return null;
+                else if ( seq[i] == base )
                     hcount++;
                 else
                     break;
             }
             if ( pos >= seq.length ) {
-                key.add(hcount);
+                key[keySize++] = hcount;
                 break;
             }
-            key.add(hcount);
+            key[keySize++] = hcount;
             pos += hcount;
         }
 
-        return key.stream().mapToInt(i->i).toArray();
+        return Arrays.copyOfRange(key, 0, keySize);
     }
 
     private void annotateMotifAroundHherIndel(final VariantContext vc, final LocalAttributes la, final int hmerLength) {
