@@ -12,7 +12,9 @@ import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.tools.walkers.annotator.GenotypeAnnotation;
+import org.broadinstitute.hellbender.tools.walkers.annotator.InfoFieldAnnotation;
 import org.broadinstitute.hellbender.tools.walkers.annotator.StandardMutectAnnotation;
+import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotation;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.help.HelpConstants;
@@ -27,7 +29,7 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 @DocumentedFeature(groupName=HelpConstants.DOC_CAT_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_ANNOTATORS_SUMMARY, summary="UltimaConcordanceAnnotator")
-public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements StandardMutectAnnotation {
+public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements StandardMutectAnnotation {
     private final static Logger logger = LogManager.getLogger(UltimaConcordanceAnnotator.class);
 
     // additional constants
@@ -44,7 +46,6 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
 
     static class LocalAttributes {
         ReferenceContext ref;
-        GenotypeBuilder gb;
         String      flowOrder;
 
         String      indel;
@@ -52,22 +53,20 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
         int         hmerIndelLength;
         String      leftMotif;
         String      rightMotif;
+
+        Map<String, Object> attributes = new LinkedHashMap<>();
     }
 
     @Override
-    public void annotate(final ReferenceContext ref,
-                         final VariantContext vc,
-                         final Genotype g,
-                         final GenotypeBuilder gb,
-                         final AlleleLikelihoods<GATKRead, Allele> likelihoods) {
+    public Map<String, Object> annotate(ReferenceContext ref,
+                                        VariantContext vc,
+                                        AlleleLikelihoods<GATKRead, Allele> likelihoods) {
         Utils.nonNull(ref);
         Utils.nonNull(vc);
-        Utils.nonNull(gb);
 
         // some annotators share results
         LocalAttributes         la = new LocalAttributes();
         la.ref = ref;
-        la.gb = gb;
 
         // establish flow order
         la.flowOrder = establishFlowOrder(likelihoods);
@@ -78,6 +77,8 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
         getMotif(vc, la);
         gcContent(vc, la);
         cycleSkip(vc, la);
+
+        return la.attributes;
     }
 
     private String establishFlowOrder(AlleleLikelihoods<GATKRead, Allele> likelihoods) {
@@ -107,11 +108,6 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
                 GATKVCFConstants.ULTIMA_CYCLESKIP_STATUS);
     }
 
-    @Override
-    public List<VCFFormatHeaderLine> getDescriptions() {
-        return getKeyNames().stream().map(s -> GATKVCFHeaderLines.getFormatLine(s)).collect(Collectors.toList());
-    }
-
     // "indel_classify" and "indel_length"
     private void indelClassify(final VariantContext vc, final LocalAttributes la) {
 
@@ -128,13 +124,13 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
                     .filter(allele -> !allele.isReference())
                     .map(allele -> allele.length())
                     .max(Integer::compare).get();
-            la.gb.attribute(GATKVCFConstants.ULTIMA_INDEL_CLASSIFY, la.indel = (vc.getReference().length() < maxAlleleLength) ? C_INSERT : C_DELETE);
+            la.attributes.put(GATKVCFConstants.ULTIMA_INDEL_CLASSIFY, la.indel = (vc.getReference().length() < maxAlleleLength) ? C_INSERT : C_DELETE);
 
             /*
             lambda x: max([abs(len(y) - len(x['ref'])) for y in x['alleles']])
              */
             final int refLength = vc.getReference().length();
-            la.gb.attribute(GATKVCFConstants.ULTIMA_INDEL_LENGTH, la.indelLength = vc.getAlleles().stream()
+            la.attributes.put(GATKVCFConstants.ULTIMA_INDEL_LENGTH, la.indelLength = vc.getAlleles().stream()
                     .filter(allele -> !allele.isReference())
                     .map(allele -> Math.abs(refLength - allele.length()))
                     .max(Integer::compare).get());
@@ -162,8 +158,8 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
                         return (utils.hmer_length(fasta_idx[rec['chrom']], rec['pos']), alt[0])
                      */
                     if (getReferenceNucleoid(la, vc.getStart()) == altAllele.getBases()[0]) {
-                        la.gb.attribute(GATKVCFConstants.ULTIMA_HMER_INDEL_LENGTH, la.hmerIndelLength = hmerLength(la, vc.getStart()));
-                        la.gb.attribute(GATKVCFConstants.ULTIMA_HMER_INDEL_NUC, Character.toString((char) altAllele.getBases()[0]));
+                        la.attributes.put(GATKVCFConstants.ULTIMA_HMER_INDEL_LENGTH, la.hmerIndelLength = hmerLength(la, vc.getStart()));
+                        la.attributes.put(GATKVCFConstants.ULTIMA_HMER_INDEL_NUC, Character.toString((char) altAllele.getBases()[0]));
                     }
 
                 } else if (C_DELETE.equals(la.indel)) {
@@ -177,8 +173,8 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
                         return (len(del_seq) + utils.hmer_length(fasta_idx[rec['chrom']],
                      */
                     if (getReferenceNucleoid(la,vc.getStart() + vc.getReference().length() - 1) == altAllele.getBases()[0]) {
-                        la.gb.attribute(GATKVCFConstants.ULTIMA_HMER_INDEL_LENGTH, la.hmerIndelLength = altAllele.length() + hmerLength(la, vc.getStart() + vc.getReference().length() - 1));
-                        la.gb.attribute(GATKVCFConstants.ULTIMA_HMER_INDEL_NUC, Character.toString((char) altAllele.getBases()[0]));
+                        la.attributes.put(GATKVCFConstants.ULTIMA_HMER_INDEL_LENGTH, la.hmerIndelLength = altAllele.length() + hmerLength(la, vc.getStart() + vc.getReference().length() - 1));
+                        la.attributes.put(GATKVCFConstants.ULTIMA_HMER_INDEL_NUC, Character.toString((char) altAllele.getBases()[0]));
                     }
                 }
             }
@@ -215,7 +211,7 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
                 gcCount++;
             }
         }
-        la.gb.attribute(GATKVCFConstants.ULTIMA_GC_CONTENT, (float)gcCount / seq.length());
+        la.attributes.put(GATKVCFConstants.ULTIMA_GC_CONTENT, (float)gcCount / seq.length());
     }
 
     private void cycleSkip(final VariantContext vc, final LocalAttributes la) {
@@ -287,7 +283,7 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
                 css = C_CSS_NS;
         }
 
-        la.gb.attribute(GATKVCFConstants.ULTIMA_CYCLESKIP_STATUS, css);
+        la.attributes.put(GATKVCFConstants.ULTIMA_CYCLESKIP_STATUS, css);
     }
 
     private int[] generateKeyFromSequence(final String sequence, final String flowOrder) {
@@ -344,8 +340,8 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
         hmer_length = rec['hmer_indel_length']
         return chrom[pos - size:pos].seq.upper(), chrom[pos + hmer_length:pos + hmer_length + size].seq.upper()
          */
-        la.gb.attribute(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getReferenceMotif(la,vc.getStart() - MOTIF_SIZE, vc.getStart()));
-        la.gb.attribute(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getReferenceMotif(la, vc.getStart() + hmerLength, vc.getStart() + hmerLength + MOTIF_SIZE));
+        la.attributes.put(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getReferenceMotif(la,vc.getStart() - MOTIF_SIZE, vc.getStart()));
+        la.attributes.put(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getReferenceMotif(la, vc.getStart() + hmerLength, vc.getStart() + hmerLength + MOTIF_SIZE));
     }
 
     private void annotateMotifAroundNonHherIndel(final VariantContext vc, final LocalAttributes la) {
@@ -355,16 +351,16 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
                   len(rec['ref']) - 1 + size].seq.upper()
          */
         int         refLength = vc.getReference().length();
-        la.gb.attribute(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getReferenceMotif(la, vc.getStart() - MOTIF_SIZE, vc.getStart()));
-        la.gb.attribute(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getReferenceMotif(la, vc.getStart() + refLength - 1, vc.getStart() + refLength - 1 + MOTIF_SIZE));
+        la.attributes.put(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getReferenceMotif(la, vc.getStart() - MOTIF_SIZE, vc.getStart()));
+        la.attributes.put(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getReferenceMotif(la, vc.getStart() + refLength - 1, vc.getStart() + refLength - 1 + MOTIF_SIZE));
     }
 
     private void annotateMotifAroundSnp(final VariantContext vc, final LocalAttributes la) {
         /*
         return chrom[pos - size - 1:pos - 1].seq.upper(), chrom[pos:pos + size].seq.upper()
          */
-        la.gb.attribute(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getReferenceMotif(la, vc.getStart() - MOTIF_SIZE - 1, vc.getStart() - 1));
-        la.gb.attribute(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getReferenceMotif(la, vc.getStart(), vc.getStart() + MOTIF_SIZE));
+        la.attributes.put(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getReferenceMotif(la, vc.getStart() - MOTIF_SIZE - 1, vc.getStart() - 1));
+        la.attributes.put(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getReferenceMotif(la, vc.getStart(), vc.getStart() + MOTIF_SIZE));
     }
 
     // get a single nucleoid from reference
@@ -400,9 +396,7 @@ public class UltimaConcordanceAnnotator extends GenotypeAnnotation implements St
         GenotypeBuilder             gb = new GenotypeBuilder();
         UltimaConcordanceAnnotator  annotator = new UltimaConcordanceAnnotator();
 
-        annotator.annotate(ref, vc, null, gb, null);
-
-        return gb.make().getExtendedAttributes();
+        return annotator.annotate(ref, vc, null);
     }
 
 }
