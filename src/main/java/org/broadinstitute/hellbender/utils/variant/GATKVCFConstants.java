@@ -148,12 +148,14 @@ public final class GATKVCFConstants {
     // ultima annotations
     public final static String ULTIMA_INDEL_CLASSIFY =              "X-IC";
     public final static String ULTIMA_INDEL_LENGTH =                "X-IL";
-    public final static String ULTIMA_HMER_INDEL_LENGTH =           "X-HIL";
     public final static String ULTIMA_HMER_INDEL_NUC =              "X-HIN";
     public final static String ULTIMA_LEFT_MOTIF =                  "X-LM";
     public final static String ULTIMA_RIGHT_MOTIF =                 "X-RM";
     public final static String ULTIMA_GC_CONTENT =                  "X-GCC";
     public final static String ULTIMA_CYCLESKIP_STATUS =            "X-CSS";
+    public final static String ULTIMA_DBG_HMER_INDEL_LENGTH =       "XD-HIL";
+    public final static String ULTIMA_DBG_REF =                     "XD-RF";
+    public final static String ULTIMA_DBG_REF_START =               "XD-RFS";
 
 
     // M2-specific FORMAT keys

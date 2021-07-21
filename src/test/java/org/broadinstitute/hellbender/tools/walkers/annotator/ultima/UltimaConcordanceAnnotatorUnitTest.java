@@ -1,7 +1,5 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator.ultima;
 
-import com.google.errorprone.annotations.Var;
-import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMSequenceDictionary;
 import htsjdk.samtools.SAMSequenceRecord;
 import htsjdk.variant.variantcontext.Allele;
@@ -9,12 +7,8 @@ import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.variantcontext.VariantContextBuilder;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.engine.ReferenceDataSource;
-import org.broadinstitute.hellbender.tools.walkers.annotator.CountNs;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
-import org.broadinstitute.hellbender.utils.read.ArtificialReadUtils;
-import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.reference.ReferenceBases;
-import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -31,8 +25,8 @@ public class UltimaConcordanceAnnotatorUnitTest {
                 {
                     // for now only a basic test isd defined. more could be added below using the same format
                     "GTATCATCATCGGA", 6, 6, "A", "AATC",                // refbases, start, stop, refAllele, altAllele
-                    UltimaConcordanceAnnotator.C_INSERT, 3, 1, "A",     // indel-classify, indel-lenfth, hmer-indel-length, hmer-indel-nuc
-                    "GTATC", "TCATC", (float)0.3, UltimaConcordanceAnnotator.C_CSS_NA // left-motif, right-motif, gc-content, cycleskip-status
+                    UltimaConcordanceAnnotator.C_INSERT, "3", null,     // indel-classify, indel-lenfth, hmer-indel-nuc
+                    "TATCA", "TCATC", (float)0.3, UltimaConcordanceAnnotator.C_NA // left-motif, right-motif, gc-content, cycleskip-status
                 }
         };
 
@@ -51,8 +45,10 @@ public class UltimaConcordanceAnnotatorUnitTest {
             Assert.assertNotNull(attrs);
 
             // check that all expected attributes are there
-            for ( int n = 0 ; n < 8 ; n++ ) {
-                Assert.assertEquals(attrs.get(expectedAttrs.get(n)), data[5+n]);
+            for ( int n = 0 ; n < 7 ; n++ ) {
+                Object          elem = data[5+n];
+                if ( elem != null )
+                    Assert.assertEquals(attrs.get(expectedAttrs.get(n)), elem);
             }
         }
     }
