@@ -242,8 +242,8 @@ public class GATKVCFHeaderLines {
         addInfoLine(new VCFInfoHeaderLine(POSSIBLE_FP_ADJACENT_TP_KEY,1, VCFHeaderLineType.Flag, "Indicates a locus where false positive allele might be affecting a true positive allele"));
 
         // ultima annotations
-        addInfoLine(new VCFInfoHeaderLine(ULTIMA_INDEL_CLASSIFY, 1, VCFHeaderLineType.String, "ULTIMA_INDEL_CLASSIFY"));
-        addInfoLine(new VCFInfoHeaderLine(ULTIMA_INDEL_LENGTH, 1, VCFHeaderLineType.String, "ULTIMA_INDEL_LENGTH"));
+        addInfoLine(new VCFInfoHeaderLine(ULTIMA_INDEL_CLASSIFY, VCFHeaderLineCount.A, VCFHeaderLineType.String, "ULTIMA_INDEL_CLASSIFY"));
+        addInfoLine(new VCFInfoHeaderLine(ULTIMA_INDEL_LENGTH, VCFHeaderLineCount.A, VCFHeaderLineType.String, "ULTIMA_INDEL_LENGTH"));
         addInfoLine(new VCFInfoHeaderLine(ULTIMA_HMER_INDEL_NUC, 1, VCFHeaderLineType.String, "ULTIMA_HMER_INDEL_NUC"));
         addInfoLine(new VCFInfoHeaderLine(ULTIMA_LEFT_MOTIF, 1, VCFHeaderLineType.String, "ULTIMA_LEFT_MOTIF"));
         addInfoLine(new VCFInfoHeaderLine(ULTIMA_RIGHT_MOTIF, 1, VCFHeaderLineType.String, "ULTIMA_RIGHT_MOTIF"));

@@ -38,14 +38,14 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
     protected static final int      GC_CONTENT_SIZE = 10;
     protected static final String   FLOW_ORDER_DEFAULT = "TACG";
 
-    public static final boolean  addDebugAnnotations = true;
+    public static final boolean  addDebugAnnotations = false;
 
     static class LocalAttributes {
         ReferenceContext ref;
         String      flowOrder;
 
-        String      indel;
-        String      indelLength;
+        List<String> indel;
+        List<Integer> indelLength;
         int         hmerIndelLength;
         String      leftMotif;
         String      rightMotif;
@@ -140,6 +140,9 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
 
         if ( vc.isIndel() ) {
 
+            if ( vc.getAlleles().size() > 2 )
+                logger.info("indel has more that 2 alleles: " + vc);
+
             /*
             if not x['indel']:
                 return None
@@ -156,8 +159,8 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
                     indelLength.add(Math.abs(refLength - a.length()));
                 }
             }
-            la.attributes.put(GATKVCFConstants.ULTIMA_INDEL_CLASSIFY, la.indel = StringUtils.join(indelClassify, ","));
-            la.attributes.put(GATKVCFConstants.ULTIMA_INDEL_LENGTH, la.indelLength = StringUtils.join(indelLength, ","));
+            la.attributes.put(GATKVCFConstants.ULTIMA_INDEL_CLASSIFY, la.indel = indelClassify);
+            la.attributes.put(GATKVCFConstants.ULTIMA_INDEL_LENGTH, la.indelLength = indelLength);
         }
     }
 
@@ -170,7 +173,7 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
                     .collect(Collectors.toList());
             if ( alt.size() == 1 ) {
                 Allele      altAllele = alt.get(0);
-                if (C_INSERT.equals(la.indel)) {
+                if (C_INSERT.equals(la.indel.get(0))) {
                     /*
                     alt = [x for x in rec['alleles'] if x != rec['ref']][0][1:]
                     if len(set(alt)) != 1:
@@ -186,7 +189,7 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
                         la.attributes.put(GATKVCFConstants.ULTIMA_HMER_INDEL_NUC, Character.toString((char) altAllele.getBases()[0]));
                     }
 
-                } else if (C_DELETE.equals(la.indel)) {
+                } else if (C_DELETE.equals(la.indel.get(0))) {
                     /*
                     del_seq = rec['ref'][1:]
                     if len(set(del_seq)) != 1:
