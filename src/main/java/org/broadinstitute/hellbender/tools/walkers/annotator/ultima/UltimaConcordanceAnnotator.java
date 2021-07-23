@@ -37,7 +37,6 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
 
     protected static final int      MOTIF_SIZE = 5;
     protected static final int      GC_CONTENT_SIZE = 10;
-    protected static final String   FLOW_ORDER_DEFAULT = "TACG";
 
     public static final boolean  addDebugAnnotations = false;
 
@@ -100,7 +99,11 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
 
     private String establishFlowOrder(AlleleLikelihoods<GATKRead, Allele> likelihoods) {
 
-        // extract from a read
+        // defined?
+        if ( VariantAnnotator.flowOrder != null )
+            return VariantAnnotator.flowOrder;
+
+            // extract from a read
         if ( likelihoods != null ) {
             List<GATKRead>  reads = likelihoods.sampleEvidence(0);
             if ( reads.size() > 0 ) {
@@ -111,8 +114,8 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
             }
         }
 
-        // if here, return default
-        return VariantAnnotator.flowOrder != null ? VariantAnnotator.flowOrder : FLOW_ORDER_DEFAULT;
+        // if here, it is an error - we have no default for flow order
+        throw new RuntimeException("flow-order must be defined. Use --flow-order if running VariantAnnotator");
     }
 
     @Override
