@@ -244,13 +244,13 @@ public class GATKVCFHeaderLines {
         // ultima annotations
         addInfoLine(new VCFInfoHeaderLine(ULTIMA_INDEL_CLASSIFY, VCFHeaderLineCount.A, VCFHeaderLineType.String, "ULTIMA_INDEL_CLASSIFY"));
         addInfoLine(new VCFInfoHeaderLine(ULTIMA_INDEL_LENGTH, VCFHeaderLineCount.A, VCFHeaderLineType.String, "ULTIMA_INDEL_LENGTH"));
+        addInfoLine(new VCFInfoHeaderLine(ULTIMA_HMER_INDEL_LENGTH, 1, VCFHeaderLineType.Integer, "ULTIMA_HMER_INDEL_LENGTH"));
         addInfoLine(new VCFInfoHeaderLine(ULTIMA_HMER_INDEL_NUC, 1, VCFHeaderLineType.String, "ULTIMA_HMER_INDEL_NUC"));
         addInfoLine(new VCFInfoHeaderLine(ULTIMA_LEFT_MOTIF, 1, VCFHeaderLineType.String, "ULTIMA_LEFT_MOTIF"));
         addInfoLine(new VCFInfoHeaderLine(ULTIMA_RIGHT_MOTIF, 1, VCFHeaderLineType.String, "ULTIMA_RIGHT_MOTIF"));
         addInfoLine(new VCFInfoHeaderLine(ULTIMA_GC_CONTENT, 1, VCFHeaderLineType.Float, "ULTIMA_GC_CONTENT"));
         addInfoLine(new VCFInfoHeaderLine(ULTIMA_CYCLESKIP_STATUS, 1, VCFHeaderLineType.String, "ULTIMA_CYCLESKIP_STATUS"));
         if (UltimaConcordanceAnnotator.addDebugAnnotations ) {
-            addInfoLine(new VCFInfoHeaderLine(ULTIMA_DBG_HMER_INDEL_LENGTH, 1, VCFHeaderLineType.Integer, "ULTIMA_DBG_HMER_INDEL_LENGTH"));
             addInfoLine(new VCFInfoHeaderLine(ULTIMA_DBG_REF, 1, VCFHeaderLineType.String, "ULTIMA_DBG_REF"));
             addInfoLine(new VCFInfoHeaderLine(ULTIMA_DBG_REF_START, 1, VCFHeaderLineType.Integer, "ULTIMA_DBG_REF_START"));
         }

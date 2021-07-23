@@ -2,9 +2,7 @@ package org.broadinstitute.hellbender.tools.walkers.annotator.ultima;
 
 import com.google.common.annotations.VisibleForTesting;
 import htsjdk.variant.variantcontext.Allele;
-import htsjdk.variant.variantcontext.GenotypeBuilder;
 import htsjdk.variant.variantcontext.VariantContext;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.help.DocumentedFeature;
@@ -18,7 +16,6 @@ import org.broadinstitute.hellbender.utils.help.HelpConstants;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
-import spire.math.All;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -78,7 +75,6 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
         if ( la.indel == null )
             la.attributes.put(GATKVCFConstants.ULTIMA_INDEL_CLASSIFY, C_NA);
         if ( addDebugAnnotations ) {
-            la.attributes.put(GATKVCFConstants.ULTIMA_DBG_HMER_INDEL_LENGTH, la.hmerIndelLength);
             la.attributes.put(GATKVCFConstants.ULTIMA_DBG_REF, makeDbgRef(ref, vc));
             la.attributes.put(GATKVCFConstants.ULTIMA_DBG_REF_START, ref.getStart());
         }
@@ -123,14 +119,13 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
 
         List<String>        names = new LinkedList<>(Arrays.asList(
                 GATKVCFConstants.ULTIMA_INDEL_CLASSIFY, GATKVCFConstants.ULTIMA_INDEL_LENGTH,
-                GATKVCFConstants.ULTIMA_HMER_INDEL_NUC,
+                GATKVCFConstants.ULTIMA_HMER_INDEL_LENGTH, GATKVCFConstants.ULTIMA_HMER_INDEL_NUC,
                 GATKVCFConstants.ULTIMA_LEFT_MOTIF, GATKVCFConstants.ULTIMA_RIGHT_MOTIF,
                 GATKVCFConstants.ULTIMA_GC_CONTENT,
                 GATKVCFConstants.ULTIMA_CYCLESKIP_STATUS));
 
         if ( addDebugAnnotations ) {
             names.addAll(Arrays.asList(
-                    GATKVCFConstants.ULTIMA_DBG_HMER_INDEL_LENGTH,
                     GATKVCFConstants.ULTIMA_DBG_REF,
                     GATKVCFConstants.ULTIMA_DBG_REF_START));
 
@@ -168,77 +163,71 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
     // "hmer_indel_length" and "hmer_indel_nuc"
     private void isHmerIndel(final VariantContext vc, final LocalAttributes la) {
 
-        if ( vc.isIndel() ) {
+        // this is (currently) computed only when there is exactly one non reference allele
+        if ( vc.isIndel() && la.indel.size() == 1 && vc.getAlleles().size() == 2 ) {
 
-            // find out if reference allele is an hmer
-            for ( Allele a : vc.getAlleles() )
-                if ( a.isReference() ) {
-                    byte[]          bases = a.getBases();
-                    for ( int i = 1 ; i < bases.length ; i++ ) {
-                        if (bases[i] != bases[0])
-                            return;
-                    }
+            // access alleles
+            int         refIndex = vc.getAlleles().get(0).isReference() ? 0 : 1;
+            Allele      ref = vc.getAlleles().get(refIndex);
+            Allele      alt = vc.getAlleles().get(1 - refIndex);
 
-                    // if we're here, then it is an hmer
-                    la.hmerIndelLength = a.length();
-                    la.attributes.put(GATKVCFConstants.ULTIMA_HMER_INDEL_NUC, Character.toString((char)bases[0]));
-                    break;
+            // get byte before and after
+            byte        before = getReferenceNucleoid(la, vc.getStart() - 1);
+            byte        after = getReferenceNucleoid(la, vc.getEnd() + 1);
+
+            // build two haplotypes. add byte before and after
+            byte[]      refHap = buildHaplotype(before, ref.getBases(), after);
+            byte[]      altHap = buildHaplotype(before, alt.getBases(), after);
+
+            // convert to flow space
+            int[]       refKey = generateKeyFromSequence(new String(refHap), la.flowOrder);
+            int[]       altKey = generateKeyFromSequence(new String(altHap), la.flowOrder);
+
+            // key must be the same length to begin with
+            if ( refKey.length != altKey.length )
+                return;
+
+            // key must have only one difference, which should not be between a zero and something
+            int     diffIndex = -1;
+            for ( int n = 0 ; n < refKey.length ; n++ ) {
+                if ( refKey[n] != altKey[n] ) {
+                    if ( diffIndex >= 0 )
+                        return;
+                    else
+                        diffIndex = n;
                 }
+            }
+            if ( diffIndex < 0 )
+                return;
+            if ( Math.min(refKey[diffIndex], altKey[diffIndex]) == 0 )
+                return;
+
+            // if here, we found the difference.
+            byte            nuc = la.flowOrder.getBytes()[diffIndex % la.flowOrder.length()];
+            la.hmerIndelLength = refKey[diffIndex];
+            la.attributes.put(GATKVCFConstants.ULTIMA_HMER_INDEL_LENGTH, la.hmerIndelLength);
+            la.attributes.put(GATKVCFConstants.ULTIMA_HMER_INDEL_NUC, Character.toString((char)nuc));
         }
     }
 
-    // "hmer_indel_length" and "hmer_indel_nuc"
-    private void isHmerIndel_OLD(final VariantContext vc, final LocalAttributes la) {
+    private byte[] buildHaplotype(byte before, byte[] bases, byte after) {
 
-        if ( vc.isIndel() ) {
-            List<Allele> alt = vc.getAlleles().stream()
-                    .filter(allele -> !allele.isReference())
-                    .collect(Collectors.toList());
-            if ( alt.size() == 1 ) {
-                Allele      altAllele = alt.get(0);
-                if (C_INSERT.equals(la.indel.get(0))) {
-                    /*
-                    alt = [x for x in rec['alleles'] if x != rec['ref']][0][1:]
-                    if len(set(alt)) != 1:
-                        return (0, None)
-                    elif fasta_idx[rec['chrom']][rec['pos']].seq.upper() != alt[0]:
+        byte[]  hap = new byte[bases.length + 2];
 
-                        return (0, None)
-                    else:
-                        return (utils.hmer_length(fasta_idx[rec['chrom']], rec['pos']), alt[0])
-                     */
-                    if (getReferenceNucleoid(la, vc.getStart()) == altAllele.getBases()[0]) {
-                        la.hmerIndelLength = hmerLength(la, vc.getStart());
-                        la.attributes.put(GATKVCFConstants.ULTIMA_HMER_INDEL_NUC, Character.toString((char) altAllele.getBases()[0]));
-                    }
+        hap[0] = before;
+        System.arraycopy(bases, 0, hap, 1, bases.length);
+        hap[hap.length - 1] = after;
 
-                } else if (C_DELETE.equals(la.indel.get(0))) {
-                    /*
-                    del_seq = rec['ref'][1:]
-                    if len(set(del_seq)) != 1:
-                        return (0, None)
-                    elif fasta_idx[rec['chrom']][rec['pos'] + len(rec['ref']) - 1].seq.upper() != del_seq[0]:
-                        return (0, None)
-                    else:
-                        return (len(del_seq) + utils.hmer_length(fasta_idx[rec['chrom']],
-                                                    rec['pos'] + len(rec['ref']) - 1), del_seq[0])
-                     */
-                    if (getReferenceNucleoid(la,vc.getStart() + vc.getReference().length() - 1) == altAllele.getBases()[0]) {
-                        la.hmerIndelLength = altAllele.length() + hmerLength(la, vc.getStart() + vc.getReference().length() - 1);
-                        la.attributes.put(GATKVCFConstants.ULTIMA_HMER_INDEL_NUC, Character.toString((char) altAllele.getBases()[0]));
-                    }
-                }
-            }
-        }
+        return hap;
     }
 
     private void getMotif(final VariantContext vc, final LocalAttributes la) {
 
-        int         indelLength = la.hmerIndelLength;
+        int         length = la.hmerIndelLength;
 
-        if ( la.indel != null && indelLength > 0 ) {
-            annotateMotifAroundHherIndel(vc, la, indelLength);
-        } else if ( la.indel != null && indelLength == 0 ) {
+        if ( la.indel != null && length > 0 ) {
+            annotateMotifAroundHherIndel(vc, la, length);
+        } else if ( la.indel != null && length == 0 ) {
             annotateMotifAroundNonHherIndel(vc, la);
         } else {
             annotateMotifAroundSnp(vc, la);
@@ -256,8 +245,7 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
         return float(len(seqGC)) / len(seq)
          */
         int         begin = vc.getStart() - (GC_CONTENT_SIZE / 2);
-        int         end = begin + GC_CONTENT_SIZE;
-        String      seq = getReferenceMotif(la, begin, end);
+        String      seq = getRefMotif(la, begin + 1, GC_CONTENT_SIZE);
         int         gcCount = 0;
         for ( byte b : seq.getBytes() ) {
             if ( b == 'G' || b == 'C' ) {
@@ -325,14 +313,12 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
         if ( altEncs != null ) {
             boolean cycleskip = refEncs.length != altEncs.length;
             boolean passCycleskip = !cycleskip && !Arrays.equals(refEncs, altEncs);
-            boolean s = cycleskip || passCycleskip;
-            boolean nonCycleSkip = !s;
 
             if ( cycleskip )
                 css = C_CSS_CS;
             else if ( passCycleskip )
                 css = C_CSS_PCS;
-            else if ( nonCycleSkip )
+            else
                 css = C_CSS_NS;
         }
 
@@ -393,8 +379,8 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
         hmer_length = rec['hmer_indel_length']
         return chrom[pos - size:pos].seq.upper(), chrom[pos + hmer_length:pos + hmer_length + size].seq.upper()
          */
-        la.attributes.put(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getReferenceMotif(la,vc.getStart() - MOTIF_SIZE, vc.getStart()));
-        la.attributes.put(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getReferenceMotif(la, vc.getStart() + hmerLength, vc.getStart() + hmerLength + MOTIF_SIZE));
+        la.attributes.put(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getRefMotif(la,vc.getStart() - MOTIF_SIZE, MOTIF_SIZE));
+        la.attributes.put(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getRefMotif(la, vc.getStart() + hmerLength, MOTIF_SIZE));
     }
 
     private void annotateMotifAroundNonHherIndel(final VariantContext vc, final LocalAttributes la) {
@@ -404,51 +390,39 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
                   len(rec['ref']) - 1 + size].seq.upper()
          */
         int         refLength = vc.getReference().length();
-        la.attributes.put(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getReferenceMotif(la, vc.getStart() - MOTIF_SIZE, vc.getStart()));
-        la.attributes.put(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getReferenceMotif(la, vc.getStart() + refLength - 1, vc.getStart() + refLength - 1 + MOTIF_SIZE));
+        la.attributes.put(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getRefMotif(la, vc.getStart() - MOTIF_SIZE, MOTIF_SIZE));
+        la.attributes.put(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getRefMotif(la, vc.getStart() + refLength, MOTIF_SIZE));
     }
 
     private void annotateMotifAroundSnp(final VariantContext vc, final LocalAttributes la) {
         /*
         return chrom[pos - size - 1:pos - 1].seq.upper(), chrom[pos:pos + size].seq.upper()
          */
-        la.attributes.put(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getReferenceMotif(la, vc.getStart() - MOTIF_SIZE - 1, vc.getStart() - 1));
-        la.attributes.put(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getReferenceMotif(la, vc.getStart(), vc.getStart() + MOTIF_SIZE));
+        la.attributes.put(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getRefMotif(la, vc.getStart() - MOTIF_SIZE, MOTIF_SIZE));
+        la.attributes.put(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getRefMotif(la, vc.getEnd() + 1, MOTIF_SIZE));
     }
 
     // get a single nucleoid from reference
     private byte getReferenceNucleoid(final LocalAttributes la, final int start) {
-        int         index = start - la.ref.getWindow().getStart() + 1;
+        int         index = start - la.ref.getWindow().getStart();
         byte[]      bases = la.ref.getBases();
         Utils.validIndex(index, bases.length);
         return bases[index];
     }
 
     // get motif from reference
-    private String getReferenceMotif(final LocalAttributes la, final int start, final int end) {
+    private String getRefMotif(final LocalAttributes la, final int start, final int length) {
         byte[]      bases = la.ref.getBases();
-        int         startIndex = start - la.ref.getWindow().getStart() + 1;
-        int         endIndex = end - la.ref.getWindow().getStart() + 1;
-        if ( Math.min(startIndex, endIndex) < 0 || Math.max(startIndex, endIndex) >= bases.length )
-            return "?";
+        int         startIndex = start - la.ref.getWindow().getStart();
+        int         endIndex = startIndex + length;
         Utils.validIndex(startIndex, bases.length);
-        Utils.validIndex(endIndex, bases.length);
+        Utils.validIndex(endIndex-1, bases.length);
         return new String(Arrays.copyOfRange(bases, startIndex, endIndex));
-    }
-
-    private int hmerLength(final LocalAttributes la, final int start) {
-        byte        base = getReferenceNucleoid(la, start);
-        int         length = 1;
-        while ( getReferenceNucleoid(la, start + length) == base )
-            length++;
-        return length;
-
     }
 
     @VisibleForTesting
     static Map<String, Object> annotateForTesting(final ReferenceContext ref, final VariantContext vc) {
 
-        GenotypeBuilder             gb = new GenotypeBuilder();
         UltimaConcordanceAnnotator  annotator = new UltimaConcordanceAnnotator();
 
         return annotator.annotate(ref, vc, null);
