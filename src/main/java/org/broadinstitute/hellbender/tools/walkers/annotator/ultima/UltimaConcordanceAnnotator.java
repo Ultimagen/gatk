@@ -11,6 +11,7 @@ import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.tools.walkers.annotator.InfoFieldAnnotation;
 import org.broadinstitute.hellbender.tools.walkers.annotator.StandardMutectAnnotation;
+import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotator;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.help.HelpConstants;
@@ -111,7 +112,7 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
         }
 
         // if here, return default
-        return FLOW_ORDER_DEFAULT;
+        return VariantAnnotator.flowOrder != null ? VariantAnnotator.flowOrder : FLOW_ORDER_DEFAULT;
     }
 
     @Override
