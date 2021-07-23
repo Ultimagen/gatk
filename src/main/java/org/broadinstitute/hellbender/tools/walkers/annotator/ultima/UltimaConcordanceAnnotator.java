@@ -140,9 +140,6 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
 
         if ( vc.isIndel() ) {
 
-            if ( vc.getAlleles().size() > 2 )
-                logger.info("indel has more that 2 alleles: " + vc);
-
             /*
             if not x['indel']:
                 return None
@@ -166,6 +163,28 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
 
     // "hmer_indel_length" and "hmer_indel_nuc"
     private void isHmerIndel(final VariantContext vc, final LocalAttributes la) {
+
+        if ( vc.isIndel() ) {
+
+            // find out if reference allele is an hmer
+            for ( Allele a : vc.getAlleles() )
+                if ( a.isReference() ) {
+                    byte[]          bases = a.getBases();
+                    for ( int i = 1 ; i < bases.length ; i++ ) {
+                        if (bases[i] != bases[0])
+                            return;
+                    }
+
+                    // if we're here, then it is an hmer
+                    la.hmerIndelLength = a.length();
+                    la.attributes.put(GATKVCFConstants.ULTIMA_HMER_INDEL_NUC, Character.toString((char)bases[0]));
+                    break;
+                }
+        }
+    }
+
+    // "hmer_indel_length" and "hmer_indel_nuc"
+    private void isHmerIndel_OLD(final VariantContext vc, final LocalAttributes la) {
 
         if ( vc.isIndel() ) {
             List<Allele> alt = vc.getAlleles().stream()
