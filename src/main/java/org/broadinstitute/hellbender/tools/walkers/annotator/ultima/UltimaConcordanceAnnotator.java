@@ -47,6 +47,8 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
         String      leftMotif;
         String      rightMotif;
 
+        String      refAlleleHmerAndRightMotif;
+
         Map<String, Object> attributes = new LinkedHashMap<>();
     }
 
@@ -173,7 +175,7 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
 
             // get byte before and after
             byte        before = getReferenceNucleoid(la, vc.getStart() - 1);
-            byte        after = getReferenceNucleoid(la, vc.getEnd() + 1);
+            byte[]      after = getReferenceHmerPlus(la, vc.getEnd() + 1, MOTIF_SIZE);
 
             // build two haplotypes. add byte before and after
             byte[]      refHap = buildHaplotype(before, ref.getBases(), after);
@@ -189,7 +191,13 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
 
             // key must have only one difference, which should not be between a zero and something
             int     diffIndex = -1;
+            int     refBasesCountUpInclHmer = 0;
             for ( int n = 0 ; n < refKey.length ; n++ ) {
+                // count ref bases up to and including difference key
+                if ( diffIndex < 0 )
+                    refBasesCountUpInclHmer += refKey[n];
+
+                // is this the (one) difference key?
                 if ( refKey[n] != altKey[n] ) {
                     if ( diffIndex >= 0 )
                         return;
@@ -207,31 +215,32 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
             la.hmerIndelLength = refKey[diffIndex];
             la.attributes.put(GATKVCFConstants.ULTIMA_HMER_INDEL_LENGTH, la.hmerIndelLength);
             la.attributes.put(GATKVCFConstants.ULTIMA_HMER_INDEL_NUC, Character.toString((char)nuc));
+
+            // at this point, we can generate the right motif (for the hmer indel) as we already have the location
+            // of the hmer-indel and the bases following it
+            la.rightMotif = new String(Arrays.copyOfRange(refHap, refBasesCountUpInclHmer, Math.min(refHap.length, refBasesCountUpInclHmer + MOTIF_SIZE)));
+            la.refAlleleHmerAndRightMotif = new String(Arrays.copyOfRange(refHap, 1, Math.min(refHap.length, refBasesCountUpInclHmer + MOTIF_SIZE)));
         }
     }
 
-    private byte[] buildHaplotype(byte before, byte[] bases, byte after) {
+    private byte[] buildHaplotype(byte before, byte[] bases, byte[] after) {
 
-        byte[]  hap = new byte[bases.length + 2];
+        byte[]  hap = new byte[1 + bases.length + after.length];
 
         hap[0] = before;
         System.arraycopy(bases, 0, hap, 1, bases.length);
-        hap[hap.length - 1] = after;
+        System.arraycopy(after, 0, hap, 1 + bases.length, after.length);
 
         return hap;
     }
 
     private void getMotif(final VariantContext vc, final LocalAttributes la) {
 
-        int         length = la.hmerIndelLength;
-
-        if ( la.indel != null && length > 0 ) {
-            annotateMotifAroundHherIndel(vc, la, length);
-        } else if ( la.indel != null && length == 0 ) {
-            annotateMotifAroundNonHherIndel(vc, la);
-        } else {
-            annotateMotifAroundSnp(vc, la);
-        }
+        // we already did the hard work of building the right motif for hmer-indels. the rest should be simple
+        int         refLength = vc.getReference().length();
+        la.attributes.put(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getRefMotif(la, vc.getStart() - MOTIF_SIZE, MOTIF_SIZE));
+        if ( la.rightMotif == null )
+            la.attributes.put(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getRefMotif(la, vc.getStart() + refLength, MOTIF_SIZE));
     }
 
     private void gcContent(final VariantContext vc, final LocalAttributes la) {
@@ -372,36 +381,6 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
         return Arrays.copyOfRange(key, 0, keySize);
     }
 
-    private void annotateMotifAroundHherIndel(final VariantContext vc, final LocalAttributes la, final int hmerLength) {
-        /*
-        chrom = faidx[rec['chrom']]
-        pos = rec['pos']
-        hmer_length = rec['hmer_indel_length']
-        return chrom[pos - size:pos].seq.upper(), chrom[pos + hmer_length:pos + hmer_length + size].seq.upper()
-         */
-        la.attributes.put(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getRefMotif(la,vc.getStart() - MOTIF_SIZE, MOTIF_SIZE));
-        la.attributes.put(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getRefMotif(la, vc.getStart() + hmerLength, MOTIF_SIZE));
-    }
-
-    private void annotateMotifAroundNonHherIndel(final VariantContext vc, final LocalAttributes la) {
-        /*
-        return chrom[pos - size:pos].seq.upper(),\
-            chrom[pos + len(rec['ref']) - 1:pos +
-                  len(rec['ref']) - 1 + size].seq.upper()
-         */
-        int         refLength = vc.getReference().length();
-        la.attributes.put(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getRefMotif(la, vc.getStart() - MOTIF_SIZE, MOTIF_SIZE));
-        la.attributes.put(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getRefMotif(la, vc.getStart() + refLength, MOTIF_SIZE));
-    }
-
-    private void annotateMotifAroundSnp(final VariantContext vc, final LocalAttributes la) {
-        /*
-        return chrom[pos - size - 1:pos - 1].seq.upper(), chrom[pos:pos + size].seq.upper()
-         */
-        la.attributes.put(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getRefMotif(la, vc.getStart() - MOTIF_SIZE, MOTIF_SIZE));
-        la.attributes.put(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getRefMotif(la, vc.getEnd() + 1, MOTIF_SIZE));
-    }
-
     // get a single nucleoid from reference
     private byte getReferenceNucleoid(final LocalAttributes la, final int start) {
         int         index = start - la.ref.getWindow().getStart();
@@ -410,6 +389,25 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
         return bases[index];
     }
 
+    // get an hmer from reference plus a number of additional bases
+    private byte[] getReferenceHmerPlus(final LocalAttributes la, final int start, final int additional) {
+        int         index = start - la.ref.getWindow().getStart();
+        byte[]      bases = la.ref.getBases();
+        Utils.validIndex(index, bases.length);
+
+        // get hmer
+        StringBuilder sb = new StringBuilder();
+        byte          base0 = bases[index++];
+        sb.append((char)base0);
+        for ( ; index < bases.length && bases[index] == base0 ; index++ )
+            sb.append((char)bases[index]);
+
+        // get additional
+        for ( int n = 0 ; n < additional && index < bases.length ; n++, index++ )
+            sb.append((char)bases[index]);
+
+        return sb.toString().getBytes();
+    }
     // get motif from reference
     private String getRefMotif(final LocalAttributes la, final int start, final int length) {
         byte[]      bases = la.ref.getBases();
