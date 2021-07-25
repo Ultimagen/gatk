@@ -240,7 +240,8 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
         int         refLength = vc.getReference().length();
         la.attributes.put(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getRefMotif(la, vc.getStart() - MOTIF_SIZE, MOTIF_SIZE));
         if ( la.rightMotif == null )
-            la.attributes.put(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif = getRefMotif(la, vc.getStart() + refLength, MOTIF_SIZE));
+            la.rightMotif = getRefMotif(la, vc.getStart() + refLength, MOTIF_SIZE);
+        la.attributes.put(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif);
     }
 
     private void gcContent(final VariantContext vc, final LocalAttributes la) {

@@ -2,17 +2,21 @@ package org.broadinstitute.hellbender.tools.walkers.annotator.ultima;
 
 import htsjdk.samtools.SAMSequenceDictionary;
 import htsjdk.samtools.SAMSequenceRecord;
+import htsjdk.samtools.util.Locatable;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.variantcontext.VariantContextBuilder;
+import org.apache.commons.lang3.StringUtils;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.engine.ReferenceDataSource;
+import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotator;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.reference.ReferenceBases;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -21,40 +25,76 @@ public class UltimaConcordanceAnnotatorUnitTest {
     @Test
     public void testBasic() {
 
-        final Object[][]        testData = {
+        final String[][]        testData = {
+                // order:
+                // refbases, altAllele (include a space before and after refAllele
+                // indel-class, indel-length, hmer-indel-lenfth, hmer-indel-nuc
+                // left-motif, right-motif, gc-content, cycleskip-status
+                // value that starts with "!" means ignore
                 {
-                    // for now only a basic test isd defined. more could be added below using the same format
-                    "GTATCATCATCGGA", 6, 6, "A", "AATC",                // refbases, start, stop, refAllele, altAllele
-                    UltimaConcordanceAnnotator.C_INSERT, "3", null,     // indel-classify, indel-lenfth, hmer-indel-nuc
-                    "TATCA", "TCATC", (float)0.3, UltimaConcordanceAnnotator.C_NA // left-motif, right-motif, gc-content, cycleskip-status
+                        // a simple SNP
+                        "GTATC A TCATCGGA", "C",
+                        "NA", null, null, null, "GTATC", "TCATC", "0.3", "possible-cycle-skip"
+                },
+                {
+                        // not hmer indel
+                        "TATCT CA TTGACCAA", "C",
+                        "del", "1", null, null, "TATCT", "TTGAC", "0.3", "NA"
+                },
+                {
+                        // del hmer indel
+                        "TATCTC AT TGACCAA", "A",
+                        "del", "1", "2", "T", "ATCTC", "GACCA", "0.4", "NA"
+                },
+                {
+                        // ins hmer indel
+                        "TATCT C ATTGACCAA", "CA",
+                        "ins", "1", "1", "A", "TATCT", "TTGAC", "0.3", "NA"
                 }
         };
+
+        // setup flow order
+        VariantAnnotator.flowOrder = "TGCA";
 
         // should be in same order as test data!!!!
         final List<String>      expectedAttrs = (new UltimaConcordanceAnnotator()).getKeyNames();
 
         // loop on test data
-        for ( Object[] data : testData ) {
+        for ( String[] data : testData ) {
 
             // prepare
-            final ReferenceContext ref = buildReferenceContext(data[0].toString(), Integer.parseInt(data[1].toString()), Integer.parseInt(data[2].toString()));
-            final VariantContext vc = buildVariantContext(ref, data[3].toString(), data[4].toString());
+            final int        refAlleleStart = data[0].indexOf(' ');
+            final int        refAlleleEnd = data[0].indexOf(' ', refAlleleStart + 1);
+            final String     refAllele = data[0].substring(refAlleleStart + 1, refAlleleEnd);
+            final ReferenceContext ref = buildReferenceContext(data[0].replace(" ", ""), refAlleleStart + 1, refAlleleEnd - 1);
+            final VariantContext vc = buildVariantContext(ref, refAllele, data[1]);
+            String          msg = "on " + StringUtils.join(data, " ");
 
             // invoke
             final Map<String, Object> attrs = UltimaConcordanceAnnotator.annotateForTesting(ref, vc);
-            Assert.assertNotNull(attrs);
+            Assert.assertNotNull(attrs, msg);
 
             // check that all expected attributes are there
-            for ( int n = 0 ; n < 7 ; n++ ) {
-                Object          elem = data[5+n];
-                if ( elem != null )
-                    Assert.assertEquals(attrs.get(expectedAttrs.get(n)), elem);
+            for ( int n = 0 ; n < 8 ; n++ ) {
+                String       key = expectedAttrs.get(n);
+                String       elem = data[2+n];
+                String       keyMsg = "on " + key + " " + msg;
+                if ( elem != null && elem.charAt(0) != '!' ) {
+                    Object v = attrs.get(key);
+                    if (v instanceof List) {
+                        v = StringUtils.join((List) v, ",");
+                    }
+                    Assert.assertEquals(v.toString(), elem, keyMsg);
+                } else if ( elem == null ) {
+                    Assert.assertFalse(attrs.containsKey(key), keyMsg);
+                }
             }
         }
     }
 
     private ReferenceContext buildReferenceContext(String refBases, int start, int stop) {
 
+        // note that locations here are 1 based
         final String                insLoc = "chr1";
         final SimpleInterval        interval = new SimpleInterval(insLoc, start, stop);
         final byte[]                refBytes = refBases.getBytes();
