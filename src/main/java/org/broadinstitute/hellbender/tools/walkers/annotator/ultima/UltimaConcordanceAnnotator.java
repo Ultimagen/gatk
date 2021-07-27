@@ -182,8 +182,10 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
             byte[]      altHap = buildHaplotype(before, alt.getBases(), after);
 
             // convert to flow space
-            int[]       refKey = generateKeyFromSequence(new String(refHap), la.flowOrder);
-            int[]       altKey = generateKeyFromSequence(new String(altHap), la.flowOrder);
+            int[]       refKey = generateKeyFromSequence(new String(refHap), la.flowOrder, false);
+            int[]       altKey = generateKeyFromSequence(new String(altHap), la.flowOrder, false);
+            if ( refKey == null || altKey == null )
+                return;
 
             // key must be the same length to begin with
             if ( refKey.length != altKey.length )
@@ -276,8 +278,8 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
             Allele      alt = vc.getAlleles().get(1 - refIndex);
 
             // convert to flow space
-            int[]       refKey = generateKeyFromSequence(la.leftMotif + ref.getBaseString() + la.rightMotif, la.flowOrder);
-            int[]       altKey = generateKeyFromSequence(la.leftMotif + alt.getBaseString() + la.rightMotif, la.flowOrder);
+            int[]       refKey = generateKeyFromSequence(la.leftMotif + ref.getBaseString() + la.rightMotif, la.flowOrder, true);
+            int[]       altKey = generateKeyFromSequence(la.leftMotif + alt.getBaseString() + la.rightMotif, la.flowOrder, true);
 
             // assign initial css
             css = (refKey.length != altKey.length) ? C_CSS_CS : C_CSS_NS;
@@ -296,10 +298,12 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
         la.attributes.put(GATKVCFConstants.ULTIMA_CYCLESKIP_STATUS, css);
     }
 
-    private int[] generateKeyFromSequence(final String sequence, final String flowOrder) {
+    private int[] generateKeyFromSequence(String sequence, final String flowOrder, boolean ignoreNBases) {
 
         if ( sequence == null )
             return null;
+        if ( ignoreNBases && sequence.indexOf('N') >= 0 )
+            sequence = sequence.replace("N", "");
         int[]         key = new int[sequence.length() * 4];
         /*
         key = []
@@ -325,7 +329,7 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
             byte    base = flow[flowPos];
             int     hcount = 0;
             for ( int i = pos ; i < seq.length ; i++ ) {
-                if ( seq[i] == 'N')
+                if ( (seq[i] == 'N') || (seq[i] == '*') )
                     return null;
                 else if ( seq[i] == base )
                     hcount++;
