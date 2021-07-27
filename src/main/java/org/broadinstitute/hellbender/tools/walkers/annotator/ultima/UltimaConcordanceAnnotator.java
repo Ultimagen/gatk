@@ -279,7 +279,18 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
             int[]       refKey = generateKeyFromSequence(la.leftMotif + ref.getBaseString() + la.rightMotif, la.flowOrder);
             int[]       altKey = generateKeyFromSequence(la.leftMotif + alt.getBaseString() + la.rightMotif, la.flowOrder);
 
+            // assign initial css
             css = (refKey.length != altKey.length) ? C_CSS_CS : C_CSS_NS;
+
+            // if same length (NS) then see if it is possible-cycle-skip
+            if ( css == C_CSS_NS ) {
+                for ( int n = 0 ; n < refKey.length ; n++ ) {
+                    if ( (refKey[n] == 0) ^ (altKey[n] == 0) ) {
+                        css = C_CSS_PCS;
+                        break;
+                    }
+                }
+            }
         }
 
         la.attributes.put(GATKVCFConstants.ULTIMA_CYCLESKIP_STATUS, css);

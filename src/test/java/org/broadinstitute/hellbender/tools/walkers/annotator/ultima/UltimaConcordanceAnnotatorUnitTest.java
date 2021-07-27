@@ -33,8 +33,13 @@ public class UltimaConcordanceAnnotatorUnitTest {
                 // value that starts with "!" means ignore
                 {
                         // a simple SNP
+                        "GTATC A ACATCGGA", "C",
+                        "NA", null, null, null, "GTATC", "ACATC", "0.3", "non-skip"
+                },
+                {
+                        // a possible-cycle-skip SNP
                         "GTATC A TCATCGGA", "C",
-                        "NA", null, null, null, "GTATC", "TCATC", "0.3", "non-skip"
+                        "NA", null, null, null, "GTATC", "TCATC", "0.3", "possible-cycle-skip"
                 },
                 {
                         // a cycle-skip SNP
