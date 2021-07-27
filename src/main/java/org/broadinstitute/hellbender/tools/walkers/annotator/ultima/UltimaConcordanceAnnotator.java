@@ -267,69 +267,19 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
 
     private void cycleSkip(final VariantContext vc, final LocalAttributes la) {
 
-        /*
-        #gt_field is None
-        na_pos = df['indel'] | (df['alleles'].apply(len) > 2)
-         */
-        boolean naIndicator = la.indel != null || vc.getAlleles().size() > 2;
-
-        /*
-        df['cycleskip_status'] = "NA"
-        snp_pos = ~na_pos
-        snps = df.loc[snp_pos].copy()
-        left_last = np.array(snps['left_motif']).astype(np.string_)
-        right_first = np.array(snps['right_motif']).astype(np.string_)
-         */
         String      css = C_NA;
-        boolean     snpIndicator = !naIndicator;
+        if ( !vc.isIndel() && vc.getAlleles().size() == 2 ) {
 
-        /*
-        ref = np.array(snps['ref']).astype(np.string_)
-        alt = np.array(snps['alleles'].apply(
-            lambda x: x[1] if len(x) > 1 else None)).astype(np.string_)
-         */
-        String      ref = vc.getReference().getBaseString();
-        String      alt = (snpIndicator && (vc.getAlleles().size() > 1)) ? vc.getAlleles().get(1).getBaseString() : null;
+            // access alleles
+            int         refIndex = vc.getAlleles().get(0).isReference() ? 0 : 1;
+            Allele      ref = vc.getAlleles().get(refIndex);
+            Allele      alt = vc.getAlleles().get(1 - refIndex);
 
-        /*
-        ref_seqs = np.char.add(np.char.add(left_last, ref), right_first)
-        alt_seqs = np.char.add(np.char.add(left_last, alt), right_first)
-         */
-        String      refSeqs = null;
-        String      altSeqs = null;
-        if ( la.leftMotif != null && la.rightMotif != null && alt != null ) {
-            refSeqs = la.leftMotif + ref + la.rightMotif;
-            altSeqs = la.leftMotif + alt + la.rightMotif;
-        }
+            // convert to flow space
+            int[]       refKey = generateKeyFromSequence(la.leftMotif + ref.getBaseString() + la.rightMotif, la.flowOrder);
+            int[]       altKey = generateKeyFromSequence(la.leftMotif + alt.getBaseString() + la.rightMotif, la.flowOrder);
 
-        /*
-        ref_encs = [utils.generateKeyFromSequence(
-                str(np.char.decode(x)), flow_order) for x in ref_seqs]
-        alt_encs = [utils.generateKeyFromSequence(
-                str(np.char.decode(x)), flow_order) for x in alt_seqs]
-         */
-        int[]   refEncs = generateKeyFromSequence(refSeqs, la.flowOrder);
-        int[]   altEncs = generateKeyFromSequence(altSeqs, la.flowOrder);
-
-        /*
-        cycleskip = np.array([x for x in range(len(ref_encs))
-                          if len(ref_encs[x]) != len(alt_encs[x])])
-        poss_cycleskip = [x for x in range(len(ref_encs)) if len(ref_encs[x]) == len(alt_encs[x])
-                          and (np.any(ref_encs[x][ref_encs[x] - alt_encs[x] != 0] == 0) or
-                           np.any(alt_encs[x][ref_encs[x] - alt_encs[x] != 0] == 0))]
-        s = set(np.concatenate((cycleskip, poss_cycleskip)))
-        non_cycleskip = [x for x in range(len(ref_encs)) if x not in s]
-         */
-        if ( altEncs != null ) {
-            boolean cycleskip = refEncs.length != altEncs.length;
-            boolean passCycleskip = !cycleskip && !Arrays.equals(refEncs, altEncs);
-
-            if ( cycleskip )
-                css = C_CSS_CS;
-            else if ( passCycleskip )
-                css = C_CSS_PCS;
-            else
-                css = C_CSS_NS;
+            css = (refKey.length != altKey.length) ? C_CSS_CS : C_CSS_NS;
         }
 
         la.attributes.put(GATKVCFConstants.ULTIMA_CYCLESKIP_STATUS, css);

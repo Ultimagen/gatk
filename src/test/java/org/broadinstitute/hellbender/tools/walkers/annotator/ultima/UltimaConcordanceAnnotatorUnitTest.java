@@ -34,7 +34,12 @@ public class UltimaConcordanceAnnotatorUnitTest {
                 {
                         // a simple SNP
                         "GTATC A TCATCGGA", "C",
-                        "NA", null, null, null, "GTATC", "TCATC", "0.3", "possible-cycle-skip"
+                        "NA", null, null, null, "GTATC", "TCATC", "0.3", "non-skip"
+                },
+                {
+                        // a cycle-skip SNP
+                        "GTATC A ACATCGGA", "T",
+                        "NA", null, null, null, "GTATC", "ACATC", "0.3", "cycle-skip"
                 },
                 {
                         // not hmer indel
