@@ -243,7 +243,7 @@ public class GATKVCFHeaderLines {
 
         // ultima annotations
         addInfoLine(new VCFInfoHeaderLine(ULTIMA_INDEL_CLASSIFY, VCFHeaderLineCount.A, VCFHeaderLineType.String, "ULTIMA_INDEL_CLASSIFY"));
-        addInfoLine(new VCFInfoHeaderLine(ULTIMA_INDEL_LENGTH, VCFHeaderLineCount.A, VCFHeaderLineType.String, "ULTIMA_INDEL_LENGTH"));
+        addInfoLine(new VCFInfoHeaderLine(ULTIMA_INDEL_LENGTH, VCFHeaderLineCount.A, VCFHeaderLineType.Integer, "ULTIMA_INDEL_LENGTH"));
         addInfoLine(new VCFInfoHeaderLine(ULTIMA_HMER_INDEL_LENGTH, 1, VCFHeaderLineType.Integer, "ULTIMA_HMER_INDEL_LENGTH"));
         addInfoLine(new VCFInfoHeaderLine(ULTIMA_HMER_INDEL_NUC, 1, VCFHeaderLineType.String, "ULTIMA_HMER_INDEL_NUC"));
         addInfoLine(new VCFInfoHeaderLine(ULTIMA_LEFT_MOTIF, 1, VCFHeaderLineType.String, "ULTIMA_LEFT_MOTIF"));

@@ -49,17 +49,17 @@ public class UltimaConcordanceAnnotatorUnitTest {
                 {
                         // not hmer indel
                         "TATCT CA TTGACCAA", "C",
-                        "del", "1", null, null, "TATCT", "TTGAC", "0.3", "NA"
+                        "del", "1", null, null, "ATCTC", "TTGAC", "0.3", "NA"
                 },
                 {
                         // del hmer indel
                         "TATCTC AT TGACCAA", "A",
-                        "del", "1", "2", "T", "ATCTC", "GACCA", "0.4", "NA"
+                        "del", "1", "2", "T", "TCTCA", "GACCA", "0.4", "NA"
                 },
                 {
                         // ins hmer indel
                         "TATCT C ATTGACCAA", "CA",
-                        "ins", "1", "1", "A", "TATCT", "TTGAC", "0.3", "NA"
+                        "ins", "1", "1", "A", "ATCTC", "TTGAC", "0.3", "NA"
                 }
         };
 

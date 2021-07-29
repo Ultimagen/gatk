@@ -241,6 +241,8 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
         // we already did the hard work of building the right motif for hmer-indels. the rest should be simple
         int         refLength = vc.getReference().length();
         la.attributes.put(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getRefMotif(la, vc.getStart() - MOTIF_SIZE, MOTIF_SIZE));
+        if ( vc.isIndel() )
+            la.attributes.put(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif.substring(1) + vc.getReference().getBaseString().substring(0, 1));
         if ( la.rightMotif == null )
             la.rightMotif = getRefMotif(la, vc.getStart() + refLength, MOTIF_SIZE);
         la.attributes.put(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif);
