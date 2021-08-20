@@ -1679,7 +1679,6 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
                vc.getAlternateAlleles().size() == 1 &&
                vc.getAlternateAllele(0).equals(Allele.NON_REF_ALLELE);
     }
-
     @Test
     public void testVcfBeforeRebase_flowLikelihoodOptimizedComp() throws Exception {
         Utils.resetRandomGenerator();
