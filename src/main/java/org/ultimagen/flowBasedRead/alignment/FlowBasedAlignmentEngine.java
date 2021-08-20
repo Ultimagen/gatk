@@ -99,7 +99,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         }
 
         result.normalizeLikelihoods(log10globalReadMismappingRate, symmetricallyNormalizeAllelesToReference);
-        ReadLikelihoodCalculationEngine.filterPoorlyModeledEvidence(result, dynamicReadDisqualification, expectedErrorRatePerBase, readDisqualificationScale);
+        filterPoorlyModeledEvidence(result, dynamicReadDisqualification, expectedErrorRatePerBase, readDisqualificationScale);
 
         return result;
     }
@@ -113,7 +113,8 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
      * @param expectedErrorRate  error rate for expected errors.
      * @return minimal likelihood for the read to be considered not poorly modeled
      */
-    private ToDoubleFunction<GATKRead> log10MinTrueLikelihood(final double expectedErrorRate) {
+    @Override
+    public ToDoubleFunction<GATKRead> log10MinTrueLikelihood(final double expectedErrorRate, final boolean capLikelihoods) {
         final double log10ErrorRate = Math.log10(expectedErrorRate);
         final double catastrophicErrorRate = Math.log10(fbargs.fillingValue);
 
@@ -467,7 +468,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
 
         result.normalizeLikelihoods(log10globalReadMismappingRate, symmetricallyNormalizeAllelesToReference);
         if ( filterPoorly )
-            result.filterPoorlyModeledEvidence(log10MinTrueLikelihood(expectedErrorRatePerBase));
+            result.filterPoorlyModeledEvidence(log10MinTrueLikelihood(expectedErrorRatePerBase, false));
 
         return result;
     }

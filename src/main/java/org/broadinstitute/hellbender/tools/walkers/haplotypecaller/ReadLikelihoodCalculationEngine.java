@@ -58,7 +58,7 @@ public interface ReadLikelihoodCalculationEngine extends AutoCloseable {
      * @param expectedErrorRatePerBase      amount of uncertainty to tolerate per read-base (in log scale)
      * @param readDisqualificationScale     constant used to scale the dynamic read disqualificaiton threshold
      */
-    static void filterPoorlyModeledEvidence(final AlleleLikelihoods<GATKRead, Haplotype> result, final boolean dynamicDisqualification, final double expectedErrorRatePerBase, final double readDisqualificationScale) {
+    default void filterPoorlyModeledEvidence(final AlleleLikelihoods<GATKRead, Haplotype> result, final boolean dynamicDisqualification, final double expectedErrorRatePerBase, final double readDisqualificationScale) {
         if (dynamicDisqualification) {
             result.filterPoorlyModeledEvidence(daynamicLog10MinLiklihoodModel(readDisqualificationScale, log10MinTrueLikelihood(expectedErrorRatePerBase, false)));
         } else {
@@ -84,7 +84,7 @@ public interface ReadLikelihoodCalculationEngine extends AutoCloseable {
     /**
      * Standard read disqulification threshold algorithm
      */
-    static ToDoubleFunction<GATKRead> log10MinTrueLikelihood(final double maximumErrorPerBase, final boolean capLikelihoods) {
+    default ToDoubleFunction<GATKRead> log10MinTrueLikelihood(final double maximumErrorPerBase, final boolean capLikelihoods) {
         return read -> {
             // TODO this might be replaced by an explicit calculation
             final int qualifiedReadLength = read.getTransientAttribute(PairHMMLikelihoodCalculationEngine.HMM_BASE_QUALITIES_TAG) != null ? ((byte[])read.getTransientAttribute(PairHMMLikelihoodCalculationEngine.HMM_BASE_QUALITIES_TAG)).length : read.getLength();

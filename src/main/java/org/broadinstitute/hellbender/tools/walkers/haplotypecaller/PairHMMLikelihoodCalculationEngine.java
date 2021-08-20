@@ -192,8 +192,7 @@ public final class PairHMMLikelihoodCalculationEngine implements ReadLikelihoodC
         }
 
         result.normalizeLikelihoods(log10globalReadMismappingRate, symmetricallyNormalizeAllelesToReference);
-
-        ReadLikelihoodCalculationEngine.filterPoorlyModeledEvidence(result, dynamicDisqualification, expectedErrorRatePerBase, readDisqualificationScale);
+        filterPoorlyModeledEvidence(result, dynamicDisqualification, expectedErrorRatePerBase, readDisqualificationScale);
         return result;
     }
 
