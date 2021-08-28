@@ -98,7 +98,6 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             computeReadLikelihoods(result.sampleMatrix(i), hdr);
         }
 
-
         result.normalizeLikelihoods(log10globalReadMismappingRate, symmetricallyNormalizeAllelesToReference);
         ReadLikelihoodCalculationEngine.filterPoorlyModeledEvidence(result, dynamicReadDisqualification, expectedErrorRatePerBase, readDisqualificationScale);
 
@@ -153,7 +152,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             //get flow order for conversion.
             fo = hdr.getReadGroup(rd.getReadGroup()).getFlowOrder();
             if ( fo == null ) {
-                throw new GATKException("Unable to perform flow based alignment without the flow order information");
+               throw new GATKException("Unable to perform flow based alignment without the flow order information");
             }
 
             originalFlowOrder = fo.substring(0,fbargs.flowOrderCycleLength);
@@ -179,10 +178,10 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
                 }
             }
         }
-
         if ( flowOrder == null ) {
             throw new GATKException("Unable to perform flow based alignment without the flow order");
         }
+
         for (int i = 0; i < likelihoods.numberOfAlleles(); i++){
             final FlowBasedHaplotype fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i),
                         originalFlowOrder != null ? originalFlowOrder : flowOrder);
