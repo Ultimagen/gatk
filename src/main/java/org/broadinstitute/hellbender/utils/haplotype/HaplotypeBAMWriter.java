@@ -36,7 +36,6 @@ public class HaplotypeBAMWriter implements AutoCloseable {
 
     private final HaplotypeBAMDestination output;
     private WriterType writerType;
-    private boolean writeHaplotypes = true;
 
     /**
      * Possible modes for writing haplotypes to BAMs
@@ -193,11 +192,9 @@ public class HaplotypeBAMWriter implements AutoCloseable {
         Utils.nonNull(bestHaplotypes, "bestHaplotypes cannot be null");
         Utils.nonNull(paddedReferenceLoc, "paddedReferenceLoc cannot be null");
         int index = 0 ;
-        if (writeHaplotypes) {
-            for (final Haplotype haplotype : haplotypes) {
-                writeHaplotype(haplotype, paddedReferenceLoc, bestHaplotypes.contains(haplotype), callableRegion, index);
-                index++;
-            }
+        for (final Haplotype haplotype : haplotypes) {
+            writeHaplotype(haplotype, paddedReferenceLoc, bestHaplotypes.contains(haplotype), callableRegion, index);
+            index++;
         }
     }
 
