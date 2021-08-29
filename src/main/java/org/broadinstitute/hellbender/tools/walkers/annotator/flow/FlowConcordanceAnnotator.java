@@ -1,4 +1,4 @@
-package org.broadinstitute.hellbender.tools.walkers.annotator.ultima;
+package org.broadinstitute.hellbender.tools.walkers.annotator.flow;
 
 import com.google.common.annotations.VisibleForTesting;
 import htsjdk.variant.variantcontext.Allele;
@@ -18,11 +18,10 @@ import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
-@DocumentedFeature(groupName=HelpConstants.DOC_CAT_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_ANNOTATORS_SUMMARY, summary="UltimaConcordanceAnnotator")
-public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements StandardMutectAnnotation {
-    private final static Logger logger = LogManager.getLogger(UltimaConcordanceAnnotator.class);
+@DocumentedFeature(groupName=HelpConstants.DOC_CAT_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_ANNOTATORS_SUMMARY, summary="FlowConcordanceAnnotator")
+public class FlowConcordanceAnnotator extends InfoFieldAnnotation implements StandardMutectAnnotation {
+    private final static Logger logger = LogManager.getLogger(FlowConcordanceAnnotator.class);
 
     // additional constants
     protected static final String   C_INSERT = "ins";
@@ -75,10 +74,10 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
 
         // return attibutes
         if ( la.indel == null )
-            la.attributes.put(GATKVCFConstants.ULTIMA_INDEL_CLASSIFY, C_NA);
+            la.attributes.put(GATKVCFConstants.FLOW_INDEL_CLASSIFY, C_NA);
         if ( addDebugAnnotations ) {
-            la.attributes.put(GATKVCFConstants.ULTIMA_DBG_REF, makeDbgRef(ref, vc));
-            la.attributes.put(GATKVCFConstants.ULTIMA_DBG_REF_START, ref.getStart());
+            la.attributes.put(GATKVCFConstants.FLOW_DBG_REF, makeDbgRef(ref, vc));
+            la.attributes.put(GATKVCFConstants.FLOW_DBG_REF_START, ref.getStart());
         }
         return la.attributes;
     }
@@ -120,16 +119,16 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
     public List<String> getKeyNames() {
 
         List<String>        names = new LinkedList<>(Arrays.asList(
-                GATKVCFConstants.ULTIMA_INDEL_CLASSIFY, GATKVCFConstants.ULTIMA_INDEL_LENGTH,
-                GATKVCFConstants.ULTIMA_HMER_INDEL_LENGTH, GATKVCFConstants.ULTIMA_HMER_INDEL_NUC,
-                GATKVCFConstants.ULTIMA_LEFT_MOTIF, GATKVCFConstants.ULTIMA_RIGHT_MOTIF,
-                GATKVCFConstants.ULTIMA_GC_CONTENT,
-                GATKVCFConstants.ULTIMA_CYCLESKIP_STATUS));
+                GATKVCFConstants.FLOW_INDEL_CLASSIFY, GATKVCFConstants.FLOW_INDEL_LENGTH,
+                GATKVCFConstants.FLOW_HMER_INDEL_LENGTH, GATKVCFConstants.FLOW_HMER_INDEL_NUC,
+                GATKVCFConstants.FLOW_LEFT_MOTIF, GATKVCFConstants.FLOW_RIGHT_MOTIF,
+                GATKVCFConstants.FLOW_GC_CONTENT,
+                GATKVCFConstants.FLOW_CYCLESKIP_STATUS));
 
         if ( addDebugAnnotations ) {
             names.addAll(Arrays.asList(
-                    GATKVCFConstants.ULTIMA_DBG_REF,
-                    GATKVCFConstants.ULTIMA_DBG_REF_START));
+                    GATKVCFConstants.FLOW_DBG_REF,
+                    GATKVCFConstants.FLOW_DBG_REF_START));
 
         }
 
@@ -157,8 +156,8 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
                     indelLength.add(Math.abs(refLength - a.length()));
                 }
             }
-            la.attributes.put(GATKVCFConstants.ULTIMA_INDEL_CLASSIFY, la.indel = indelClassify);
-            la.attributes.put(GATKVCFConstants.ULTIMA_INDEL_LENGTH, la.indelLength = indelLength);
+            la.attributes.put(GATKVCFConstants.FLOW_INDEL_CLASSIFY, la.indel = indelClassify);
+            la.attributes.put(GATKVCFConstants.FLOW_INDEL_LENGTH, la.indelLength = indelLength);
         }
     }
 
@@ -215,8 +214,8 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
             // if here, we found the difference.
             byte            nuc = la.flowOrder.getBytes()[diffIndex % la.flowOrder.length()];
             la.hmerIndelLength = refKey[diffIndex];
-            la.attributes.put(GATKVCFConstants.ULTIMA_HMER_INDEL_LENGTH, la.hmerIndelLength);
-            la.attributes.put(GATKVCFConstants.ULTIMA_HMER_INDEL_NUC, Character.toString((char)nuc));
+            la.attributes.put(GATKVCFConstants.FLOW_HMER_INDEL_LENGTH, la.hmerIndelLength);
+            la.attributes.put(GATKVCFConstants.FLOW_HMER_INDEL_NUC, Character.toString((char)nuc));
 
             // at this point, we can generate the right motif (for the hmer indel) as we already have the location
             // of the hmer-indel and the bases following it
@@ -240,12 +239,12 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
 
         // we already did the hard work of building the right motif for hmer-indels. the rest should be simple
         int         refLength = vc.getReference().length();
-        la.attributes.put(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif = getRefMotif(la, vc.getStart() - MOTIF_SIZE, MOTIF_SIZE));
+        la.attributes.put(GATKVCFConstants.FLOW_LEFT_MOTIF, la.leftMotif = getRefMotif(la, vc.getStart() - MOTIF_SIZE, MOTIF_SIZE));
         if ( vc.isIndel() )
-            la.attributes.put(GATKVCFConstants.ULTIMA_LEFT_MOTIF, la.leftMotif.substring(1) + vc.getReference().getBaseString().substring(0, 1));
+            la.attributes.put(GATKVCFConstants.FLOW_LEFT_MOTIF, la.leftMotif.substring(1) + vc.getReference().getBaseString().substring(0, 1));
         if ( la.rightMotif == null )
             la.rightMotif = getRefMotif(la, vc.getStart() + refLength, MOTIF_SIZE);
-        la.attributes.put(GATKVCFConstants.ULTIMA_RIGHT_MOTIF, la.rightMotif);
+        la.attributes.put(GATKVCFConstants.FLOW_RIGHT_MOTIF, la.rightMotif);
     }
 
     private void gcContent(final VariantContext vc, final LocalAttributes la) {
@@ -266,7 +265,7 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
                 gcCount++;
             }
         }
-        la.attributes.put(GATKVCFConstants.ULTIMA_GC_CONTENT, (float)gcCount / seq.length());
+        la.attributes.put(GATKVCFConstants.FLOW_GC_CONTENT, (float)gcCount / seq.length());
     }
 
     private void cycleSkip(final VariantContext vc, final LocalAttributes la) {
@@ -297,7 +296,7 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
             }
         }
 
-        la.attributes.put(GATKVCFConstants.ULTIMA_CYCLESKIP_STATUS, css);
+        la.attributes.put(GATKVCFConstants.FLOW_CYCLESKIP_STATUS, css);
     }
 
     private int[] generateKeyFromSequence(String sequence, final String flowOrder, boolean ignoreNBases) {
@@ -389,7 +388,7 @@ public class UltimaConcordanceAnnotator extends InfoFieldAnnotation implements S
     @VisibleForTesting
     static Map<String, Object> annotateForTesting(final ReferenceContext ref, final VariantContext vc) {
 
-        UltimaConcordanceAnnotator  annotator = new UltimaConcordanceAnnotator();
+        FlowConcordanceAnnotator annotator = new FlowConcordanceAnnotator();
 
         return annotator.annotate(ref, vc, null);
     }

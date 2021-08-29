@@ -1,8 +1,7 @@
-package org.broadinstitute.hellbender.tools.walkers.annotator.ultima;
+package org.broadinstitute.hellbender.tools.walkers.annotator.flow;
 
 import htsjdk.samtools.SAMSequenceDictionary;
 import htsjdk.samtools.SAMSequenceRecord;
-import htsjdk.samtools.util.Locatable;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.variantcontext.VariantContextBuilder;
@@ -16,11 +15,10 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-public class UltimaConcordanceAnnotatorUnitTest {
+public class FlowConcordanceAnnotatorUnitTest {
 
     @Test
     public void testBasic() {
@@ -67,7 +65,7 @@ public class UltimaConcordanceAnnotatorUnitTest {
         VariantAnnotator.flowOrder = "TGCA";
 
         // should be in same order as test data!!!!
-        final List<String>      expectedAttrs = (new UltimaConcordanceAnnotator()).getKeyNames();
+        final List<String>      expectedAttrs = (new FlowConcordanceAnnotator()).getKeyNames();
 
         // loop on test data
         for ( String[] data : testData ) {
@@ -81,7 +79,7 @@ public class UltimaConcordanceAnnotatorUnitTest {
             String          msg = "on " + StringUtils.join(data, " ");
 
             // invoke
-            final Map<String, Object> attrs = UltimaConcordanceAnnotator.annotateForTesting(ref, vc);
+            final Map<String, Object> attrs = FlowConcordanceAnnotator.annotateForTesting(ref, vc);
             Assert.assertNotNull(attrs, msg);
 
             // check that all expected attributes are there
