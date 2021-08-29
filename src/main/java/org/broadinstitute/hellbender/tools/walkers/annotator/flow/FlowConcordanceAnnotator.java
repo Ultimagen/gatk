@@ -1,11 +1,14 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator.flow;
 
 import com.google.common.annotations.VisibleForTesting;
+import htsjdk.samtools.SAMReadGroupRecord;
+import htsjdk.samtools.SAMRecord;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.help.DocumentedFeature;
+import org.broadinstitute.hellbender.engine.GATKTool;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.tools.walkers.annotator.InfoFieldAnnotation;
 import org.broadinstitute.hellbender.tools.walkers.annotator.StandardMutectAnnotation;
@@ -14,6 +17,7 @@ import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.help.HelpConstants;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
+import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
 
@@ -100,15 +104,26 @@ public class FlowConcordanceAnnotator extends InfoFieldAnnotation implements Sta
         if ( VariantAnnotator.flowOrder != null )
             return VariantAnnotator.flowOrder;
 
-            // extract from a read
+        // extract from a read
         if ( likelihoods != null ) {
             List<GATKRead>  reads = likelihoods.sampleEvidence(0);
             if ( reads.size() > 0 ) {
                 GATKRead        read = reads.get(0);
                 if ( read instanceof FlowBasedRead ) {
                     return ((FlowBasedRead)read).getFlowOrder();
+                } else if ( read.getReadGroup() != null ) {
+                    if ( GATKTool.onStartupHeederForReads != null ) {
+                        SAMReadGroupRecord rg = GATKTool.onStartupHeederForReads.getReadGroup(read.getReadGroup());
+                        if ( rg != null && rg.getFlowOrder() != null )
+                            return rg.getFlowOrder();
+                    }
                 }
             }
+        }
+
+        // has global?
+        if ( GATKTool.onStartupHeederForReads != null ) {
+
         }
 
         // if here, it is an error - we have no default for flow order
