@@ -31,17 +31,6 @@ public abstract class AnnotatorBase implements VariantContextAnnotator {
         this.referenceSequenceFile = referenceSequenceFile;
     }
 
-    // get nucleoid from reference
-    protected byte getReferenceNucleoid(final String contig, final int start) {
-        return referenceSequenceFile.getSubsequenceAt(contig, start, start).getBases()[0];
-    }
-
-    // get motif from reference
-    protected String getReferenceMotif(final String contig, final int start, final int end) {
-        return referenceSequenceFile.getSubsequenceAt(contig, start, end).getBaseString();
-    }
-
-
     // add a single 'cooked' annotation
     protected void annotate(final VariantContext vc, final String name, final Object value) {
         if ( value != null ) {
