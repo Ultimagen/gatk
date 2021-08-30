@@ -2,7 +2,7 @@ package org.broadinstitute.hellbender.utils.variant;
 
 import htsjdk.variant.vcf.*;
 import org.broadinstitute.hellbender.tools.walkers.annotator.*;
-import org.broadinstitute.hellbender.tools.walkers.annotator.flow.FlowConcordanceAnnotator;
+import org.broadinstitute.hellbender.tools.walkers.annotator.flow.FlowAnnotator;
 import org.broadinstitute.hellbender.utils.Utils;
 
 import java.util.*;
@@ -250,7 +250,7 @@ public class GATKVCFHeaderLines {
         addInfoLine(new VCFInfoHeaderLine(FLOW_RIGHT_MOTIF, 1, VCFHeaderLineType.String, "FLOW_RIGHT_MOTIF"));
         addInfoLine(new VCFInfoHeaderLine(FLOW_GC_CONTENT, 1, VCFHeaderLineType.Float, "FLOW_GC_CONTENT"));
         addInfoLine(new VCFInfoHeaderLine(FLOW_CYCLESKIP_STATUS, 1, VCFHeaderLineType.String, "FLOW_CYCLESKIP_STATUS"));
-        if (FlowConcordanceAnnotator.addDebugAnnotations ) {
+        if (FlowAnnotator.addDebugAnnotations ) {
             addInfoLine(new VCFInfoHeaderLine(FLOW_DBG_REF, 1, VCFHeaderLineType.String, "FLOW_DBG_REF"));
             addInfoLine(new VCFInfoHeaderLine(FLOW_DBG_REF_START, 1, VCFHeaderLineType.Integer, "FLOW_DBG_REF_START"));
         }

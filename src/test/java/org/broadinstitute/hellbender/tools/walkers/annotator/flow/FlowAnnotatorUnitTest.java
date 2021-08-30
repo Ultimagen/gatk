@@ -18,7 +18,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-public class FlowConcordanceAnnotatorUnitTest {
+public class FlowAnnotatorUnitTest {
 
     @Test
     public void testBasic() {
@@ -65,7 +65,7 @@ public class FlowConcordanceAnnotatorUnitTest {
         VariantAnnotator.flowOrder = "TGCA";
 
         // should be in same order as test data!!!!
-        final List<String>      expectedAttrs = (new FlowConcordanceAnnotator()).getKeyNames();
+        final List<String>      expectedAttrs = (new FlowAnnotator()).getKeyNames();
 
         // loop on test data
         for ( String[] data : testData ) {
@@ -79,7 +79,7 @@ public class FlowConcordanceAnnotatorUnitTest {
             String          msg = "on " + StringUtils.join(data, " ");
 
             // invoke
-            final Map<String, Object> attrs = FlowConcordanceAnnotator.annotateForTesting(ref, vc);
+            final Map<String, Object> attrs = FlowAnnotator.annotateForTesting(ref, vc);
             Assert.assertNotNull(attrs, msg);
 
             // check that all expected attributes are there

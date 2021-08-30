@@ -22,8 +22,8 @@ import org.ultimagen.flowBasedRead.read.FlowBasedRead;
 import java.util.*;
 
 @DocumentedFeature(groupName=HelpConstants.DOC_CAT_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_ANNOTATORS_SUMMARY, summary="FlowConcordanceAnnotator")
-public class FlowConcordanceAnnotator extends InfoFieldAnnotation implements StandardMutectAnnotation {
-    private final static Logger logger = LogManager.getLogger(FlowConcordanceAnnotator.class);
+public class FlowAnnotator extends InfoFieldAnnotation implements StandardMutectAnnotation {
+    private final static Logger logger = LogManager.getLogger(FlowAnnotator.class);
 
     // additional constants
     protected static final String   C_INSERT = "ins";
@@ -186,7 +186,7 @@ public class FlowConcordanceAnnotator extends InfoFieldAnnotation implements Sta
             Allele      alt = vc.getAlleles().get(1 - refIndex);
 
             // get byte before and after
-            byte        before = getReferenceNucleoid(la, vc.getStart() - 1);
+            byte        before = getReferenceNucleotide(la, vc.getStart() - 1);
             byte[]      after = getReferenceHmerPlus(la, vc.getEnd() + 1, MOTIF_SIZE);
 
             // build two haplotypes. add byte before and after
@@ -362,7 +362,7 @@ public class FlowConcordanceAnnotator extends InfoFieldAnnotation implements Sta
     }
 
     // get a single nucleoid from reference
-    private byte getReferenceNucleoid(final LocalAttributes la, final int start) {
+    private byte getReferenceNucleotide(final LocalAttributes la, final int start) {
         int         index = start - la.ref.getWindow().getStart();
         byte[]      bases = la.ref.getBases();
         Utils.validIndex(index, bases.length);
@@ -401,7 +401,7 @@ public class FlowConcordanceAnnotator extends InfoFieldAnnotation implements Sta
     @VisibleForTesting
     static Map<String, Object> annotateForTesting(final ReferenceContext ref, final VariantContext vc) {
 
-        FlowConcordanceAnnotator annotator = new FlowConcordanceAnnotator();
+        FlowAnnotator annotator = new FlowAnnotator();
 
         return annotator.annotate(ref, vc, null);
     }
