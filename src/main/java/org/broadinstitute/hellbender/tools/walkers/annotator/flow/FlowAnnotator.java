@@ -96,6 +96,13 @@ public class FlowAnnotator extends InfoFieldAnnotation implements StandardMutect
         return sb.toString();
     }
 
+    /*
+    This function establishes the flow order to be used for manipulating reads in flow space.
+
+    The most natural source for the flow order is are the reads themselves. Alas reads will
+    not always be sourced from a bam file with a flow order. In these cases, we can either get it from a
+    --flow-order parameter (VariantAnnotator tool) or the default input source (bam)
+     */
     private String establishFlowOrder(AlleleLikelihoods<GATKRead, Allele> likelihoods) {
 
         // defined?
