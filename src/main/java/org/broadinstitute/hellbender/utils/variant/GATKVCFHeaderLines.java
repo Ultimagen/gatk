@@ -241,18 +241,18 @@ public class GATKVCFHeaderLines {
         addInfoLine(new VCFInfoHeaderLine(EXT_COLLAPSED_KEY,1, VCFHeaderLineType.Integer, "Indicates collapsing took place"));
         addInfoLine(new VCFInfoHeaderLine(POSSIBLE_FP_ADJACENT_TP_KEY,1, VCFHeaderLineType.Flag, "Indicates a locus where false positive allele might be affecting a true positive allele"));
 
-        // ultima annotations
-        addInfoLine(new VCFInfoHeaderLine(FLOW_INDEL_CLASSIFY, VCFHeaderLineCount.A, VCFHeaderLineType.String, "ULTIMA_INDEL_CLASSIFY"));
-        addInfoLine(new VCFInfoHeaderLine(FLOW_INDEL_LENGTH, VCFHeaderLineCount.A, VCFHeaderLineType.Integer, "ULTIMA_INDEL_LENGTH"));
-        addInfoLine(new VCFInfoHeaderLine(FLOW_HMER_INDEL_LENGTH, 1, VCFHeaderLineType.Integer, "ULTIMA_HMER_INDEL_LENGTH"));
-        addInfoLine(new VCFInfoHeaderLine(FLOW_HMER_INDEL_NUC, 1, VCFHeaderLineType.String, "ULTIMA_HMER_INDEL_NUC"));
-        addInfoLine(new VCFInfoHeaderLine(FLOW_LEFT_MOTIF, 1, VCFHeaderLineType.String, "ULTIMA_LEFT_MOTIF"));
-        addInfoLine(new VCFInfoHeaderLine(FLOW_RIGHT_MOTIF, 1, VCFHeaderLineType.String, "ULTIMA_RIGHT_MOTIF"));
-        addInfoLine(new VCFInfoHeaderLine(FLOW_GC_CONTENT, 1, VCFHeaderLineType.Float, "ULTIMA_GC_CONTENT"));
-        addInfoLine(new VCFInfoHeaderLine(FLOW_CYCLESKIP_STATUS, 1, VCFHeaderLineType.String, "ULTIMA_CYCLESKIP_STATUS"));
+        // flow annotations
+        addInfoLine(new VCFInfoHeaderLine(FLOW_INDEL_CLASSIFY, VCFHeaderLineCount.A, VCFHeaderLineType.String, "FLOW_INDEL_CLASSIFY"));
+        addInfoLine(new VCFInfoHeaderLine(FLOW_INDEL_LENGTH, VCFHeaderLineCount.A, VCFHeaderLineType.Integer, "FLOW_INDEL_LENGTH"));
+        addInfoLine(new VCFInfoHeaderLine(FLOW_HMER_INDEL_LENGTH, 1, VCFHeaderLineType.Integer, "FLOW_HMER_INDEL_LENGTH"));
+        addInfoLine(new VCFInfoHeaderLine(FLOW_HMER_INDEL_NUC, 1, VCFHeaderLineType.String, "FLOW_HMER_INDEL_NUC"));
+        addInfoLine(new VCFInfoHeaderLine(FLOW_LEFT_MOTIF, 1, VCFHeaderLineType.String, "FLOW_LEFT_MOTIF"));
+        addInfoLine(new VCFInfoHeaderLine(FLOW_RIGHT_MOTIF, 1, VCFHeaderLineType.String, "FLOW_RIGHT_MOTIF"));
+        addInfoLine(new VCFInfoHeaderLine(FLOW_GC_CONTENT, 1, VCFHeaderLineType.Float, "FLOW_GC_CONTENT"));
+        addInfoLine(new VCFInfoHeaderLine(FLOW_CYCLESKIP_STATUS, 1, VCFHeaderLineType.String, "FLOW_CYCLESKIP_STATUS"));
         if (FlowConcordanceAnnotator.addDebugAnnotations ) {
-            addInfoLine(new VCFInfoHeaderLine(FLOW_DBG_REF, 1, VCFHeaderLineType.String, "ULTIMA_DBG_REF"));
-            addInfoLine(new VCFInfoHeaderLine(FLOW_DBG_REF_START, 1, VCFHeaderLineType.Integer, "ULTIMA_DBG_REF_START"));
+            addInfoLine(new VCFInfoHeaderLine(FLOW_DBG_REF, 1, VCFHeaderLineType.String, "FLOW_DBG_REF"));
+            addInfoLine(new VCFInfoHeaderLine(FLOW_DBG_REF_START, 1, VCFHeaderLineType.Integer, "FLOW_DBG_REF_START"));
         }
         addInfoLine(new VCFInfoHeaderLine(REFERENCE_BASES_KEY, 1, VCFHeaderLineType.String, "local reference bases."));
         addInfoLine(new VCFInfoHeaderLine(HAPLOTYPE_EQUIVALENCE_COUNTS_KEY, VCFHeaderLineCount.UNBOUNDED, VCFHeaderLineType.Integer, "Counts of support for haplotype groups excluding difference at the site in question."));

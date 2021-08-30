@@ -2,7 +2,6 @@ package org.broadinstitute.hellbender.tools.walkers.annotator.flow;
 
 import com.google.common.annotations.VisibleForTesting;
 import htsjdk.samtools.SAMReadGroupRecord;
-import htsjdk.samtools.SAMRecord;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.logging.log4j.LogManager;
@@ -17,7 +16,6 @@ import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.help.HelpConstants;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
-import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
 
@@ -112,8 +110,8 @@ public class FlowConcordanceAnnotator extends InfoFieldAnnotation implements Sta
                 if ( read instanceof FlowBasedRead ) {
                     return ((FlowBasedRead)read).getFlowOrder();
                 } else if ( read.getReadGroup() != null ) {
-                    if ( GATKTool.onStartupHeederForReads != null ) {
-                        SAMReadGroupRecord rg = GATKTool.onStartupHeederForReads.getReadGroup(read.getReadGroup());
+                    if ( GATKTool.onStartupHeaderForReads != null ) {
+                        SAMReadGroupRecord rg = GATKTool.onStartupHeaderForReads.getReadGroup(read.getReadGroup());
                         if ( rg != null && rg.getFlowOrder() != null )
                             return rg.getFlowOrder();
                     }
@@ -122,7 +120,7 @@ public class FlowConcordanceAnnotator extends InfoFieldAnnotation implements Sta
         }
 
         // has global?
-        if ( GATKTool.onStartupHeederForReads != null ) {
+        if ( GATKTool.onStartupHeaderForReads != null ) {
 
         }
 

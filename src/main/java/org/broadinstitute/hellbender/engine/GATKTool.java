@@ -39,7 +39,6 @@ import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.config.ConfigFactory;
 import org.broadinstitute.hellbender.utils.config.GATKConfig;
-import org.broadinstitute.hellbender.utils.io.IOUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.read.SAMFileGATKReadWriter;
@@ -166,7 +165,7 @@ public abstract class GATKTool extends CommandLineProgram {
      */
     List<SimpleInterval> userIntervals;
 
-    static public SAMFileHeader   onStartupHeederForReads;
+    static public SAMFileHeader onStartupHeaderForReads;
 
     /**
      * Get the {@link ReferenceDataSource} for this {@link GATKTool}.
@@ -738,7 +737,7 @@ public abstract class GATKTool extends CommandLineProgram {
 
         initializeProgressMeter(getProgressMeterRecordLabel());
 
-        onStartupHeederForReads = getHeaderForReads();
+        onStartupHeaderForReads = getHeaderForReads();
     }
 
     /**
