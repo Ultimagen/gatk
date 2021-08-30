@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.engine.GATKTool;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
+import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.walkers.annotator.InfoFieldAnnotation;
 import org.broadinstitute.hellbender.tools.walkers.annotator.StandardMutectAnnotation;
 import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotator;
@@ -204,7 +205,7 @@ public class FlowAnnotator extends InfoFieldAnnotation implements StandardMutect
             int[]       refKey = generateKeyFromSequence(new String(refHap), la.flowOrder, false);
             int[]       altKey = generateKeyFromSequence(new String(altHap), la.flowOrder, false);
             if ( refKey == null || altKey == null )
-                return;
+                throw new GATKException("failed to generate key from reference or alternate sequence");
 
             // key must be the same length to begin with
             if ( refKey.length != altKey.length )
