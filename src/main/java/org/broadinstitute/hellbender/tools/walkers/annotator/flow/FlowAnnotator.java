@@ -175,7 +175,9 @@ public class FlowAnnotator extends InfoFieldAnnotation implements StandardMutect
         }
     }
 
-    // "hmer_indel_length" and "hmer_indel_nuc"
+    /*
+    This function determines if the vc is an hmer indel. If so, it marks it as such
+     */
     private void isHmerIndel(final VariantContext vc, final LocalAttributes la) {
 
         // this is (currently) computed only when there is exactly one non reference allele
