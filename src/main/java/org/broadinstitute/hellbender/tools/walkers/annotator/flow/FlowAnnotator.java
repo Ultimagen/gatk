@@ -161,13 +161,6 @@ public class FlowAnnotator extends InfoFieldAnnotation implements StandardMutect
 
         if ( vc.isIndel() ) {
 
-            /*
-            if not x['indel']:
-                return None
-            elif len(x['ref']) < max([len(y) for y in x['alleles']]):
-                return 'ins'
-            return 'del'
-             */
             final List<String>      indelClassify = new LinkedList<>();
             final List<Integer>     indelLength = new LinkedList<>();
             final int               refLength = vc.getReference().length();
@@ -270,14 +263,6 @@ public class FlowAnnotator extends InfoFieldAnnotation implements StandardMutect
 
     private void gcContent(final VariantContext vc, final LocalAttributes la) {
 
-        /*
-        chrom = faidx[rec['chrom']]
-        beg = rec['pos'] - int(size / 2)
-        end = beg + size
-        seq = chrom[beg:end].seq.upper()
-        seqGC = seq.replace('A', '').replace('T', '')
-        return float(len(seqGC)) / len(seq)
-         */
         int         begin = vc.getStart() - (GC_CONTENT_SIZE / 2);
         String      seq = getRefMotif(la, begin + 1, GC_CONTENT_SIZE);
         int         gcCount = 0;
@@ -327,22 +312,6 @@ public class FlowAnnotator extends InfoFieldAnnotation implements StandardMutect
         if ( ignoreNBases && sequence.indexOf('N') >= 0 )
             sequence = sequence.replace("N", "");
         int[]         key = new int[sequence.length() * 4];
-        /*
-        key = []
-        pos = 0
-        for base in flow:
-            hcount = 0
-            for i in range(pos, len(sequence)):
-                if sequence[i] == base:
-                    hcount+=1
-                else:
-                    break
-            else:
-                key.append(hcount)
-                break # end of sequence
-            key.append(hcount)
-            pos += hcount
-         */
         byte[]      seq = sequence.getBytes();
         byte[]      flow = flowOrder.getBytes();
         int         pos = 0;
