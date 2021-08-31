@@ -36,6 +36,7 @@ public class FlowAnnotator extends InfoFieldAnnotation implements StandardMutect
 
     protected static final int      MOTIF_SIZE = 5;
     protected static final int      GC_CONTENT_SIZE = 10;
+    protected static final int      BASE_TYPE_COUNT = 4;
 
     public static final boolean  addDebugAnnotations = false;
 
@@ -315,7 +316,10 @@ public class FlowAnnotator extends InfoFieldAnnotation implements StandardMutect
             return null;
         if ( ignoreNBases && sequence.indexOf('N') >= 0 )
             sequence = sequence.replace("N", "");
-        int[]         key = new int[sequence.length() * 4];
+
+        // allocate maximal key, to be later copied into an array of the exact length.
+        int[]       key = new int[sequence.length() * BASE_TYPE_COUNT];
+        
         byte[]      seq = sequence.getBytes();
         byte[]      flow = flowOrder.getBytes();
         int         pos = 0;
