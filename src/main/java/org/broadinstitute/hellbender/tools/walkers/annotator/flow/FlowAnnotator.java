@@ -220,6 +220,8 @@ public class FlowAnnotator extends InfoFieldAnnotation implements StandardMutect
                         diffIndex = n;
                 }
             }
+
+            // check if we've actually encountered a significant different key
             if ( diffIndex < 0 )
                 return;
             if ( Math.min(refKey[diffIndex], altKey[diffIndex]) == 0 )
