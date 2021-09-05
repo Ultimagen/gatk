@@ -165,8 +165,6 @@ public abstract class GATKTool extends CommandLineProgram {
      */
     List<SimpleInterval> userIntervals;
 
-    static public SAMFileHeader onStartupHeaderForReads;
-
     /**
      * Get the {@link ReferenceDataSource} for this {@link GATKTool}.
      * Will throw a {@link GATKException} if the reference is null.
@@ -736,8 +734,6 @@ public abstract class GATKTool extends CommandLineProgram {
         checkToolRequirements();
 
         initializeProgressMeter(getProgressMeterRecordLabel());
-
-        onStartupHeaderForReads = getHeaderForReads();
     }
 
     /**

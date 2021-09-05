@@ -111,8 +111,6 @@ public class VariantAnnotator extends VariantWalker {
     private VariantContextWriter vcfWriter;
     private static final int REFERENCE_PADDING = 100;
 
-    public static String flowOrder;
-
     /**
      * The rsIDs from this file are used to populate the ID column of the output.  Also, the DB INFO flag will be set when appropriate. Note that dbSNP is not used in any way for the calculations themselves.
      */
@@ -176,9 +174,6 @@ public class VariantAnnotator extends VariantWalker {
     @Argument(fullName = AssemblyBasedCallerArgumentCollection.MIN_BASE_QUALITY_SCORE_LONG_NAME,  doc = "Minimum base quality required to confidently assign a read to an allele", optional = true)
     public byte minBaseQualityScore = 10;
 
-    @Argument(fullName = "flow-order",  doc = "flow order", optional = true)
-    public String flowOrderParam;
-
     public List<ReadFilter> getDefaultReadFilters() {
         return Lists.newArrayList( new WellformedReadFilter(),
                 ReadFilterLibrary.NOT_DUPLICATE,
@@ -201,7 +196,6 @@ public class VariantAnnotator extends VariantWalker {
         final List<String> samples = getHeaderForVariants().getGenotypeSamples();
         sequenceDictionary = getBestAvailableSequenceDictionary();
         variantSamples = new IndexedSampleList(samples);
-        flowOrder = flowOrderParam;
 
         // Check that the reads have compatible samples to the variants:
         if (hasReads()) {

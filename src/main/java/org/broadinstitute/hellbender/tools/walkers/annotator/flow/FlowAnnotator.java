@@ -6,6 +6,7 @@ import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.engine.GATKTool;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
@@ -25,6 +26,9 @@ import java.util.*;
 @DocumentedFeature(groupName=HelpConstants.DOC_CAT_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_ANNOTATORS_SUMMARY, summary="FlowConcordanceAnnotator")
 public class FlowAnnotator extends InfoFieldAnnotation implements StandardMutectAnnotation {
     private final static Logger logger = LogManager.getLogger(FlowAnnotator.class);
+
+    @Argument(fullName = "flow-order-for-annotation",  doc = "flow order used for the flow annotations. [readGroup:]flowOrder,...", optional = true)
+    public String flowOrderForAnnotation;
 
     // additional constants
     protected static final String   C_INSERT = "ins";
@@ -107,10 +111,6 @@ public class FlowAnnotator extends InfoFieldAnnotation implements StandardMutect
      */
     private String establishFlowOrder(AlleleLikelihoods<GATKRead, Allele> likelihoods) {
 
-        // defined?
-        if ( VariantAnnotator.flowOrder != null )
-            return VariantAnnotator.flowOrder;
-
         // extract from a read
         if ( likelihoods != null ) {
             List<GATKRead>  reads = likelihoods.sampleEvidence(0);
@@ -118,23 +118,38 @@ public class FlowAnnotator extends InfoFieldAnnotation implements StandardMutect
                 GATKRead        read = reads.get(0);
                 if ( read instanceof FlowBasedRead ) {
                     return ((FlowBasedRead)read).getFlowOrder();
-                } else if ( read.getReadGroup() != null ) {
-                    if ( GATKTool.onStartupHeaderForReads != null ) {
-                        SAMReadGroupRecord rg = GATKTool.onStartupHeaderForReads.getReadGroup(read.getReadGroup());
-                        if ( rg != null && rg.getFlowOrder() != null )
-                            return rg.getFlowOrder();
-                    }
+                } else if ( flowOrderForAnnotation != null )  {
+                    establishReadGroupFlowOrder(read.getReadGroup());
                 }
+
             }
         }
 
         // has global?
-        if ( GATKTool.onStartupHeaderForReads != null ) {
-
+        if ( flowOrderForAnnotation != null ) {
+            return establishReadGroupFlowOrder(null);
         }
 
         // if here, it is an error - we have no default for flow order
-        throw new RuntimeException("flow-order must be defined. Use --flow-order if running VariantAnnotator");
+        throw new RuntimeException("flow order must be defined. Use --flow-order-for-annotations parameter");
+    }
+
+    /*
+        the flow order might be different for each read group.
+        provided flow order can be a list of [group:]flowOrder separated by a comma
+        no group: means all/rest
+     */
+    private String establishReadGroupFlowOrder(String readGroup) {
+
+        for ( String elem : flowOrderForAnnotation.split(",") ) {
+            String  toks[] = elem.split(":");
+            if ( toks.length == 1 )
+                return toks[0];
+            else if ( toks[0].equals(readGroup) )
+                return toks[1];
+        }
+
+        throw new RuntimeException("no flow order found for greadGroup " + readGroup + ". Use --flow-order-for-annotations parameter");
     }
 
     @Override
@@ -319,7 +334,7 @@ public class FlowAnnotator extends InfoFieldAnnotation implements StandardMutect
 
         // allocate maximal key, to be later copied into an array of the exact length.
         int[]       key = new int[sequence.length() * BASE_TYPE_COUNT];
-        
+//        
         byte[]      seq = sequence.getBytes();
         byte[]      flow = flowOrder.getBytes();
         int         pos = 0;
