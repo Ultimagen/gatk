@@ -8,17 +8,25 @@ import htsjdk.variant.variantcontext.VariantContextBuilder;
 import org.apache.commons.lang3.StringUtils;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.engine.ReferenceDataSource;
-import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotator;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.reference.ReferenceBases;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class FlowAnnotatorUnitTest {
+
+    private FlowAnnotatorBase[]     allAnnotators = {
+            new IndelClassify(),
+            new IndelLength(),
+            new HmerIndelLength(),
+            new HmerIndelNuc(),
+            new LeftMotif(),
+            new RightMotif(),
+            new GcContent(),
+            new CycleSkipStatus()
+    };
 
     @Test
     public void testBasic() {
@@ -61,11 +69,8 @@ public class FlowAnnotatorUnitTest {
                 }
         };
 
-        // setup flow order
-        VariantAnnotator.flowOrder = "TGCA";
-
         // should be in same order as test data!!!!
-        final List<String>      expectedAttrs = (new FlowAnnotator()).getKeyNames();
+        final List<String>      expectedAttrs = allKeys();
 
         // loop on test data
         for ( String[] data : testData ) {
@@ -79,7 +84,7 @@ public class FlowAnnotatorUnitTest {
             String          msg = "on " + StringUtils.join(data, " ");
 
             // invoke
-            final Map<String, Object> attrs = FlowAnnotator.annotateForTesting(ref, vc);
+            final Map<String, Object> attrs = allAnnotate(ref, vc);
             Assert.assertNotNull(attrs, msg);
 
             // check that all expected attributes are there
@@ -98,6 +103,29 @@ public class FlowAnnotatorUnitTest {
                 }
             }
         }
+    }
+
+    private Map<String, Object> allAnnotate(ReferenceContext ref, VariantContext vc) {
+
+        Map<String, Object>     attrs = new LinkedHashMap<>();
+
+        for ( FlowAnnotatorBase a : allAnnotators )
+            attrs.putAll(a.annotate(ref, vc, null));
+
+        return attrs;
+    }
+
+    private List<String> allKeys() {
+
+        List<String>     keys = new LinkedList<>();
+
+        for ( FlowAnnotatorBase a : allAnnotators ) {
+            keys.addAll(a.getKeyNames());
+            a.flowOrderForAnnotation = "TGCA";
+        }
+
+        return keys;
+
     }
 
     private ReferenceContext buildReferenceContext(String refBases, int start, int stop) {

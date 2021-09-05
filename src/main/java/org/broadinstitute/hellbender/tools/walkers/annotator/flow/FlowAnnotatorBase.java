@@ -1,19 +1,16 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator.flow;
 
 import com.google.common.annotations.VisibleForTesting;
-import htsjdk.samtools.SAMReadGroupRecord;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.help.DocumentedFeature;
-import org.broadinstitute.hellbender.engine.GATKTool;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.walkers.annotator.InfoFieldAnnotation;
 import org.broadinstitute.hellbender.tools.walkers.annotator.StandardMutectAnnotation;
-import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotator;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.help.HelpConstants;
@@ -22,10 +19,10 @@ import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
-@DocumentedFeature(groupName=HelpConstants.DOC_CAT_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_ANNOTATORS_SUMMARY, summary="FlowConcordanceAnnotator")
-public class FlowAnnotator extends InfoFieldAnnotation implements StandardMutectAnnotation {
-    private final static Logger logger = LogManager.getLogger(FlowAnnotator.class);
+public abstract class FlowAnnotatorBase extends InfoFieldAnnotation implements StandardMutectAnnotation {
+    private final static Logger logger = LogManager.getLogger(FlowAnnotatorBase.class);
 
     @Argument(fullName = "flow-order-for-annotation",  doc = "flow order used for the flow annotations. [readGroup:]flowOrder,...", optional = true)
     public String flowOrderForAnnotation;
@@ -42,10 +39,9 @@ public class FlowAnnotator extends InfoFieldAnnotation implements StandardMutect
     protected static final int      GC_CONTENT_SIZE = 10;
     protected static final int      BASE_TYPE_COUNT = 4;
 
-    public static final boolean  addDebugAnnotations = false;
-
     static class LocalAttributes {
         ReferenceContext ref;
+        AlleleLikelihoods<GATKRead, Allele> likelihoods;
         String      flowOrder;
 
         List<String> indel;
@@ -63,43 +59,43 @@ public class FlowAnnotator extends InfoFieldAnnotation implements StandardMutect
     public Map<String, Object> annotate(ReferenceContext ref,
                                         VariantContext vc,
                                         AlleleLikelihoods<GATKRead, Allele> likelihoods) {
+        return annotate(ref, vc, likelihoods, getKeyNames());
+    }
+
+    public Map<String, Object> annotate(ReferenceContext ref,
+                                        VariantContext vc,
+                                        AlleleLikelihoods<GATKRead, Allele> likelihoods,
+                                        final List<String> requestedAnnotations) {
         Utils.nonNull(ref);
         Utils.nonNull(vc);
 
         // some annotators share results
         LocalAttributes         la = new LocalAttributes();
         la.ref = ref;
-
-        // establish flow order
-        la.flowOrder = establishFlowOrder(likelihoods);
+        la.likelihoods = likelihoods;
 
         // call annotatotrs
         indelClassify(vc, la);
-        isHmerIndel(vc, la);
-        getMotif(vc, la);
-        gcContent(vc, la);
-        cycleSkip(vc, la);
+        if ( requestedAnnotations.contains(GATKVCFConstants.FLOW_HMER_INDEL_LENGTH)
+            || requestedAnnotations.contains(GATKVCFConstants.FLOW_HMER_INDEL_NUC)
+            || requestedAnnotations.contains(GATKVCFConstants.FLOW_RIGHT_MOTIF) )
+            isHmerIndel(vc, la);
+        if ( requestedAnnotations.contains(GATKVCFConstants.FLOW_LEFT_MOTIF)
+                || requestedAnnotations.contains(GATKVCFConstants.FLOW_RIGHT_MOTIF) )
+            getMotif(vc, la);
+        if ( requestedAnnotations.contains(GATKVCFConstants.FLOW_GC_CONTENT) )
+            gcContent(vc, la);
+        if ( requestedAnnotations.contains(GATKVCFConstants.FLOW_CYCLESKIP_STATUS) )
+            cycleSkip(vc, la);
 
-        // return attibutes
+        // make sure we have a default indel class attibutes
         if ( la.indel == null )
             la.attributes.put(GATKVCFConstants.FLOW_INDEL_CLASSIFY, C_NA);
-        if ( addDebugAnnotations ) {
-            la.attributes.put(GATKVCFConstants.FLOW_DBG_REF, makeDbgRef(ref, vc));
-            la.attributes.put(GATKVCFConstants.FLOW_DBG_REF_START, ref.getStart());
-        }
-        return la.attributes;
-    }
 
-    private String makeDbgRef(ReferenceContext ref, VariantContext vc) {
-
-        int                 fence = vc.getStart() - ref.getStart();
-        StringBuilder       sb = new StringBuilder();
-
-        sb.append(new String(Arrays.copyOfRange(ref.getBases(), 0, fence)));
-        sb.append(">");
-        sb.append(new String(Arrays.copyOfRange(ref.getBases(), fence, ref.getBases().length)));
-
-        return sb.toString();
+        // filter map down to requested attributes
+        return la.attributes.entrySet().stream()
+                .filter(x -> requestedAnnotations.contains(x.getKey()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     /*
@@ -152,26 +148,6 @@ public class FlowAnnotator extends InfoFieldAnnotation implements StandardMutect
         throw new RuntimeException("no flow order found for greadGroup " + readGroup + ". Use --flow-order-for-annotations parameter");
     }
 
-    @Override
-    public List<String> getKeyNames() {
-
-        List<String>        names = new LinkedList<>(Arrays.asList(
-                GATKVCFConstants.FLOW_INDEL_CLASSIFY, GATKVCFConstants.FLOW_INDEL_LENGTH,
-                GATKVCFConstants.FLOW_HMER_INDEL_LENGTH, GATKVCFConstants.FLOW_HMER_INDEL_NUC,
-                GATKVCFConstants.FLOW_LEFT_MOTIF, GATKVCFConstants.FLOW_RIGHT_MOTIF,
-                GATKVCFConstants.FLOW_GC_CONTENT,
-                GATKVCFConstants.FLOW_CYCLESKIP_STATUS));
-
-        if ( addDebugAnnotations ) {
-            names.addAll(Arrays.asList(
-                    GATKVCFConstants.FLOW_DBG_REF,
-                    GATKVCFConstants.FLOW_DBG_REF_START));
-
-        }
-
-        return names;
-    }
-
     // "indel_classify" and "indel_length"
     private void indelClassify(final VariantContext vc, final LocalAttributes la) {
 
@@ -198,6 +174,10 @@ public class FlowAnnotator extends InfoFieldAnnotation implements StandardMutect
 
         // this is (currently) computed only when there is exactly one non reference allele
         if ( vc.isIndel() && la.indel.size() == 1 && vc.getAlleles().size() == 2 ) {
+
+            // establish flow order
+            if ( la.flowOrder == null )
+                la.flowOrder = establishFlowOrder(la.likelihoods);
 
             // access alleles
             int         refIndex = vc.getAlleles().get(0).isReference() ? 0 : 1;
@@ -299,6 +279,10 @@ public class FlowAnnotator extends InfoFieldAnnotation implements StandardMutect
         String      css = C_NA;
         if ( !vc.isIndel() && vc.getAlleles().size() == 2 ) {
 
+            // establish flow order
+            if ( la.flowOrder == null )
+                la.flowOrder = establishFlowOrder(la.likelihoods);
+
             // access alleles
             int         refIndex = vc.getAlleles().get(0).isReference() ? 0 : 1;
             Allele      ref = vc.getAlleles().get(refIndex);
@@ -397,13 +381,4 @@ public class FlowAnnotator extends InfoFieldAnnotation implements StandardMutect
         Utils.validIndex(endIndex-1, bases.length);
         return new String(Arrays.copyOfRange(bases, startIndex, endIndex));
     }
-
-    @VisibleForTesting
-    static Map<String, Object> annotateForTesting(final ReferenceContext ref, final VariantContext vc) {
-
-        FlowAnnotator annotator = new FlowAnnotator();
-
-        return annotator.annotate(ref, vc, null);
-    }
-
 }

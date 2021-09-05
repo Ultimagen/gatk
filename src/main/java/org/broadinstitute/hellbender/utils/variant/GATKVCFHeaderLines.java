@@ -2,7 +2,6 @@ package org.broadinstitute.hellbender.utils.variant;
 
 import htsjdk.variant.vcf.*;
 import org.broadinstitute.hellbender.tools.walkers.annotator.*;
-import org.broadinstitute.hellbender.tools.walkers.annotator.flow.FlowAnnotator;
 import org.broadinstitute.hellbender.utils.Utils;
 
 import java.util.*;
