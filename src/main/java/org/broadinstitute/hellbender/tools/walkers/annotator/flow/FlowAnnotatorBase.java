@@ -81,7 +81,8 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation implements S
             || requestedAnnotations.contains(GATKVCFConstants.FLOW_RIGHT_MOTIF) )
             isHmerIndel(vc, la);
         if ( requestedAnnotations.contains(GATKVCFConstants.FLOW_LEFT_MOTIF)
-                || requestedAnnotations.contains(GATKVCFConstants.FLOW_RIGHT_MOTIF) )
+                || requestedAnnotations.contains(GATKVCFConstants.FLOW_RIGHT_MOTIF)
+                || requestedAnnotations.contains(GATKVCFConstants.FLOW_CYCLESKIP_STATUS) )
             getMotif(vc, la);
         if ( requestedAnnotations.contains(GATKVCFConstants.FLOW_GC_CONTENT) )
             gcContent(vc, la);
