@@ -11,7 +11,7 @@ import java.util.Collections;
 import java.util.List;
 
 @DocumentedFeature(groupName=HelpConstants.DOC_CAT_FLOW_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_FLOW_ANNOTATORS_SUMMARY, summary="GC Content Flow Annotation")
-public class GcContent extends FlowAnnotatorBase implements StandardMutectAnnotation {
+public class GcContent extends FlowAnnotatorBase implements StandardFlowBasedAnnotation {
     private final static Logger logger = LogManager.getLogger(GcContent.class);
 
     @Override

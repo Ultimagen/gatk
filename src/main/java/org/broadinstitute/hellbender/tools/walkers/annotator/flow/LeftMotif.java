@@ -11,7 +11,7 @@ import java.util.Collections;
 import java.util.List;
 
 @DocumentedFeature(groupName=HelpConstants.DOC_CAT_FLOW_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_FLOW_ANNOTATORS_SUMMARY, summary="Left Motif Flow Annotation")
-public class LeftMotif extends FlowAnnotatorBase implements StandardMutectAnnotation {
+public class LeftMotif extends FlowAnnotatorBase implements StandardFlowBasedAnnotation {
     private final static Logger logger = LogManager.getLogger(LeftMotif.class);
 
     @Override

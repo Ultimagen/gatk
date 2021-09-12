@@ -11,7 +11,7 @@ import java.util.Collections;
 import java.util.List;
 
 @DocumentedFeature(groupName=HelpConstants.DOC_CAT_FLOW_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_FLOW_ANNOTATORS_SUMMARY, summary="Hmer Indel Length Flow Annotation")
-public class HmerIndelLength extends FlowAnnotatorBase implements StandardMutectAnnotation {
+public class HmerIndelLength extends FlowAnnotatorBase implements StandardFlowBasedAnnotation {
     private final static Logger logger = LogManager.getLogger(HmerIndelLength.class);
 
     @Override

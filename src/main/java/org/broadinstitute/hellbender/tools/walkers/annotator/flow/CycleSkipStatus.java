@@ -13,7 +13,7 @@ import java.util.Collections;
 import java.util.List;
 
 @DocumentedFeature(groupName=HelpConstants.DOC_CAT_FLOW_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_FLOW_ANNOTATORS_SUMMARY, summary="Cycle Skip Status Flow Annotation")
-public class CycleSkipStatus extends FlowAnnotatorBase implements StandardMutectAnnotation {
+public class CycleSkipStatus extends FlowAnnotatorBase implements StandardFlowBasedAnnotation {
     private final static Logger logger = LogManager.getLogger(CycleSkipStatus.class);
 
     @Argument(fullName = "flow-order-for-cycle-skip",  doc = "flow order used for this annotations. [readGroup:]flowOrder,...", optional = true)
