@@ -241,14 +241,14 @@ public class GATKVCFHeaderLines {
         addInfoLine(new VCFInfoHeaderLine(POSSIBLE_FP_ADJACENT_TP_KEY,1, VCFHeaderLineType.Flag, "Indicates a locus where false positive allele might be affecting a true positive allele"));
 
         // flow annotations
-        addInfoLine(new VCFInfoHeaderLine(FLOW_INDEL_CLASSIFY, VCFHeaderLineCount.A, VCFHeaderLineType.String, "FLOW_INDEL_CLASSIFY"));
-        addInfoLine(new VCFInfoHeaderLine(FLOW_INDEL_LENGTH, VCFHeaderLineCount.A, VCFHeaderLineType.Integer, "FLOW_INDEL_LENGTH"));
-        addInfoLine(new VCFInfoHeaderLine(FLOW_HMER_INDEL_LENGTH, 1, VCFHeaderLineType.Integer, "FLOW_HMER_INDEL_LENGTH"));
-        addInfoLine(new VCFInfoHeaderLine(FLOW_HMER_INDEL_NUC, 1, VCFHeaderLineType.String, "FLOW_HMER_INDEL_NUC"));
-        addInfoLine(new VCFInfoHeaderLine(FLOW_LEFT_MOTIF, 1, VCFHeaderLineType.String, "FLOW_LEFT_MOTIF"));
-        addInfoLine(new VCFInfoHeaderLine(FLOW_RIGHT_MOTIF, 1, VCFHeaderLineType.String, "FLOW_RIGHT_MOTIF"));
-        addInfoLine(new VCFInfoHeaderLine(FLOW_GC_CONTENT, 1, VCFHeaderLineType.Float, "FLOW_GC_CONTENT"));
-        addInfoLine(new VCFInfoHeaderLine(FLOW_CYCLESKIP_STATUS, 1, VCFHeaderLineType.String, "FLOW_CYCLESKIP_STATUS"));
+        addInfoLine(new VCFInfoHeaderLine(FLOW_INDEL_CLASSIFY, VCFHeaderLineCount.A, VCFHeaderLineType.String, "Flow: indel class: ins, del, NA"));
+        addInfoLine(new VCFInfoHeaderLine(FLOW_INDEL_LENGTH, VCFHeaderLineCount.A, VCFHeaderLineType.Integer, "Flow: length of indel"));
+        addInfoLine(new VCFInfoHeaderLine(FLOW_HMER_INDEL_LENGTH, 1, VCFHeaderLineType.Integer, "Flow: length of the hmer indel, if so"));
+        addInfoLine(new VCFInfoHeaderLine(FLOW_HMER_INDEL_NUC, 1, VCFHeaderLineType.String, "Flow: nucleotide of the hmer indel, if so"));
+        addInfoLine(new VCFInfoHeaderLine(FLOW_LEFT_MOTIF, 1, VCFHeaderLineType.String, "Flow: motif to the left of the indel"));
+        addInfoLine(new VCFInfoHeaderLine(FLOW_RIGHT_MOTIF, 1, VCFHeaderLineType.String, "Flow: motif to the right of the indel"));
+        addInfoLine(new VCFInfoHeaderLine(FLOW_GC_CONTENT, 1, VCFHeaderLineType.Float, "Flow: percentage of G or C in the window around hmer"));
+        addInfoLine(new VCFInfoHeaderLine(FLOW_CYCLESKIP_STATUS, 1, VCFHeaderLineType.String, "Flow: cycle skip status: cycle-skip, possible-cycle-skip, non-skip"));
         if (FlowAnnotator.addDebugAnnotations ) {
             addInfoLine(new VCFInfoHeaderLine(FLOW_DBG_REF, 1, VCFHeaderLineType.String, "FLOW_DBG_REF"));
             addInfoLine(new VCFInfoHeaderLine(FLOW_DBG_REF_START, 1, VCFHeaderLineType.Integer, "FLOW_DBG_REF_START"));
