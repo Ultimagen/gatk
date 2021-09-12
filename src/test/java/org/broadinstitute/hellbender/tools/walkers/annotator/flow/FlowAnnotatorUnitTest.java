@@ -121,7 +121,7 @@ public class FlowAnnotatorUnitTest {
 
         for ( FlowAnnotatorBase a : allAnnotators ) {
             keys.addAll(a.getKeyNames());
-            a.flowOrderForAnnotation = "TGCA";
+            a.setFlowOrderForTesting("TGCA");
         }
 
         return keys;

@@ -24,9 +24,6 @@ import java.util.stream.Collectors;
 public abstract class FlowAnnotatorBase extends InfoFieldAnnotation implements StandardMutectAnnotation {
     private final static Logger logger = LogManager.getLogger(FlowAnnotatorBase.class);
 
-    @Argument(fullName = "flow-order-for-annotation",  doc = "flow order used for the flow annotations. [readGroup:]flowOrder,...", optional = true)
-    public String flowOrderForAnnotation;
-
     // additional constants
     protected static final String   C_INSERT = "ins";
     protected static final String   C_DELETE = "del";
@@ -115,20 +112,15 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation implements S
                 GATKRead        read = reads.get(0);
                 if ( read instanceof FlowBasedRead ) {
                     return ((FlowBasedRead)read).getFlowOrder();
-                } else if ( flowOrderForAnnotation != null )  {
+                } else if ( getFlowOrderForAnnotation() != null )  {
                     establishReadGroupFlowOrder(read.getReadGroup());
                 }
 
             }
         }
 
-        // has global?
-        if ( flowOrderForAnnotation != null ) {
-            return establishReadGroupFlowOrder(null);
-        }
-
-        // if here, it is an error - we have no default for flow order
-        throw new RuntimeException("flow order must be defined. Use --flow-order-for-annotations parameter");
+        // use global
+        return establishReadGroupFlowOrder(null);
     }
 
     /*
@@ -138,7 +130,7 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation implements S
      */
     private String establishReadGroupFlowOrder(String readGroup) {
 
-        for ( String elem : flowOrderForAnnotation.split(",") ) {
+        for ( String elem : getFlowOrderForAnnotation().split(",") ) {
             String  toks[] = elem.split(":");
             if ( toks.length == 1 )
                 return toks[0];
@@ -146,7 +138,13 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation implements S
                 return toks[1];
         }
 
-        throw new RuntimeException("no flow order found for greadGroup " + readGroup + ". Use --flow-order-for-annotations parameter");
+        throw new RuntimeException("no flow order found for greadGroup " + readGroup);
+    }
+
+    // this method should be overriden by annotations requiring a "real" flow order
+    // the value returned by this method is a flow order that can be used for computations that work under all flow orders
+    protected String getFlowOrderForAnnotation() {
+        return "TAGC";
     }
 
     // "indel_classify" and "indel_length"
@@ -381,5 +379,10 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation implements S
         Utils.validIndex(startIndex, bases.length);
         Utils.validIndex(endIndex-1, bases.length);
         return new String(Arrays.copyOfRange(bases, startIndex, endIndex));
+    }
+
+    @VisibleForTesting
+    public void setFlowOrderForTesting(String flowOrder) {
+
     }
 }
