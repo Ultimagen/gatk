@@ -1,19 +1,16 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator.flow;
 
-import com.google.common.annotations.VisibleForTesting;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.broadinstitute.barclay.argparser.Argument;
-import org.broadinstitute.barclay.help.DocumentedFeature;
+import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.walkers.annotator.InfoFieldAnnotation;
-import org.broadinstitute.hellbender.tools.walkers.annotator.StandardMutectAnnotation;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
-import org.broadinstitute.hellbender.utils.help.HelpConstants;
+import org.broadinstitute.hellbender.utils.logging.OneShotLogger;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
@@ -35,6 +32,10 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation {
     protected static final int      MOTIF_SIZE = 5;
     protected static final int      GC_CONTENT_SIZE = 10;
     protected static final int      BASE_TYPE_COUNT = 4;
+    private static final String     DEFAULT_FLOW_ORDER = "TAGC";
+
+    private List<String>            flowOrder;
+
 
     static class LocalAttributes {
         ReferenceContext ref;
@@ -50,6 +51,8 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation {
         String      refAlleleHmerAndRightMotif;
 
         Map<String, Object> attributes = new LinkedHashMap<>();
+
+        boolean     notCalculated;
     }
 
     @Override
@@ -91,9 +94,13 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation {
             la.attributes.put(GATKVCFConstants.FLOW_INDEL_CLASSIFY, C_NA);
 
         // filter map down to requested attributes
-        return la.attributes.entrySet().stream()
-                .filter(x -> requestedAnnotations.contains(x.getKey()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        if ( la.notCalculated ) {
+            return Collections.emptyMap();
+        } else {
+            return la.attributes.entrySet().stream()
+                    .filter(x -> requestedAnnotations.contains(x.getKey()))
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        }
     }
 
     /*
@@ -103,7 +110,7 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation {
     not always be sourced from a bam file with a flow order. In these cases, we can either get it from a
     --flow-order parameter (VariantAnnotator tool) or the default input source (bam)
      */
-    private String establishFlowOrder(AlleleLikelihoods<GATKRead, Allele> likelihoods) {
+    private String establishFlowOrder(LocalAttributes la, AlleleLikelihoods<GATKRead, Allele> likelihoods) {
 
         // extract from a read
         if ( likelihoods != null ) {
@@ -112,15 +119,14 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation {
                 GATKRead        read = reads.get(0);
                 if ( read instanceof FlowBasedRead ) {
                     return ((FlowBasedRead)read).getFlowOrder();
-                } else if ( getFlowOrderForAnnotation() != null )  {
-                    establishReadGroupFlowOrder(read.getReadGroup());
+                } else if ( flowOrder != null )  {
+                    establishReadGroupFlowOrder(la, read.getReadGroup());
                 }
-
             }
         }
 
         // use global
-        return establishReadGroupFlowOrder(null);
+        return establishReadGroupFlowOrder(la, null);
     }
 
     /*
@@ -128,23 +134,35 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation {
         provided flow order can be a list of [group:]flowOrder separated by a comma
         no group: means all/rest
      */
-    private String establishReadGroupFlowOrder(String readGroup) {
+    private String establishReadGroupFlowOrder(LocalAttributes la, String readGroup) {
 
-        for ( String elem : getFlowOrderForAnnotation().split(",") ) {
-            String  toks[] = elem.split(":");
-            if ( toks.length == 1 )
-                return toks[0];
-            else if ( toks[0].equals(readGroup) )
-                return toks[1];
+        // find flow order for the readGroup
+        if ( flowOrder != null ) {
+            for (String elem : flowOrder) {
+                String toks[] = elem.split(":");
+                if (toks.length == 1)
+                    return toks[0];
+                else if (toks[0].equals(readGroup))
+                    return toks[1];
+            }
         }
 
-        throw new RuntimeException("no flow order found for greadGroup " + readGroup);
+        // if here, no flow order was found. may we use a default?
+        if ( isActualFlowOrderRequired() ) {
+            if ( getNoFlowOrderLogger() != null )
+                getNoFlowOrderLogger().warn(this.getClass().getSimpleName() + " annotation will not be calculated, no '" + StandardArgumentDefinitions.FLOW_ORDER_FOR_ANNOTATIONS + "' argument provided");
+            la.notCalculated = true;
+        }
+
+        return DEFAULT_FLOW_ORDER;
     }
 
-    // this method should be overriden by annotations requiring a "real" flow order
-    // the value returned by this method is a flow order that can be used for computations that work under all flow orders
-    protected String getFlowOrderForAnnotation() {
-        return "TAGC";
+    protected OneShotLogger getNoFlowOrderLogger() {
+        return null;
+    }
+
+    protected boolean isActualFlowOrderRequired() {
+        return false;
     }
 
     // "indel_classify" and "indel_length"
@@ -176,7 +194,7 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation {
 
             // establish flow order
             if ( la.flowOrder == null )
-                la.flowOrder = establishFlowOrder(la.likelihoods);
+                la.flowOrder = establishFlowOrder(la, la.likelihoods);
 
             // access alleles
             int         refIndex = vc.getAlleles().get(0).isReference() ? 0 : 1;
@@ -275,12 +293,13 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation {
 
     private void cycleSkip(final VariantContext vc, final LocalAttributes la) {
 
+        // establish flow order
         String      css = C_NA;
         if ( !vc.isIndel() && vc.getAlleles().size() == 2 ) {
 
             // establish flow order
             if ( la.flowOrder == null )
-                la.flowOrder = establishFlowOrder(la.likelihoods);
+                la.flowOrder = establishFlowOrder(la, la.likelihoods);
 
             // access alleles
             int         refIndex = vc.getAlleles().get(0).isReference() ? 0 : 1;
@@ -381,8 +400,7 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation {
         return new String(Arrays.copyOfRange(bases, startIndex, endIndex));
     }
 
-    @VisibleForTesting
-    public void setFlowOrderForTesting(String flowOrder) {
-
+    public void setFlowOrder(List<String> flowOrder) {
+        this.flowOrder = flowOrder;
     }
 }
