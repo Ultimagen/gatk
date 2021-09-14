@@ -12,6 +12,7 @@ import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.reference.ReferenceBases;
 import org.testng.Assert;
 import org.testng.annotations.Test;
+import org.testng.annotations.DataProvider;
 
 import java.util.*;
 
@@ -28,10 +29,10 @@ public class FlowAnnotatorUnitTest {
             new CycleSkipStatus()
     };
 
-    @Test
-    public void testBasic() {
+    @DataProvider(name = "testData")
+    public Object[][] getTestData() {
 
-        final String[][]        testData = {
+        final Object[][]        testData = {
                 // order:
                 // refbases, altAllele (include a space before and after refAllele
                 // indel-class, indel-length, hmer-indel-lenfth, hmer-indel-nuc
@@ -69,38 +70,48 @@ public class FlowAnnotatorUnitTest {
                 }
         };
 
+        return testData;
+    }
+
+    @Test(dataProvider = "testData")
+    public void testBasic(Object[] testData) {
+
         // should be in same order as test data!!!!
         final List<String>      expectedAttrs = allKeys();
 
-        // loop on test data
-        for ( String[] data : testData ) {
+        // prepare as array of Strings
+        String[]        data = new String[testData.length];
+        for ( int n = 0 ; n < data.length ; n++ ) {
+            if (testData[n] != null) {
+                data[n] = testData[n].toString();
+            }
+        }
 
-            // prepare
-            final int        refAlleleStart = data[0].indexOf(' ');
-            final int        refAlleleEnd = data[0].indexOf(' ', refAlleleStart + 1);
-            final String     refAllele = data[0].substring(refAlleleStart + 1, refAlleleEnd);
-            final ReferenceContext ref = buildReferenceContext(data[0].replace(" ", ""), refAlleleStart + 1, refAlleleEnd - 1);
-            final VariantContext vc = buildVariantContext(ref, refAllele, data[1]);
-            String          msg = "on " + StringUtils.join(data, " ");
+        // prepare
+        final int        refAlleleStart = data[0].indexOf(' ');
+        final int        refAlleleEnd = data[0].indexOf(' ', refAlleleStart + 1);
+        final String     refAllele = data[0].substring(refAlleleStart + 1, refAlleleEnd);
+        final ReferenceContext ref = buildReferenceContext(data[0].replace(" ", ""), refAlleleStart + 1, refAlleleEnd - 1);
+        final VariantContext vc = buildVariantContext(ref, refAllele, data[1]);
+        String          msg = "on " + StringUtils.join(data, " ");
 
-            // invoke
-            final Map<String, Object> attrs = allAnnotate(ref, vc);
-            Assert.assertNotNull(attrs, msg);
+        // invoke
+        final Map<String, Object> attrs = allAnnotate(ref, vc);
+        Assert.assertNotNull(attrs, msg);
 
-            // check that all expected attributes are there
-            for ( int n = 0 ; n < 8 ; n++ ) {
-                String       key = expectedAttrs.get(n);
-                String       elem = data[2+n];
-                String       keyMsg = "on " + key + " " + msg;
-                if ( elem != null && elem.charAt(0) != '!' ) {
-                    Object v = attrs.get(key);
-                    if (v instanceof List) {
-                        v = StringUtils.join((List) v, ",");
-                    }
-                    Assert.assertEquals(v.toString(), elem, keyMsg);
-                } else if ( elem == null ) {
-                    Assert.assertFalse(attrs.containsKey(key), keyMsg);
+        // check that all expected attributes are there
+        for ( int n = 0 ; n < 8 ; n++ ) {
+            String       key = expectedAttrs.get(n);
+            String       elem = data[2+n];
+            String       keyMsg = "on " + key + " " + msg;
+            if ( elem != null && elem.charAt(0) != '!' ) {
+                Object v = attrs.get(key);
+                if (v instanceof List) {
+                    v = StringUtils.join((List) v, ",");
                 }
+                Assert.assertEquals(v.toString(), elem, keyMsg);
+            } else if ( elem == null ) {
+                Assert.assertFalse(attrs.containsKey(key), keyMsg);
             }
         }
     }
