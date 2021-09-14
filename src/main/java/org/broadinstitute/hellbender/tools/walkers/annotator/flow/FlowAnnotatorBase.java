@@ -32,7 +32,7 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation {
     protected static final int      MOTIF_SIZE = 5;
     protected static final int      GC_CONTENT_SIZE = 10;
     protected static final int      BASE_TYPE_COUNT = 4;
-    private static final String     DEFAULT_FLOW_ORDER = "TAGC";
+    private static final String     DEFAULT_FLOW_ORDER = "TGCA";
 
     private List<String>            flowOrder;
 
