@@ -120,8 +120,9 @@ public class FlowAnnotatorUnitTest {
 
         Map<String, Object>     attrs = new LinkedHashMap<>();
 
-        for ( FlowAnnotatorBase a : allAnnotators )
+        for ( FlowAnnotatorBase a : allAnnotators ) {
             attrs.putAll(a.annotate(ref, vc, null));
+        }
 
         return attrs;
     }
