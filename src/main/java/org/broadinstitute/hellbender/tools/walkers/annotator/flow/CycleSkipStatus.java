@@ -16,7 +16,7 @@ import java.util.List;
 public class CycleSkipStatus extends FlowAnnotatorBase implements StandardFlowBasedAnnotation {
     private final static Logger logger = LogManager.getLogger(CycleSkipStatus.class);
 
-    @Argument(fullName = "flow-order-for-cycle-skip",  doc = "flow order used for this annotations. [readGroup:]flowOrder,...", optional = true)
+    @Argument(fullName = "flow-order-for-annotations",  doc = "flow order used for this annotations. [readGroup:]flowOrder,...", optional = true)
     private String flowOrder;
 
     @Override
