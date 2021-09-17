@@ -244,8 +244,70 @@ public class AlleleFilteringUnitTest {
 
 
         AlleleFiltering alleleFiltering = new AlleleFilteringHC(hcArgs, null, genotypingEngine);
-        AlleleLikelihoods<GATKRead, Haplotype> filtered_lks = alleleFiltering.filterAlleles(lks, 0, new HashSet<>());
+        AlleleLikelihoods<GATKRead, Haplotype> filtered_lks = alleleFiltering.filterAlleles(lks, 100, new HashSet<>());
         Assert.assertEquals(filtered_lks.alleles(), haplotypeList.subList(0,1));
     }
+
+    @Test
+    public void testNotFilterLoneWeakAllele(){
+        //if hcArgs.filterLoneAlleles is false - weak lone alleles should be kept
+
+        // create haplotypes
+        List<Haplotype> haplotypeList = new ArrayList<>();
+        final byte[] fullReferenceWithPadding = "CATGCATG".getBytes();
+        Haplotype haplotype = new Haplotype(fullReferenceWithPadding, true, 0, TextCigarCodec.decode("8M"));
+        haplotype.setGenomeLocation(new SimpleInterval("chr", 100, 108));
+        haplotype.setEventMap(new EventMap(haplotype, fullReferenceWithPadding,
+                new SimpleInterval("chr", (int)haplotype.getStartPosition(),(int)haplotype.getStopPosition()), "test", 0));
+        haplotypeList.add(haplotype);
+
+        haplotype = new Haplotype("CAGGCATG".getBytes(), false, 0, TextCigarCodec.decode("8M"));
+        haplotype.setGenomeLocation(new SimpleInterval("chr", 100, 108));
+
+        haplotype.setEventMap(new EventMap(haplotype, fullReferenceWithPadding,
+                new SimpleInterval("chr", (int)haplotype.getStartPosition(), (int)haplotype.getStopPosition()), "test", 0));
+        haplotypeList.add(haplotype);
+
+        AlleleList<Haplotype> haplotypes = new IndexedAlleleList<>(haplotypeList);
+        SampleList samples = new IndexedSampleList(Arrays.asList("sm1"));
+
+        List<GATKRead> readList = new ArrayList<>(30);
+        Map<String, List<GATKRead>>ebs = new HashMap<>();
+        ebs.put("sm1", readList);
+
+        for (int i = 0 ; i < 30; i++) {
+            readList.add(ArtificialReadUtils.createArtificialRead("20M"));
+        }
+
+        double[][] values = {{3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0},
+                {3, 0, 4, 0, 3, 0, 4, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0}
+        };
+
+        AlleleLikelihoods<GATKRead, Haplotype> lks = new AlleleLikelihoods<>(samples, haplotypes, ebs);
+        LikelihoodMatrix<GATKRead, Haplotype> lkm = lks.sampleMatrix(0);
+        for (int i = 0; i < lks.numberOfAlleles(); i++){
+            for (int j = 0 ; j < lkm.evidenceCount(); j++) {
+                lkm.set(i,j,values[i][j]);
+            }
+        }
+
+        HaplotypeCallerArgumentCollection hcArgs = new HaplotypeCallerArgumentCollection();
+        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples, ! hcArgs.doNotRunPhysicalPhasing, false);
+
+
+        AlleleFiltering alleleFiltering = new AlleleFilteringHC(hcArgs, null, genotypingEngine);
+        AlleleLikelihoods<GATKRead, Haplotype> filtered_lks = alleleFiltering.filterAlleles(lks, 100, new HashSet<>());
+        //hcArgs.filterLoneAlleles is false, so we keep the weak lone allele
+        Assert.assertEquals(filtered_lks.alleles(), haplotypeList);
+
+        hcArgs.filterLoneAlleles = true;
+        alleleFiltering = new AlleleFilteringHC(hcArgs, null, genotypingEngine);
+        filtered_lks = alleleFiltering.filterAlleles(lks, 100, new HashSet<>());
+
+        //hcArgs.filterLoneAlleles is true, so we keep the remove the weak lone allele
+        Assert.assertEquals(filtered_lks.alleles(), haplotypeList.subList(0,1));
+
+    }
+
 
 }

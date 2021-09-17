@@ -1,6 +1,8 @@
 package org.ultimagen.haplotypeCalling;
 
 import htsjdk.variant.variantcontext.Allele;
+import org.broadinstitute.hellbender.exceptions.GATKException;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.InverseAllele;
 import org.broadinstitute.hellbender.tools.walkers.mutect.*;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleList;
@@ -45,7 +47,10 @@ public class AlleleFilteringMutect extends AlleleFiltering {
     private double somaticAltLogOdds(final LikelihoodMatrix<GATKRead, Allele> matrix) {
 
         final LikelihoodMatrix<GATKRead, Allele> initialMatrix = matrix;
-        final LikelihoodMatrix<GATKRead, Allele> logMatrixWithoutThisAllele = SubsettedLikelihoodMatrix.excludingAllele(matrix, matrix.getAllele(0));
+        if (matrix.getAllele(1-matrix.indexOfReference()) instanceof InverseAllele){
+            throw new GATKException.ShouldNeverReachHereException("Inverse allele removed in filtering");
+        }
+        final LikelihoodMatrix<GATKRead, Allele> logMatrixWithoutThisAllele = SubsettedLikelihoodMatrix.excludingAllele(matrix, matrix.getAllele(1-matrix.indexOfReference()));
 
         final double logEvidenceWithoutThisAllele = logMatrixWithoutThisAllele.evidenceCount() == 0 ? 0 :
                 SomaticLikelihoodsEngine.logEvidence(SomaticGenotypingEngine.getAsRealMatrix(logMatrixWithoutThisAllele),

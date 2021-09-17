@@ -320,8 +320,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
 
         if ( emitReferenceConfidence() ) {
-            //hcArgs.standardArgs.genotypeArgs.standardConfidenceForCalling = -0.0;
-
+            hcArgs.standardArgs.genotypeArgs.standardConfidenceForCalling = -0.0;
             logger.info("Standard Emitting and Calling confidence set to " + hcArgs.standardArgs.genotypeArgs.STANDARD_CONFIDENCE_FOR_CALLING + " for reference-model confidence output");
             if ( ! hcArgs.standardArgs.annotateAllSitesWithPLs ) {
                 logger.info("All sites annotated with PLs forced to true for reference-model confidence output");
@@ -794,6 +793,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         Set<Integer> suspiciousLocations = new HashSet<>();
         if (hcArgs.filterAlleles) {
             logger.debug("Filtering alleles");
+
             AlleleFilteringHC alleleFilter = new AlleleFilteringHC(hcArgs, assemblyDebugOutStream, genotypingEngine);
             //need to update haplotypes to find the alleles
             EventMap.buildEventMapsForHaplotypes(uncollapsedReadLikelihoods.alleles(),

@@ -168,13 +168,6 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
             final List<VariantContext> eventsAtThisLoc = AssemblyBasedCallerUtils.getVariantContextsFromActiveHaplotypes(loc,
                     haplotypes, !hcArgs.disableSpanningEventGenotyping);
 
-//            List<VariantContext> possibleEquivalents = null;
-//            if (hcArgs.filterAlleles && false) {
-//                //Adding all variants in the area that are possibly equivalent allele up to hmer indel
-//                possibleEquivalents = getPossibleEquivalents(loc, eventsAtThisLoc,
-//                        exclusivePairMap, haplotypes);
-//            }
-
             final List<VariantContext> eventsAtThisLocWithSpanDelsReplaced = replaceSpanDels(eventsAtThisLoc,
                     Allele.create(ref[loc - refLoc.getStart()], true), loc);
 
@@ -213,6 +206,7 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
 
                 readAlleleLikelihoods.contaminationDownsampling(configuration.getSampleContamination());
             }
+
             if (HaplotypeCallerGenotypingDebugger.isEnabled()) {
                 HaplotypeCallerGenotypingDebugger.println("\n=============================================================================");
                 HaplotypeCallerGenotypingDebugger.println("Event at: " + mergedVC + " with " + readAlleleLikelihoods.evidenceCount() + " reads and "+readAlleleLikelihoods.filteredSampleEvidence(0).size()+" disqualified");
@@ -220,6 +214,20 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
                 HaplotypeCallerGenotypingDebugger.println("haplotype alleles key:");
                 for (Map.Entry<Allele, List<Haplotype>> allele : alleleMapper.entrySet()) {
                     HaplotypeCallerGenotypingDebugger.println("Allele: "+allele.getKey()+" Haps: "+allele.getValue().stream().map(readLikelihoods::indexOfAllele).map(i -> Integer.toString(i)).collect(Collectors.joining(", ")));
+                }
+                HaplotypeCallerGenotypingDebugger.println("Read-allele matrix:");
+                String allele_string = readAlleleLikelihoods.alleles().stream().map(al -> al.toString()).collect(Collectors.joining(" "));
+                HaplotypeCallerGenotypingDebugger.println(allele_string);
+                for (int sn = 0 ; sn < readAlleleLikelihoods.numberOfSamples(); sn++){
+                    for (int evn = 0 ; evn < readAlleleLikelihoods.sampleEvidence(sn).size(); evn++) {
+                        String outputStr = readAlleleLikelihoods.sampleEvidence(sn).get(evn).getName();
+
+                        for (Allele curAllele : readAlleleLikelihoods.alleles()) {
+                            int idx = readAlleleLikelihoods.indexOfAllele(curAllele);
+                            outputStr = outputStr + " " + readAlleleLikelihoods.sampleMatrix(sn).get(idx, evn);
+                        }
+                        HaplotypeCallerGenotypingDebugger.println(outputStr);
+                    }
                 }
             }
 

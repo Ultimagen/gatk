@@ -359,13 +359,12 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     public final String FILTER_ALLELES = "flow-filter-alleles";
     public final String FILTER_ALLELES_QUAL_THRESHOLD = "flow-filter-alleles-qual-threshold";
     public final String FILTER_ALLELES_SOR_THRESHOLD = "flow-filter-alleles-sor-threshold";
-
+    public final String FILTER_ALLELES_FILTER_LONE_ALLELES = "flow-filter-lone-alleles";
 
     public final String FILTER_ALLELES_DEBUG_GRAPH = "flow-filter-alleles-debug-graphs";
 
 
     @Advanced
-    @Hidden
     @Argument(fullName = FILTER_ALLELES, doc = "pre-filter alleles before genotyping", optional=true)
     public boolean filterAlleles=false;
 
@@ -379,6 +378,12 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     @Hidden
     @Argument(fullName = FILTER_ALLELES_SOR_THRESHOLD, doc = "Threshold for prefiltering alleles on SOR", optional=true)
     public float prefilterSorThreshold=PREFILTER_SOR_THRESHOLD;
+
+    @Advanced
+    @Hidden
+    @Argument(fullName = FILTER_ALLELES_FILTER_LONE_ALLELES, doc = "Remove also lone alleles during allele filtering", optional=true)
+    public boolean filterLoneAlleles=false;
+
 
     /* This is a debugging printout - printing how much each allele affects other allele (i.e. how much
      * quality of an allele is affected by removing other allele */
