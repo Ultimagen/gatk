@@ -6,17 +6,18 @@ public class InverseAllele extends Allele {
     final static public long serialVersionUID = 1L;
 
     private final Allele internalAllele;
-
-    private InverseAllele(final Allele allele) {
+    private final boolean referenceStatus;
+    private InverseAllele(final Allele allele, boolean isReference) {
         super(allele, false);
         this.internalAllele = allele;
+        referenceStatus = isReference;
     }
 
-    public static Allele of(final Allele allele){
+    public static Allele of(final Allele allele, boolean refFlag){
         if (allele instanceof InverseAllele) {
             return ((InverseAllele)allele).internalAllele;
         } else {
-            return new InverseAllele(allele);
+            return new InverseAllele(allele, refFlag);
         }
     }
 
@@ -25,7 +26,7 @@ public class InverseAllele extends Allele {
     }
     @Override
     public boolean isReference() {
-        return internalAllele.isReference();
+        return referenceStatus;
     }
 
     @Override
