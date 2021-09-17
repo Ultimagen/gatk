@@ -223,8 +223,8 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
                 for (int j = 0; j < likelihoods.evidenceCount(); j++) {
                     final double likelihood = haplotypeReadMatching(fbh, processedReads.get(j));
                     likelihoods.set(i, j, likelihood);
-                    if (logger.isDebugEnabled())
-                        logger.debug("likelihood: " + likelihood + " " + processedReads.get(j).getName() + " " + fbh.getBaseString());
+//                    if (logger.isDebugEnabled())
+//                        logger.debug("likelihood: " + likelihood + " " + processedReads.get(j).getName() + " " + fbh.getBaseString());
                 }
             }
         }
@@ -434,8 +434,9 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
                 for (int i = 0; i < locationsToFetch.length; i++) {
                     final double prob;
                     result += Math.log10(prob = read.getProb(i, locationsToFetch[i]));
-                    if (logger.isDebugEnabled())
+                    if (logger.isDebugEnabled()) {
                         logger.debug("prob:" + read.getName() + " " + i + " " + locationsToFetch[i] + " " + prob);
+                    }
                 }
                 if (result > bestAlignment) {
                     bestAlignment = result;

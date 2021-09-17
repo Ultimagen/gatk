@@ -7,9 +7,12 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.walkers.annotator.StrandOddsRatio;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyBasedCallerArgumentCollection;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerArgumentCollection;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerEngine;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerGenotypingEngine;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.InverseAllele;
 import org.broadinstitute.hellbender.utils.dragstr.DragstrReferenceAnalyzer;
@@ -27,6 +30,7 @@ import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /**
  * Filtering haplotypes that contribute weak alleles to the genotyping.
@@ -41,7 +45,6 @@ public abstract class AlleleFiltering {
     protected static final Logger logger = LogManager.getLogger(AlleleFiltering.class);
     protected AssemblyBasedCallerArgumentCollection hcArgs;
     private OutputStreamWriter assemblyDebugOutStream;
-
     AlleleFiltering(AssemblyBasedCallerArgumentCollection _hcargs, OutputStreamWriter _assemblyDebugOutStream){
         hcArgs = _hcargs;
         assemblyDebugOutStream = _assemblyDebugOutStream;
@@ -134,7 +137,7 @@ public abstract class AlleleFiltering {
         OccurrenceMatrix<Haplotype, LocationAndAllele> occm = new OccurrenceMatrix<>(haplotypeAlleleMap);
         List<Pair<LocationAndAllele, LocationAndAllele>> nonCoOcurringAlleles = occm.nonCoOcurringColumns();
         List<Pair<LocationAndAllele, LocationAndAllele>> restrictiveNonCoOcurring = filterByDistance(nonCoOcurringAlleles, 0, 3);
-        filterByDistance(nonCoOcurringAlleles, 0, 20);
+        nonCoOcurringAlleles = filterByDistance(nonCoOcurringAlleles, 0, 20);
         nonCoOcurringAlleles = filterSameUpToHmerPairs(nonCoOcurringAlleles, findReferenceHaplotype(readLikelihoods.alleles()), activeWindowStart);
         nonCoOcurringAlleles.addAll(restrictiveNonCoOcurring);
         List<Set<LocationAndAllele>> independentAlleles = occm.getIndependentSets(nonCoOcurringAlleles);
@@ -209,21 +212,40 @@ public abstract class AlleleFiltering {
                                                                                 hcargs.prefilterQualThreshold,
                                                                                 hcargs.prefilterSorThreshold);
 
+
+                //very weak candidates are filtered out in any case, even if they are alone (they will be filtered anyway even in the GVCF mode)
+                // the very weak quality is hardcoded
+                List<LocationAndAllele> filteringCandidatesStringent = identifyBadAlleles(collectedRPLs,
+                        collectedSORs,
+                        activeAlleles,
+                        1,
+                        Integer.MAX_VALUE);
+
+
                 //for now we just mark all locations with close alleles, one of which is weak.
                 //We write them in suspiciousLocations and they will be then annotated as SUSP_NOISY... in the VCF
-                if ((filteringCandidates.size() > 0 ) && (alleleSet.size()>1)) {
+                if ((filteringCandidates.size() > 0 ) && (alleleSet.size()>0)) {
                     activeAlleles.forEach(laa -> suspiciousLocations.add(laa.getLoc()));
                 }
 
                 //    e. For every variant - calculate what is the effect of its deletion and if higher than threshold - delete and continue
-                // This is a currently disabled code from the approach that would disable only the candidates that strongly
+
+                // (This is a currently disabled code from the approach that would disable only the candidates that strongly
                 // affect other alleles
                 //LocationAndAllele candidateToDisable = identifyStrongInteractingAllele(filteringCandidates,
-                //        hcargs.prefilterQualThreshold, activeAlleles, collectedRPLs, readLikelihoods, haplotypeAlleleMap, alleleHaplotypeMap);
+                //        hcargs.prefilterQualThreshold, activeAlleles, collectedRPLs, readLikelihoods, haplotypeAlleleMap, alleleHaplotypeMap); )
 
                 // if weak candidate had been identified - add its haplotypes into blacklist, remove the allele from the
                 // current cluster and genotype again.
-                if (filteringCandidates.size()>0) {
+                if ((filteringCandidates.size()>0 && activeAlleles.size()>1) ||
+                (activeAlleles.size()==1 && filteringCandidatesStringent.size()>0) ||
+                        (filteringCandidates.size()>0 && hcArgs.filterLoneAlleles)) {
+
+                    if ((filteringCandidatesStringent.size()>0) && (filteringCandidates.size() == 0 )) {
+                        throw new GATKException.ShouldNeverReachHereException("The thresholds for stringent allele " +
+                                "filtering should always be higher than for the relaxed one");
+                    }
+
                     LocationAndAllele candidateToDisable = filteringCandidates.get(0);
                     logger.debug(() -> String.format("GAL:: Remove %s", candidateToDisable.toString()));
                     removedAlleles = true;
@@ -329,7 +351,7 @@ public abstract class AlleleFiltering {
                                                                                      ){
         Map<Allele,List<Haplotype>> alleleHaplotypeMap = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
 
-        final Allele notAllele= InverseAllele.of(allele.getAllele());
+        final Allele notAllele= InverseAllele.of(allele.getAllele(), true);
         readLikelihoods.alleles().stream().filter(enabledHaplotypes::contains)
                 .filter(h->haplotypeAlleleMap.get(h).contains(allele))
                 .forEach(alleleHaplotypeMap.get(allele)::add);
@@ -346,7 +368,7 @@ public abstract class AlleleFiltering {
     abstract int getAlleleLikelihood(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele);
 
     private double getAlleleSOR(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele) {
-        final Allele notAllele = InverseAllele.of(allele);
+        final Allele notAllele = InverseAllele.of(allele, true);
         int [][] contingency_table = StrandOddsRatio.getContingencyTableWrtAll(alleleLikelihoods, notAllele, Collections.singletonList(allele), 1);
         double sor = StrandOddsRatio.calculateSOR(contingency_table);
         logger.debug(() -> String.format("GAS:: %s: %f (%d %d %d %d)", allele.toString(), sor, contingency_table[0][0], contingency_table[0][1], contingency_table[1][0], contingency_table[1][1]));
@@ -356,14 +378,15 @@ public abstract class AlleleFiltering {
 
     //filters pairs of alleles by distance
     private List<Pair<LocationAndAllele, LocationAndAllele>> filterByDistance(
-            List<Pair<LocationAndAllele, LocationAndAllele>> allelePairs,
+            final List<Pair<LocationAndAllele, LocationAndAllele>> allelePairs,
             final int minDist, final int maxDist) {
         logger.debug(() -> String.format("FBD: input %d pairs ", allelePairs.size()));
-        allelePairs.removeIf(v -> Math.abs(v.getLeft().getLoc() - v.getRight().getLoc())>maxDist);
-        allelePairs.removeIf(v -> Math.abs(v.getLeft().getLoc() - v.getRight().getLoc())<minDist);
+        List<Pair<LocationAndAllele, LocationAndAllele>> result = new ArrayList<>(allelePairs);
+        result.removeIf(v -> Math.abs(v.getLeft().getLoc() - v.getRight().getLoc())>maxDist);
+        result.removeIf(v -> Math.abs(v.getLeft().getLoc() - v.getRight().getLoc())<minDist);
         logger.debug(() -> String.format("FBD: output %d pairs ", allelePairs.size()));
 
-        return allelePairs;
+        return result;
     }
 
     //filters pairs of alleles that are not same up to hmer indel
@@ -371,7 +394,7 @@ public abstract class AlleleFiltering {
             LocationAndAllele>> allelePairs, Haplotype refHaplotype, int activeWindowStart) {
 
         List<Pair<LocationAndAllele, LocationAndAllele>> result = new ArrayList<>();
-
+        FlowBasedHaplotype refHapFlow = haplotype2FlowHaplotype(refHaplotype);
         for (Pair<LocationAndAllele, LocationAndAllele> allelePair: allelePairs) {
 
             int commonPrefixLengthLeft = getCommonPrefixLength(allelePair.getLeft().getAllele(), allelePair.getLeft().getRefAllele());
@@ -398,6 +421,7 @@ public abstract class AlleleFiltering {
             {
                 result.add(allelePair);
             }
+
         }
 
 
@@ -585,8 +609,6 @@ public abstract class AlleleFiltering {
             throw new RuntimeException();
         }
     }
-
-
 
 }
 

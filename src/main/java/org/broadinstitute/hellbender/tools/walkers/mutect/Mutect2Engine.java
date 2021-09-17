@@ -302,7 +302,11 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
                 regionForGenotyping.getSpan(), featureContext, givenAlleles,
                 header, haplotypeBAMWriter.isPresent(), emitReferenceConfidence(),
                 suspiciousLocations);
-        writeBamOutput(assemblyResult, subsettedReadLikelihoodsFinal, calledHaplotypes, regionForGenotyping.getSpan());
+        writeBamOutput(uncollapsedReadLikelihoods.alleles(),
+                assemblyResult.getPaddedReferenceLoc(),
+                subsettedReadLikelihoodsFinal,
+                calledHaplotypes,
+                regionForGenotyping.getSpan());
 
         if (emitReferenceConfidence()) {
             if ( !containsCalls(calledHaplotypes) ) {
@@ -358,13 +362,13 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
                 .anyMatch(Genotype::isCalled);
     }
 
-    private void writeBamOutput(final AssemblyResultSet assemblyResult, final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods, final CalledHaplotypes calledHaplotypes, final Locatable callableRegion) {
+    private void writeBamOutput(final Collection<Haplotype> initialHaplotypeList, Locatable paddedReferenceLoc, final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods, final CalledHaplotypes calledHaplotypes, final Locatable callableRegion) {
         if ( haplotypeBAMWriter.isPresent() ) {
             final Set<Haplotype> calledHaplotypeSet = new HashSet<>(calledHaplotypes.getCalledHaplotypes());
             haplotypeBAMWriter.get().writeReadsAlignedToHaplotypes(
-                    assemblyResult.getHaplotypeList(),
-                    assemblyResult.getPaddedReferenceLoc(),
-                    assemblyResult.getHaplotypeList(),
+                    initialHaplotypeList,
+                    paddedReferenceLoc,
+                    initialHaplotypeList,
                     calledHaplotypeSet,
                     readLikelihoods,
                     callableRegion);
