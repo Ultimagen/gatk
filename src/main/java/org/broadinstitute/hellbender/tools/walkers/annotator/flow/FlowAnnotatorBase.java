@@ -37,7 +37,7 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation {
     private List<String>            flowOrder;
 
 
-    static class LocalContext {
+    static private class LocalContext {
         ReferenceContext ref;
         AlleleLikelihoods<GATKRead, Allele> likelihoods;
         String      flowOrder;
