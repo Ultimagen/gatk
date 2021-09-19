@@ -16,14 +16,14 @@ import java.util.*;
 
 @DocumentedFeature(groupName=HelpConstants.DOC_CAT_FLOW_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_FLOW_ANNOTATORS_SUMMARY, summary="Indel Classify Flow Annotation")
 public class IndelClassify extends FlowAnnotatorBase implements StandardFlowBasedAnnotation {
-    private final static Logger logger = LogManager.getLogger(IndelClassify.class);
+    private final Logger logger = LogManager.getLogger(IndelClassify.class);
 
     @Override
     public Map<String, Object> annotate(ReferenceContext ref,
                                         VariantContext vc,
                                         AlleleLikelihoods<GATKRead, Allele> likelihoods) {
 
-        LocalContext        localContext = new LocalContext(ref, vc, likelihoods);
+       final LocalContext        localContext = new LocalContext(ref, vc, likelihoods);
 
         indelClassify(vc, localContext);
 

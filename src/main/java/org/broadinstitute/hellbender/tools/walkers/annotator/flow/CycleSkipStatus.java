@@ -21,15 +21,15 @@ import java.util.Map;
 
 @DocumentedFeature(groupName=HelpConstants.DOC_CAT_FLOW_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_FLOW_ANNOTATORS_SUMMARY, summary="Cycle Skip Status Flow Annotation")
 public class CycleSkipStatus extends FlowAnnotatorBase implements StandardFlowBasedAnnotation {
-    private final static Logger logger = LogManager.getLogger(CycleSkipStatus.class);
-    private final static OneShotLogger noFlowOrderLogger = new OneShotLogger(logger);
+    private final Logger logger = LogManager.getLogger(CycleSkipStatus.class);
+    private final OneShotLogger noFlowOrderLogger = new OneShotLogger(logger);
 
     @Override
     public Map<String, Object> annotate(ReferenceContext ref,
                                         VariantContext vc,
                                         AlleleLikelihoods<GATKRead, Allele> likelihoods) {
 
-        LocalContext        localContext = new LocalContext(ref, vc, likelihoods);
+        final LocalContext        localContext = new LocalContext(ref, vc, likelihoods);
 
         indelClassify(vc, localContext);
         isHmerIndel(vc, localContext);

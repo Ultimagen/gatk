@@ -18,14 +18,14 @@ import java.util.Map;
 
 @DocumentedFeature(groupName=HelpConstants.DOC_CAT_FLOW_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_FLOW_ANNOTATORS_SUMMARY, summary="Hmer Indel Length Flow Annotation")
 public class HmerIndelLength extends FlowAnnotatorBase implements StandardFlowBasedAnnotation {
-    private final static Logger logger = LogManager.getLogger(HmerIndelLength.class);
+    private final Logger logger = LogManager.getLogger(HmerIndelLength.class);
 
     @Override
     public Map<String, Object> annotate(ReferenceContext ref,
                                         VariantContext vc,
                                         AlleleLikelihoods<GATKRead, Allele> likelihoods) {
 
-        LocalContext        localContext = new LocalContext(ref, vc, likelihoods);
+        final LocalContext        localContext = new LocalContext(ref, vc, likelihoods);
 
         indelClassify(vc, localContext);
         isHmerIndel(vc, localContext);
