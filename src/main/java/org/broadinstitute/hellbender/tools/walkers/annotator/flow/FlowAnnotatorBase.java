@@ -37,7 +37,7 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation {
     private List<String>            flowOrder;
 
 
-    static private class LocalContext {
+    protected class LocalContext {
         ReferenceContext ref;
         AlleleLikelihoods<GATKRead, Allele> likelihoods;
         String      flowOrder;
@@ -53,59 +53,27 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation {
         Map<String, Object> attributes = new LinkedHashMap<>();
 
         boolean     notCalculated;
-    }
 
-    @Override
-    public Map<String, Object> annotate(ReferenceContext ref,
-                                        VariantContext vc,
-                                        AlleleLikelihoods<GATKRead, Allele> likelihoods) {
-        return annotate(ref, vc, likelihoods, getKeyNames());
-    }
+        protected LocalContext(final ReferenceContext ref,
+                               final VariantContext vc,
+                               final AlleleLikelihoods<GATKRead, Allele> likelihoods) {
+            Utils.nonNull(ref);
+            Utils.nonNull(vc);
 
-    public Map<String, Object> annotate(final ReferenceContext ref,
-                                        final VariantContext vc,
-                                        final AlleleLikelihoods<GATKRead, Allele> likelihoods,
-                                        final List<String> requestedAnnotations) {
-        Utils.nonNull(ref);
-        Utils.nonNull(vc);
-
-        // some annotators share results
-        final LocalContext localContext = new LocalContext();
-        localContext.ref = ref;
-        localContext.likelihoods = likelihoods;
-
-        // call annotatotrs
-        indelClassify(vc, localContext);
-        if ( requestedAnnotations.contains(GATKVCFConstants.FLOW_HMER_INDEL_LENGTH)
-            || requestedAnnotations.contains(GATKVCFConstants.FLOW_HMER_INDEL_NUC)
-            || requestedAnnotations.contains(GATKVCFConstants.FLOW_RIGHT_MOTIF)
-            || requestedAnnotations.contains(GATKVCFConstants.FLOW_CYCLESKIP_STATUS) ) {
-            isHmerIndel(vc, localContext);
-        }
-        if ( requestedAnnotations.contains(GATKVCFConstants.FLOW_LEFT_MOTIF)
-                || requestedAnnotations.contains(GATKVCFConstants.FLOW_RIGHT_MOTIF)
-                || requestedAnnotations.contains(GATKVCFConstants.FLOW_CYCLESKIP_STATUS) ) {
-            getMotif(vc, localContext);
-        }
-        if ( requestedAnnotations.contains(GATKVCFConstants.FLOW_GC_CONTENT) ) {
-            gcContent(vc, localContext);
-        }
-        if ( requestedAnnotations.contains(GATKVCFConstants.FLOW_CYCLESKIP_STATUS) ) {
-            cycleSkip(vc, localContext);
+            // some annotators share results
+            this.ref = ref;
+            this.likelihoods = likelihoods;
         }
 
-        // make sure we have a default indel class attibutes
-        if ( localContext.indel == null ) {
-            localContext.attributes.put(GATKVCFConstants.FLOW_INDEL_CLASSIFY, C_NA);
-        }
+        protected Map<String, Object> asAttributes() {
 
-        // filter map down to requested attributes
-        if ( localContext.notCalculated ) {
-            return Collections.emptyMap();
-        } else {
-            return localContext.attributes.entrySet().stream()
-                    .filter(x -> requestedAnnotations.contains(x.getKey()))
-                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            if ( notCalculated ) {
+                return Collections.emptyMap();
+            } else {
+                return attributes.entrySet().stream()
+                        .filter(x -> getKeyNames().contains(x.getKey()))
+                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            }
         }
     }
 
@@ -174,7 +142,7 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation {
     }
 
     // "indel_classify" and "indel_length"
-    private void indelClassify(final VariantContext vc, final LocalContext localContext) {
+    protected void indelClassify(final VariantContext vc, final LocalContext localContext) {
 
         if ( vc.isIndel() ) {
 
@@ -189,13 +157,15 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation {
             }
             localContext.attributes.put(GATKVCFConstants.FLOW_INDEL_CLASSIFY, localContext.indel = indelClassify);
             localContext.attributes.put(GATKVCFConstants.FLOW_INDEL_LENGTH, localContext.indelLength = indelLength);
+        } else {
+            localContext.attributes.put(GATKVCFConstants.FLOW_INDEL_CLASSIFY, C_NA);
         }
     }
 
     /*
     This function determines if the vc is an hmer indel. If so, it marks it as such
      */
-    private void isHmerIndel(final VariantContext vc, final LocalContext localContext) {
+    protected void isHmerIndel(final VariantContext vc, final LocalContext localContext) {
 
         // this is (currently) computed only when there is exactly one non reference allele
         if ( vc.isIndel() && localContext.indel.size() == 1 && vc.getAlleles().size() == 2 ) {
@@ -281,13 +251,18 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation {
         return hap;
     }
 
-    private void getMotif(final VariantContext vc, final LocalContext localContext) {
+    protected void getLeftMotif(final VariantContext vc, final LocalContext localContext) {
 
-        // we already did the hard work of building the right motif for hmer-indels. the rest should be simple
         final int         refLength = vc.getReference().length();
+
         localContext.attributes.put(GATKVCFConstants.FLOW_LEFT_MOTIF, localContext.leftMotif = getRefMotif(localContext, vc.getStart() - MOTIF_SIZE, MOTIF_SIZE));
         if ( vc.isIndel() ) {
             localContext.attributes.put(GATKVCFConstants.FLOW_LEFT_MOTIF, localContext.leftMotif.substring(1) + vc.getReference().getBaseString().substring(0, 1));}
+    }
+
+    protected void getRightMotif(final VariantContext vc, final LocalContext localContext) {
+
+        final int         refLength = vc.getReference().length();
 
         if ( localContext.rightMotif == null ) {
             localContext.rightMotif = getRefMotif(localContext, vc.getStart() + refLength, MOTIF_SIZE);
@@ -295,7 +270,7 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation {
         localContext.attributes.put(GATKVCFConstants.FLOW_RIGHT_MOTIF, localContext.rightMotif);
     }
 
-    private void gcContent(final VariantContext vc, final LocalContext localContext) {
+    protected void gcContent(final VariantContext vc, final LocalContext localContext) {
 
         final int         begin = vc.getStart() - (GC_CONTENT_SIZE / 2);
         final String      seq = getRefMotif(localContext, begin + 1, GC_CONTENT_SIZE);
@@ -308,7 +283,7 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation {
         localContext.attributes.put(GATKVCFConstants.FLOW_GC_CONTENT, (float)gcCount / seq.length());
     }
 
-    private void cycleSkip(final VariantContext vc, final LocalContext localContext) {
+    protected void cycleSkip(final VariantContext vc, final LocalContext localContext) {
 
         // establish flow order
         String      css = C_NA;

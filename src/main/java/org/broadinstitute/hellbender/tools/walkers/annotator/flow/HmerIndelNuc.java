@@ -11,7 +11,7 @@ import java.util.Collections;
 import java.util.List;
 
 @DocumentedFeature(groupName=HelpConstants.DOC_CAT_FLOW_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_FLOW_ANNOTATORS_SUMMARY, summary="Hmer Indel Nucleotide Flow Annotation")
-public class HmerIndelNuc extends FlowAnnotatorBase implements StandardFlowBasedAnnotation {
+public class HmerIndelNuc extends HmerIndelLength implements StandardFlowBasedAnnotation {
     private final static Logger logger = LogManager.getLogger(HmerIndelNuc.class);
 
     @Override
