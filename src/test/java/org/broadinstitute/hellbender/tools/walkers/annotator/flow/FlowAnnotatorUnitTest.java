@@ -29,6 +29,13 @@ public class FlowAnnotatorUnitTest {
             new CycleSkipStatus()
     };
 
+    final static String         FLOW_ORDER = "TGCA";
+    final static int            RANDOM_TEST_DATA_ENTRY_COUNT = 1000;
+    final static int            RANDOM_TEST_DATA_MIN_REF_LENGTH = 5;
+    final static int            RANDOM_TEST_DATA_MAX_REF_LENGTH = 10;
+    final static int            RANDOM_TEST_DATA_MIN_ALLELE_LENGTH = 1;
+    final static int            RANDOM_TEST_DATA_MAX_ALLELE_LENGTH = 2;
+
     @DataProvider(name = "testData")
     public Object[][] getTestData() {
 
@@ -71,6 +78,49 @@ public class FlowAnnotatorUnitTest {
         };
 
         return testData;
+    }
+
+    @DataProvider(name = "randomTestData")
+    public Object[][] getRandomTestData() {
+
+        // this test data is designed to increase confidence in the code no crashing
+        final Object[][]        testData = new Object[RANDOM_TEST_DATA_ENTRY_COUNT][];
+        final Random            rand = new Random(0);
+        for ( int i = 0 ; i < testData.length ; i++ ) {
+
+            // random entries consist of:
+            // [0] reference
+            // [1] allele
+            // [2] index of annotation to call
+            testData[i] = new Object[3];
+            final String    alleleOnRef = generateRandomSequence(rand, FLOW_ORDER, RANDOM_TEST_DATA_MIN_ALLELE_LENGTH, RANDOM_TEST_DATA_MAX_ALLELE_LENGTH, null);
+            final String    allele = generateRandomSequence(rand, FLOW_ORDER, RANDOM_TEST_DATA_MIN_ALLELE_LENGTH, RANDOM_TEST_DATA_MAX_ALLELE_LENGTH, alleleOnRef);
+            testData[i][0] =
+                    generateRandomSequence(rand, FLOW_ORDER, RANDOM_TEST_DATA_MIN_REF_LENGTH, RANDOM_TEST_DATA_MAX_REF_LENGTH, null)
+                    + " "
+                    + alleleOnRef
+                    + " "
+                    + generateRandomSequence(rand, FLOW_ORDER, RANDOM_TEST_DATA_MIN_REF_LENGTH, RANDOM_TEST_DATA_MAX_REF_LENGTH, null);
+            testData[i][1] = allele;
+            testData[i][2] = rand.nextInt(allAnnotators.length);
+        }
+
+        return testData;
+    }
+
+    private String generateRandomSequence(final Random rand, final String flowOrder,
+                                          final int minLength, final int maxLength,
+                                          final String exceptFor) {
+
+        final int           length = minLength + rand.nextInt(maxLength - minLength);
+        do {
+            final StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < length; i++)
+                sb.append(flowOrder.charAt(rand.nextInt(flowOrder.length())));
+
+            if ( exceptFor == null || !sb.toString().equals(exceptFor) )
+                return sb.toString();
+        } while (true);
     }
 
     @Test(dataProvider = "testData")
@@ -116,9 +166,33 @@ public class FlowAnnotatorUnitTest {
         }
     }
 
-    private Map<String, Object> allAnnotate(ReferenceContext ref, VariantContext vc) {
+    @Test(dataProvider = "randomTestData")
+    public void testRandom(Object[] testData) {
 
-        Map<String, Object>     attrs = new LinkedHashMap<>();
+        // should be in same order as test data!!!!
+        final List<String>      expectedAttrs = allKeys();
+
+        // prepare specific types
+        final String    data0 = testData[0].toString();
+        final String    data1 = testData[1].toString();
+        final int       data2 = Integer.parseInt(testData[2].toString());
+
+        // prepare
+        final int        refAlleleStart = data0.indexOf(' ');
+        final int        refAlleleEnd = data0.indexOf(' ', refAlleleStart + 1);
+        final String     refAllele = data0.substring(refAlleleStart + 1, refAlleleEnd);
+        final ReferenceContext ref = buildReferenceContext(data0.replace(" ", ""), refAlleleStart + 1, refAlleleEnd - 1);
+        final VariantContext vc = buildVariantContext(ref, refAllele, data1);
+        String          msg = "on " + StringUtils.join(testData, " ");
+
+        // invoke
+        final Map<String, Object> attrs = allAnnotators[data2].annotate(ref, vc, null);
+        Assert.assertNotNull(attrs, msg);
+    }
+
+    private Map<String, Object> allAnnotate(final ReferenceContext ref, final VariantContext vc) {
+
+        final Map<String, Object>     attrs = new LinkedHashMap<>();
 
         for ( FlowAnnotatorBase a : allAnnotators ) {
             attrs.putAll(a.annotate(ref, vc, null));
@@ -133,7 +207,7 @@ public class FlowAnnotatorUnitTest {
 
         for ( FlowAnnotatorBase a : allAnnotators ) {
             keys.addAll(a.getKeyNames());
-            a.setFlowOrder(Collections.singletonList("TGCA"));
+            a.setFlowOrder(Collections.singletonList(FLOW_ORDER));
         }
 
         return keys;
