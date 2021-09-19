@@ -124,35 +124,33 @@ public class FlowAnnotatorUnitTest {
     }
 
     @Test(dataProvider = "testData")
-    public void testBasic(Object[] testData) {
+    public void testBasic(final String refBases, final String altAllele,
+                          final String indelClass, final String indelLength,
+                          final String hmerIndelLength, final String hmerIndelNuc,
+                          final String leftMotif, final String rightMotif,
+                          final String gcContent, final String cycleskipStatus) {
 
         // should be in same order as test data!!!!
         final List<String>      expectedAttrs = allKeys();
 
-        // prepare as array of Strings
-        String[]        data = new String[testData.length];
-        for ( int n = 0 ; n < data.length ; n++ ) {
-            if (testData[n] != null) {
-                data[n] = testData[n].toString();
-            }
-        }
-
         // prepare
-        final int        refAlleleStart = data[0].indexOf(' ');
-        final int        refAlleleEnd = data[0].indexOf(' ', refAlleleStart + 1);
-        final String     refAllele = data[0].substring(refAlleleStart + 1, refAlleleEnd);
-        final ReferenceContext ref = buildReferenceContext(data[0].replace(" ", ""), refAlleleStart + 1, refAlleleEnd - 1);
-        final VariantContext vc = buildVariantContext(ref, refAllele, data[1]);
-        String          msg = "on " + StringUtils.join(data, " ");
+        final int        refAlleleStart = refBases.indexOf(' ');
+        final int        refAlleleEnd = refBases.indexOf(' ', refAlleleStart + 1);
+        final String     refAllele = refBases.substring(refAlleleStart + 1, refAlleleEnd);
+        final ReferenceContext ref = buildReferenceContext(refBases.replace(" ", ""), refAlleleStart + 1, refAlleleEnd - 1);
+        final VariantContext vc = buildVariantContext(ref, refAllele, altAllele);
+        String          msg = "on " + refBases + " " + altAllele;
 
         // invoke
         final Map<String, Object> attrs = allAnnotate(ref, vc);
         Assert.assertNotNull(attrs, msg);
 
         // check that all expected attributes are there
+        String[]        testResults = {indelClass, indelLength, hmerIndelLength, hmerIndelNuc,
+                leftMotif, rightMotif, gcContent, cycleskipStatus};
         for ( int n = 0 ; n < 8 ; n++ ) {
             String       key = expectedAttrs.get(n);
-            String       elem = data[2+n];
+            String       elem = testResults[n];
             String       keyMsg = "on " + key + " " + msg;
             if ( elem != null && elem.charAt(0) != '!' ) {
                 Object v = attrs.get(key);
@@ -167,26 +165,18 @@ public class FlowAnnotatorUnitTest {
     }
 
     @Test(dataProvider = "randomTestData")
-    public void testRandom(Object[] testData) {
-
-        // should be in same order as test data!!!!
-        final List<String>      expectedAttrs = allKeys();
-
-        // prepare specific types
-        final String    data0 = testData[0].toString();
-        final String    data1 = testData[1].toString();
-        final int       data2 = Integer.parseInt(testData[2].toString());
+    public void testRandom(final String refBases, final String altAllele, final int annotationIndex) {
 
         // prepare
-        final int        refAlleleStart = data0.indexOf(' ');
-        final int        refAlleleEnd = data0.indexOf(' ', refAlleleStart + 1);
-        final String     refAllele = data0.substring(refAlleleStart + 1, refAlleleEnd);
-        final ReferenceContext ref = buildReferenceContext(data0.replace(" ", ""), refAlleleStart + 1, refAlleleEnd - 1);
-        final VariantContext vc = buildVariantContext(ref, refAllele, data1);
-        String          msg = "on " + StringUtils.join(testData, " ");
+        final int        refAlleleStart = refBases.indexOf(' ');
+        final int        refAlleleEnd = refBases.indexOf(' ', refAlleleStart + 1);
+        final String     refAllele = refBases.substring(refAlleleStart + 1, refAlleleEnd);
+        final ReferenceContext ref = buildReferenceContext(refBases.replace(" ", ""), refAlleleStart + 1, refAlleleEnd - 1);
+        final VariantContext vc = buildVariantContext(ref, refAllele, altAllele);
+        String          msg = "on " + altAllele + " " + annotationIndex + " " + annotationIndex;
 
         // invoke
-        final Map<String, Object> attrs = allAnnotators[data2].annotate(ref, vc, null);
+        final Map<String, Object> attrs = allAnnotators[annotationIndex].annotate(ref, vc, null);
         Assert.assertNotNull(attrs, msg);
     }
 
