@@ -78,7 +78,8 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation {
         indelClassify(vc, localContext);
         if ( requestedAnnotations.contains(GATKVCFConstants.FLOW_HMER_INDEL_LENGTH)
             || requestedAnnotations.contains(GATKVCFConstants.FLOW_HMER_INDEL_NUC)
-            || requestedAnnotations.contains(GATKVCFConstants.FLOW_RIGHT_MOTIF) ) {
+            || requestedAnnotations.contains(GATKVCFConstants.FLOW_RIGHT_MOTIF)
+            || requestedAnnotations.contains(GATKVCFConstants.FLOW_CYCLESKIP_STATUS) ) {
             isHmerIndel(vc, localContext);
         }
         if ( requestedAnnotations.contains(GATKVCFConstants.FLOW_LEFT_MOTIF)
