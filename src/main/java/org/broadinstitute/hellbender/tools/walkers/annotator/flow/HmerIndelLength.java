@@ -27,8 +27,10 @@ public class HmerIndelLength extends FlowAnnotatorBase implements StandardFlowBa
 
         final LocalContext        localContext = new LocalContext(ref, vc, likelihoods);
 
-        indelClassify(vc, localContext);
-        isHmerIndel(vc, localContext);
+        if ( !localContext.notCalculated ) {
+            indelClassify(vc, localContext);
+            isHmerIndel(vc, localContext);
+        }
 
         return localContext.asAttributes();
     }

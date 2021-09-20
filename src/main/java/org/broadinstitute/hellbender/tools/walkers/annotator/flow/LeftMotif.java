@@ -27,7 +27,9 @@ public class LeftMotif extends FlowAnnotatorBase implements StandardFlowBasedAnn
 
         final LocalContext        localContext = new LocalContext(ref, vc, likelihoods);
 
-        getLeftMotif(vc, localContext);
+        if ( !localContext.notCalculated ) {
+            getLeftMotif(vc, localContext);
+        }
 
         return localContext.asAttributes();
     }

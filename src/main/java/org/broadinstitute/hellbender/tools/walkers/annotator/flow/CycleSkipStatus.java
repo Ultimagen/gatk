@@ -31,11 +31,13 @@ public class CycleSkipStatus extends FlowAnnotatorBase implements StandardFlowBa
 
         final LocalContext        localContext = new LocalContext(ref, vc, likelihoods);
 
-        indelClassify(vc, localContext);
-        isHmerIndel(vc, localContext);
-        getLeftMotif(vc, localContext);
-        getRightMotif(vc, localContext);
-        cycleSkip(vc, localContext);
+        if ( !localContext.notCalculated ) {
+            indelClassify(vc, localContext);
+            isHmerIndel(vc, localContext);
+            getLeftMotif(vc, localContext);
+            getRightMotif(vc, localContext);
+            cycleSkip(vc, localContext);
+        }
 
         return localContext.asAttributes();
     }

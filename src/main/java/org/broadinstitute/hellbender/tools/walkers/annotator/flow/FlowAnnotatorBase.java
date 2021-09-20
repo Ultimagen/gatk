@@ -57,12 +57,15 @@ public abstract class FlowAnnotatorBase extends InfoFieldAnnotation {
         protected LocalContext(final ReferenceContext ref,
                                final VariantContext vc,
                                final AlleleLikelihoods<GATKRead, Allele> likelihoods) {
-            Utils.nonNull(ref);
             Utils.nonNull(vc);
 
             // some annotators share results
             this.ref = ref;
             this.likelihoods = likelihoods;
+
+            // we do need the reference
+            if ( ref == null )
+                notCalculated = true;
         }
 
         protected Map<String, Object> asAttributes() {
