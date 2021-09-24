@@ -379,7 +379,11 @@ public final class VariantAnnotatorEngine {
             final GenotypeBuilder gb = new GenotypeBuilder(genotype);
             for ( final GenotypeAnnotation annotation : genotypeAnnotations) {
 
-                genotypeAnnotations.stream().filter(addAnnot).forEach(annot -> annot.annotate(ref, vc, genotype, gb, likelihoods));
+                genotypeAnnotations.stream().filter(addAnnot).filter(
+                        annot ->  !((annot.getKeyNames().get(0).equals(GATKVCFConstants.STRAND_BIAS_BY_SAMPLE_KEY)) &&
+                        genotype.hasExtendedAttribute(GATKVCFConstants.STRAND_BIAS_BY_SAMPLE_KEY) &&
+                        (likelihoods == null))
+                ).forEach(annot -> annot.annotate(ref, vc, genotype, gb, likelihoods));
 
                 if (fragmentLikelihoods.isPresent() && haplotypeLikelihoods.isPresent()) {
                     jumboGenotypeAnnotations.stream().filter(addAnnot).forEach(annot ->

@@ -18,7 +18,7 @@ import org.ultimagen.flowBasedRead.read.FlowBasedRead;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public abstract class FlowAnnotatorBase extends InfoFieldAnnotation {
+public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
     private final static Logger logger = LogManager.getLogger(FlowAnnotatorBase.class);
 
     // additional constants
