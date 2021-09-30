@@ -110,33 +110,14 @@ public final class AssemblyBasedCallerUtils {
         final Collection<AlleleLikelihoods<GATKRead, Haplotype>.BestAllele> bestAlleles = originalReadLikelihoods.bestAllelesBreakingTies(HAPLOTYPE_ALIGNMENT_TIEBREAKING_PRIORITY);
         final Map<GATKRead, GATKRead> result = new HashMap<>(bestAlleles.size());
 
-        if ( threadPool == null ) {
-
-            for (final AlleleLikelihoods<GATKRead, Haplotype>.BestAllele bestAllele : bestAlleles) {
-                final GATKRead originalRead = bestAllele.evidence;
-                final Haplotype bestHaplotype = bestAllele.allele;
-                final boolean isInformative = bestAllele.isInformative();
-                final GATKRead realignedRead = AlignmentUtils.createReadAlignedToRef(originalRead, bestHaplotype, refHaplotype, paddedReferenceLoc.getStart(), isInformative, aligner, readToHaplotypeSWParameters);
-                result.put(originalRead, realignedRead);
-            }
-            return result;
-        } else {
-
-            Callable<Map<GATKRead, GATKRead>>   callable = () -> {
-                return bestAlleles.stream().parallel().collect(Collectors.toMap(bestAllele->bestAllele.evidence, bestAllele->{
-                    final GATKRead originalRead = bestAllele.evidence;
-                    final Haplotype bestHaplotype = bestAllele.allele;
-                    final boolean isInformative = bestAllele.isInformative();
-                    final GATKRead realignedRead = AlignmentUtils.createReadAlignedToRef(originalRead, bestHaplotype, refHaplotype, paddedReferenceLoc.getStart(), isInformative, aligner);
-                    return realignedRead;
-                }));
-            };
-            try {
-                return threadPool.submit(callable).get();
-            } catch (InterruptedException| ExecutionException e) {
-                throw new RuntimeException(e);
-            }
+        for (final AlleleLikelihoods<GATKRead, Haplotype>.BestAllele bestAllele : bestAlleles) {
+            final GATKRead originalRead = bestAllele.evidence;
+            final Haplotype bestHaplotype = bestAllele.allele;
+            final boolean isInformative = bestAllele.isInformative();
+            final GATKRead realignedRead = AlignmentUtils.createReadAlignedToRef(originalRead, bestHaplotype, refHaplotype, paddedReferenceLoc.getStart(), isInformative, aligner, readToHaplotypeSWParameters);
+            result.put(originalRead, realignedRead);
         }
+        return result;
     }
 
     public static void finalizeRegion(final AssemblyRegion region,
@@ -362,7 +343,7 @@ public final class AssemblyBasedCallerUtils {
 
         final LHWRefView refView = (argumentCollection.flowAssemblyCollapseHKerSize > 0 && LHWRefView.needsCollapsing(refHaplotype.getBases(), argumentCollection.flowAssemblyCollapseHKerSize, logger, argumentCollection.assemblerArgs.debugAssembly))
                                             ? new LHWRefView(argumentCollection.flowAssemblyCollapseHKerSize, argumentCollection.flowAssemblyCollapsePartialMode, fullReferenceWithPadding,
-                paddedReferenceLoc, logger, argumentCollection.assemblerArgs.debugAssembly, aligner, argumentCollection.assemblerArgs.flowAssemblerParallelThreads)
+                paddedReferenceLoc, logger, argumentCollection.assemblerArgs.debugAssembly, aligner)
                                             : null;
         if ( refView != null )
             logger.debug("deploying refView on " + paddedReferenceLoc + ", region: " + region);
