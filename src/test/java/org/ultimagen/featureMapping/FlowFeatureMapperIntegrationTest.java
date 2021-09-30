@@ -3,42 +3,15 @@ package org.ultimagen.featureMapping;
 import org.broadinstitute.hellbender.CommandLineProgramTest;
 import org.testng.Assert;
 import org.testng.annotations.Test;
-import org.ultimagen.featureMapping.Const;
+import org.ultimagen.CommentedTextReader;
+import org.ultimagen.Const;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 
-public class FlowFeatureMapperTest  extends CommandLineProgramTest {
+public class FlowFeatureMapperIntegrationTest extends CommandLineProgramTest {
 
-    protected static String    vcTestDir = publicTestDir + Const.DATA_DIR;
-
-    static class CommentedTextReader implements AutoCloseable {
-        final boolean         ignoreComments = true;
-        final String          commentPrefix = "#";
-        final BufferedReader  reader;
-
-        CommentedTextReader(File file) throws IOException {
-            reader = new BufferedReader(new FileReader(file));
-        }
-
-        String readLine() throws IOException {
-            String      line;
-            while ( (line = reader.readLine()) != null ) {
-                if ( !ignoreComments || !line.startsWith(commentPrefix) ) {
-                    return line;
-                }
-            }
-            return null;
-        }
-
-
-        @Override
-        public void close() throws IOException {
-            reader.close();
-        }
-    }
+    protected static String    vcTestDir = publicTestDir + Const.FEATURE_MAPPING_DATA_DIR;
 
     @Test
     public void testBasic() throws IOException {
@@ -71,8 +44,8 @@ public class FlowFeatureMapperTest  extends CommandLineProgramTest {
 
         // walk the output and expected files, compare non-comment lines
         try (
-            CommentedTextReader     expectedReader = new CommentedTextReader(expectedFile);
-            CommentedTextReader     outputReader = new CommentedTextReader(outputFile);
+                final CommentedTextReader     expectedReader = new CommentedTextReader(expectedFile);
+                final CommentedTextReader     outputReader = new CommentedTextReader(outputFile);
         ) {
             String expectedLine;
             String outputLine;
