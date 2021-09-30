@@ -9,6 +9,7 @@ import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyResultSet;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
@@ -22,51 +23,53 @@ import java.io.PrintWriter;
 import java.util.*;
 
 public class VariantRecallerResultWriter {
-    PrintWriter     pw;
-    boolean         first = true;
-    boolean         debugFormat = false;
+    final PrintWriter     pw;
+    boolean               first = true;
+    final boolean         debugFormat = false;
 
-    public VariantRecallerResultWriter(File file) {
+    protected VariantRecallerResultWriter(final File file) {
         try {
             pw = new PrintWriter(file);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new GATKException("Unbale to open output file: " + file.getAbsolutePath(), e);
         }
     }
 
-    public void close() {
+    protected void close() {
         pw.close();
-        pw = null;
     }
 
-    public void add(Locatable loc, List<Map<Integer, AlleleLikelihoods<GATKRead, Allele>>> genotypeLikelihoodsList, List<VariantContext> variants, List<AssemblyResultSet> assemblyResultList, List<SAMFileHeader> fileHeaderList) {
+    protected void add(final Locatable loc, final List<Map<Integer, AlleleLikelihoods<GATKRead, Allele>>> genotypeLikelihoodsList,
+                    final List<VariantContext> variants, final List<AssemblyResultSet> assemblyResultList,
+                    final List<SAMFileHeader> fileHeaderList) {
 
         // build a map of vcs by startPos
-        Map<Integer, VariantContext>    vcStartPos = new LinkedHashMap<>();
+        final Map<Integer, VariantContext>    vcStartPos = new LinkedHashMap<>();
         variants.forEach(vc -> {
             vcStartPos.put(vc.getStart(), vc);
         });
 
         // print location (as a separator)
         if ( debugFormat ) {
-            if (first)
+            if (first) {
                 first = false;
-            else
+            } else {
                 pw.println("");
+            }
             pw.println("loc: " + loc);
             pw.println("ref: " + new String(assemblyResultList.get(0).getFullReferenceWithPadding()));
         }
 
         // loop on result
-        List<Tuple<Double, String>> vcLines = new LinkedList<>();
+        final List<Tuple<Double, String>> vcLines = new LinkedList<>();
         for ( int index = 0 ; index < genotypeLikelihoodsList.size() ; index++ ) {
-            Map<Integer, AlleleLikelihoods<GATKRead, Allele>>   genotypeLikelihoods = genotypeLikelihoodsList.get(index);
-            SAMFileHeader                                       fileHeader = fileHeaderList.get(index);
+            final Map<Integer, AlleleLikelihoods<GATKRead, Allele>>   genotypeLikelihoods = genotypeLikelihoodsList.get(index);
+            final SAMFileHeader                                       fileHeader = fileHeaderList.get(index);
 
             genotypeLikelihoods.forEach((startPos, likelihoods) -> {
 
                 // DK: map to vc? ignore unmapped?
-                VariantContext vc = vcStartPos.get(startPos);
+                final VariantContext vc = vcStartPos.get(startPos);
                 if (vc != null) {
 
                     if (debugFormat) {
@@ -98,18 +101,19 @@ public class VariantRecallerResultWriter {
                         pw.println("");
                     }
 
-                    SimpleInterval vcSpan = new SimpleInterval(vc.getContig(), vc.getStart(), vc.getEnd());
+                    final SimpleInterval vcSpan = new SimpleInterval(vc.getContig(), vc.getStart(), vc.getEnd());
 
                     // matrix
                     if (debugFormat) {
                         pw.println("");
                         pw.println("matrix:");
                     }
-                    LikelihoodMatrix<GATKRead, Allele> matrix = likelihoods.sampleMatrix(0);
-                    double[][] values = new double[matrix.numberOfAlleles()][matrix.evidenceCount()];
-                    for (int alleleIndex = 0; alleleIndex < matrix.numberOfAlleles(); alleleIndex++)
+                    final LikelihoodMatrix<GATKRead, Allele> matrix = likelihoods.sampleMatrix(0);
+                    final double[][] values = new double[matrix.numberOfAlleles()][matrix.evidenceCount()];
+                    for (int alleleIndex = 0; alleleIndex < matrix.numberOfAlleles(); alleleIndex++) {
                         matrix.copyAlleleLikelihoods(alleleIndex, values[alleleIndex], 0);
-                    double[] lineValues = new double[matrix.numberOfAlleles()];
+                    }
+                    final double[] lineValues = new double[matrix.numberOfAlleles()];
                     for (int evidenceIndex = 0; evidenceIndex < matrix.evidenceCount(); evidenceIndex++) {
 
                         // determine matrix values
@@ -117,17 +121,19 @@ public class VariantRecallerResultWriter {
                         double sortKey = Double.NEGATIVE_INFINITY;
                         for (int alleleIndex = 0; alleleIndex < matrix.numberOfAlleles(); alleleIndex++) {
                             lineValues[alleleIndex] = values[alleleIndex][evidenceIndex];
-                            if (lineValues[alleleIndex] != Double.NEGATIVE_INFINITY)
+                            if (lineValues[alleleIndex] != Double.NEGATIVE_INFINITY) {
                                 allValuesNegativeInfinity = false;
+                            }
                             sortKey = lineValues[alleleIndex];
                         }
 
                         // lines which have all values of -Inf are complete alignment failures. Ignore them
-                        if (allValuesNegativeInfinity)
+                        if (allValuesNegativeInfinity) {
                             continue;
+                        }
 
                         // determine length in key space
-                        GATKRead read = matrix.evidence().get(evidenceIndex);
+                        final GATKRead read = matrix.evidence().get(evidenceIndex);
                         int keyspaceLength = 0;
                         if (read instanceof FlowBasedRead)
                             keyspaceLength = ((FlowBasedRead) read).getKeyLength();
@@ -142,7 +148,7 @@ public class VariantRecallerResultWriter {
                                 StringUtils.join(ArrayUtils.toObject(lineValues), " "));
 
                         // add bytes at variant location?
-                        StringBuilder bases = new StringBuilder();
+                        final StringBuilder bases = new StringBuilder();
                         int firstBaseUnclippedOfs = 0;
                         if (read.getContig() != null) {
                             SimpleInterval readSpan = new SimpleInterval(read.getContig(), read.getStart(), read.getEnd());
@@ -153,10 +159,11 @@ public class VariantRecallerResultWriter {
                                     int readOfs = getOffsetOnRead(read, ofs + i);
                                     if (readOfs >= 0) {
                                         bases.append((char) read.getBase(readOfs));
-                                        if (!read.isReverseStrand())
+                                        if (!read.isReverseStrand()) {
                                             firstBaseUnclippedOfs = readOfs + (read.getStart() - read.getUnclippedStart());
-                                        else
+                                        } else {
                                             firstBaseUnclippedOfs = (read.getLength() - readOfs - 1) + (read.getUnclippedEnd() - read.getEnd());
+                                        }
                                     } else {
                                         // we don't like '?' bases anymore!
                                         bases.setLength(0);
@@ -185,18 +192,20 @@ public class VariantRecallerResultWriter {
         }
     }
 
-    public static int getOffsetOnRead(GATKRead read, int ofs) {
+    public static int getOffsetOnRead(final GATKRead read, final int intialOfs) {
         int     readOfs = 0;
+        int     ofs = intialOfs;
 
         Iterator<CigarElement> iter = read.getCigar().iterator();
         while ( iter.hasNext() ) {
             CigarElement    elem = iter.next();
             CigarOperator   op = elem.getOperator();
             if ( op.consumesReadBases() ) {
-                if (ofs < elem.getLength() )
+                if (ofs < elem.getLength() ) {
                     return readOfs + ofs;
-                else
+                } else {
                     readOfs += elem.getLength();
+                }
             }
             ofs -= (op.consumesReferenceBases() ? elem.getLength() : 0);
         }

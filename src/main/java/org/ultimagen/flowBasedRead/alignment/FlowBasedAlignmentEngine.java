@@ -13,6 +13,7 @@ import org.broadinstitute.hellbender.utils.genotyper.*;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
+import org.ultimagen.FlowConstants;
 import org.ultimagen.flowBasedRead.read.FlowBasedHaplotype;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
 import org.ultimagen.flowBasedRead.utils.Direction;
@@ -145,7 +146,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             final GATKRead rd = likelihoods.evidence().get(i);
             final String mc_string = hdr.getReadGroup(rd.getReadGroup()).getAttribute("mc");
             if (mc_string==null) {
-                max_class = 12;
+                max_class = FlowConstants.MAX_CLASS;
             } else {
                 max_class = Integer.parseInt(mc_string);
             }
