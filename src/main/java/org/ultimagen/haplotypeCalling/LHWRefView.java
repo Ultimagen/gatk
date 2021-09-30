@@ -30,10 +30,7 @@ public class LHWRefView {
     final private boolean         debug;
     final private SmithWatermanAligner aligner;
 
-    final private ForkJoinPool    threadPool;
-    private static long           monitorNano;
-
-    public LHWRefView(final int hmerSizeThreshold, final boolean partialMode, final byte[] fullRef, final Locatable refLoc, final Logger logger, final boolean debug, final SmithWatermanAligner aligner, final int threadCount) {
+    public LHWRefView(final int hmerSizeThreshold, final boolean partialMode, final byte[] fullRef, final Locatable refLoc, final Logger logger, final boolean debug, final SmithWatermanAligner aligner) {
 
         this.hmerSizeThreshold = hmerSizeThreshold;
         this.partialMode = partialMode;
@@ -45,11 +42,6 @@ public class LHWRefView {
         if ( debug ) {
             logger.info("LHWRefView: >" + hmerSizeThreshold + "hmer, refLoc: " + refLoc + " fullRef:");
             logger.info(basesAsString(fullRef));
-        }
-        if ( threadCount > 0 ) {
-            threadPool = new ForkJoinPool(threadCount);
-        } else {
-            threadPool = null;
         }
     }
 
@@ -113,7 +105,6 @@ public class LHWRefView {
         final List<Haplotype>       result = new LinkedList<>();
         final Map<Locatable, byte[]> refMap = new LinkedHashMap<>();
         int                         alignmentStartHapwrtRef = 0;
-        long                        startedNano = System.nanoTime();
 
         // locate reference haplotype, if needed, also collect refMap
         for ( Haplotype h : haplotypes ) {
@@ -132,55 +123,21 @@ public class LHWRefView {
         }
 
         // uncollapse haplotypes
-        if ( threadPool == null ) {
-            for (Haplotype h : haplotypes) {
-                // by default
-                Haplotype alignedHaplotype = uncollapseSingleHaplotypeByRef(h, limit, refMap);
-                alignedHaplotype.setDiffMatter(result.size());
-                result.add(alignedHaplotype);
-            }
-        } else {
-
-            try {
-                List<Haplotype> list = threadPool.submit(() -> {
-                    return haplotypes.stream().parallel().map(h -> uncollapseSingleHaplotypeByRef(h, limit, refMap)).collect(Collectors.toList());
-                }).get();
-                for ( Haplotype h : list ) {
-                    h.setDiffMatter(result.size());
-                    result.add(h);
-                }
-            } catch (InterruptedException | ExecutionException e) {
-                throw new RuntimeException(e);
-            }
+        for (Haplotype h : haplotypes) {
+            // by default
+            Haplotype alignedHaplotype = uncollapseSingleHaplotypeByRef(h, limit, refMap);
+            alignedHaplotype.setDiffMatter(result.size());
+            result.add(alignedHaplotype);
         }
-
 
         // if we had a reference, generate cigar against it
         if ( refBases != null ) {
-            if ( threadPool == null ) {
-                for (Haplotype h : result) {
-                    if (!h.isReference()) {
-                        SmithWatermanAlignment alignment = aligner.align(refBases, h.getBases(), SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
-                        h.setCigar(alignment.getCigar());
-                        h.setAlignmentStartHapwrtRef(alignment.getAlignmentOffset() + alignmentStartHapwrtRef);
-                    }
+            for (Haplotype h : result) {
+                if (!h.isReference()) {
+                    SmithWatermanAlignment alignment = aligner.align(refBases, h.getBases(), SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
+                    h.setCigar(alignment.getCigar());
+                    h.setAlignmentStartHapwrtRef(alignment.getAlignmentOffset() + alignmentStartHapwrtRef);
                 }
-            } else {
-               final byte[] finalRefBases = refBases;
-               final int finalAlignmentStartHapwrtRef = alignmentStartHapwrtRef;
-               try {
-                   threadPool.submit(()-> {
-                       result.stream().parallel().forEach(h -> {
-                           if (!h.isReference()) {
-                               SmithWatermanAlignment alignment = AlignmentThreadingUtils.getSimilarAlignerForCurrentThread(aligner).align(finalRefBases, h.getBases(), SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
-                               h.setCigar(alignment.getCigar());
-                               h.setAlignmentStartHapwrtRef(alignment.getAlignmentOffset() + finalAlignmentStartHapwrtRef);
-                        }
-                    });
-                }).get();
-               } catch (InterruptedException | ExecutionException e) {
-                   throw new RuntimeException(e);
-               }
             }
         }
 
@@ -191,12 +148,6 @@ public class LHWRefView {
             i = 0;
             for (Haplotype h : result)
                 logHaplotype(h, "UNCOL_" + (limit ? "P1_" : "P2_"), i++);
-        }
-
-        long        elapseNano = System.nanoTime() - startedNano;
-        monitorNano += elapseNano;
-        if ( logger.isDebugEnabled() ) {
-            logger.info("uncollapseHaplotypesByRef took " + elapseNano + " nano seconds. overall msec: " + (monitorNano / 1000000.0));
         }
 
         return result;
