@@ -8,7 +8,9 @@ import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.argparser.ArgumentCollection;
+import org.broadinstitute.barclay.argparser.BetaFeature;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
+import org.broadinstitute.barclay.argparser.ExperimentalFeature;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.GATKPlugin.GATKReadFilterPluginDescriptor;
 import org.broadinstitute.hellbender.cmdline.programgroups.ShortVariantDiscoveryProgramGroup;
@@ -66,6 +68,7 @@ import java.util.*;
         programGroup = ShortVariantDiscoveryProgramGroup.class
 )
 @DocumentedFeature
+@ExperimentalFeature
 public final class HaplotypeBasedVariantRecaller extends GATKTool {
 
     private static final Logger logger = LogManager.getLogger(HaplotypeBasedVariantRecaller.class);
@@ -94,9 +97,9 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
         final SampleList                        samplesList = new IndexedSampleList(Arrays.asList(sampleNames));
         final HaplotypeCallerGenotypingEngine   genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samplesList, !hcArgs.doNotRunPhysicalPhasing, false);
         final ReferenceDataSource               reference = ReferenceDataSource.of(referenceArguments.getReferencePath());
-        final VariantRecallerResultWriter       resultWriter = new VariantRecallerResultWriter(vrArgs.MATRIX_CSV_FILE);
+        final VariantRecallerResultWriter       resultWriter = new VariantRecallerResultWriter(vrArgs.matrixCsvFile);
         final FeatureDataSource<VariantContext> dataSource = new FeatureDataSource<VariantContext>(
-                vrArgs.ALLELE_VCF_FILE, null, 0, VariantContext.class);
+                vrArgs.alleleVcfFile, null, 0, VariantContext.class);
         final HaplotypeRegionWalker             regionWalker = new HaplotypeRegionWalker(vrArgs, referenceArguments.getReferencePath(), getDefaultCloudPrefetchBufferSize());
         final TrimmedReadsReader                readsReader = new TrimmedReadsReader(readArguments.getReadPaths(), referenceArguments.getReferencePath(), getDefaultCloudPrefetchBufferSize());
         final CountingReadFilter                readFilter = makeReadFilter(readsReader.getHeader(null));
@@ -112,13 +115,13 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
             dataSource.query(region).forEachRemaining(vc -> {
 
                 // walk haplotype (groups) under this variant
-                SimpleInterval      vcLoc = new SimpleInterval(vc.getContig(), vc.getStart(), vc.getEnd());
+                final SimpleInterval      vcLoc = new SimpleInterval(vc.getContig(), vc.getStart(), vc.getEnd());
                 regionWalker.forBest(vcLoc, bestHaplotypes -> {
 
-                    SimpleInterval  haplotypeSpan = new SimpleInterval(bestHaplotypes.get(0).getGenomeLocation());
-                    byte[]          refBases = reference.queryAndPrefetch(haplotypeSpan).getBases();
+                    final SimpleInterval  haplotypeSpan = new SimpleInterval(bestHaplotypes.get(0).getGenomeLocation());
+                    final byte[]          refBases = reference.queryAndPrefetch(haplotypeSpan).getBases();
 
-                    LHWRefView      refView = null;
+                    LHWRefView            refView = null;
                     final List<Haplotype> processedHaplotypes = new LinkedList<>();
                     if ( (hcArgs.flowAssemblyCollapseHKerSize > 0)
                                     && LHWRefView.needsCollapsing(refBases, hcArgs.flowAssemblyCollapseHKerSize, logger, false) ) {
@@ -126,12 +129,13 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                                 SmithWatermanAligner.getAligner(SmithWatermanAligner.Implementation.FASTEST_AVAILABLE));
                         processedHaplotypes.addAll(refView.uncollapseHaplotypesByRef(bestHaplotypes, false, true, refBases));
                     }
-                    else
+                    else {
                         processedHaplotypes.addAll(bestHaplotypes);
+                    }
 
                     // get reads overlapping haplotypes
-                    Map<SamReader, Collection<FlowBasedRead>> readsByReader = readsReader.getReads(haplotypeSpan, vcLoc);
-                    List<VariantContext>      variants = new LinkedList<>(Arrays.asList(vc));
+                    final Map<SamReader, Collection<FlowBasedRead>> readsByReader = readsReader.getReads(haplotypeSpan, vcLoc);
+                    final List<VariantContext>      variants = new LinkedList<>(Arrays.asList(vc));
                     if ( logger.isDebugEnabled() ) {
                         int readCount = 0;
                         for ( Collection<FlowBasedRead> reads : readsByReader.values() )
@@ -142,16 +146,16 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                     progressMeter.update(vcLoc);
 
                     // prepare assembly result
-                    List<Map<Integer, AlleleLikelihoods<GATKRead, Allele>>> genotypeLikelihoodsList = new LinkedList<>();
-                    List<AssemblyResultSet>                                 assemblyResultList = new LinkedList<>();
-                    List<SAMFileHeader>                                     readsHeaderList = new LinkedList<>();
+                    final List<Map<Integer, AlleleLikelihoods<GATKRead, Allele>>> genotypeLikelihoodsList = new LinkedList<>();
+                    final List<AssemblyResultSet>                                 assemblyResultList = new LinkedList<>();
+                    final List<SAMFileHeader>                                     readsHeaderList = new LinkedList<>();
                     for ( Map.Entry<SamReader, Collection<FlowBasedRead>> entry : readsByReader.entrySet() ) {
-                        AssemblyResultSet assemblyResult = new AssemblyResultSet();
+                        final AssemblyResultSet assemblyResult = new AssemblyResultSet();
                         processedHaplotypes.forEach(haplotype -> assemblyResult.add(haplotype));
 
-                        Map<String, List<GATKRead>> perSampleReadList = new LinkedHashMap<>();
-                        SamReader                   samReader = entry.getKey();
-                        Collection<FlowBasedRead>   reads = entry.getValue();
+                        final Map<String, List<GATKRead>> perSampleReadList = new LinkedHashMap<>();
+                        final SamReader                   samReader = entry.getKey();
+                        final Collection<FlowBasedRead>   reads = entry.getValue();
 
                         List<GATKRead> gtakReads = new LinkedList<>();
                         reads.forEach(flowBasedRead -> gtakReads.add(flowBasedRead));
@@ -163,13 +167,13 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
 
 
                         // computer likelihood
-                        AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods = likelihoodCalculationEngine.computeReadLikelihoods(
+                        final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods = likelihoodCalculationEngine.computeReadLikelihoods(
                                 assemblyResult, samplesList, perSampleReadList, false);
 
                         // assign
-                        Map<String, List<GATKRead>> perSampleFilteredReadList = perSampleReadList;
-                        SAMFileHeader readsHeader = samReader.getFileHeader();
-                        Map<Integer, AlleleLikelihoods<GATKRead, Allele>> genotypeLikelihoods = genotypingEngine.assignGenotypeLikelihoods2(
+                        final Map<String, List<GATKRead>> perSampleFilteredReadList = perSampleReadList;
+                        final SAMFileHeader readsHeader = samReader.getFileHeader();
+                        final Map<Integer, AlleleLikelihoods<GATKRead, Allele>> genotypeLikelihoods = genotypingEngine.assignGenotypeLikelihoods2(
                                 processedHaplotypes,
                                 readLikelihoods,
                                 perSampleFilteredReadList,
@@ -200,12 +204,10 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
         return HaplotypeCallerEngine.makeStandardHCReadFilters();
     }
 
-    public CountingReadFilter makeReadFilter(SAMFileHeader samFileHeader){
+    public CountingReadFilter makeReadFilter(final SAMFileHeader samFileHeader){
         final GATKReadFilterPluginDescriptor readFilterPlugin =
                 getCommandLineParser().getPluginDescriptor(GATKReadFilterPluginDescriptor.class);
-        return  readFilterPlugin.getMergedCountingReadFilter(samFileHeader);
+        return readFilterPlugin.getMergedCountingReadFilter(samFileHeader);
     }
-
-
 }
 
