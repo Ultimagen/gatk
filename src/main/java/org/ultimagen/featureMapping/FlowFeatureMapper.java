@@ -10,10 +10,7 @@ import htsjdk.variant.variantcontext.writer.VariantContextWriter;
 import htsjdk.variant.vcf.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.broadinstitute.barclay.argparser.Argument;
-import org.broadinstitute.barclay.argparser.ArgumentCollection;
-import org.broadinstitute.barclay.argparser.CommandLineException;
-import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
+import org.broadinstitute.barclay.argparser.*;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.programgroups.ShortVariantDiscoveryProgramGroup;
@@ -28,12 +25,43 @@ import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.broadinstitute.hellbender.utils.variant.writers.GVCFWriter;
-import org.ultimagen.flowBasedRead.alignment.FlowBasedAlignmentEngine;
+import org.ultimagen.FlowConstants;
 import org.ultimagen.flowBasedRead.read.FlowBasedHaplotype;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
 
 import java.util.*;
 
+
+/**
+ * Finds specific features in reads: SNP/indel,
+ * scores the confidence of each feature relative to the reference in each read
+ * and writes them into a VCF file
+ *
+ * <p>
+ * At this point, this tool finds SNVs
+ * </p>
+ *
+ * <h3> Input </h3>
+ * <ul>
+ *     <li> Coordinate-sorted and indexed SAM/BAM/CRAM </li>
+ * </ul>
+ *
+ * <h3> Output </h3>
+ * <ul>
+ *     <li> Coordinate-sorted and indexed VCF </li>
+ * </ul>
+ *
+ * <h3>Usage examples</h3>
+ * Find SNVs in chromosome 20.
+ * <pre>
+ * gatk FlowFeatureMapper \
+ *   -I input.bam \
+ *   -L 20 \
+ *   -O chr20_snv.vcf
+ * </pre>
+ *
+ * {@GATK.walkertype ReadWalker}
+ */
 @CommandLineProgramProperties(
         summary = "Mapping features (flow space processing)",
         oneLineSummary = "Map/find features in BAM file, output VCF. Initially mapping SNVs",
@@ -42,9 +70,10 @@ import java.util.*;
 
 
 @DocumentedFeature
+@ExperimentalFeature
 public final class FlowFeatureMapper extends ReadWalker {
 
-    private static final Logger logger = LogManager.getLogger(FlowFeatureMapper.class);
+    private static final Logger     logger = LogManager.getLogger(FlowFeatureMapper.class);
 
     private static final String     VCB_SOURCE = "fm";
 
@@ -67,27 +96,27 @@ public final class FlowFeatureMapper extends ReadWalker {
             doc = "File to which variants should be written")
     public GATKPath outputVCF = null;
 
-    private VariantContextWriter vcfWriter;
-
-    private PriorityQueue<Feature>  featureQueue = new PriorityQueue<>();
-    private PriorityQueue<ReadContext> readQueue = new PriorityQueue<>();
-
     @ArgumentCollection
     private FlowFeatureMapperArgumentCollection fmArgs = new FlowFeatureMapperArgumentCollection();
 
     @ArgumentCollection
     private final HaplotypeCallerArgumentCollection hcArgs = new HaplotypeCallerArgumentCollection();
 
-    static class ReadGroupInfo {
-        String  flowOrder;
-        int     maxClass;
+    static private class ReadGroupInfo {
+        final String  flowOrder;
+        final int     maxClass;
+
+        ReadGroupInfo(final String flowOrder, final int maxClass) {
+            this.flowOrder = flowOrder;
+            this.maxClass = maxClass;
+        }
     }
 
-    static class ReadContext implements Comparable<ReadContext> {
-        GATKRead         read;
-        ReferenceContext referenceContext;
+    static private class ReadContext implements Comparable<ReadContext> {
+        final GATKRead         read;
+        final ReferenceContext referenceContext;
 
-        ReadContext(GATKRead read, ReferenceContext referenceContext) {
+        ReadContext(final GATKRead read, final ReferenceContext referenceContext) {
             this.read = read;
             this.referenceContext = referenceContext;
         }
@@ -104,23 +133,16 @@ public final class FlowFeatureMapper extends ReadWalker {
     }
 
     // locals
-    FeatureMapper mapper;
-    private Map<String, ReadGroupInfo>          readGroupInfo = new LinkedHashMap<>();
-    private FlowBasedAlignmentEngine            likelihoodCalculationEngine;
-
+    private VariantContextWriter                vcfWriter;
+    final private PriorityQueue<Feature>        featureQueue = new PriorityQueue<>();
+    final private PriorityQueue<ReadContext>    readQueue = new PriorityQueue<>();
+    private FeatureMapper                       mapper;
+    private final Map<String, ReadGroupInfo>    readGroupInfo = new LinkedHashMap<>();
 
     @Override
     public void onTraversalStart() {
         super.onTraversalStart();
         mapper = buildMapper();
-
-        // create likelihood engine
-        ReadLikelihoodCalculationEngine     engine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(hcArgs.likelihoodArgs, hcArgs.fbargs, false);
-        if ( engine instanceof FlowBasedAlignmentEngine ) {
-            likelihoodCalculationEngine = (FlowBasedAlignmentEngine)engine;
-        } else {
-            throw new GATKException("must use a flow based likelihood calculation engine");
-        }
 
         // open output vcf
         // The HC engine will make the right kind (VCF or GVCF) of writer for us
@@ -201,15 +223,17 @@ public final class FlowFeatureMapper extends ReadWalker {
     }
 
     @Override
-    public void apply(GATKRead read, ReferenceContext referenceContext, FeatureContext featureContext) {
+    public void apply(final GATKRead read, final ReferenceContext referenceContext, final FeatureContext featureContext) {
 
         // include dups?
-        if ( read.isDuplicate() && !fmArgs.includeDupReads )
+        if ( read.isDuplicate() && !fmArgs.includeDupReads ) {
             return;
+        }
 
         // include supplementary alignments?
-        if ( read.isSupplementaryAlignment() && !fmArgs.keepSupplementaryAlignments )
+        if ( read.isSupplementaryAlignment() && !fmArgs.keepSupplementaryAlignments ) {
             return;
+        }
 
         // flush qeues up to this read
         flushQueue(read, referenceContext);
@@ -230,12 +254,12 @@ public final class FlowFeatureMapper extends ReadWalker {
         });
     }
 
-    private void flushQueue(GATKRead read, ReferenceContext referenceContext) {
+    private void flushQueue(final GATKRead read, final ReferenceContext referenceContext) {
 
         // emit all?
         if ( read == null ) {
             while ( featureQueue.size() != 0 ) {
-                Feature         fr = featureQueue.poll();
+                final Feature         fr = featureQueue.poll();
                 enrichFeature(fr);
                 emitFeature(fr);
             }
@@ -252,8 +276,9 @@ public final class FlowFeatureMapper extends ReadWalker {
                     enrichFeature(fr);
                     emitFeature(fr);
                 }
-                else
+                else {
                     break;
+                }
             }
 
             // remove all reads that start before this read
@@ -264,33 +289,35 @@ public final class FlowFeatureMapper extends ReadWalker {
                         || (rc.read.getEnd() < read.getStart()) ) {
                     rc = readQueue.poll();
                 }
-                else
+                else {
                     break;
+                }
             }
         }
     }
 
-    private void enrichFeature(Feature fr) {
+    private void enrichFeature(final Feature fr) {
 
         // loop on queued reads, count and check if should be counted as filtered
-        Locatable   loc = new SimpleInterval(fr.read.getContig(), fr.start, fr.start);
+        final Locatable   loc = new SimpleInterval(fr.read.getContig(), fr.start, fr.start);
         for ( ReadContext rc : readQueue ) {
             if ( rc.read.contains(loc) ) {
                 fr.readCount++;
-                if ( mapper.noFeatureButFilterAt(rc.read, rc.referenceContext, fr.start) )
+                if ( mapper.noFeatureButFilterAt(rc.read, rc.referenceContext, fr.start) ) {
                     fr.filteredCount++;
+                }
             }
         }
     }
 
-    private double scoreFeature(Feature fr) {
+    private double scoreFeature(final Feature fr) {
 
-       // build haplotypes
-        ReadGroupInfo           rgInfo = getReadGroupInfo(fr.read);
-        FlowBasedHaplotype[]    haplotypes = buildHaplotypes(fr, rgInfo.flowOrder);
+        // build haplotypes
+        final ReadGroupInfo           rgInfo = getReadGroupInfo(fr.read);
+        final FlowBasedHaplotype[]    haplotypes = buildHaplotypes(fr, rgInfo.flowOrder);
 
         // create flow read
-        FlowBasedRead   flowRead = new FlowBasedRead(fr.read, rgInfo.flowOrder,
+        final FlowBasedRead   flowRead = new FlowBasedRead(fr.read, rgInfo.flowOrder,
                                                                         rgInfo.maxClass, hcArgs.fbargs);
         final int diffLeft = haplotypes[0].getStart() - flowRead.getStart() + fr.offsetDelta;
         final int diffRight = flowRead.getEnd() - haplotypes[0].getEnd();
@@ -301,12 +328,13 @@ public final class FlowFeatureMapper extends ReadWalker {
         }
 
         // compute alternative score
-        int         hapKeyLength = Math.min(haplotypes[0].getKeyLength(), haplotypes[1].getKeyLength());
-        double      readScore = computeLikelihoodLocal(flowRead, haplotypes[0], hapKeyLength, false);
-        double      refScore = computeLikelihoodLocal(flowRead, haplotypes[1], hapKeyLength, false);
-        double      score = readScore - refScore;
-        if ( !Double.isNaN(fmArgs.limitScore) )
+        final int         hapKeyLength = Math.min(haplotypes[0].getKeyLength(), haplotypes[1].getKeyLength());
+        final double      readScore = computeLikelihoodLocal(flowRead, haplotypes[0], hapKeyLength, false);
+        final double      refScore = computeLikelihoodLocal(flowRead, haplotypes[1], hapKeyLength, false);
+        double            score = readScore - refScore;
+        if ( !Double.isNaN(fmArgs.limitScore) ) {
             score = Math.min(score, fmArgs.limitScore);
+        }
 
         if ( ((Double.isNaN(score) || (score < 0)) && fmArgs.debugNegatives)
              || (fmArgs.debugReadName != null && fmArgs.debugReadName.contains(fr.read.getName())) ) {
@@ -325,12 +353,12 @@ public final class FlowFeatureMapper extends ReadWalker {
             logger.info("score: " + score);
 
             // analyze read
-            FlowBasedRead       flowRead2 = new FlowBasedRead(fr.read, rgInfo.flowOrder, rgInfo.maxClass, hcArgs.fbargs);
-            byte[]              key2 = flowRead2.getKey();
+            final FlowBasedRead flowRead2 = new FlowBasedRead(fr.read, rgInfo.flowOrder, rgInfo.maxClass, hcArgs.fbargs);
+            final byte[]        key2 = flowRead2.getKey();
             for ( int i = 0 ; i < key2.length ; i++ ) {
-                double      p1 = flowRead2.getProb(i, key2[i]);
+                final double      p1 = flowRead2.getProb(i, key2[i]);
                 for ( int j = 0 ; j < rgInfo.maxClass ; j++ ) {
-                    double      p2 = flowRead2.getProb(i, j);
+                    final double      p2 = flowRead2.getProb(i, j);
                     if ( p2 > p1 )
                         logger.info(String.format("prob at %s key[%d]=%d, %f is lower than at %d which is %f",
                                                                 flowRead2.getName(), i, key2[i], p1, j, p2));
@@ -338,13 +366,14 @@ public final class FlowFeatureMapper extends ReadWalker {
             }
         }
 
-        if ( score < 0 && !fmArgs.keepNegatives && score != -1.0 )
+        if ( score < 0 && !fmArgs.keepNegatives && score != -1.0 ) {
             score = 0;
+        }
 
         return score;
     }
 
-    private double computeLikelihoodLocal(FlowBasedRead read, FlowBasedHaplotype haplotype, int hapKeyLength, boolean debug) {
+    private double computeLikelihoodLocal(final FlowBasedRead read, final FlowBasedHaplotype haplotype, final int hapKeyLength, final boolean debug) {
 
         final byte[] flowOrder = haplotype.getFlowOrderArray();
         final byte   readFlowOrder0 = read.getFlowOrderArray()[0];
@@ -370,12 +399,14 @@ public final class FlowFeatureMapper extends ReadWalker {
                 locationToFetch = Math.min(key[index] & 0xff, read.getMaxHmer() + 1);
                 prob = read.getProb(i, locationToFetch);
             } else {
-                if ( debug )
+                if ( debug ) {
                     debugMessage.append(" clip");
+                }
                 break;
             }
-            if ( prob == 0.0 )
+            if ( prob == 0.0 ) {
                 prob = LOWEST_PROB;
+            }
             result += Math.log10(prob);
 
             if ( debug ) {
@@ -391,13 +422,13 @@ public final class FlowFeatureMapper extends ReadWalker {
         return result;
     }
 
-    private FlowBasedHaplotype[] buildHaplotypes(Feature fr, String flowOrder) {
+    private FlowBasedHaplotype[] buildHaplotypes(final Feature fr, final String flowOrder) {
 
         // build bases for flow haplotypes
         // NOTE!!!: this code assumes length of feature on read and reference is the same
         // this is true for SNP but not for INDELs - it will have to be re-written!
         // TODO: write for INDEL
-        byte[]      bases = fr.read.getBasesNoCopy();
+        final byte[] bases = fr.read.getBasesNoCopy();
         int         offset = fr.readBasesOffset;
         int         refStart = fr.start;
         int         refModOfs = 0;
@@ -408,30 +439,30 @@ public final class FlowFeatureMapper extends ReadWalker {
             refStart--;
 
             // extend until start of hmer
-            byte        hmerBase = bases[offset];
+            final byte        hmerBase = bases[offset];
             while ( offset > 0 && bases[offset-1] == hmerBase ) {
                 offset--;
                 refModOfs++;
                 refStart--;
             }
         }
-        byte[]      sAltBases = Arrays.copyOfRange(bases, offset, bases.length);
-        byte[]      sRefBases = Arrays.copyOf(sAltBases, sAltBases.length);
+        final byte[]      sAltBases = Arrays.copyOfRange(bases, offset, bases.length);
+        final byte[]      sRefBases = Arrays.copyOf(sAltBases, sAltBases.length);
         System.arraycopy(fr.refBases, 0, sRefBases, refModOfs, fr.refBases.length);
 
         // construct haplotypes
-        SimpleInterval      genomeLoc = new SimpleInterval(fr.read.getContig(), refStart, refStart + sAltBases.length - 1);
-        Cigar               cigar = new Cigar();
+        final SimpleInterval genomeLoc = new SimpleInterval(fr.read.getContig(), refStart, refStart + sAltBases.length - 1);
+        final Cigar          cigar = new Cigar();
         cigar.add(new CigarElement(sAltBases.length, CigarOperator.M));
-        Haplotype           altHaplotype = new Haplotype(sAltBases, false);
-        Haplotype           refHaplotype = new Haplotype(sRefBases, true);
+        final Haplotype      altHaplotype = new Haplotype(sAltBases, false);
+        final Haplotype      refHaplotype = new Haplotype(sRefBases, true);
         altHaplotype.setGenomeLocation(genomeLoc);
         refHaplotype.setGenomeLocation(genomeLoc);
         altHaplotype.setCigar(cigar);
         refHaplotype.setCigar(cigar);
 
         // prepare flow based haplotypes
-        FlowBasedHaplotype[] result = {
+        final FlowBasedHaplotype[] result = {
                                 new FlowBasedHaplotype(altHaplotype, flowOrder),
                                 new FlowBasedHaplotype(refHaplotype, flowOrder)
                             };
@@ -440,46 +471,43 @@ public final class FlowFeatureMapper extends ReadWalker {
         return result;
     }
 
-    private synchronized ReadGroupInfo getReadGroupInfo(GATKRead read) {
+    private synchronized ReadGroupInfo getReadGroupInfo(final GATKRead read) {
 
-        String              rg = read.getReadGroup();
-        ReadGroupInfo       info = readGroupInfo.get(rg);
-        if ( info == null ) {
-            info = new ReadGroupInfo();
-            info.flowOrder = getHeaderForReads().getReadGroup(rg).getFlowOrder();
-            String mc_string = getHeaderForReads().getReadGroup(rg).getAttribute("mc");
-            if ( mc_string == null ) {
-                info.maxClass = 12;
-            } else {
-                info.maxClass = Integer.parseInt(mc_string);
-            }
+        final String              rg = read.getReadGroup();
+        if ( readGroupInfo.containsKey(rg) ) {
+            return readGroupInfo.get(rg);
+        } else {
+            final String mc = getHeaderForReads().getReadGroup(rg).getAttribute("mc");
+            final ReadGroupInfo info = new ReadGroupInfo(getHeaderForReads().getReadGroup(rg).getFlowOrder(),
+                                            (mc == null) ? FlowConstants.MAX_CLASS : Integer.parseInt(mc));
             readGroupInfo.put(rg, info);
+
+            return info;
         }
-        return info;
     }
 
-    private boolean filterFeature(Feature fr) {
+    private boolean filterFeature(final Feature fr) {
 
-        if ( fmArgs.excludeNaNScores && Double.isNaN(fr.score) )
+        if ( fmArgs.excludeNaNScores && Double.isNaN(fr.score) ) {
             return false;
-        if ( fr.score > fmArgs.maxScore )
+        } else if ( fr.score > fmArgs.maxScore ) {
             return false;
-        if ( fr.score < fmArgs.minScore )
+        } else if ( fr.score < fmArgs.minScore ) {
             return false;
+        }
 
         return true;
     }
 
-    private void emitFeature(Feature fr) {
-
+    private void emitFeature(final Feature fr) {
 
         // create alleles
-        Collection<Allele>          alleles = new LinkedList<>();
+        final Collection<Allele>          alleles = new LinkedList<>();
         alleles.add(Allele.create(fr.readBases, false));
         alleles.add(Allele.create(fr.refBases, true));
 
         // create variant context builder
-        VariantContextBuilder       vcb = new VariantContextBuilder(
+        final VariantContextBuilder       vcb = new VariantContextBuilder(
                                                     VCB_SOURCE,
                                                     fr.read.getContig(),
                                                     fr.start,
@@ -503,7 +531,7 @@ public final class FlowFeatureMapper extends ReadWalker {
                 vcb.attribute(fmArgs.copyAttrPrefix + name, fr.read.getAttributeAsString(name));
             }
         }
-        VariantContext              vc = vcb.make();
+        final VariantContext      vc = vcb.make();
 
         // write to file
         vcfWriter.add(vc);
@@ -512,11 +540,11 @@ public final class FlowFeatureMapper extends ReadWalker {
     private FeatureMapper buildMapper() {
 
         // build appropriate mapper
-        if ( fmArgs.mappingFeature == FlowFeatureMapperArgumentCollection.MappingFeatureEnum.SNV )
+        if ( fmArgs.mappingFeature == FlowFeatureMapperArgumentCollection.MappingFeatureEnum.SNV ) {
             return new SNVMapper(fmArgs);
-        else
+        } else {
             throw new GATKException("unsupported mappingFeature: " + fmArgs.mappingFeature);
+        }
     }
-
 }
 
