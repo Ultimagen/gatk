@@ -4,14 +4,14 @@ import org.broadinstitute.hellbender.CommandLineProgramTest;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import org.ultimagen.CommentedTextReader;
-import org.ultimagen.Const;
+import org.ultimagen.FlowTestConstants;
 
 import java.io.File;
 import java.io.IOException;
 
 public class FlowFeatureMapperIntegrationTest extends CommandLineProgramTest {
 
-    protected static String    vcTestDir = publicTestDir + Const.FEATURE_MAPPING_DATA_DIR;
+    protected static String    vcTestDir = publicTestDir + FlowTestConstants.FEATURE_MAPPING_DATA_DIR;
 
     @Test
     public void testBasic() throws IOException {
