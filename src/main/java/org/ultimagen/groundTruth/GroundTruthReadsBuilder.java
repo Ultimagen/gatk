@@ -526,7 +526,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
                 "ReadCigar", "ReadSeq", "ReadKey",
                 "PaternalHaplotypeInterval", "PaternalHaplotypeSequence",
                 "MaternalHaplotypeInterval", "MaternalHaplotypeSequence",
-                "tm", "mapq"
+                "tm", "mapq", "flags"
         };
 
         outputCsv.println(StringUtils.join(fields, ","));
@@ -599,6 +599,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
         sb.append("," + (read.hasAttribute("tm") ? read.getAttributeAsString("tm") : ""));
         sb.append("," + read.getMappingQuality());
+        sb.append("," + read.getFlags());
 
         // write
         outputCsv.println(sb);
