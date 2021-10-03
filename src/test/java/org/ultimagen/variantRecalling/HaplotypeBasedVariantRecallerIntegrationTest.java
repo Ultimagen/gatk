@@ -4,14 +4,14 @@ import org.broadinstitute.hellbender.CommandLineProgramTest;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import org.ultimagen.CommentedTextReader;
-import org.ultimagen.Const;
+import org.ultimagen.FlowTestConstants;
 
 import java.io.File;
 import java.io.IOException;
 
 public class HaplotypeBasedVariantRecallerIntegrationTest extends CommandLineProgramTest {
 
-    protected static String    vcTestDir = publicTestDir + Const.VARIANT_CALLING_DATA_DIR;
+    protected static String    vcTestDir = publicTestDir + FlowTestConstants.VARIANT_CALLING_DATA_DIR;
 
     @Test
     public void testBasic() throws IOException {
