@@ -102,6 +102,9 @@ import java.util.Random;
 public final class GroundTruthReadsBuilder extends ReadWalker {
 
     private static final Logger logger = LogManager.getLogger(GroundTruthReadsBuilder.class);
+    public static final int DEFAULT_FILL_VALUE = -65;
+    public static final int NONREF_FILL_VALUE = -80;
+    public static final int UNKNOWN_FILL_VALUE = -85;
 
     @ArgumentCollection
     private final HaplotypeCallerArgumentCollection hcArgs = new HaplotypeCallerArgumentCollection();
@@ -535,15 +538,23 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         final StringBuilder       sb = new StringBuilder();
 
         // establish fill value
-        int                 fillValue = -65;
+        int                 fillValue = DEFAULT_FILL_VALUE;
+        final String        tm = read.getAttributeAsString("tm");
+        boolean             hasA = (tm != null) && tm.indexOf('A') >= 0;
+        boolean             hasQ = (tm != null) && tm.indexOf('Q') >= 0;
+        boolean             hasZ = (tm != null) && tm.indexOf('Z') >= 0;
         if ( !fillHardClippedReads ) {
-            String      tm = read.getAttributeAsString("tm");
             if ( tm != null ) {
-                if ( (tm.indexOf('Q') >= 0) && !fillHardClippedReadsQ )
-                    fillValue = -80;
-                if ( (tm.indexOf('Z') >= 0) && !fillHardClippedReadsZ )
-                    fillValue = -80;
+                if ( hasQ && !fillHardClippedReadsQ ) {
+                    fillValue = NONREF_FILL_VALUE;
+                }
+                if ( hasZ && !fillHardClippedReadsZ ) {
+                    fillValue = NONREF_FILL_VALUE;
+                }
             }
+        }
+        if ( hasA && (hasQ || hasZ) ) {
+            fillValue = UNKNOWN_FILL_VALUE;
         }
 
         // read number
@@ -586,7 +597,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         sb.append("," + maternal.ref.getInterval());
         sb.append("," + maternal.haplotype.getBaseString());
 
-        sb.append("," + read.getAttributeAsString("tm"));
+        sb.append("," + (read.hasAttribute("tm") ? read.getAttributeAsString("tm") : ""));
         sb.append("," + read.getMappingQuality());
 
         // write
