@@ -373,7 +373,7 @@ public final class FlowFeatureMapper extends ReadWalker {
         return score;
     }
 
-    private double computeLikelihoodLocal(final FlowBasedRead read, final FlowBasedHaplotype haplotype, final int hapKeyLength, final boolean debug) {
+    public static double computeLikelihoodLocal(final FlowBasedRead read, final FlowBasedHaplotype haplotype, final int hapKeyLength, final boolean debug) {
 
         final byte[] flowOrder = haplotype.getFlowOrderArray();
         final byte   readFlowOrder0 = read.getFlowOrderArray()[0];
