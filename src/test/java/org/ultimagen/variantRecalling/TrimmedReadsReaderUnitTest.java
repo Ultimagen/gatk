@@ -7,7 +7,7 @@ import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.ultimagen.Const;
+import org.ultimagen.FlowTestConstants;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
 
 import java.nio.file.FileSystems;
@@ -19,7 +19,7 @@ import java.util.Map;
 
 public class TrimmedReadsReaderUnitTest extends GATKBaseTest {
 
-    protected static String    vcTestDir = publicTestDir + Const.VARIANT_CALLING_DATA_DIR;
+    protected static String    vcTestDir = publicTestDir + FlowTestConstants.VARIANT_CALLING_DATA_DIR;
 
     private static class BamSource {
         final String      filename;
