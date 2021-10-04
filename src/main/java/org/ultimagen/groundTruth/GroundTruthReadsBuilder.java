@@ -170,6 +170,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
     private static class ScoredHaplotype {
         ReferenceContext        ref;
+        ReferenceContext        unclippedRef;
         Haplotype               haplotype;
         FlowBasedRead           flowRead;
         FlowBasedHaplotype      flowHaplotype;
@@ -264,6 +265,8 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
             final Tuple<SimpleInterval, SimpleInterval>  ancestralLocs = locationTranslator.translate(read);
             maternal.ref = new ReferenceContext(maternalReference, ancestralLocs.a);
             paternal.ref = new ReferenceContext(paternalReference, ancestralLocs.b);
+            maternal.unclippedRef = buildUnclippedRef(maternalReference, ancestralLocs.a, read);
+            paternal.unclippedRef = buildUnclippedRef(paternalReference, ancestralLocs.b, read);
 
             // build haplotypes
             maternal.haplotype = buildReferenceHaplotype(maternal.ref);
@@ -317,6 +320,41 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         } catch (IOException e) {
             throw new GATKException("failed to process read: " + read.getName(), e);
         }
+    }
+
+    private ReferenceContext buildUnclippedRef(final ReferenceDataSource ref, final SimpleInterval loc, GATKRead read) {
+
+        // assume no extension
+        int     extendStart = 0;
+        int     extendEnd = 0;
+
+        // extending hard as well?
+        final String    tm = read.getAttributeAsString("tm");
+        boolean         extendHard = false;
+        if ( tm != null ) {
+            if ( (tm.indexOf('Z') >= 0) && (fillHardClippedReads || fillHardClippedReadsZ) ) {
+                extendHard = true;
+            }
+            else if ( (tm.indexOf('Q') >= 0) && (fillHardClippedReads || fillHardClippedReadsQ) ) {
+                extendHard = true;
+            }
+        }
+
+        // calc extension
+        final CigarElement      elem = !read.isReverseStrand()
+                ? read.getCigar().getLastCigarElement() : read.getCigar().getFirstCigarElement();
+        if ( (elem.getOperator() == CigarOperator.S)
+                || (extendHard && (elem.getOperator() == CigarOperator.H)) ) {
+            if ( !read.isReverseStrand() ) {
+                extendEnd += elem.getLength();
+            } else {
+                extendStart += elem.getLength();
+            }
+        }
+
+        // extend location and build
+        return new ReferenceContext(ref,
+                new SimpleInterval(loc.getContig(), loc.getStart() - extendStart, loc.getEnd() + extendEnd));
     }
 
     private byte[] buildHaplotypeOverflow(final ReferenceDataSource ref, final SimpleInterval loc, final boolean isReversed) {
@@ -527,7 +565,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         }
 
         if ( !isReversed ) {
-            sb.append(new String(haplotype.ref.getBases()));
+            sb.append(new String(haplotype.unclippedRef.getBases()));
             if (haplotype.halplotypeOverflow != null) {
                 sb.append(new String(haplotype.halplotypeOverflow));
             }
@@ -535,7 +573,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
             if (haplotype.halplotypeOverflow != null) {
                 sb.append(new String(reverseComplement(haplotype.halplotypeOverflow)));
             }
-            sb.append(new String(reverseComplement(haplotype.ref.getBases())));
+            sb.append(new String(reverseComplement(haplotype.unclippedRef.getBases())));
         }
 
         if ( appendSequence != null ) {
@@ -597,18 +635,8 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         boolean             hasA = (tm != null) && tm.indexOf('A') >= 0;
         boolean             hasQ = (tm != null) && tm.indexOf('Q') >= 0;
         boolean             hasZ = (tm != null) && tm.indexOf('Z') >= 0;
-        if ( !fillHardClippedReads ) {
-            if ( tm != null ) {
-                if ( hasQ && !fillHardClippedReadsQ ) {
-                    fillValue = NONREF_FILL_VALUE;
-                }
-                if ( hasZ && !fillHardClippedReadsZ ) {
-                    fillValue = NONREF_FILL_VALUE;
-                }
-            }
-        }
-        if ( hasA && (hasQ || hasZ) ) {
-            fillValue = UNKNOWN_FILL_VALUE;
+        if ( hasQ || hasZ ) {
+            fillValue = hasA ? UNKNOWN_FILL_VALUE : NONREF_FILL_VALUE;
         }
 
         // read number
@@ -628,8 +656,8 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
         // best haplotype key
         final ReadGroupInfo rgInfo = getReadGroupInfo(getHeaderForReads(), read);
-        final int[]           paternalHaplotypeKey = buildHaplotypeKeyForOutput(paternalHaplotypeSeq, rgInfo,fillValue, read.isReverseStrand());
-        final int[]           maternalHaplotypeKey = buildHaplotypeKeyForOutput(maternalHaplotypeSeq, rgInfo,fillValue, read.isReverseStrand());
+        final int[]           paternalHaplotypeKey = buildHaplotypeKeyForOutput(paternalHaplotypeSeq, rgInfo,fillValue, false);
+        final int[]           maternalHaplotypeKey = buildHaplotypeKeyForOutput(maternalHaplotypeSeq, rgInfo,fillValue, false);
         final int[]           bestHaplotypeKey = (bestHaplotype == paternal) ? paternalHaplotypeKey : maternalHaplotypeKey;
         sb.append("," + flowKeyAsCsvString(bestHaplotypeKey));
 
