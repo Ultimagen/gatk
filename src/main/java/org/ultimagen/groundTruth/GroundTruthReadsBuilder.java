@@ -228,9 +228,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         }
 
         // discard because softclipped
-        if ( discardNonPolytSoftclippedReads
-                && (read.getCigar().getFirstCigarElement().getOperator() == CigarOperator.S)
-                && !isPolyTSoftclipped(read) ) {
+        if ( discardNonPolytSoftclippedReads && isSoftclipped(read) && !isPolyTSoftclipped(read) ) {
             return;
         }
 
@@ -287,7 +285,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
             }
 
             // debug printing (in INFO for now, will be changed to DEBUG)
-            debugLog(read, maternal, paternal);
+            debugLog(read, referenceContext, maternal, paternal);
 
             // filter on min score
             // TODO: this is probaby wrong since the scores are negative. To be handled later
@@ -349,19 +347,36 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         return new FlowBasedRead(read, rgInfo.flowOrder, rgInfo.maxClass, hcArgs.fbargs);
     }
 
+    private boolean isSoftclipped(final GATKRead read) {
+
+        if ( !read.isReverseStrand() ) {
+            return read.getCigar().getFirstCigarElement().getOperator() == CigarOperator.S;
+        } else {
+            return read.getCigar().getLastCigarElement().getOperator() == CigarOperator.S;
+        }
+    }
+
     private boolean isPolyTSoftclipped(final GATKRead read) {
 
         // must be softclipped
-        final CigarElement        elem = read.getCigar().getFirstCigarElement();
-        if ( elem.getOperator() != CigarOperator.S ) {
+        if ( !isSoftclipped(read) )
             return false;
-        }
 
         // are all softclipped bases T
         final byte[]      bases = read.getBasesNoCopy();
-        for ( int n = 0 ; n < elem.getLength() ; n++ ) {
-            if (bases[n] != 'T') {
-                return false;
+        if ( !read.isReverseStrand() ) {
+            final int      length = read.getCigar().getFirstCigarElement().getLength();
+            for ( int n = 0 ; n < length ; n++ ) {
+                if (bases[n] != 'T') {
+                    return false;
+                }
+            }
+        } else {
+            final int      length = read.getCigar().getLastCigarElement().getLength();
+            for ( int n = 0 ; n < length ; n++ ) {
+                if (bases[bases.length - n - 1] != 'A') {
+                    return false;
+                }
             }
         }
 
@@ -369,16 +384,30 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         return true;
     }
 
-    private void debugLog(final GATKRead read, final ScoredHaplotype maternal, final ScoredHaplotype paternal) {
+    private void debugLog(final GATKRead read, final ReferenceContext referenceContext, final ScoredHaplotype maternal, final ScoredHaplotype paternal) {
 
         if ( debugMode ) {
-            logger.info("read: " + read.getName());
+            logger.info("read: " + read.getName() + " " + read.getCigar() + " " + read.getFlags());
             logger.info("read:          " + new SimpleInterval(read) + " " + new String(read.getBases()));
+            logger.info("ref:           " + new SimpleInterval(referenceContext) + " " + new String(referenceContext.getBases()));
             logger.info("mRef: " + maternal.ref.getInterval() + " " + new String(maternal.ref.getBases()));
             logger.info("pRef: " + paternal.ref.getInterval() + " " + new String(paternal.ref.getBases()));
+            logger.info("pmDiff:                                 " + new String(debugBinDiff(maternal.ref.getBases(), paternal.ref.getBases())));
             logger.info("mHap: " + maternal.score + " " + maternal.haplotype);
             logger.info("pHap: " + paternal.score + " " + paternal.haplotype);
         }
+    }
+
+    private byte[] debugBinDiff(final byte[] b1, final byte[] b2) {
+        final int     len = Math.min(b1.length, b2.length);
+        final byte[]  result = new byte[len];
+
+        for ( int n = 0 ; n < len ; n++ ) {
+            result[n] = (b1[n] == b2[n]) ? (byte)'_' : (byte)'1';
+        }
+
+        return result;
+
     }
 
     private double getFlowBasedReadQuality(final FlowBasedRead read, final int maxClass) {
@@ -446,6 +475,15 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         // compute alternative score
         final int         hapKeyLength = flowHaplotype.getKeyLength();
         final double      score = FlowFeatureMapper.computeLikelihoodLocal(flowRead, flowHaplotype, hapKeyLength, false);
+
+        // debug
+        if ( debugMode ) {
+            logger.info("flowRead: " + flowRead);
+            logger.info("flowHaplotype: " + flowHaplotype);
+            logger.info("flowRead.key:      " + Arrays.toString(flowRead.getKey()));
+            logger.info("flowHaplotype.key: " + Arrays.toString(flowHaplotype.getKey()));
+            logger.info("scoreReadAgainstReference: score: " + score);
+        }
 
         return score;
     }
