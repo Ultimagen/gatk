@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.ArgumentCollection;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
+import org.broadinstitute.barclay.argparser.ExperimentalFeature;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.exceptions.GATKException;
@@ -100,6 +101,7 @@ import java.util.Random;
 )
 
 @DocumentedFeature
+@ExperimentalFeature
 public final class GroundTruthReadsBuilder extends ReadWalker {
 
     private static final Logger logger = LogManager.getLogger(GroundTruthReadsBuilder.class);
