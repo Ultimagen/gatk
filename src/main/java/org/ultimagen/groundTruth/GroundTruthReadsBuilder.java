@@ -4,6 +4,7 @@ import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.util.Locatable;
+import htsjdk.samtools.util.SequenceUtil;
 import htsjdk.samtools.util.Tuple;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -182,6 +183,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
     static private class ReadGroupInfo {
         public String  flowOrder;
+        public String  reversedFlowOrder;
         public int     maxClass;
     }
 
@@ -299,8 +301,8 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
             }
 
             // prepare overflow
-            maternal.halplotypeOverflow = buildHaplotypeOverflow(maternalReference, ancestralLocs.a);
-            paternal.halplotypeOverflow = buildHaplotypeOverflow(paternalReference, ancestralLocs.b);
+            maternal.halplotypeOverflow = buildHaplotypeOverflow(maternalReference, ancestralLocs.a, read.isReverseStrand());
+            paternal.halplotypeOverflow = buildHaplotypeOverflow(paternalReference, ancestralLocs.b, read.isReverseStrand());
 
             // if here, emit this read
             outputReadsCount++;
@@ -317,7 +319,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         }
     }
 
-    private byte[] buildHaplotypeOverflow(final ReferenceDataSource ref, final SimpleInterval loc) {
+    private byte[] buildHaplotypeOverflow(final ReferenceDataSource ref, final SimpleInterval loc, final boolean isReversed) {
 
         // allocate
         if ( haplotypeOutputPaddingSize == 0 ) {
@@ -325,9 +327,14 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         }
 
         // adjust location
-        final SimpleInterval      padLoc = new SimpleInterval(loc.getContig(), loc.getEnd() + 1, loc.getEnd() + haplotypeOutputPaddingSize);
+        final SimpleInterval      padLoc = !isReversed
+                ? new SimpleInterval(loc.getContig(), loc.getEnd() + 1, loc.getEnd() + haplotypeOutputPaddingSize)
+                : new SimpleInterval(loc.getContig(), loc.getStart() - haplotypeOutputPaddingSize, loc.getStart() - 1);
+
+        // access reference
         final ReferenceContext    context = new ReferenceContext(ref, padLoc);
 
+        // return bases
         return context.getBases();
     }
 
@@ -488,11 +495,11 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         return score;
     }
 
-    private int[] buildHaplotypeKeyForOutput(final String haplotypeSeq, final ReadGroupInfo rgInfo, final int fillValue) {
+    private int[] buildHaplotypeKeyForOutput(final String haplotypeSeq, final ReadGroupInfo rgInfo, final int fillValue, final boolean isReversed) {
 
         // create a haplotype to contain the sequence
-        final Haplotype           h = new Haplotype(haplotypeSeq.getBytes());
-        final FlowBasedHaplotype  flowHaplotype = new FlowBasedHaplotype(h, rgInfo.flowOrder);
+        final Haplotype           h = new Haplotype(reverseComplement(haplotypeSeq.getBytes(), isReversed));
+        final FlowBasedHaplotype  flowHaplotype = new FlowBasedHaplotype(h, !isReversed ? rgInfo.flowOrder : rgInfo.reversedFlowOrder);
 
         // need to start on a T - find out T offset on the flow order
         int             tOfs = 0;
@@ -512,16 +519,25 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         return key;
     }
 
-    private String buildHaplotypeSequenceForOutput(final ScoredHaplotype haplotype) {
+    private String buildHaplotypeSequenceForOutput(final ScoredHaplotype haplotype, final boolean isReversed) {
 
         final StringBuilder      sb = new StringBuilder();
         if ( prependSequence != null ) {
             sb.append(prependSequence);
         }
-        sb.append(new String(haplotype.ref.getBases()));
-        if ( haplotype.halplotypeOverflow != null ) {
-            sb.append(new String(haplotype.halplotypeOverflow));
+
+        if ( !isReversed ) {
+            sb.append(new String(haplotype.ref.getBases()));
+            if (haplotype.halplotypeOverflow != null) {
+                sb.append(new String(haplotype.halplotypeOverflow));
+            }
+        } else {
+            if (haplotype.halplotypeOverflow != null) {
+                sb.append(new String(reverseComplement(haplotype.halplotypeOverflow)));
+            }
+            sb.append(new String(reverseComplement(haplotype.ref.getBases())));
         }
+
         if ( appendSequence != null ) {
             sb.append(appendSequence);
         }
@@ -605,15 +621,15 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         sb.append("," + refScore);
 
         // best haplotype sequence
-        final String              paternalHaplotypeSeq = buildHaplotypeSequenceForOutput(paternal);
-        final String              maternalHaplotypeSeq = buildHaplotypeSequenceForOutput(maternal);
+        final String              paternalHaplotypeSeq = buildHaplotypeSequenceForOutput(paternal, read.isReverseStrand());
+        final String              maternalHaplotypeSeq = buildHaplotypeSequenceForOutput(maternal, read.isReverseStrand());
         final ScoredHaplotype     bestHaplotype = (paternal.score > maternal.score) ? paternal: maternal;
         sb.append("," + ((bestHaplotype == paternal) ? paternalHaplotypeSeq : maternalHaplotypeSeq));
 
         // best haplotype key
         final ReadGroupInfo rgInfo = getReadGroupInfo(getHeaderForReads(), read);
-        final int[]           paternalHaplotypeKey = buildHaplotypeKeyForOutput(paternalHaplotypeSeq, rgInfo,fillValue);
-        final int[]           maternalHaplotypeKey = buildHaplotypeKeyForOutput(maternalHaplotypeSeq, rgInfo,fillValue);
+        final int[]           paternalHaplotypeKey = buildHaplotypeKeyForOutput(paternalHaplotypeSeq, rgInfo,fillValue, read.isReverseStrand());
+        final int[]           maternalHaplotypeKey = buildHaplotypeKeyForOutput(maternalHaplotypeSeq, rgInfo,fillValue, read.isReverseStrand());
         final int[]           bestHaplotypeKey = (bestHaplotype == paternal) ? paternalHaplotypeKey : maternalHaplotypeKey;
         sb.append("," + flowKeyAsCsvString(bestHaplotypeKey));
 
@@ -628,12 +644,12 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         sb.append("," + read.getUnclippedStart());
         sb.append("," + read.getUnclippedEnd());
         sb.append("," + read.getCigar());
-        sb.append("," + read.getBasesString());
-        sb.append("," + flowKeyAsCsvString(flowRead.getKey()));
+        sb.append("," + reverseComplement(read.getBasesString(), read.isReverseStrand()));
+        sb.append("," + flowKeyAsCsvString(reverse(flowRead.getKey(), read.isReverseStrand())));
         sb.append("," + paternal.ref.getInterval());
-        sb.append("," + paternal.haplotype.getBaseString());
+        sb.append("," + reverseComplement(paternal.haplotype.getBaseString(), read.isReverseStrand()));
         sb.append("," + maternal.ref.getInterval());
-        sb.append("," + maternal.haplotype.getBaseString());
+        sb.append("," + reverseComplement(maternal.haplotype.getBaseString(), read.isReverseStrand()));
 
         sb.append("," + (read.hasAttribute("tm") ? read.getAttributeAsString("tm") : ""));
         sb.append("," + read.getMappingQuality());
@@ -651,6 +667,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         if ( info == null ) {
             info = new ReadGroupInfo();
             info.flowOrder = headerForReads.getReadGroup(rg).getFlowOrder();
+            info.reversedFlowOrder = reverseComplement(info.flowOrder);
             String mc_string = headerForReads.getReadGroup(rg).getAttribute("mc");
             if ( mc_string == null ) {
                 info.maxClass = 12;
@@ -661,5 +678,39 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         }
         return info;
     }
+
+    private byte[] reverseComplement(final byte[] bases) {
+
+        final byte[] result = new byte[bases.length];
+        System.arraycopy(bases, 0, result, 0, result.length);
+        SequenceUtil.reverseComplement(result);
+
+        return result;
+    }
+
+    private byte[] reverseComplement(final byte[] bases, final boolean isReversed) {
+        return !isReversed ? bases : reverseComplement(bases);
+    }
+
+    private String reverseComplement(final String bases) {
+        return new String(reverseComplement(bases.getBytes()));
+    }
+
+    private String reverseComplement(final String bases, final boolean isReversed) {
+        return !isReversed ? bases : reverseComplement(bases);
+    }
+
+    private byte[] reverse(final byte[] bytes) {
+        final byte[] result = new byte[bytes.length];
+        System.arraycopy(bytes, 0, result, 0, result.length);
+        FlowBasedRead.reverse(result, result.length);
+
+        return result;
+    }
+
+    private byte[] reverse(final byte[] bytes, final boolean isReversed) {
+        return !isReversed ? bytes : reverse(bytes);
+    }
+
 }
 
