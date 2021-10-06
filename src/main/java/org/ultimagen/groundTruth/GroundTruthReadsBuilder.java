@@ -108,6 +108,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
     public static final int DEFAULT_FILL_VALUE = -65;
     public static final int NONREF_FILL_VALUE = -80;
     public static final int UNKNOWN_FILL_VALUE = -85;
+    private static final int EXTRA_FILL_FROM_HAPLOTYPE = 50;
 
     @ArgumentCollection
     private final HaplotypeCallerArgumentCollection hcArgs = new HaplotypeCallerArgumentCollection();
@@ -146,12 +147,12 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
     @Argument(fullName = "discard-non-polyt-softclipped-reads", doc = "Discard reads which are softclipped, unless the softclip is polyT, defaults to true", optional = true)
     public boolean  discardNonPolytSoftclippedReads = true;
 
-    @Argument(fullName = "fill-hard-clipped-reads-Q", doc = "Reads with tm:Q should be filled will -65, otherwise (default) filled with -80", optional = true)
-    public boolean  fillHardClippedReadsQ;
-    @Argument(fullName = "fill-hard-clipped-reads-Z", doc = "Reads with tm:Z should be filled will -65, otherwise (default) filled with -80", optional = true)
-    public boolean  fillHardClippedReadsZ;
-    @Argument(fullName = "fill-hard-clipped-reads", doc = "Reads with tm:Q or tm:Z should be filled will -65, otherwise (default) filled with -80", optional = true)
-    public boolean  fillHardClippedReads;
+    @Argument(fullName = "fill-trimmed-reads-Q", doc = "Reads with tm:Q should be filled from haplotype, otherwise (default) filled with -80", optional = true)
+    public boolean fillTrimmedReadsQ;
+    @Argument(fullName = "fill-trimmed-reads-Z", doc = "Reads with tm:Z should be filled from haplotype, otherwise (default) filled with -80", optional = true)
+    public boolean fillTrimmedReadsZ;
+    @Argument(fullName = "fill-trimmed-reads", doc = "Reads with tm:Q or tm:Z should be filled from haplotype, otherwise (default) filled with -80", optional = true)
+    public boolean fillTrimmedReads;
 
     @Argument(fullName = "output-csv", doc="main output file")
     public GATKPath outputCsvPath = null;
@@ -172,12 +173,12 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
     private static class ScoredHaplotype {
         ReferenceContext        ref;
-        ReferenceContext        unclippedRef;
+        ReferenceContext        extendedRef;
+        ReferenceContext        filledRef;
         Haplotype               haplotype;
         FlowBasedRead           flowRead;
         FlowBasedHaplotype      flowHaplotype;
         double                  score;
-        byte[]                  halplotypeOverflow;
 
         ScoredHaplotype(FlowBasedRead flowRead) {
             this.flowRead = flowRead;
@@ -267,8 +268,8 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
             final Tuple<SimpleInterval, SimpleInterval>  ancestralLocs = locationTranslator.translate(read);
             maternal.ref = new ReferenceContext(maternalReference, ancestralLocs.a);
             paternal.ref = new ReferenceContext(paternalReference, ancestralLocs.b);
-            maternal.unclippedRef = buildUnclippedRef(maternalReference, ancestralLocs.a, read);
-            paternal.unclippedRef = buildUnclippedRef(paternalReference, ancestralLocs.b, read);
+            buildExtendedRef(maternal, maternalReference, ancestralLocs.a, read);
+            buildExtendedRef(paternal, paternalReference, ancestralLocs.b, read);
 
             // build haplotypes
             maternal.haplotype = buildReferenceHaplotype(maternal.ref);
@@ -305,10 +306,6 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
                 return;
             }
 
-            // prepare overflow
-            maternal.halplotypeOverflow = buildHaplotypeOverflow(maternalReference, ancestralLocs.a, read.isReverseStrand());
-            paternal.halplotypeOverflow = buildHaplotypeOverflow(paternalReference, ancestralLocs.b, read.isReverseStrand());
-
             // if here, emit this read
             outputReadsCount++;
             emit(read, flowRead, refScore, maternal, paternal);
@@ -324,29 +321,40 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         }
     }
 
-    private ReferenceContext buildUnclippedRef(final ReferenceDataSource ref, final SimpleInterval loc, GATKRead read) {
+    private boolean shouldFillTrimmedFromHaplotype(final GATKRead read) {
+
+        // extending timmed as well?
+        final String    tm = read.getAttributeAsString("tm");
+        if ( tm == null ) {
+            return true;
+        } else {
+            boolean             hasA = tm.indexOf('A') >= 0;
+            boolean             hasQ = tm.indexOf('Q') >= 0;
+            boolean             hasZ = tm.indexOf('Z') >= 0;
+            if ( hasA ) {
+                return false;
+            }
+            else if ( hasZ && (fillTrimmedReads || fillTrimmedReadsZ) ) {
+                return true;
+            }
+            else if ( hasQ && (fillTrimmedReads || fillTrimmedReadsQ) ) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+
+    private void buildExtendedRef(final ScoredHaplotype scoredHaplotype, final ReferenceDataSource ref, final SimpleInterval loc, final GATKRead read) {
 
         // assume no extension
         int     extendStart = 0;
         int     extendEnd = 0;
 
-        // extending hard as well?
-        final String    tm = read.getAttributeAsString("tm");
-        boolean         extendHard = false;
-        if ( tm != null ) {
-            if ( (tm.indexOf('Z') >= 0) && (fillHardClippedReads || fillHardClippedReadsZ) ) {
-                extendHard = true;
-            }
-            else if ( (tm.indexOf('Q') >= 0) && (fillHardClippedReads || fillHardClippedReadsQ) ) {
-                extendHard = true;
-            }
-        }
-
-        // calc extension
+        // calc soft extension
         final CigarElement      elem = !read.isReverseStrand()
                 ? read.getCigar().getLastCigarElement() : read.getCigar().getFirstCigarElement();
-        if ( (elem.getOperator() == CigarOperator.S)
-                || (extendHard && (elem.getOperator() == CigarOperator.H)) ) {
+        if ( elem.getOperator() == CigarOperator.S ) {
             if ( !read.isReverseStrand() ) {
                 extendEnd += elem.getLength();
             } else {
@@ -354,28 +362,29 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
             }
         }
 
-        // extend location and build
-        return new ReferenceContext(ref,
-                new SimpleInterval(loc.getContig(), loc.getStart() - extendStart, loc.getEnd() + extendEnd));
-    }
-
-    private byte[] buildHaplotypeOverflow(final ReferenceDataSource ref, final SimpleInterval loc, final boolean isReversed) {
-
-        // allocate
-        if ( haplotypeOutputPaddingSize == 0 ) {
-            return null;
+        // add padding
+        if ( !read.isReverseStrand() ) {
+            extendEnd += haplotypeOutputPaddingSize;
+        } else {
+            extendStart += haplotypeOutputPaddingSize;
         }
 
-        // adjust location
-        final SimpleInterval      padLoc = !isReversed
-                ? new SimpleInterval(loc.getContig(), loc.getEnd() + 1, loc.getEnd() + haplotypeOutputPaddingSize)
-                : new SimpleInterval(loc.getContig(), loc.getStart() - haplotypeOutputPaddingSize, loc.getStart() - 1);
+        // extend location and build
+        scoredHaplotype.extendedRef = new ReferenceContext(ref,
+                new SimpleInterval(loc.getContig(), loc.getStart() - extendStart, loc.getEnd() + extendEnd));
 
-        // access reference
-        final ReferenceContext    context = new ReferenceContext(ref, padLoc);
-
-        // return bases
-        return context.getBases();
+        // add extra fill from haplotype
+        if ( (outputFlowLength != 0) && shouldFillTrimmedFromHaplotype(read) ) {
+            int     length = (loc.getEnd() + extendEnd) - (loc.getStart() - extendStart);
+            int     delta = Math.max(0, outputFlowLength - length) + EXTRA_FILL_FROM_HAPLOTYPE;
+            if ( !read.isReverseStrand() ) {
+                extendEnd += delta;
+            } else {
+                extendStart += delta;
+            }
+        }
+        scoredHaplotype.filledRef = new ReferenceContext(ref,
+                new SimpleInterval(loc.getContig(), loc.getStart() - extendStart, loc.getEnd() + extendEnd));
     }
 
     private boolean arsSame(final Haplotype h1, final Haplotype h2) {
@@ -547,11 +556,13 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
             tOfs++;
         }
 
-        // prepare key, adjust to a fixed length
+        // prepare key
         final int             flowLength = (outputFlowLength != 0) ? outputFlowLength : (flowHaplotype.getKey().length - tOfs);
         final int[]           key = new int[flowLength];
         int             ofs;
         System.arraycopy(flowHaplotype.getKey(), tOfs, key, 0, ofs = Math.min(flowLength, flowHaplotype.getKey().length - tOfs));
+
+        // adjust to a fixed length
         for (  ; ofs < flowLength ; ofs++ ) {
             key[ofs] = fillValue;
         }
@@ -567,15 +578,9 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         }
 
         if ( !isReversed ) {
-            sb.append(new String(haplotype.unclippedRef.getBases()));
-            if (haplotype.halplotypeOverflow != null) {
-                sb.append(new String(haplotype.halplotypeOverflow));
-            }
+            sb.append(new String(haplotype.extendedRef.getBases()));
         } else {
-            if (haplotype.halplotypeOverflow != null) {
-                sb.append(new String(reverseComplement(haplotype.halplotypeOverflow)));
-            }
-            sb.append(new String(reverseComplement(haplotype.unclippedRef.getBases())));
+            sb.append(new String(reverseComplement(haplotype.extendedRef.getBases())));
         }
 
         if ( appendSequence != null ) {
@@ -674,18 +679,26 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         // best haplotype sequence
         final String              paternalHaplotypeSeq = buildHaplotypeSequenceForOutput(paternal, read.isReverseStrand());
         final String              maternalHaplotypeSeq = buildHaplotypeSequenceForOutput(maternal, read.isReverseStrand());
+        final boolean             ancestralHaplotypesSame = paternalHaplotypeSeq.equals(maternalHaplotypeSeq);
         final ScoredHaplotype     bestHaplotype = (paternal.score > maternal.score) ? paternal: maternal;
         sb.append("," + ((bestHaplotype == paternal) ? paternalHaplotypeSeq : maternalHaplotypeSeq));
 
         // best haplotype key
         final ReadGroupInfo rgInfo = getReadGroupInfo(getHeaderForReads(), read);
-        final int[]           paternalHaplotypeKey = buildHaplotypeKeyForOutput(paternalHaplotypeSeq, rgInfo,fillValue, false);
-        final int[]           maternalHaplotypeKey = buildHaplotypeKeyForOutput(maternalHaplotypeSeq, rgInfo,fillValue, false);
+        final int[]           paternalHaplotypeKey = buildHaplotypeKeyForOutput(
+                new String(paternal.filledRef.getBases()),
+                rgInfo,fillValue, read.isReverseStrand());
+        final int[]           maternalHaplotypeKey = buildHaplotypeKeyForOutput(
+                new String(maternal.filledRef.getBases()),
+                rgInfo,fillValue, read.isReverseStrand());
         final int[]           bestHaplotypeKey = (bestHaplotype == paternal) ? paternalHaplotypeKey : maternalHaplotypeKey;
-        sb.append("," + flowKeyAsCsvString(bestHaplotypeKey));
+        final int[]           consensus = buildConsensusKey(paternalHaplotypeKey, maternalHaplotypeKey);
+        if ( !ancestralHaplotypesSame )
+            sb.append("," + flowKeyAsCsvString(bestHaplotypeKey));
+        else
+            sb.append("," + flowKeyAsCsvString(consensus));
 
         // write consensus haplotype
-        final int[]           consensus = buildConsensusKey(paternalHaplotypeKey, maternalHaplotypeKey);
         sb.append("," + flowKeyAsCsvString(consensus));
 
         // additional  fields
