@@ -602,8 +602,29 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         return "\"" + Arrays.toString(key).replaceAll("\\[|\\]|\\s", "") + "\"";
     }
 
-    private String flowKeyAsCsvString(final byte[] key) {
-        return "\"" + Arrays.toString(key).replaceAll("\\[|\\]|\\s", "") + "\"";
+    private String flowKeyAsCsvString(byte[] key, final String seq, final String flowOrder) {
+        final StringBuilder     sb = new StringBuilder();
+
+        sb.append("\"");
+
+        while ( key[0] == 0 ) {
+            key = Arrays.copyOfRange(key, 1, key.length);
+        }
+        if ( seq.charAt(0) != 'T' ) {
+            int     ofs = 0;
+            while ( flowOrder.charAt(ofs) != 'T' )
+                ofs++;
+            while ( flowOrder.charAt(ofs) != seq.charAt(0) ) {
+                sb.append("0,");
+                ofs = (ofs + 1) % flowOrder.length();
+            }
+        }
+
+        sb.append(Arrays.toString(key).replaceAll("\\[|\\]|\\s", ""));
+
+        sb.append("\"");
+
+        return sb.toString();
     }
 
     private void emitCsvHeaders() {
@@ -674,8 +695,12 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         sb.append("," + read.getUnclippedStart());
         sb.append("," + read.getUnclippedEnd());
         sb.append("," + read.getCigar());
-        sb.append("," + reverseComplement(read.getBasesString(), read.isReverseStrand()));
-        sb.append("," + flowKeyAsCsvString(reverse(flowRead.getKey(), read.isReverseStrand())));
+
+        final String    readSeq = reverseComplement(read.getBasesString(), read.isReverseStrand());
+        final byte[]    readKey = reverse(flowRead.getKey(), read.isReverseStrand());
+        final String    readFlowOrder = reverseComplement(getReadGroupInfo(getHeaderForReads(), read).flowOrder, read.isReverseStrand());
+        sb.append("," + readSeq);
+        sb.append("," + flowKeyAsCsvString(readKey, readSeq, readFlowOrder));
         sb.append("," + paternal.ref.getInterval());
         sb.append("," + reverseComplement(paternal.haplotype.getBaseString(), read.isReverseStrand()));
         sb.append("," + maternal.ref.getInterval());
