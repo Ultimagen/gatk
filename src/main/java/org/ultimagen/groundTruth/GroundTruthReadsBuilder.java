@@ -135,7 +135,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
     public double   minMappingQuality = 0;
     @Argument(fullName = "max-rq", doc = "Maximal read quality", optional = true)
     public double   maxReadQuality = 0;
-    @Argument(fullName = "include-supp-align", doc = "Include supplumentary alignments", optional = true)
+    @Argument(fullName = "include-supp-align", doc = "Include supplementary alignments", optional = true)
     public boolean  includeSuppAlign = false;
     @Argument(fullName = "min-haplotype-score", doc = "Minimal score (likelihood) on either haplotype", optional = true)
     public double   minHaplotypeScore = 0;
