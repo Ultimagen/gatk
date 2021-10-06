@@ -547,20 +547,33 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
     private int[] buildHaplotypeKeyForOutput(final String haplotypeSeq, final ReadGroupInfo rgInfo, final int fillValue, final boolean isReversed) {
 
         // create a haplotype to contain the sequence
-        final Haplotype           h = new Haplotype(reverseComplement(haplotypeSeq.getBytes(), isReversed));
+        final byte[]              seq = reverseComplement(haplotypeSeq.getBytes(), isReversed);
+        final Haplotype           h = new Haplotype(seq);
         final FlowBasedHaplotype  flowHaplotype = new FlowBasedHaplotype(h, !isReversed ? rgInfo.flowOrder : rgInfo.reversedFlowOrder);
 
         // need to start on a T - find out T offset on the flow order
-        int             tOfs = 0;
-        while ( flowHaplotype.getFlowOrderArray()[tOfs] != 'T' ) {
-            tOfs++;
+        int[]                     hapKey = flowHaplotype.getKey();
+        byte[]                    hapFlowOrder = flowHaplotype.getFlowOrderArray();
+        int                       appendZeroCount = 0;
+        while ( hapKey[0] == 0 ) {
+            hapKey = Arrays.copyOfRange(hapKey, 1, hapKey.length);
+        }
+        if ( seq[0] != 'T' ) {
+            int     ofs = 0;
+            while ( hapFlowOrder[ofs] != 'T' )
+                ofs++;
+            while ( hapFlowOrder[ofs] != seq[0] ) {
+                appendZeroCount++;
+                ofs = (ofs + 1) % hapFlowOrder.length;
+            }
         }
 
         // prepare key
-        final int             flowLength = (outputFlowLength != 0) ? outputFlowLength : (flowHaplotype.getKey().length - tOfs);
+        final int             flowLength = (outputFlowLength != 0) ? outputFlowLength : (hapKey.length + appendZeroCount);
         final int[]           key = new int[flowLength];
-        int             ofs;
-        System.arraycopy(flowHaplotype.getKey(), tOfs, key, 0, ofs = Math.min(flowLength, flowHaplotype.getKey().length - tOfs));
+        int                   ofs;
+        System.arraycopy(hapKey, 0, key, appendZeroCount, ofs = Math.min(flowLength - appendZeroCount, hapKey.length));
+        ofs += appendZeroCount;
 
         // adjust to a fixed length
         for (  ; ofs < flowLength ; ofs++ ) {
