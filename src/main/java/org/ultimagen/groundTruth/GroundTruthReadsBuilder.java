@@ -583,18 +583,16 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         return key;
     }
 
-    private String buildHaplotypeSequenceForOutput(final ScoredHaplotype haplotype, final boolean isReversed) {
+    private String buildHaplotypeSequenceForOutput(final ScoredHaplotype haplotype, final boolean isReversed, final int keyBaseCount) {
 
         final StringBuilder      sb = new StringBuilder();
         if ( prependSequence != null ) {
             sb.append(prependSequence);
         }
 
-        if ( !isReversed ) {
-            sb.append(new String(haplotype.extendedRef.getBases()));
-        } else {
-            sb.append(new String(reverseComplement(haplotype.extendedRef.getBases())));
-        }
+        final String            seq = new String(reverseComplement(haplotype.filledRef.getBases(), isReversed));
+        final String            baseCountSeq = seq.substring(0, keyBaseCount);
+        sb.append(baseCountSeq);
 
         if ( appendSequence != null ) {
             sb.append(appendSequence);
@@ -689,14 +687,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         sb.append("," + maternal.score);
         sb.append("," + refScore);
 
-        // best haplotype sequence
-        final String              paternalHaplotypeSeq = buildHaplotypeSequenceForOutput(paternal, read.isReverseStrand());
-        final String              maternalHaplotypeSeq = buildHaplotypeSequenceForOutput(maternal, read.isReverseStrand());
-        final boolean             ancestralHaplotypesSame = paternalHaplotypeSeq.equals(maternalHaplotypeSeq);
-        final ScoredHaplotype     bestHaplotype = (paternal.score > maternal.score) ? paternal: maternal;
-        sb.append("," + ((bestHaplotype == paternal) ? paternalHaplotypeSeq : maternalHaplotypeSeq));
-
-        // best haplotype key
+        // build haplotype keys
         final ReadGroupInfo rgInfo = getReadGroupInfo(getHeaderForReads(), read);
         final int[]           paternalHaplotypeKey = buildHaplotypeKeyForOutput(
                 new String(paternal.filledRef.getBases()),
@@ -704,8 +695,19 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         final int[]           maternalHaplotypeKey = buildHaplotypeKeyForOutput(
                 new String(maternal.filledRef.getBases()),
                 rgInfo,fillValue, read.isReverseStrand());
-        final int[]           bestHaplotypeKey = (bestHaplotype == paternal) ? paternalHaplotypeKey : maternalHaplotypeKey;
-        final int[]           consensus = buildConsensusKey(paternalHaplotypeKey, maternalHaplotypeKey);
+
+        // build haplotype sequence
+        final String           paternalHaplotypeSeq = buildHaplotypeSequenceForOutput(paternal, read.isReverseStrand(), keyBases(paternalHaplotypeKey));
+        final String           maternalHaplotypeSeq = buildHaplotypeSequenceForOutput(maternal, read.isReverseStrand(), keyBases(maternalHaplotypeKey));
+
+        // select best and establish consensus
+        final boolean          ancestralHaplotypesSame = paternalHaplotypeSeq.equals(maternalHaplotypeSeq);
+        final ScoredHaplotype  bestHaplotype = (paternal.score > maternal.score) ? paternal: maternal;
+        final int[]            bestHaplotypeKey = (bestHaplotype == paternal) ? paternalHaplotypeKey : maternalHaplotypeKey;
+        final int[]            consensus = buildConsensusKey(paternalHaplotypeKey, maternalHaplotypeKey);
+
+        // emit best haplotype
+        sb.append("," + ((bestHaplotype == paternal) ? paternalHaplotypeSeq : maternalHaplotypeSeq));
         if ( !ancestralHaplotypesSame )
             sb.append("," + flowKeyAsCsvString(bestHaplotypeKey));
         else
@@ -738,7 +740,16 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
         // write
         outputCsv.println(sb);
+    }
 
+    private int keyBases(int[] key) {
+        int     count = 0;
+        for ( int c : key ) {
+            if (c > 0) {
+                count += c;
+            }
+        }
+        return count;
     }
 
     private synchronized ReadGroupInfo getReadGroupInfo(SAMFileHeader headerForReads, GATKRead read) {
