@@ -90,7 +90,7 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
     private String establishFlowOrder(final LocalContext localContext, final AlleleLikelihoods<GATKRead, Allele> likelihoods) {
 
         // extract from a read
-        if ( likelihoods != null ) {
+        if ( (likelihoods != null) && (likelihoods.numberOfSamples()>0) ) {
             final List<GATKRead>  reads = likelihoods.sampleEvidence(0);
             if ( reads.size() > 0 ) {
                 GATKRead        read = reads.get(0);
