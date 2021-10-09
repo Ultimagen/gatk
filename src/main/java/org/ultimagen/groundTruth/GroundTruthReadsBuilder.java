@@ -108,6 +108,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
     public static final int DEFAULT_FILL_VALUE = -65;
     public static final int NONREF_FILL_VALUE = -80;
     public static final int UNKNOWN_FILL_VALUE = -85;
+    public static final int SOFTCLIP_FILL_VALUE = -83;
     private static final int EXTRA_FILL_FROM_HAPLOTYPE = 50;
 
     @ArgumentCollection
@@ -145,7 +146,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
     @Argument(fullName = "haplotype-output-padding-size", doc = "Number of N to append to best haplotype on output", optional = true)
     public int      haplotypeOutputPaddingSize = 8;
     @Argument(fullName = "discard-non-polyt-softclipped-reads", doc = "Discard reads which are softclipped, unless the softclip is polyT, defaults to true", optional = true)
-    public boolean  discardNonPolytSoftclippedReads = true;
+    public boolean  discardNonPolytSoftclippedReads = false;
 
     @Argument(fullName = "fill-trimmed-reads-Q", doc = "Reads with tm:Q should be filled from haplotype, otherwise (default) filled with -80", optional = true)
     public boolean fillTrimmedReadsQ;
@@ -153,6 +154,8 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
     public boolean fillTrimmedReadsZ;
     @Argument(fullName = "fill-trimmed-reads", doc = "Reads with tm:Q or tm:Z should be filled from haplotype, otherwise (default) filled with -80", optional = true)
     public boolean fillTrimmedReads;
+    @Argument(fullName = "fill-softclipped-reads", doc = "Softclipped reads should be filled from haplotype, otherwise (default) filled with -83", optional = true)
+    public boolean fillSoftclippedReads;
 
     @Argument(fullName = "output-csv", doc="main output file")
     public GATKPath outputCsvPath = null;
@@ -321,12 +324,12 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         }
     }
 
-    private boolean shouldFillTrimmedFromHaplotype(final GATKRead read) {
+    private boolean shouldFillFromHaplotype(final GATKRead read) {
 
         // extending timmed as well?
         final String    tm = read.getAttributeAsString("tm");
         if ( tm == null ) {
-            return true;
+            return isSoftclipped(read) ? fillSoftclippedReads : true;
         } else {
             boolean             hasA = tm.indexOf('A') >= 0;
             boolean             hasQ = tm.indexOf('Q') >= 0;
@@ -352,13 +355,15 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         int     extendEnd = 0;
 
         // calc soft extension
-        final CigarElement      elem = !read.isReverseStrand()
-                ? read.getCigar().getLastCigarElement() : read.getCigar().getFirstCigarElement();
-        if ( elem.getOperator() == CigarOperator.S ) {
-            if ( !read.isReverseStrand() ) {
-                extendEnd += elem.getLength();
-            } else {
-                extendStart += elem.getLength();
+        if ( fillSoftclippedReads ) {
+            final CigarElement elem = !read.isReverseStrand()
+                    ? read.getCigar().getLastCigarElement() : read.getCigar().getFirstCigarElement();
+            if (elem.getOperator() == CigarOperator.S) {
+                if (!read.isReverseStrand()) {
+                    extendEnd += elem.getLength();
+                } else {
+                    extendStart += elem.getLength();
+                }
             }
         }
 
@@ -374,7 +379,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
                 new SimpleInterval(loc.getContig(), loc.getStart() - extendStart, loc.getEnd() + extendEnd));
 
         // add extra fill from haplotype
-        if ( (outputFlowLength != 0) && shouldFillTrimmedFromHaplotype(read) ) {
+        if ( (outputFlowLength != 0) && shouldFillFromHaplotype(read) ) {
             int     length = (loc.getEnd() + extendEnd) - (loc.getStart() - extendStart);
             int     delta = Math.max(0, outputFlowLength - length) + EXTRA_FILL_FROM_HAPLOTYPE;
             if ( !read.isReverseStrand() ) {
@@ -406,9 +411,9 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
     private boolean isSoftclipped(final GATKRead read) {
 
         if ( !read.isReverseStrand() ) {
-            return read.getCigar().getFirstCigarElement().getOperator() == CigarOperator.S;
-        } else {
             return read.getCigar().getLastCigarElement().getOperator() == CigarOperator.S;
+        } else {
+            return read.getCigar().getFirstCigarElement().getOperator() == CigarOperator.S;
         }
     }
 
@@ -669,11 +674,11 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         final StringBuilder       sb = new StringBuilder();
 
         // establish fill value
-        int                 fillValue = DEFAULT_FILL_VALUE;
         final String        tm = read.getAttributeAsString("tm");
         boolean             hasA = (tm != null) && tm.indexOf('A') >= 0;
         boolean             hasQ = (tm != null) && tm.indexOf('Q') >= 0;
         boolean             hasZ = (tm != null) && tm.indexOf('Z') >= 0;
+        int                 fillValue = (!hasA && isSoftclipped(read) && !fillSoftclippedReads) ? SOFTCLIP_FILL_VALUE : DEFAULT_FILL_VALUE;
         if ( hasQ || hasZ ) {
             fillValue = hasA ? UNKNOWN_FILL_VALUE : NONREF_FILL_VALUE;
         }
