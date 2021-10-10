@@ -326,10 +326,14 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
     private boolean shouldFillFromHaplotype(final GATKRead read) {
 
+        // softclip has priori
+        if ( isSoftclipped(read) )
+            return fillSoftclippedReads;
+
         // extending timmed as well?
         final String    tm = read.getAttributeAsString("tm");
         if ( tm == null ) {
-            return isSoftclipped(read) ? fillSoftclippedReads : true;
+            return true;
         } else {
             boolean             hasA = tm.indexOf('A') >= 0;
             boolean             hasQ = tm.indexOf('Q') >= 0;
@@ -678,9 +682,13 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         boolean             hasA = (tm != null) && tm.indexOf('A') >= 0;
         boolean             hasQ = (tm != null) && tm.indexOf('Q') >= 0;
         boolean             hasZ = (tm != null) && tm.indexOf('Z') >= 0;
-        int                 fillValue = (!hasA && isSoftclipped(read) && !fillSoftclippedReads) ? SOFTCLIP_FILL_VALUE : DEFAULT_FILL_VALUE;
-        if ( hasQ || hasZ ) {
+        int                 fillValue;
+        if ( isSoftclipped(read) )
+            fillValue = SOFTCLIP_FILL_VALUE;
+        else if ( hasQ || hasZ ) {
             fillValue = hasA ? UNKNOWN_FILL_VALUE : NONREF_FILL_VALUE;
+        } else {
+            fillValue = DEFAULT_FILL_VALUE;
         }
 
         // read number
