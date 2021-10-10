@@ -90,7 +90,7 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
     private String establishFlowOrder(final LocalContext localContext, final AlleleLikelihoods<GATKRead, Allele> likelihoods) {
 
         // extract from a read
-        if ( (likelihoods != null) && (likelihoods.numberOfSamples()>0) ) {
+        if ( (likelihoods != null) && (likelihoods.numberOfSamples() > 0) ) {
             final List<GATKRead>  reads = likelihoods.sampleEvidence(0);
             if ( reads.size() > 0 ) {
                 GATKRead        read = reads.get(0);
@@ -192,8 +192,8 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
             final byte[]      altHap = buildHaplotype(before, alt.getBases(), after);
 
             // convert to flow space
-            final int[]       refKey = generateKeyFromSequence(new String(refHap), localContext.flowOrder, false);
-            final int[]       altKey = generateKeyFromSequence(new String(altHap), localContext.flowOrder, false);
+            final int[]       refKey = generateKeyFromSequence(new String(refHap), localContext.flowOrder, true);
+            final int[]       altKey = generateKeyFromSequence(new String(altHap), localContext.flowOrder, true);
             if ( refKey == null || altKey == null ) {
                 throw new GATKException("failed to generate key from reference or alternate sequence");
             }
