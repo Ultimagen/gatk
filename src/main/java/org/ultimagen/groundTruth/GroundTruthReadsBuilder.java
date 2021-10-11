@@ -802,7 +802,8 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
     private void softclipFill(ScoredHaplotype scoredHaplotype, int[] key) {
         if ( !fillSoftclippedReads ) {
-            for (int n = 0; n < scoredHaplotype.softclipFrontFillCount; n++) {
+            int     limit = Math.min(scoredHaplotype.softclipFrontFillCount, key.length);
+            for (int n = 0; n < limit ; n++) {
                 key[n] = SOFTCLIP_FILL_VALUE;
             }
         }
