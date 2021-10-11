@@ -178,6 +178,8 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         ReferenceContext        ref;
         ReferenceContext        extendedRef;
         ReferenceContext        filledRef;
+        ReferenceContext        unclippedRef;
+        int                     softclipFrontFillCount;
         Haplotype               haplotype;
         FlowBasedRead           flowRead;
         FlowBasedHaplotype      flowHaplotype;
@@ -394,6 +396,21 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         }
         scoredHaplotype.filledRef = new ReferenceContext(ref,
                 new SimpleInterval(loc.getContig(), loc.getStart() - extendStart, loc.getEnd() + extendEnd));
+
+        // add front unclipped
+        {
+            final CigarElement frontElem = !read.isReverseStrand()
+                    ? read.getCigar().getFirstCigarElement() : read.getCigar().getLastCigarElement();
+            if (frontElem.getOperator() == CigarOperator.S) {
+                if (!read.isReverseStrand()) {
+                    extendStart += frontElem.getLength();
+                } else {
+                    extendEnd += frontElem.getLength();
+                }
+            }
+            scoredHaplotype.unclippedRef = new ReferenceContext(ref,
+                    new SimpleInterval(loc.getContig(), loc.getStart() - extendStart, loc.getEnd() + extendEnd));
+        }
     }
 
     private boolean arsSame(final Haplotype h1, final Haplotype h2) {
@@ -553,7 +570,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         return score;
     }
 
-    private int[] buildHaplotypeKeyForOutput(final String haplotypeSeq, final ReadGroupInfo rgInfo, final int fillValue, final boolean isReversed) {
+    private int[] buildHaplotypeKey(final String haplotypeSeq, final ReadGroupInfo rgInfo, final boolean isReversed) {
 
         // create a haplotype to contain the sequence
         final byte[]              seq = reverseComplement(haplotypeSeq.getBytes(), isReversed);
@@ -577,12 +594,28 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
             }
         }
 
+        if ( appendZeroCount == 0 ) {
+            return hapKey;
+        } else {
+            int[]       hapKey1 = new int[appendZeroCount + hapKey.length];
+            System.arraycopy(hapKey, 0, hapKey1, appendZeroCount, hapKey.length);
+            return hapKey1;
+        }
+
+    }
+
+    private int[] buildHaplotypeKeyForOutput(ScoredHaplotype scoredHaplotype, final ReadGroupInfo rgInfo, final int fillValue, final boolean isReversed) {
+
+        // create key from filled and unclipped version
+        int[]                     hapKeyClipped = buildHaplotypeKey(new String(scoredHaplotype.filledRef.getBases()), rgInfo, isReversed);
+        int[]                     hapKey = buildHaplotypeKey(new String(scoredHaplotype.unclippedRef.getBases()), rgInfo, isReversed);
+        scoredHaplotype.softclipFrontFillCount = hapKey.length - hapKeyClipped.length;
+
         // prepare key
-        final int             flowLength = (outputFlowLength != 0) ? outputFlowLength : (hapKey.length + appendZeroCount);
+        final int             flowLength = (outputFlowLength != 0) ? outputFlowLength : hapKey.length;
         final int[]           key = new int[flowLength];
         int                   ofs;
-        System.arraycopy(hapKey, 0, key, appendZeroCount, ofs = Math.min(flowLength - appendZeroCount, hapKey.length));
-        ofs += appendZeroCount;
+        System.arraycopy(hapKey, 0, key, 0, ofs = Math.min(flowLength, hapKey.length));
 
         // adjust to a fixed length
         for (  ; ofs < flowLength ; ofs++ ) {
@@ -599,7 +632,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
             sb.append(prependSequence);
         }
 
-        final String            seq = new String(reverseComplement(haplotype.filledRef.getBases(), isReversed));
+        final String            seq = new String(reverseComplement(haplotype.unclippedRef.getBases(), isReversed));
         final String            baseCountSeq = seq.substring(0, keyBaseCount);
         sb.append(baseCountSeq);
 
@@ -702,16 +735,16 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
         // build haplotype keys
         final ReadGroupInfo rgInfo = getReadGroupInfo(getHeaderForReads(), read);
-        final int[]           paternalHaplotypeKey = buildHaplotypeKeyForOutput(
-                new String(paternal.filledRef.getBases()),
-                rgInfo,fillValue, read.isReverseStrand());
-        final int[]           maternalHaplotypeKey = buildHaplotypeKeyForOutput(
-                new String(maternal.filledRef.getBases()),
-                rgInfo,fillValue, read.isReverseStrand());
+        final int[]           paternalHaplotypeKey = buildHaplotypeKeyForOutput(paternal, rgInfo,fillValue, read.isReverseStrand());
+        final int[]           maternalHaplotypeKey = buildHaplotypeKeyForOutput(maternal, rgInfo,fillValue, read.isReverseStrand());
 
         // build haplotype sequence
         final String           paternalHaplotypeSeq = buildHaplotypeSequenceForOutput(paternal, read.isReverseStrand(), keyBases(paternalHaplotypeKey));
         final String           maternalHaplotypeSeq = buildHaplotypeSequenceForOutput(maternal, read.isReverseStrand(), keyBases(maternalHaplotypeKey));
+
+        // fill softclip at front
+        softclipFill(paternal, paternalHaplotypeKey);
+        softclipFill(maternal, maternalHaplotypeKey);
 
         // select best and establish consensus
         final boolean          ancestralHaplotypesSame = paternalHaplotypeSeq.equals(maternalHaplotypeSeq);
@@ -753,6 +786,14 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
         // write
         outputCsv.println(sb);
+    }
+
+    private void softclipFill(ScoredHaplotype scoredHaplotype, int[] key) {
+        if ( !fillSoftclippedReads ) {
+            for (int n = 0; n < scoredHaplotype.softclipFrontFillCount; n++) {
+                key[n] = SOFTCLIP_FILL_VALUE;
+            }
+        }
     }
 
     private int keyBases(int[] key) {
