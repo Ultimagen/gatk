@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.zip.GZIPOutputStream;
 
 /**
  * An internal tool to produce a flexible and robust ground truth set for base calling training.
@@ -173,6 +174,16 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
     PrintWriter                         outputCsv;
     private final Map<String, ReadGroupInfo> readGroupInfo = new LinkedHashMap<>();
 
+    // static/const
+    static final private String[]       CSV_FIELD_ORDER = {
+            "ReadName", "ReadChrom", "ReadStart", "ReadEnd",
+            "PaternalHaplotypeScore", "MaternalHaplotypeScore", "RefHaplotypeScore",
+            "ReadKey", "BestHaplotypeKey", "ConsensusHaplotypeKey",
+            "tm", "mapq", "flags", "ReadCigar",
+            "ReadSequence", "PaternalHaplotypeSequence", "MaternalHaplotypeSequence", "BestHaplotypeSequence",
+            "ReadUnclippedStart", "ReadUnclippedEnd", "PaternalHaplotypeInterval", "MaternalHaplotypeInterval"
+    };
+
 
     private static class ScoredHaplotype {
         ReferenceContext        ref;
@@ -214,7 +225,15 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         }
 
         // open output, write header
-        outputCsv = new PrintWriter(outputCsvPath.getOutputStream());
+        try {
+            if (outputCsvPath.toPath().toString().endsWith(".gz")) {
+                outputCsv = new PrintWriter(new GZIPOutputStream(outputCsvPath.getOutputStream()));
+            } else {
+                outputCsv = new PrintWriter(outputCsvPath.getOutputStream());
+            }
+        } catch (IOException e) {
+            throw new GATKException("failed to open csv output: " + outputCsvPath, e);
+        }
         emitCsvHeaders();
     }
 
@@ -501,14 +520,6 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         return sum;
     }
 
-    private String getReadNumber(final GATKRead read) {
-
-        final String      name = read.getName();
-        final int         i = name.lastIndexOf('-');
-
-        return (i < 0) ? name : name.substring(i + 1);
-    }
-
     private Haplotype buildReferenceHaplotype(final ReferenceContext ref) {
 
         final Locatable loc = new SimpleInterval(ref.getInterval());
@@ -687,28 +698,13 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
     private void emitCsvHeaders() {
 
-        final String[]        fields = {
-                "ReadNumber",
-                "PaternalHaplotypeScore", "MaternalHaplotypeScore",
-                "RefHaplotypeScore",
-                "BestHaplotypeSeq", "BestHaplotypeKey", "ConsensusHaplotypeKey",
-
-                "ReadChrom",
-                "ReadStart", "ReadEnd",
-                "ReadUnclippedStart", "ReadUnclippedEnd",
-                "ReadCigar", "ReadSeq", "ReadKey",
-                "PaternalHaplotypeInterval", "PaternalHaplotypeSequence",
-                "MaternalHaplotypeInterval", "MaternalHaplotypeSequence",
-                "tm", "mapq", "flags"
-        };
-
-        outputCsv.println(StringUtils.join(fields, ","));
+        outputCsv.println(StringUtils.join(CSV_FIELD_ORDER, ","));
     }
 
     private void emit(final GATKRead read, final FlowBasedRead flowRead, final double refScore, final ScoredHaplotype maternal, final ScoredHaplotype paternal) throws IOException {
 
-        // build line
-        final StringBuilder       sb = new StringBuilder();
+        // build line columns
+        final Map<String,Object>        cols = new LinkedHashMap<>();
 
         // establish fill value
         final String        tm = read.getAttributeAsString("tm");
@@ -724,14 +720,13 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
             fillValue = DEFAULT_FILL_VALUE;
         }
 
-        // read number
-        final String              readNumber = getReadNumber(read);
-        sb.append(readNumber);
+        // read name
+        cols.put("ReadName", read.getName());
 
         // haplotypes and reference scores
-        sb.append("," + paternal.score);
-        sb.append("," + maternal.score);
-        sb.append("," + refScore);
+        cols.put("PaternalHaplotypeScore", paternal.score);
+        cols.put("MaternalHaplotypeScore", maternal.score);
+        cols.put("RefHaplotypeScore", refScore);
 
         // build haplotype keys
         final ReadGroupInfo rgInfo = getReadGroupInfo(getHeaderForReads(), read);
@@ -753,38 +748,55 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         final int[]            consensus = buildConsensusKey(paternalHaplotypeKey, maternalHaplotypeKey);
 
         // emit best haplotype
-        sb.append("," + ((bestHaplotype == paternal) ? paternalHaplotypeSeq : maternalHaplotypeSeq));
+        cols.put("BestHaplotypeSequence", (bestHaplotype == paternal) ? paternalHaplotypeSeq : maternalHaplotypeSeq);
         if ( !ancestralHaplotypesSame )
-            sb.append("," + flowKeyAsCsvString(bestHaplotypeKey));
+            cols.put("BestHaplotypeKey", flowKeyAsCsvString(bestHaplotypeKey));
         else
-            sb.append("," + flowKeyAsCsvString(consensus));
+            cols.put("BestHaplotypeKey", flowKeyAsCsvString(consensus));
 
         // write consensus haplotype
-        sb.append("," + flowKeyAsCsvString(consensus));
+        cols.put("ConsensusHaplotypeKey", flowKeyAsCsvString(consensus));
 
         // additional  fields
-        sb.append("," + read.getContig());
-        sb.append("," + read.getStart());
-        sb.append("," + read.getEnd());
-        sb.append("," + read.getUnclippedStart());
-        sb.append("," + read.getUnclippedEnd());
-        sb.append("," + read.getCigar());
+        cols.put("ReadChrom", read.getContig());
+        cols.put("ReadStart", read.getStart());
+        cols.put("ReadEnd", read.getEnd());
+        cols.put("ReadUnclippedStart", read.getUnclippedStart());
+        cols.put("ReadUnclippedEnd", read.getUnclippedEnd());
+        cols.put("ReadCigar", read.getCigar());
 
         final String    readSeq = reverseComplement(read.getBasesString(), read.isReverseStrand());
         final byte[]    readKey = reverse(flowRead.getKey(), read.isReverseStrand());
         final String    readFlowOrder = reverseComplement(getReadGroupInfo(getHeaderForReads(), read).flowOrder, read.isReverseStrand());
-        sb.append("," + readSeq);
-        sb.append("," + flowKeyAsCsvString(readKey, readSeq, readFlowOrder));
-        sb.append("," + paternal.ref.getInterval());
-        sb.append("," + reverseComplement(paternal.haplotype.getBaseString(), read.isReverseStrand()));
-        sb.append("," + maternal.ref.getInterval());
-        sb.append("," + reverseComplement(maternal.haplotype.getBaseString(), read.isReverseStrand()));
+        cols.put("ReadSequence", readSeq);
+        cols.put("ReadKey", flowKeyAsCsvString(readKey, readSeq, readFlowOrder));
+        cols.put("PaternalHaplotypeInterval", paternal.ref.getInterval());
+        cols.put("PaternalHaplotypeSequence", reverseComplement(paternal.haplotype.getBaseString(), read.isReverseStrand()));
+        cols.put("MaternalHaplotypeInterval", maternal.ref.getInterval());
+        cols.put("MaternalHaplotypeSequence", reverseComplement(maternal.haplotype.getBaseString(), read.isReverseStrand()));
 
-        sb.append("," + (read.hasAttribute("tm") ? read.getAttributeAsString("tm") : ""));
-        sb.append("," + read.getMappingQuality());
-        sb.append("," + read.getFlags());
+        cols.put("tm", (read.hasAttribute("tm") ? read.getAttributeAsString("tm") : ""));
+        cols.put("mapq", read.getMappingQuality());
+        cols.put("flags", read.getFlags());
 
-        // write
+        // construct line
+        StringBuilder       sb = new StringBuilder();
+        int                 colIndex = 0;
+        for ( String field : CSV_FIELD_ORDER ) {
+            if ( colIndex++ > 0 ) {
+                sb.append(',');
+            }
+            if ( !cols.containsKey(field) ) {
+                throw new GATKException("column missing from csv line: " + field);
+            }
+            sb.append(cols.get(field));
+            cols.remove(field);
+        }
+        if ( cols.size() > 0 ) {
+            throw new GATKException("invalid columns on csv line: " + cols.keySet());
+        }
+
+        // output line
         outputCsv.println(sb);
     }
 
