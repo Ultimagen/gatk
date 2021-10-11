@@ -595,7 +595,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         while ( hapKey[0] == 0 ) {
             hapKey = Arrays.copyOfRange(hapKey, 1, hapKey.length);
         }
-        if ( seq[0] != 'T' ) {
+        if ( (seq[0] != 'T') && (seq[0] != 'N') ) {
             int     ofs = 0;
             while ( hapFlowOrder[ofs] != 'T' )
                 ofs++;
@@ -679,7 +679,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         while ( key[0] == 0 ) {
             key = Arrays.copyOfRange(key, 1, key.length);
         }
-        if ( seq.charAt(0) != 'T' ) {
+        if ( (seq.charAt(0) != 'T') && (seq.charAt(0) != 'N') ) {
             int     ofs = 0;
             while ( flowOrder.charAt(ofs) != 'T' )
                 ofs++;
