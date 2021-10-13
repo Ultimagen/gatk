@@ -187,8 +187,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
     private static class ScoredHaplotype {
         ReferenceContext        ref;
-        ReferenceContext        extendedRef;
-        ReferenceContext        filledRef;
+        ReferenceContext        clippedRef;
         ReferenceContext        unclippedRef;
         int                     softclipFrontFillCount;
         Haplotype               haplotype;
@@ -258,7 +257,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         }
 
         // discard because softclipped
-        if ( discardNonPolytSoftclippedReads && isSoftclipped(read) && !isPolyTSoftclipped(read) ) {
+        if ( discardNonPolytSoftclippedReads && isEndSoftclipped(read) && !isEndPolyTSoftclipped(read) ) {
             return;
         }
 
@@ -348,7 +347,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
     private boolean shouldFillFromHaplotype(final GATKRead read) {
 
         // softclip has priori
-        if ( isSoftclipped(read) )
+        if ( isEndSoftclipped(read) )
             return fillSoftclippedReads;
 
         // extending timmed as well?
@@ -399,10 +398,6 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
             extendStart += haplotypeOutputPaddingSize;
         }
 
-        // extend location and build
-        scoredHaplotype.extendedRef = new ReferenceContext(ref,
-                new SimpleInterval(loc.getContig(), loc.getStart() - extendStart, loc.getEnd() + extendEnd));
-
         // add extra fill from haplotype
         if ( (outputFlowLength != 0) && shouldFillFromHaplotype(read) ) {
             int     length = (loc.getEnd() + extendEnd) - (loc.getStart() - extendStart);
@@ -413,8 +408,10 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
                 extendStart += delta;
             }
         }
-        scoredHaplotype.filledRef = new ReferenceContext(ref,
-                new SimpleInterval(loc.getContig(), loc.getStart() - extendStart, loc.getEnd() + extendEnd));
+        if ( isStartSoftclipped(read) ) {
+            scoredHaplotype.clippedRef = new ReferenceContext(ref,
+                    new SimpleInterval(loc.getContig(), loc.getStart() - extendStart, loc.getEnd() + extendEnd));
+        }
 
         // add front unclipped
         {
@@ -448,7 +445,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         return new FlowBasedRead(read, rgInfo.flowOrder, rgInfo.maxClass, hcArgs.fbargs);
     }
 
-    private boolean isSoftclipped(final GATKRead read) {
+    private boolean isEndSoftclipped(final GATKRead read) {
 
         if ( !read.isReverseStrand() ) {
             return read.getCigar().getLastCigarElement().getOperator() == CigarOperator.S;
@@ -457,10 +454,19 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         }
     }
 
-    private boolean isPolyTSoftclipped(final GATKRead read) {
+    private boolean isStartSoftclipped(final GATKRead read) {
+
+        if ( !read.isReverseStrand() ) {
+            return read.getCigar().getFirstCigarElement().getOperator() == CigarOperator.S;
+        } else {
+            return read.getCigar().getLastCigarElement().getOperator() == CigarOperator.S;
+        }
+    }
+
+    private boolean isEndPolyTSoftclipped(final GATKRead read) {
 
         // must be softclipped
-        if ( !isSoftclipped(read) )
+        if ( !isEndSoftclipped(read) )
             return false;
 
         // are all softclipped bases T
@@ -615,17 +621,23 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
     }
 
-    private int[] buildHaplotypeKeyForOutput(ScoredHaplotype scoredHaplotype, final ReadGroupInfo rgInfo, final int fillValue, final boolean isReversed) {
+    private int[] buildHaplotypeKeyForOutput(ScoredHaplotype scoredHaplotype, final ReadGroupInfo rgInfo, final int fillValue, final GATKRead read) {
+
+        boolean                   isReversed = read.isReverseStrand();
 
         // create key from filled and unclipped version
-        int[]                     hapKeyClipped = buildHaplotypeKey(new String(scoredHaplotype.filledRef.getBases()), rgInfo, isReversed);
         int[]                     hapKey = buildHaplotypeKey(new String(scoredHaplotype.unclippedRef.getBases()), rgInfo, isReversed);
-        scoredHaplotype.softclipFrontFillCount = hapKey.length - hapKeyClipped.length;
+        if ( isStartSoftclipped(read) ) {
+            int[] hapKeyClipped = buildHaplotypeKey(new String(scoredHaplotype.clippedRef.getBases()), rgInfo, isReversed);
+            scoredHaplotype.softclipFrontFillCount = hapKey.length - hapKeyClipped.length;
+        } else {
+            scoredHaplotype.softclipFrontFillCount = 0;
+        }
 
         // prepare key
-        final int             flowLength = (outputFlowLength != 0) ? outputFlowLength : hapKey.length;
-        final int[]           key = new int[flowLength];
-        int                   ofs;
+        final int flowLength = (outputFlowLength != 0) ? outputFlowLength : hapKey.length;
+        final int[] key = new int[flowLength];
+        int ofs;
         System.arraycopy(hapKey, 0, key, 0, ofs = Math.min(flowLength, hapKey.length));
 
         // adjust to a fixed length
@@ -712,7 +724,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         boolean             hasQ = (tm != null) && tm.indexOf('Q') >= 0;
         boolean             hasZ = (tm != null) && tm.indexOf('Z') >= 0;
         int                 fillValue;
-        if ( isSoftclipped(read) )
+        if ( isEndSoftclipped(read) )
             fillValue = SOFTCLIP_FILL_VALUE;
         else if ( hasQ || hasZ ) {
             fillValue = hasA ? UNKNOWN_FILL_VALUE : NONREF_FILL_VALUE;
@@ -730,8 +742,8 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
         // build haplotype keys
         final ReadGroupInfo rgInfo = getReadGroupInfo(getHeaderForReads(), read);
-        final int[]           paternalHaplotypeKey = buildHaplotypeKeyForOutput(paternal, rgInfo,fillValue, read.isReverseStrand());
-        final int[]           maternalHaplotypeKey = buildHaplotypeKeyForOutput(maternal, rgInfo,fillValue, read.isReverseStrand());
+        final int[]           paternalHaplotypeKey = buildHaplotypeKeyForOutput(paternal, rgInfo,fillValue, read);
+        final int[]           maternalHaplotypeKey = buildHaplotypeKeyForOutput(maternal, rgInfo,fillValue, read);
 
         // build haplotype sequence
         final String           paternalHaplotypeSeq = buildHaplotypeSequenceForOutput(paternal, read.isReverseStrand(), keyBases(paternalHaplotypeKey));
