@@ -286,18 +286,15 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
             final Tuple<SimpleInterval, SimpleInterval>  ancestralLocs = locationTranslator.translate(read);
             maternal.ref = new ReferenceContext(maternalReference, ancestralLocs.a);
             paternal.ref = new ReferenceContext(paternalReference, ancestralLocs.b);
+
+            // build haplotypes
+            maternal.haplotype = buildReferenceHaplotype(maternal.ref, read);
+            paternal.haplotype = buildReferenceHaplotype(paternal.ref, read);
             buildExtendedRef(maternal, maternalReference, ancestralLocs.a, read);
             buildExtendedRef(paternal, paternalReference, ancestralLocs.b, read);
 
-            // build haplotypes
-            maternal.haplotype = buildReferenceHaplotype(maternal.ref, read.isReverseStrand());
-            paternal.haplotype = buildReferenceHaplotype(paternal.ref, read.isReverseStrand());
-
             // generate score for reference
             final double        refScore = scoreReadAgainstReference(read, referenceContext);
-
-            // temp
-            maternal.score = scoreReadAgainstHaplotype(read, maternal);
 
             // score read against haplotypes, create flow versions of read nad haplotype
             if ( areSame(maternal.haplotype, referenceContext, read.isReverseStrand()) ) {
@@ -406,9 +403,23 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
                 extendStart += delta;
             }
         }
+
+        // compensate for skipage of first hmer
+        final int delta = scoredHaplotype.ref.getInterval().size() - scoredHaplotype.haplotype.getGenomeLocation().getLengthOnReference();
+        if ( delta != 0 ) {
+            if ( !read.isReverseStrand() ) {
+                extendStart -= delta;
+            } else {
+                extendEnd -= delta;
+            }
+        }
+
+
+        int         minStart = ref.getSequenceDictionary().getSequence(loc.getContig()).getStart();
+        int         maxEnd = ref.getSequenceDictionary().getSequence(loc.getContig()).getEnd();
         if ( isStartSoftclipped(read) ) {
             scoredHaplotype.clippedRef = new ReferenceContext(ref,
-                    new SimpleInterval(loc.getContig(), loc.getStart() - extendStart, loc.getEnd() + extendEnd));
+                    new SimpleInterval(loc.getContig(), Math.max(minStart, loc.getStart() - extendStart), Math.min(maxEnd, loc.getEnd() + extendEnd)));
         }
 
         // add front unclipped
@@ -423,7 +434,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
                 }
             }
             scoredHaplotype.unclippedRef = new ReferenceContext(ref,
-                    new SimpleInterval(loc.getContig(), loc.getStart() - extendStart, loc.getEnd() + extendEnd));
+                    new SimpleInterval(loc.getContig(), Math.max(minStart, loc.getStart() - extendStart), Math.min(maxEnd, loc.getEnd() + extendEnd)));
         }
     }
 
@@ -524,10 +535,34 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         return sum;
     }
 
-    private Haplotype buildReferenceHaplotype(final ReferenceContext ref, boolean isReversed) {
+    private Haplotype buildReferenceHaplotype(final ReferenceContext ref, final GATKRead read) {
 
-        final Locatable loc = new SimpleInterval(ref.getInterval());
-        final Haplotype haplotype = new Haplotype(reverseComplement(ref.getBases(), isReversed), loc);
+        Locatable loc = new SimpleInterval(ref.getInterval());
+        byte[]          bases = reverseComplement(ref.getBases(), read.isReverseStrand());
+        final byte[]    readBases = reverseComplement(read.getBases(), read.isReverseStrand());
+
+        // skip haplotype bases until same base as read starts
+        int             skip = 0;
+        boolean         skipOnFirst = false;
+        int             limit = skipOnFirst ? bases.length : Math.min(bases.length, readBases.length);
+        boolean         found = false;
+        while ( !found && (skip < limit) ) {
+            if (bases[skip] == readBases[skipOnFirst ? 0 : skip] ) {
+                found = true;
+            } else {
+                skip++;
+            }
+        }
+        if ( found && (skip != 0) ) {
+            bases = Arrays.copyOfRange(bases, skip, bases.length);
+            if ( !read.isReverseStrand() ) {
+                loc = new SimpleInterval(loc.getContig(), loc.getStart() + skip, loc.getEnd());
+            } else {
+                loc = new SimpleInterval(loc.getContig(), loc.getStart(), loc.getEnd() - skip);
+            }
+        }
+
+        final Haplotype haplotype = new Haplotype(bases, loc);
         haplotype.setCigar(new CigarBuilder(false)
                 .add(new CigarElement(haplotype.length(), CigarOperator.M)).make());
 
@@ -562,7 +597,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
         // build haplotypes
         final ReadGroupInfo           rgInfo = getReadGroupInfo(getHeaderForReads(), read);
-        final FlowBasedHaplotype      flowHaplotype = new FlowBasedHaplotype(buildReferenceHaplotype(ref, read.isReverseStrand()), rgInfo.flowOrder);
+        final FlowBasedHaplotype      flowHaplotype = new FlowBasedHaplotype(buildReferenceHaplotype(ref, read), rgInfo.flowOrder);
 
         // create flow read
         final FlowBasedRead           flowRead = new FlowBasedRead(read, rgInfo.flowOrder, rgInfo.maxClass, hcArgs.fbargs);
