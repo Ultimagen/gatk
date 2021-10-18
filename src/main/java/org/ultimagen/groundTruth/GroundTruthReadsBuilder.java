@@ -27,6 +27,7 @@ import org.ultimagen.featureMapping.FlowFeatureMapper;
 import org.ultimagen.flowBasedRead.alignment.FlowBasedAlignmentEngine;
 import org.ultimagen.flowBasedRead.read.FlowBasedHaplotype;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
+import org.ultimagen.flowBasedRead.utils.Direction;
 import picard.cmdline.programgroups.BaseCallingProgramGroup;
 
 import java.io.IOException;
@@ -191,13 +192,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         ReferenceContext        unclippedRef;
         int                     softclipFrontFillCount;
         Haplotype               haplotype;
-        FlowBasedRead           flowRead;
-        FlowBasedHaplotype      flowHaplotype;
         double                  score;
-
-        ScoredHaplotype(FlowBasedRead flowRead) {
-            this.flowRead = flowRead;
-        }
     }
 
     static private class ReadGroupInfo {
@@ -284,8 +279,8 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
             }
 
             // prepare
-            final ScoredHaplotype                   maternal = new ScoredHaplotype(flowRead);
-            final ScoredHaplotype                   paternal = new ScoredHaplotype(flowRead);
+            final ScoredHaplotype                   maternal = new ScoredHaplotype();
+            final ScoredHaplotype                   paternal = new ScoredHaplotype();
 
             // translate location to ascentors
             final Tuple<SimpleInterval, SimpleInterval>  ancestralLocs = locationTranslator.translate(read);
@@ -295,21 +290,24 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
             buildExtendedRef(paternal, paternalReference, ancestralLocs.b, read);
 
             // build haplotypes
-            maternal.haplotype = buildReferenceHaplotype(maternal.ref);
-            paternal.haplotype = buildReferenceHaplotype(paternal.ref);
+            maternal.haplotype = buildReferenceHaplotype(maternal.ref, read.isReverseStrand());
+            paternal.haplotype = buildReferenceHaplotype(paternal.ref, read.isReverseStrand());
 
             // generate score for reference
             final double        refScore = scoreReadAgainstReference(read, referenceContext);
 
+            // temp
+            maternal.score = scoreReadAgainstHaplotype(read, maternal);
+
             // score read against haplotypes, create flow versions of read nad haplotype
-            if ( areSame(maternal.haplotype, referenceContext) ) {
+            if ( areSame(maternal.haplotype, referenceContext, read.isReverseStrand()) ) {
                 maternal.score = refScore;
             } else {
                 maternal.score = scoreReadAgainstHaplotype(read, maternal);
             }
-            if ( areSame(paternal.haplotype, referenceContext) ) {
+            if ( areSame(paternal.haplotype, referenceContext, read.isReverseStrand()) ) {
                 paternal.score = refScore;
-            } else if ( arsSame(maternal.haplotype, paternal.haplotype) ) {
+            } else if ( arsSame(maternal.haplotype, paternal.haplotype, read.isReverseStrand()) ) {
                 paternal.score = scoreReadAgainstHaplotype(read, paternal);
             } else {
                 paternal.score = scoreReadAgainstHaplotype(read, paternal);
@@ -429,13 +427,13 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         }
     }
 
-    private boolean arsSame(final Haplotype h1, final Haplotype h2) {
+    private boolean arsSame(final Haplotype h1, final Haplotype h2, boolean isReversed) {
 
         return Arrays.equals(h1.getBases(), h2.getBases());
     }
 
-    private boolean areSame(final Haplotype h, final ReferenceContext ref) {
-        return Arrays.equals(h.getBases(), ref.getBases());
+    private boolean areSame(final Haplotype h, final ReferenceContext ref, boolean isReversed) {
+        return Arrays.equals(h.getBases(), reverseComplement(ref.getBases(), isReversed));
     }
 
     private FlowBasedRead buildFlowRead(final GATKRead read) {
@@ -526,10 +524,10 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         return sum;
     }
 
-    private Haplotype buildReferenceHaplotype(final ReferenceContext ref) {
+    private Haplotype buildReferenceHaplotype(final ReferenceContext ref, boolean isReversed) {
 
         final Locatable loc = new SimpleInterval(ref.getInterval());
-        final Haplotype haplotype = new Haplotype(ref.getBases(), loc);
+        final Haplotype haplotype = new Haplotype(reverseComplement(ref.getBases(), isReversed), loc);
         haplotype.setCigar(new CigarBuilder(false)
                 .add(new CigarElement(haplotype.length(), CigarOperator.M)).make());
 
@@ -540,20 +538,22 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
         // build haplotypes
         final ReadGroupInfo rgInfo = getReadGroupInfo(getHeaderForReads(), read);
-        sh.flowHaplotype = new FlowBasedHaplotype(sh.haplotype, rgInfo.flowOrder);
+        final FlowBasedHaplotype flowHaplotype = new FlowBasedHaplotype(sh.haplotype, rgInfo.flowOrder);
 
         // create flow read
-        if ( sh.flowRead == null ) {
-            sh.flowRead = new FlowBasedRead(read, rgInfo.flowOrder, rgInfo.maxClass, hcArgs.fbargs);
+        final FlowBasedRead   flowRead = new FlowBasedRead(read, rgInfo.flowOrder, rgInfo.maxClass, hcArgs.fbargs);
+        if ( read.isReverseStrand() ) {
+            flowRead.setDirection(Direction.SYNTHESIS);
+            flowRead.applyAlignment();
         }
 
-        if ( !sh.flowRead.isValid() ) {
+        if ( !flowRead.isValid() ) {
             return -1;
         }
 
         // compute alternative score
-        final int         hapKeyLength = sh.flowHaplotype.getKeyLength();
-        final double      score = FlowFeatureMapper.computeLikelihoodLocal(sh.flowRead, sh.flowHaplotype, hapKeyLength, false);
+        final int         hapKeyLength = flowHaplotype.getKeyLength();
+        final double      score = FlowFeatureMapper.computeLikelihoodLocal(flowRead, flowHaplotype, hapKeyLength, false);
 
         return score;
     }
@@ -562,10 +562,14 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
         // build haplotypes
         final ReadGroupInfo           rgInfo = getReadGroupInfo(getHeaderForReads(), read);
-        final FlowBasedHaplotype      flowHaplotype = new FlowBasedHaplotype(buildReferenceHaplotype(ref), rgInfo.flowOrder);
+        final FlowBasedHaplotype      flowHaplotype = new FlowBasedHaplotype(buildReferenceHaplotype(ref, read.isReverseStrand()), rgInfo.flowOrder);
 
         // create flow read
         final FlowBasedRead           flowRead = new FlowBasedRead(read, rgInfo.flowOrder, rgInfo.maxClass, hcArgs.fbargs);
+        if ( read.isReverseStrand() ) {
+            flowRead.setDirection(Direction.SYNTHESIS);
+            flowRead.applyAlignment();
+        }
 
         if ( !flowRead.isValid() ) {
             return -1;
