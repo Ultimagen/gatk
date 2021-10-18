@@ -783,9 +783,9 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         cols.put("ReadSequence", readSeq);
         cols.put("ReadKey", flowKeyAsCsvString(readKey, readSeq, readFlowOrder));
         cols.put("PaternalHaplotypeInterval", paternal.ref.getInterval());
-        cols.put("PaternalHaplotypeSequence", reverseComplement(paternal.haplotype.getBaseString(), read.isReverseStrand()));
+        cols.put("PaternalHaplotypeSequence", paternalHaplotypeSeq);
         cols.put("MaternalHaplotypeInterval", maternal.ref.getInterval());
-        cols.put("MaternalHaplotypeSequence", reverseComplement(maternal.haplotype.getBaseString(), read.isReverseStrand()));
+        cols.put("MaternalHaplotypeSequence", maternalHaplotypeSeq);
 
         cols.put("tm", (read.hasAttribute("tm") ? read.getAttributeAsString("tm") : ""));
         cols.put("mapq", read.getMappingQuality());
