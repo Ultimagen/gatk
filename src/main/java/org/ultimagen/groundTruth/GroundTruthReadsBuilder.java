@@ -538,35 +538,95 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
     private Haplotype buildReferenceHaplotype(final ReferenceContext ref, final GATKRead read) {
 
         Locatable loc = new SimpleInterval(ref.getInterval());
-        byte[]          bases = reverseComplement(ref.getBases(), read.isReverseStrand());
-        final byte[]    readBases = reverseComplement(read.getBases(), read.isReverseStrand());
+        byte[]          haplotypeBases = reverseComplement(ref.getBases(), read.isReverseStrand());
+        final byte[]    readBases = reverseComplement(getSoftclippedBases(read), read.isReverseStrand());
 
-        // skip haplotype bases until same base as read starts
-        int             skip = 0;
-        boolean         skipOnFirst = false;
-        int             limit = skipOnFirst ? bases.length : Math.min(bases.length, readBases.length);
-        boolean         found = false;
-        while ( !found && (skip < limit) ) {
-            if (bases[skip] == readBases[skipOnFirst ? 0 : skip] ) {
-                found = true;
-            } else {
-                skip++;
+        // skip haplotype bases until same base as read starts (false SNP compensation)
+        if ( haplotypeBases[0] != readBases[0] ) {
+            final int       skip = detectFalseSNP(haplotypeBases, readBases);
+            if ( skip != 0 ) {
+                haplotypeBases = Arrays.copyOfRange(haplotypeBases, skip, haplotypeBases.length);
+                if ( !read.isReverseStrand() ) {
+                    loc = new SimpleInterval(loc.getContig(), loc.getStart() + skip, loc.getEnd());
+                } else {
+                    loc = new SimpleInterval(loc.getContig(), loc.getStart(), loc.getEnd() - skip);
+                }
             }
-        }
-        if ( found && (skip != 0) ) {
-            bases = Arrays.copyOfRange(bases, skip, bases.length);
-            if ( !read.isReverseStrand() ) {
-                loc = new SimpleInterval(loc.getContig(), loc.getStart() + skip, loc.getEnd());
-            } else {
-                loc = new SimpleInterval(loc.getContig(), loc.getStart(), loc.getEnd() - skip);
-            }
+
         }
 
-        final Haplotype haplotype = new Haplotype(bases, loc);
+        final Haplotype haplotype = new Haplotype(haplotypeBases, loc);
         haplotype.setCigar(new CigarBuilder(false)
                 .add(new CigarElement(haplotype.length(), CigarOperator.M)).make());
 
         return haplotype;
+    }
+
+    private byte[] getSoftclippedBases(final GATKRead read) {
+
+        final int   startClip = (read.getCigar().getFirstCigarElement().getOperator() == CigarOperator.SOFT_CLIP)
+                                    ? read.getCigar().getFirstCigarElement().getLength() : 0;
+        final int   endClip = (read.getCigar().getLastCigarElement().getOperator() == CigarOperator.SOFT_CLIP)
+                ? read.getCigar().getLastCigarElement().getLength() : 0;
+
+        final byte[] bases = read.getBasesNoCopy();
+        if ( startClip == 0 && endClip == 0 ) {
+            return bases;
+        } else {
+            return Arrays.copyOfRange(bases, startClip, bases.length - endClip);
+        }
+    }
+
+    private int detectFalseSNP(final byte[] haplotypeBases, final byte[] readBases) {
+
+        // parametrisation
+        final int       maxSkipageSize = 5;     // will not skip more than this
+        final int       requiredRemainingMatchSize = 5; // after skipage, this number of bases must match
+
+        // this might be redundant, but just in case
+        if ( haplotypeBases[0] == readBases[0] )
+            return 0;
+
+        // establish sizes of homopolymer on read
+        int             readHomoSize = 0;
+        for ( ; readHomoSize < readBases.length ; readHomoSize++ )
+            if ( readBases[readHomoSize] != readBases[0] )
+                break;
+
+        // loop on possible skipage
+        for ( int skip = 1 ; skip <= maxSkipageSize ; skip++ ) {
+
+            // there must be enough bases
+            if ( skip + requiredRemainingMatchSize > haplotypeBases.length ) {
+                break;
+            }
+            if ( Math.max(skip + 1, requiredRemainingMatchSize) > readBases.length ) {
+                break;
+            }
+            // skipage + 1 must be inside homo polymer
+            if ( skip + 1 > readHomoSize ) {
+                break;
+            }
+
+            // remaining bases must match
+            if ( arrayRangeEquals(readBases, skip, requiredRemainingMatchSize, haplotypeBases, skip) ) {
+                // found skipape point
+                return skip;
+            }
+        }
+
+        // if here, did not find skipage point
+        return 0;
+    }
+
+    private boolean arrayRangeEquals(final byte[] a1, final int ofs1, final int len, final byte[] a2, final int ofs2) {
+
+        for ( int i = 0 ; i < len ; i++ ) {
+            if (a1[ofs1 + i] != a2[ofs2 + i]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private double scoreReadAgainstHaplotype(final GATKRead read, final ScoredHaplotype sh) {
