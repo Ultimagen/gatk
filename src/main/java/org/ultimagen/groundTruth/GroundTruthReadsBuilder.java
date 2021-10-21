@@ -165,6 +165,9 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
     @Argument(fullName = "gt-debug", doc = "Turn additional internal logging on", optional = true)
     public boolean      debugMode = false;
 
+    @Argument(fullName = "gt-no-output", doc = "do not generate output records", optional = true)
+    public boolean      noOutput = false;
+
     // locals
     final Random                        random = new Random();
     int                                 outputReadsCount = 0;
@@ -174,6 +177,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
     FlowBasedAlignmentEngine            likelihoodCalculationEngine;
     PrintWriter                         outputCsv;
     private final Map<String, ReadGroupInfo> readGroupInfo = new LinkedHashMap<>();
+    private int                         locationTranslationErrors;
 
     // static/const
     static final private String[]       CSV_FIELD_ORDER = {
@@ -233,6 +237,10 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
     @Override
     public void closeTool() {
+
+        if ( locationTranslationErrors != 0 ) {
+            logger.warn("" + locationTranslationErrors + " location translation errors detected");
+        }
 
         outputCsv.close();
         super.closeTool();
@@ -334,6 +342,9 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
                 throw new ToolSuccessfulPrematureExit("stopping tool, output reads max reached: \" + maxOutputReads");
             }
 
+        } catch (LocationTranslationException e) {
+            logger.warn("location translation exception: " + e.getMessage());
+            locationTranslationErrors++;
         } catch (IOException e) {
             throw new GATKException("failed to process read: " + read.getName(), e);
         }
@@ -908,7 +919,9 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         }
 
         // output line
-        outputCsv.println(sb);
+        if ( !noOutput ) {
+            outputCsv.println(sb);
+        }
     }
 
     private void softclipFill(ScoredHaplotype scoredHaplotype, int[] key) {

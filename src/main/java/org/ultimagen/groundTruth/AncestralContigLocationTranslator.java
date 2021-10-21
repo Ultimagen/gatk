@@ -25,9 +25,15 @@ public class AncestralContigLocationTranslator {
     }
 
     SimpleInterval translate(final String ancestor, final Locatable loc) throws IOException {
-        return new SimpleInterval(loc.getContig() + "_" + ancestor,
-                translate(ancestor, loc.getContig(), loc.getStart()),
-                translate(ancestor, loc.getContig(), loc.getEnd()));
+
+        int         start = translate(ancestor, loc.getContig(), loc.getStart());
+        int         end = translate(ancestor, loc.getContig(), loc.getEnd());
+
+        if ( end > start ) {
+            return new SimpleInterval(loc.getContig() + "_" + ancestor, start, end);
+        } else {
+            throw new LocationTranslationException("location " + loc + " failed to translate for " + ancestor + ", start:" + start + " ,end:" + end);
+        }
     }
 
     int translate(final String ancestor, final String contig, final int from) throws IOException {
