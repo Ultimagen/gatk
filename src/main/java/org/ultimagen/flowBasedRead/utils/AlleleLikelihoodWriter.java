@@ -1,4 +1,4 @@
-package org.ultimagen.flowBasedRead.tests;
+package org.ultimagen.flowBasedRead.utils;
 
 import htsjdk.samtools.util.Locatable;
 import htsjdk.variant.variantcontext.Allele;
