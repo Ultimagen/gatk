@@ -109,7 +109,7 @@ public class FlowBasedHaplotype  extends Allele {
 
     private void reverse(final int [] a, final int n)
     {
-        int i, k, t;
+        int i, t;
         for (i = 0; i < n / 2; i++) {
             t = a[i];
             a[i] = a[n - i - 1];

@@ -15,8 +15,6 @@ import java.util.function.Consumer;
 
 public class SNVMapper implements FeatureMapper {
 
-    private static final Logger logger = LogManager.getLogger(SNVMapper.class);
-
     final int         identBefore;
     final int         identAfter;
     final int         minCigarElementLength;

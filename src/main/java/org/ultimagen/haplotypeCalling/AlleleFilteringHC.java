@@ -59,13 +59,11 @@ public class AlleleFilteringHC extends AlleleFiltering {
         final double log10Confidence = af.log10ProbOnlyRefAlleleExists();
         final double phredScaledConfidence = (10.0 * log10Confidence) + 0.0;
 
-        final int retVal;
         final int[] asPL = genotypingLikelihoods.sampleLikelihoods(0).getAsPLs();
 
         //retVal = Math.min(asPL[1], asPL[2]) - asPL[0]; // if this is "large", reject the allele.
         logger.debug(() -> String.format("GAL:: %s: %d %d %d", allele.toString(), asPL[0], asPL[1], asPL[2]));
         return (int)phredScaledConfidence;
-        //return retVal;
     }
 
 }

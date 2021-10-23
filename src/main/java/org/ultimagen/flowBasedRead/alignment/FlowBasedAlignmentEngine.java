@@ -40,12 +40,10 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
     private final Logger logger = LogManager.getLogger(this.getClass());
 
     private final double commonProbValue = 0.001;
-    private final double commonProbValueLog10 = Math.log10(commonProbValue);
     private final boolean dynamicReadDisqualification;
     private final double readDisqualificationScale;
 
     private ForkJoinPool    threadPool;
-    static Map<Double, Double> probLog10 = new ConcurrentHashMap<>();
     static final double prob0 = 0.988;
     static final double prob0log10 = Math.log10(prob0);
     static final double prob1 = 0.001;
