@@ -39,7 +39,6 @@ development and testing
 public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRead, FlowBasedReadInterface, Serializable {
 
     private static final long serialVersionUID = 42L;
-    GATKRead read = null;
     private static int N_ASCII=78;
 
     private SAMRecord samRecord;
@@ -63,35 +62,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     static private int minimalReadLength = MINIMAL_READ_LENGTH;
 
-    /**
-     * Creating flow based read when the argument collection is not defined.
-     * @param samRecord Record
-     * @param _flowOrder flow order stirng (one cycle)
-     * @param _maxHmer maximal hmer to store in the flow matrix
-     */
-    public FlowBasedRead(final SAMRecord samRecord, final String _flowOrder, final int _maxHmer) {
-        this(samRecord, _flowOrder, _maxHmer, new FlowBasedAlignmentArgumentCollection());
-    }
-
-
-    /**
-     * copy constructor
-     * @param other read
-     */
-    public FlowBasedRead(final FlowBasedRead other) {
-        super(other.samRecord);
-        forwardSequence = other.forwardSequence.clone();
-        key = other.key.clone();
-        flow2base = other.flow2base.clone();
-        flowOrder = other.flowOrder.clone();
-        flowMatrix = other.flowMatrix.clone();
-        validKey = other.validKey;
-        direction = other.direction;
-        maxHmer = other.maxHmer;
-        fbargs = other.fbargs;
-    }
-
-    /**
+     /**
      * Constructor from GATKRead. flow order, hmer and arguments
      * @param read GATK read
      * @param flowOrder flow order string (one cycle)
@@ -100,7 +71,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
      */
     public FlowBasedRead(final GATKRead read, final String flowOrder, final int _maxHmer, final FlowBasedAlignmentArgumentCollection fbargs) {
         this(read.convertToSAMRecord(null), flowOrder, _maxHmer, fbargs);
-        this.read = read;
 
     }
 
@@ -414,7 +384,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     private void reverse(final int []a, final int n)
     {
-        int i, k, t;
+        int i, t;
         for (i = 0; i < n / 2; i++) {
             t = a[i];
             a[i] = a[n - i - 1];
@@ -426,7 +396,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     private void reverse(final byte []a, final int n)
     {
-        int i, k;
+        int i;
         byte t;
         for (i = 0; i < n / 2; i++) {
             t = a[i];
@@ -438,7 +408,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     private void reverse(final double []a, final int n)
     {
-        int i, k;
+        int i;
         double t;
         for (i = 0; i < n / 2; i++) {
             t = a[i];
@@ -808,7 +778,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             return result;
         }
 
-        final int index =0 ;
         int stopClip = 0;
 
         final byte[] rkey = new byte[key.length];
@@ -1034,26 +1003,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
-    private void quantizeProbs() {
-
-        final int nQuants = fbargs.probability_quantization;
-        final double bin_size = 6*fbargs.probabilityScalingFactor/(float)nQuants;
-        for (int i = 0 ; i < getNFlows(); i++) {
-            for (int j = 0 ; j < getMaxHmer()+1; j ++){
-                if ( flowMatrix[j][i] == fbargs.fillingValue)
-                    continue;
-                if (flowMatrix[j][i]>=1){
-                    continue;
-                }
-
-                final double origQual = -fbargs.probabilityScalingFactor*Math.log10(flowMatrix[j][i]);
-                final byte binnedQual = (byte)(bin_size * (byte)(origQual/bin_size)+1);
-                flowMatrix[j][i] = Math.max(Math.pow(10, ((double)binnedQual)/fbargs.probabilityScalingFactor), fbargs.fillingValue);
-            }
-        }
-    }
-
-
     private void smoothIndels(final byte [] kr ) {
         for ( int i = 0 ; i < kr.length; i++ ){
             final byte idx = kr[i];
@@ -1071,7 +1020,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             if (( idx > 1 ) && ( idx < maxHmer) ) {
                 if ((flowMatrix[idx-1][i] > fbargs.fillingValue) && (flowMatrix[idx+1][i] > fbargs.fillingValue)) {
                     final int fixCell = flowMatrix[idx-1][i] > flowMatrix[idx+1][i] ? idx+1 : idx-1;
-                    final int otherCell = flowMatrix[idx-1][i] > flowMatrix[idx+1][i] ? idx-1 : idx+1;
                     flowMatrix[fixCell][i] = fbargs.fillingValue;
                 }
             }
@@ -1185,7 +1133,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
      */
     public static GATKRead hardClipUncertainBases(final GATKRead inputRead, final SAMFileHeader samHeader,
                                                   final FlowBasedAlignmentArgumentCollection fbargs ){
-        ReadClipper clipper = new ReadClipper(inputRead);
         String flowOrder = samHeader.getReadGroup(inputRead.getReadGroup()).getFlowOrder();
         if (flowOrder==null){
             throw new GATKException("Unable to trim uncertain bases without flow order information");

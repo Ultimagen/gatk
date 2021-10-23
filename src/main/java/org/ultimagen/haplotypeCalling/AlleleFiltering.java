@@ -394,7 +394,6 @@ public abstract class AlleleFiltering {
             LocationAndAllele>> allelePairs, Haplotype refHaplotype, int activeWindowStart) {
 
         List<Pair<LocationAndAllele, LocationAndAllele>> result = new ArrayList<>();
-        FlowBasedHaplotype refHapFlow = haplotype2FlowHaplotype(refHaplotype);
         for (Pair<LocationAndAllele, LocationAndAllele> allelePair: allelePairs) {
 
             int commonPrefixLengthLeft = getCommonPrefixLength(allelePair.getLeft().getAllele(), allelePair.getLeft().getRefAllele());
