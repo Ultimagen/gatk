@@ -51,7 +51,7 @@ import org.broadinstitute.hellbender.utils.variant.HomoSapiensConstants;
 import org.broadinstitute.hellbender.utils.variant.writers.GVCFWriter;
 import org.broadinstitute.hellbender.utils.genotyper.SampleList;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
-import org.ultimagen.flowBasedRead.tests.AlleleLikelihoodWriter;
+import org.ultimagen.flowBasedRead.utils.AlleleLikelihoodWriter;
 import org.ultimagen.haplotypeCalling.AlleleFilteringHC;
 import org.ultimagen.haplotypeCalling.LHWRefView;
 
