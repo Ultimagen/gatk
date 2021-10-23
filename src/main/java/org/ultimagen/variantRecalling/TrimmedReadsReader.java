@@ -20,8 +20,6 @@ import java.util.function.Function;
 
 public class TrimmedReadsReader {
 
-    private static final Logger logger = LogManager.getLogger(TrimmedReadsReader.class);
-
     private final List<SamReader>         samReaders = new LinkedList<>();
     private CountingReadFilter            readFilter;
     private final Map<String, Integer>    readGroupMaxClass = new LinkedHashMap<>();
