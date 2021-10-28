@@ -40,3 +40,6 @@ funcotator_tmp
 .java-version
 
 .run/
+
+#Test generated dot files
+test*.dot
