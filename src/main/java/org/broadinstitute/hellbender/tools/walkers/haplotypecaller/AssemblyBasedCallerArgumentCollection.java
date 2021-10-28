@@ -227,18 +227,15 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     public boolean filterAlleles=false;
 
     @Advanced
-    @Hidden
     @Argument(fullName = FILTER_ALLELES_QUAL_THRESHOLD, doc = "Threshold for prefiltering alleles on quality", optional=true)
     public float prefilterQualThreshold=PREFILTER_QUAL_THRESHOLD;
 
 
     @Advanced
-    @Hidden
     @Argument(fullName = FILTER_ALLELES_SOR_THRESHOLD, doc = "Threshold for prefiltering alleles on SOR", optional=true)
     public float prefilterSorThreshold=PREFILTER_SOR_THRESHOLD;
 
     @Advanced
-    @Hidden
     @Argument(fullName = FILTER_ALLELES_FILTER_LONE_ALLELES, doc = "Remove also lone alleles during allele filtering", optional=true)
     public boolean filterLoneAlleles=false;
 
@@ -247,7 +244,6 @@ public abstract class AssemblyBasedCallerArgumentCollection {
      * quality of an allele is affected by removing other allele */
 
     @Advanced
-    @Hidden
     @Argument(fullName = FILTER_ALLELES_DEBUG_GRAPH, doc = "Write an interaction graph in allele filtering", optional=true)
     public boolean writeFilteringGraphs = false;
 
