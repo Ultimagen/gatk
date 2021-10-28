@@ -18,7 +18,6 @@ import org.broadinstitute.hellbender.utils.param.ParamUtils;
 import org.broadinstitute.hellbender.utils.pileup.PileupElement;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAlignment;
-import org.ultimagen.flowBasedRead.alignment.AlignmentThreadingUtils;
 
 import java.util.*;
 import java.util.stream.IntStream;

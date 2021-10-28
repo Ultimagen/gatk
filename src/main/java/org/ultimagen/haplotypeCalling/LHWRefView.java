@@ -10,7 +10,7 @@ import org.broadinstitute.gatk.nativebindings.smithwaterman.SWOverhangStrategy;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAlignment;
-import org.ultimagen.flowBasedRead.alignment.AlignmentThreadingUtils;
+import org.broadinstitute.hellbender.utils.read.AlignmentThreadingUtils;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;

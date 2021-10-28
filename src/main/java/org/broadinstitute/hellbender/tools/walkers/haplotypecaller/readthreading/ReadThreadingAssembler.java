@@ -23,16 +23,13 @@ import org.broadinstitute.hellbender.utils.param.ParamUtils;
 import org.broadinstitute.hellbender.utils.read.CigarUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
-import org.ultimagen.flowBasedRead.alignment.AlignmentThreadingUtils;
 import org.ultimagen.haplotypeCalling.LHWRefView;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.*;
-import java.util.concurrent.*;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static java.lang.String.format;
 
