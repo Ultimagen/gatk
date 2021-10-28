@@ -296,10 +296,6 @@ public final class AssemblyResultSet {
         final boolean assemblyResultAdditionReturn =  add(ar);
 
         if (haplotypes.contains(h)) {
-            haplotypes.stream()
-                    .filter(e->e.equals(h))
-                    .findFirst();
-
             final AssemblyResult previousAr = assemblyResultByHaplotype.get(h);
             if (previousAr == null) {
                 assemblyResultByHaplotype.put(h, ar);

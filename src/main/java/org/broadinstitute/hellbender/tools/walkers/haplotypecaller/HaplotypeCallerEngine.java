@@ -771,13 +771,19 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         if ( refView != null ) {
 
             haplotypes = refView.uncollapseHaplotypesByRef(haplotypes, true, false, null);
-            logger.debug(String.format("%d haplotypes before uncollapsing", haplotypes.size()));
+            if ( logger.isDebugEnabled() ) {
+                logger.debug(String.format("%d haplotypes before uncollapsing", haplotypes.size()));
+            }
             Map<Haplotype, List<Haplotype>> identicalHaplotypesMap = LHWRefView.identicalByUncollapsingHaplotypeMap(haplotypes);
             readLikelihoods.changeAlleles(haplotypes);
             uncollapsedReadLikelihoods = readLikelihoods.marginalize(identicalHaplotypesMap);
-            logger.debug(String.format("%d haplotypes after uncollapsing", uncollapsedReadLikelihoods.numberOfAlleles()));
+            if ( logger.isDebugEnabled() ) {
+                logger.debug(String.format("%d haplotypes after uncollapsing", uncollapsedReadLikelihoods.numberOfAlleles()));
+            }
         } else {
-            logger.debug(String.format("Not performing uncollapsing with %d haplotypes", readLikelihoods.numberOfAlleles()));
+            if ( logger.isDebugEnabled() ) {
+                logger.debug(String.format("Not performing uncollapsing with %d haplotypes", readLikelihoods.numberOfAlleles()));
+            }
             uncollapsedReadLikelihoods = readLikelihoods;
         }
 

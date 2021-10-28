@@ -225,56 +225,7 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
                 filteredEvidenceBySampleIndex,
                 values);
     }
-
-    public AlleleLikelihoods<EVIDENCE, A> subsetLikelihoodsToReads(final Predicate<EVIDENCE> filter){
-
-        final List<List<EVIDENCE>> evidenceBySampleIndex = new ArrayList<>(numberOfSamples());
-
-        final double[][][] values = new double[numberOfSamples()][][];
-
-        for(int i = 0; i < numberOfSamples(); i++) {
-
-            BitSet presentReads = new BitSet();
-            final int finalI = i;
-            //test shortcut if all reads in a sample are included:
-            if (IntStream.range(0, this.sampleEvidence(finalI).size()).allMatch(j -> filter.test(this.sampleEvidence(finalI).get(j)))) {
-                values[i] = this.valuesBySampleIndex[i];
-                evidenceBySampleIndex.add(this.sampleEvidence(i));
-                continue;
-            }
-
-            final double [][] sampleValues = values[i] = new double[numberOfAlleles()][];
-            final List<EVIDENCE> sampleEvidence = new ArrayList<>();
-            evidenceBySampleIndex.add(sampleEvidence);
-
-            IntStream.range(0, this.sampleEvidence(finalI).size())
-                    .filter(j -> filter.test(this.sampleEvidence(finalI).get(j)))
-                    .forEach(r-> {
-                        presentReads.set(r);
-                        sampleEvidence.add(this.sampleEvidence(finalI).get(r));
-                    });
-
-            final int cardinality = presentReads.cardinality();
-
-            for (int a = 0; a < numberOfAlleles(); a++) {
-                final double[] sampleAlleleValues = sampleValues[a] = new double[cardinality];
-                int prevRead = 0;
-                for (int r = 0; r < cardinality; r++) {
-                    prevRead = presentReads.nextSetBit(prevRead);
-                    sampleAlleleValues[r] = this.valuesBySampleIndex[i][a][prevRead];
-                    prevRead++;
-                }
-            }
-        }
-
-        return new AlleleLikelihoods<>(
-                new IndexedAlleleList<>(alleles()),
-                samples,
-                evidenceBySampleIndex,
-                filteredEvidenceBySampleIndex,
-                values);
-    }
-
+    
     // Add all the indices to alleles, sample and evidence in the look-up maps.
     private void setupIndexes(final Map<String, List<EVIDENCE>> evidenceBySample, final int sampleCount, final int alleleCount) {
         for (int s = 0; s < sampleCount; s++) {

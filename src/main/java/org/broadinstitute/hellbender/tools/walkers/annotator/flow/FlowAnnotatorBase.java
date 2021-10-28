@@ -58,6 +58,7 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
                                final VariantContext vc,
                                final AlleleLikelihoods<GATKRead, Allele> likelihoods) {
             Utils.nonNull(vc);
+            Utils.validate(ref.hasBackingDataSource(), "-R (reference) argument must be provided");
 
             // some annotators share results
             this.ref = ref;

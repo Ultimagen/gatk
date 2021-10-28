@@ -40,10 +40,6 @@ funcotator_tmp
 .java-version
 
 .run/
-testdata/scripts/output
-testdata/iscripts/data
-testdata/cases
-testdata/ref
-testdata/scripts/.ipynb_checkpoints/
-testdata/scripts/data/
-todo.txt
+
+#Test generated dot files
+test*.dot

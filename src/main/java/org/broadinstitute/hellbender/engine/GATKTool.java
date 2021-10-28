@@ -1108,6 +1108,7 @@ public abstract class GATKTool extends CommandLineProgram {
     }
 
     public List<SimpleInterval> getUserIntervals() {
-        return userIntervals;
+
+        return Collections.unmodifiableList(userIntervals);
     }
 }

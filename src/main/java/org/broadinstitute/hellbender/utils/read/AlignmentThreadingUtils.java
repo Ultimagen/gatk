@@ -1,4 +1,4 @@
-package org.ultimagen.flowBasedRead.alignment;
+package org.broadinstitute.hellbender.utils.read;
 
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 

@@ -1,5 +1,6 @@
 package org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs;
 
+import org.broadinstitute.hellbender.GATKBaseTest;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -7,7 +8,7 @@ import java.io.File;
 
 import static org.testng.Assert.*;
 
-public class SharedSequenceMergerTest {
+public class SharedSequenceMergerTest extends GATKBaseTest {
 
     @Test
     public void testMergeComplex(){
