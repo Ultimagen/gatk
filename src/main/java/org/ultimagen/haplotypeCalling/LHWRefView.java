@@ -13,11 +13,8 @@ import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAlignment;
 import org.ultimagen.flowBasedRead.alignment.AlignmentThreadingUtils;
 
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 public class LHWRefView {
 
@@ -124,9 +121,8 @@ public class LHWRefView {
 
         // uncollapse haplotypes
         for (Haplotype h : haplotypes) {
-            // by default
             Haplotype alignedHaplotype = uncollapseSingleHaplotypeByRef(h, limit, refMap);
-            alignedHaplotype.setDiffMatter(result.size());
+            alignedHaplotype.setUniquenessValue(result.size());
             result.add(alignedHaplotype);
         }
 

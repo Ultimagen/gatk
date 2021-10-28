@@ -33,7 +33,7 @@ public final class Haplotype extends Allele {
     private double score = Double.NaN;
 
     private boolean isCollapsed;
-    private int     diffMatter;
+    private int uniquenessValue;   // uniquely diffrentiates the haplotype from others with same ref/bases.
 
     // debug information for tracking kmer sizes used in graph construction for debug output
     private int kmerSize = 0;
@@ -152,7 +152,7 @@ public final class Haplotype extends Allele {
     @Override
     public boolean equals( final Object h ) {
         return h instanceof Haplotype
-                && getDiffMatter() == ((Haplotype) h).getDiffMatter()
+                && getUniquenessValue() == ((Haplotype) h).getUniquenessValue()
                 && isReference() == ((Haplotype) h).isReference()
                 && Arrays.equals(getBases(), ((Haplotype) h).getBases());
     }
@@ -303,15 +303,15 @@ public final class Haplotype extends Allele {
         this.isCollapsed = collapsed;
     }
 
-    public int getDiffMatter() {
-        return diffMatter;
+    public int getUniquenessValue() {
+        return uniquenessValue;
     }
     public int getKmerSize() {
         return kmerSize;
     }
 
-    public void setDiffMatter(int diffMatter) {
-        this.diffMatter = diffMatter;
+    public void setUniquenessValue(int uniquenessValue) {
+        this.uniquenessValue = uniquenessValue;
     }
     public void setKmerSize(int kmerSize) {
         this.kmerSize = kmerSize;
