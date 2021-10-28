@@ -34,7 +34,6 @@ public final class SmithWatermanIntelAligner implements SmithWatermanAligner {
         }
     }
 
-    static int mainCounter = 0;
     /**
      * Aligns the alternate sequence to the reference sequence
      *
