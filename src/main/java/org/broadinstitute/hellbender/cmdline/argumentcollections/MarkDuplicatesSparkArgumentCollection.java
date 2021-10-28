@@ -41,26 +41,26 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
     public boolean removeSequencingDuplicates = false;
 
     @Argument(doc = "Use specific quality summing strategy for flow based reads. The strategy ensures that the same " +
-            "(and correct) quality value is used for all bases of the same homopolymer. Default false.")
+            "(and correct) quality value is used for all bases of the same homopolymer. Default false.", optional = true)
     public boolean FLOW_QUALITY_SUM_STRATEGY = false;
 
     @Argument(doc = "Make end location of read be significant when considering duplicates, " +
-            "in addition to the start location, which is always significant. Default false.")
+            "in addition to the start location, which is always significant. Default false.", optional = true)
     public boolean FLOW_END_LOCATION_SIGNIFICANT = false;
 
-    @Argument(doc = "Maximal number of bases of reads ends difference that is marked as match. Default 0.")
+    @Argument(doc = "Maximal number of bases of reads ends difference that is marked as match. Default 0.", optional = true)
     public int ENDS_READ_UNCERTAINTY = 0;
 
-    @Argument(doc = "Use clipped, rather than unclipped, when considering duplicates. Default false.")
+    @Argument(doc = "Use clipped, rather than unclipped, when considering duplicates. Default false.", optional = true)
     public boolean FLOW_USE_CLIPPED_LOCATIONS = false;
 
-    @Argument(doc = "Skip first N flows, when considering duplicates. Default 0.")
+    @Argument(doc = "Skip first N flows, when considering duplicates. Default 0.", optional = true)
     public int FLOW_SKIP_START_HOMOPOLYMERS = 0;
 
-    @Argument(doc = "Treat tm:Q as tm:Q.")
+    @Argument(doc = "Treat tm:Q as tm:Q.", optional = true)
     public boolean FLOW_Q_IS_KNOWN_END = false;
 
-    @Argument(doc = "Emit additional debugging info specific to ultima flow. Default false.")
+    @Argument(doc = "Emit additional debugging info specific to ultima flow. Default false.", optional = true)
     public boolean DEBUG_ULTIMA_DUPS = false;
 
     @Argument(doc = "Emit additional debugging info specific to ultima flow: read name. Default null", optional = true)

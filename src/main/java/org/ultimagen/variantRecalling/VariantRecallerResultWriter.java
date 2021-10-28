@@ -139,13 +139,16 @@ public class VariantRecallerResultWriter {
                             keyspaceLength = ((FlowBasedRead) read).getKeyLength();
 
                         // build basic matrix line
-                        String line = String.format("%s %d %d %d %d %s",
-                                read.getName(),
-                                keyspaceLength,
-                                read.isDuplicate() ? 1 : 0,
-                                read.isReverseStrand() ? 1 : 0,
-                                read.getMappingQuality(),
-                                StringUtils.join(ArrayUtils.toObject(lineValues), " "));
+                        final StringBuilder line = new StringBuilder();
+                        line.append(read.getName());
+                        line.append(' ');
+                        line.append(keyspaceLength);
+                        line.append(' ');
+                        line.append(read.isDuplicate() ? 1 : 0);
+                        line.append(' ');
+                        line.append(read.isReverseStrand() ? 1 : 0);
+                        line.append(' ');
+                        line.append(StringUtils.join(ArrayUtils.toObject(lineValues), " "));
 
                         // add bytes at variant location?
                         final StringBuilder bases = new StringBuilder();
@@ -174,8 +177,12 @@ public class VariantRecallerResultWriter {
                         }
 
                         if (bases.length() > 0) {
-                            line += String.format(" %s %d %s", bases, firstBaseUnclippedOfs, fileHeader.getReadGroup(read.getReadGroup()).getSample());
-                            vcLines.add(new Tuple<>(sortKey, line));
+                            line.append(' ');
+                            line.append(bases);
+                            line.append(' ');
+                            line.append(firstBaseUnclippedOfs);
+                            line.append(fileHeader.getReadGroup(read.getReadGroup()).getSample());
+                            vcLines.add(new Tuple<>(sortKey, line.toString()));
                         }
                     }
 
