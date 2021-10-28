@@ -326,38 +326,7 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
 
         return new OutputAlleleSubset(outputAlleles,mleCounts,siteIsMonomorphic);
     }
-
-//
-//    /**
-//     * Provided the exact mode computations it returns the appropriate subset of alleles that progress to genotyping.
-//     * @param afCalculationResult the allele fraction calculation result.
-//     * @param vc the variant context
-//     * @return information about the alternative allele subsetting {@code null}.
-//     */
-//    private OutputAlleleSubset calculateOutputAlleleSubsetWithSymbolic(final AFCalculationResult afCalculationResult,
-//                                                                       final VariantContext vc,
-//                                                                       final List<VariantContext> givenAlleles,
-//                                                                       final OutputAlleleSubset currentSubset) {
-//
-//
-//        final List<Allele> outputAlleles = new ArrayList<>();
-//        final List<Integer> mleCounts = new ArrayList<>();
-//        boolean siteIsMonomorphic = true;
-//
-//        List<Allele> currentAlleles = currentSubset.alleles;
-//        List<Integer> currentMleCounts = currentSubset.mleCounts;
-//        boolean currentSiteIsMonomorphic = currentSubset.siteIsMonomorphic;
-//
-//        for (int i = 0 ; i < currentAlleles.size(); i++) {
-//            outputAlleles.add(currentAlleles.get(i));
-//            mleCounts.add(currentMleCounts.get(i));
-//
-//        }
-//
-//        siteIsMonomorphic = currentSiteIsMonomorphic;
-//        return new OutputAlleleSubset(outputAlleles,mleCounts,siteIsMonomorphic);
-//    }
-//
+    
     void clearUpstreamDeletionsLoc() {
         upstreamDeletionsLoc.clear();
     }

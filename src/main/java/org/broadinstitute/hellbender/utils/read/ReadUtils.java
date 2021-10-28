@@ -300,7 +300,7 @@ public final class ReadUtils {
             byte[]      bases = rec.getBasesNoCopy();
             int         ofs = 0;
             byte        hmerBase = bases[ofs];
-            byte[]      flowOrder = getFlowOrder(header);
+            byte[]      flowOrder = getReadFlowOrder(header, rec);
             int         flowOrderOfs = 0;
             int         hmersLeft = mdArgs.FLOW_SKIP_START_HOMOPOLYMERS;      // number of hmer left to trim
 
@@ -350,7 +350,7 @@ public final class ReadUtils {
             byte[]      bases = rec.getBasesNoCopy();
             int         ofs = 0;
             byte        hmerBase = bases[bases.length - 1 - ofs];
-            byte[]      flowOrder = getFlowOrder(header);
+            byte[]      flowOrder = getReadFlowOrder(header, rec);
             int         flowOrderOfs = 0;
             int         hmersLeft = mdArgs.FLOW_SKIP_START_HOMOPOLYMERS;      // number of hmer left to trim
 
@@ -413,8 +413,21 @@ public final class ReadUtils {
         }
     }
 
-    private static byte[] getFlowOrder(final SAMFileHeader header) {
+    // get flow order for a specific read
+    private static byte[] getReadFlowOrder(final SAMFileHeader header, GATKRead read) {
+
+        // are we looking for a specific read group, as specified by the read?
+        final String    readGroupName = (read != null) ? read.getReadGroup() : null;
+        if ( readGroupName != null ) {
+            final SAMReadGroupRecord rg = header.getReadGroup(readGroupName);
+            if ( rg != null && rg.getFlowOrder() != null )
+                return rg.getFlowOrder().getBytes();
+        }
+
+        // if here, either no read was specified, or the read has no group, or the group is not found, or it has no flow
+        // revert to old behavior of returning the first found
         for ( SAMReadGroupRecord rg : header.getReadGroups() ) {
+            // must match read group name?
             String      flowOrder = rg.getFlowOrder();
             if ( flowOrder != null ) {
                 return flowOrder.getBytes();
