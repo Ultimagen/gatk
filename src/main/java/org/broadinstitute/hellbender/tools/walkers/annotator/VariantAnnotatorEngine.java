@@ -392,14 +392,6 @@ public final class VariantAnnotatorEngine {
 
 
                 if (addAnnot.test(annotation)) {
-                    //do not recalculate StrandBiasBySampleKey when likielihhods is null (in genotypeGVCF), there is a request to
-                    // recalculate it and the variant already has StrandBiasTable. In this case it will be impossible to calculate anyway
-                    if ((annotation.getKeyNames().get(0).equals(GATKVCFConstants.STRAND_BIAS_BY_SAMPLE_KEY)) &&
-                            genotype.hasExtendedAttribute(GATKVCFConstants.STRAND_BIAS_BY_SAMPLE_KEY) &&
-                            (likelihoods == null)){
-                        continue;
-                    }
-
                     annotation.annotate(ref, vc, genotype, gb, likelihoods);
                 }
             }
