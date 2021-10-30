@@ -146,14 +146,14 @@ public final class GATKVCFConstants {
     public final static String TRANSMISSION_PROBABILITY_KEY =       "TP"; //PhaseByTransmission
 
     // ultima annotations
-    public final static String FLOW_INDEL_CLASSIFY =                "X-IC";
-    public final static String FLOW_INDEL_LENGTH =                  "X-IL";
-    public final static String FLOW_HMER_INDEL_LENGTH =             "X-HIL";
-    public final static String FLOW_HMER_INDEL_NUC =                "X-HIN";
-    public final static String FLOW_LEFT_MOTIF =                    "X-LM";
-    public final static String FLOW_RIGHT_MOTIF =                   "X-RM";
-    public final static String FLOW_GC_CONTENT =                    "X-GCC";
-    public final static String FLOW_CYCLESKIP_STATUS =              "X-CSS";
+    public final static String FLOW_INDEL_CLASSIFY =                "X_IC";
+    public final static String FLOW_INDEL_LENGTH =                  "X_IL";
+    public final static String FLOW_HMER_INDEL_LENGTH =             "X_HIL";
+    public final static String FLOW_HMER_INDEL_NUC =                "X_HIN";
+    public final static String FLOW_LEFT_MOTIF =                    "X_LM";
+    public final static String FLOW_RIGHT_MOTIF =                   "X_RM";
+    public final static String FLOW_GC_CONTENT =                    "X_GCC";
+    public final static String FLOW_CYCLESKIP_STATUS =              "X_CSS";
 
 
     // M2-specific FORMAT keys

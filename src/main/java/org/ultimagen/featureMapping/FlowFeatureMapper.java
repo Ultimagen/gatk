@@ -77,17 +77,17 @@ public final class FlowFeatureMapper extends ReadWalker {
 
     private static final String     VCB_SOURCE = "fm";
 
-    private static final String     VCF_READ_NAME = "X-RN";
-    private static final String     VCF_SCORE = "X-SCORE";
-    private static final String     VCF_FLAGS = "X-FLAGS";
-    private static final String     VCF_MAPQ = "X-MAPQ";
-    private static final String     VCF_CIGAR = "X-CIGAR";
-    private static final String     VCF_READ_COUNT = "X-READ-COUNT";
-    private static final String     VCF_FILTERED_COUNT = "X-FILTERED-COUNT";
-    private static final String     VCF_FC1 = "X-FC1";
-    private static final String     VCF_FC2 = "X-FC2";
-    private static final String     VCF_LENGTH = "X-LENGTH";
-    private static final String     VCF_EDIST = "X-EDIST";
+    private static final String     VCF_READ_NAME = "X_RN";
+    private static final String     VCF_SCORE = "X_SCORE";
+    private static final String     VCF_FLAGS = "X_FLAGS";
+    private static final String     VCF_MAPQ = "X_MAPQ";
+    private static final String     VCF_CIGAR = "X_CIGAR";
+    private static final String     VCF_READ_COUNT = "X_READ-COUNT";
+    private static final String     VCF_FILTERED_COUNT = "X_FILTERED-COUNT";
+    private static final String     VCF_FC1 = "X_FC1";
+    private static final String     VCF_FC2 = "X_FC2";
+    private static final String     VCF_LENGTH = "X_LENGTH";
+    private static final String     VCF_EDIST = "X_EDIST";
 
     private static final Double     LOWEST_PROB = 0.0001;
 
