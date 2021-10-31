@@ -448,7 +448,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
     //This function is for testing purposes only
     @VisibleForTesting
     public AlleleLikelihoods<GATKRead, Haplotype> computeReadLikelihoods(
-            final List<Haplotype> haplotypeList, final List<GATKRead> reads, final boolean filterPoorly) {
+            final List<Haplotype> haplotypeList, final List<GATKRead> reads, final boolean filterPoorly, final SAMFileHeader hdr) {
 
 
         final AlleleList<Haplotype> haplotypes = new IndexedAlleleList<>(haplotypeList);
@@ -463,7 +463,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         final AlleleLikelihoods<GATKRead, Haplotype> result = new AlleleLikelihoods<>(samples, haplotypes, perSampleReadList);
         final int sampleCount = result.numberOfSamples();
         for (int i = 0; i < sampleCount; i++) {
-            computeReadLikelihoods(result.sampleMatrix(i), null);
+            computeReadLikelihoods(result.sampleMatrix(i), hdr);
         }
 
         result.normalizeLikelihoods(log10globalReadMismappingRate, symmetricallyNormalizeAllelesToReference);
