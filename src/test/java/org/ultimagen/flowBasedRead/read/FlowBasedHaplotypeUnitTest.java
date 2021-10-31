@@ -1,4 +1,4 @@
-package org.ultimagen.reads;
+package org.ultimagen.flowBasedRead.read;
 
 import org.broadinstitute.hellbender.GATKBaseTest;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;

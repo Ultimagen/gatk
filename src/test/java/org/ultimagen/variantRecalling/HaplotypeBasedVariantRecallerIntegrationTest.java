@@ -5,6 +5,7 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 import org.ultimagen.CommentedTextReader;
 import org.ultimagen.FlowTestConstants;
+import org.ultimagen.TestFileVerifySame;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,25 +34,8 @@ public class HaplotypeBasedVariantRecallerIntegrationTest extends CommandLinePro
         runCommandLine(args);  // no assert, just make sure we don't throw
 
         // verify that output file has been created
-        Assert.assertTrue((new File(outputPath)).exists());
-
         // walk the output and expected files, compare non-comment lines
-        final String expectedPath = outputDir + "/bam1_bam2_output.csv";
-        try (
-                final CommentedTextReader expectedReader = new CommentedTextReader(new File(outputPath));
-                final CommentedTextReader outputReader = new CommentedTextReader(new File(outputPath));
-        ) {
-            String expectedLine;
-            String outputLine;
-            while ((expectedLine = expectedReader.readLine()) != null) {
-
-                outputLine = outputReader.readLine();
-                Assert.assertNotNull(outputLine, "output file contains too few lines");
-
-                Assert.assertEquals(expectedLine, outputLine, "expected and output lines differ");
-            }
-            outputLine = outputReader.readLine();
-            Assert.assertNull(outputLine, "output file contains too many lines");
-        }
+        Assert.assertTrue((new File(outputPath)).exists());
+        TestFileVerifySame.verifySame(outputPath, vcTestDir + "/bam1_bam2_output.csv");
     }
 }
