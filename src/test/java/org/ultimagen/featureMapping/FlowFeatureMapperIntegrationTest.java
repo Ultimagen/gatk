@@ -5,6 +5,7 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 import org.ultimagen.CommentedTextReader;
 import org.ultimagen.FlowTestConstants;
+import org.ultimagen.TestFileVerifySame;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,22 +44,7 @@ public class FlowFeatureMapperIntegrationTest extends CommandLineProgramTest {
         Assert.assertTrue(outputFile.exists());
 
         // walk the output and expected files, compare non-comment lines
-        try (
-                final CommentedTextReader     expectedReader = new CommentedTextReader(expectedFile);
-                final CommentedTextReader     outputReader = new CommentedTextReader(outputFile);
-        ) {
-            String expectedLine;
-            String outputLine;
-            while ((expectedLine = expectedReader.readLine()) != null) {
-
-                outputLine = outputReader.readLine();
-                Assert.assertNotNull(outputLine, "output file contains too few lines");
-
-                Assert.assertEquals(expectedLine, outputLine, "expected and output lines differ");
-            }
-            outputLine = outputReader.readLine();
-            Assert.assertNull(outputLine, "output file contains too many lines");
-        }
+        TestFileVerifySame.verifySame(outputFile, expectedFile);
     }
 
 }

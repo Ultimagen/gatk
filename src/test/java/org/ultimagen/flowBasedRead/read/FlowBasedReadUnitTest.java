@@ -1,4 +1,4 @@
-package org.ultimagen.reads;
+package org.ultimagen.flowBasedRead.read;
 
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SamReader;
