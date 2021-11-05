@@ -22,14 +22,14 @@ public class FlowBasedHaplotype  extends Allele {
     /* Create flow based haplotype from the haplotype */
     public FlowBasedHaplotype(final Haplotype sourceHaplotype, final String flowOrder){
         super(sourceHaplotype.getBases(), sourceHaplotype.isReference());
-        key = FlowBasedRead.base2key(sourceHaplotype.getBases(), flowOrder);
+        key = FlowBasedKeyCodec.base2key(sourceHaplotype.getBases(), flowOrder);
         genomeLoc = sourceHaplotype.getGenomeLocation();
         cigar = sourceHaplotype.getCigar();
-        flow2base = FlowBasedRead.getKey2Base(key);
+        flow2base = FlowBasedKeyCodec.getKey2Base(key);
         rKey = key.clone();
         reverse(rKey, rKey.length);
-        rFlow2Base = FlowBasedRead.getKey2Base(rKey);
-        flowOrderArray = FlowBasedRead.getFlow2Base(flowOrder, key.length);
+        rFlow2Base = FlowBasedKeyCodec.getKey2Base(rKey);
+        flowOrderArray = FlowBasedKeyCodec.getFlow2Base(flowOrder, key.length);
     }
 
 
