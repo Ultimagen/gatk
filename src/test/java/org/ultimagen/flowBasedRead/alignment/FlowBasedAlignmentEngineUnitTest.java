@@ -138,7 +138,7 @@ public class FlowBasedAlignmentEngineUnitTest extends GATKBaseTest {
 
             final Haplotype haplotype = new Haplotype(bases, i == 0);
             haplotype.setCigar(new Cigar(Collections.singletonList(new CigarElement(haplotype.length(), CigarOperator.M))));
-            haplotype.setDiffMatter(i);
+            haplotype.setUniquenessValue(i);
             haplotype.setGenomeLocation(read);
 
             haplotypes.add(haplotype);
