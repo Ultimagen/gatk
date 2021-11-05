@@ -1,5 +1,7 @@
 package org.ultimagen.flowBasedRead.read;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.util.ArrayList;
 
 public class FlowBasedKeyCodec {
@@ -134,5 +136,62 @@ public class FlowBasedKeyCodec {
             sb.append((char)((i < 10) ? ('0' + i) : ('A' + i - 10)));
 
         return sb.toString();
+    }
+
+    /**
+     * Converts a numerical array into flow space by flattening per-base elements to fill empty flows based on minimum scores.
+     * This is intended to make it easier to transform per-base read statistics that are computed on the read in base-space
+     * sanely into flow-space reads in a reasonable fashion that makes sense for parameters like indel-likelihoods.
+     *
+     * The rules are as follows:
+     *  - For every run of homopolymers, the minimum score for any given base is translated to cover the whole run
+     *  - For every 0 base flow, the score from the previous filled flow is coppied into place.
+     *  - For the beginning of the array (in the case of preceeding 0-flows) the given default value is uesd.
+     *
+     * Example:
+     *  A read with the following bases with a base-space calculated into flow space (ACTG) as:
+     *     TTTATGC -> 0030101101
+     *  With an input array like this:
+     *     byte[]{1,2,3,4,5,6,7}
+     *  We should expect the following result array (Which matches the key array in length)
+     *     byte[]{defaultQual,defaultQual,1,1,4,4,5,6,6,7}
+     *
+     * @param bases base space sequence
+     * @param keyLength size of the converted bases array in flow-space
+     * @param baseSpacedArrayToConvert Array of base-space scores to be conformed to flow space
+     * @param defaultQual default quality to use at the head of the array for non-covered flows
+     * @param flowOrder flow order
+     * @return Array of translated bases comparable to the keyLength
+     */
+    @VisibleForTesting
+    static public byte[] baseArray2KeySpace(final byte[] bases, final int keyLength, final byte[] baseSpacedArrayToConvert, final byte defaultQual, final String flowOrder){
+
+        if (bases.length != baseSpacedArrayToConvert.length) {
+            throw new IllegalArgumentException("Read and qual arrays do not match");
+        }
+
+        final byte[] result = new byte[keyLength];
+        final byte[] flowOrderBytes = flowOrder.getBytes();
+        int loc = 0;
+        int flowNumber = 0 ;
+        byte lastQual = defaultQual;
+        final int period = flowOrderBytes.length;
+        while ( loc < bases.length ) {
+            final byte flowBase = flowOrderBytes[flowNumber%period];
+            if ((bases[loc]!=flowBase) && ( bases[loc]!= FlowBasedRead.N_ASCII)) {
+                result[flowNumber] = lastQual;
+            } else {
+                byte qual = Byte.MAX_VALUE;
+                while ( ( loc < bases.length) && ((bases[loc]==flowBase) || (bases[loc]== FlowBasedRead.N_ASCII)) ){
+                    qual = (byte)Math.min(baseSpacedArrayToConvert[loc], qual);
+                    loc++;
+                }
+                result[flowNumber] = qual;
+                lastQual = qual;
+
+            }
+            flowNumber++;
+        }
+        return result;
     }
 }

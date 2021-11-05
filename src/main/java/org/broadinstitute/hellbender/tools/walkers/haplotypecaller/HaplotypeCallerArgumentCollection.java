@@ -28,7 +28,7 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
     public static final String DO_NOT_CORRECT_OVERLAPPING_BASE_QUALITIES_LONG_NAME = "do-not-correct-overlapping-quality";
     public static final String OUTPUT_BLOCK_LOWER_BOUNDS = "floor-blocks";
     public static final String DRAGEN_GATK_MODE_LONG_NAME = "dragen-mode";
-
+    public static final String STEPWISE_FITLERING_ARGUMENT = "use-flow-aligner-for-stepwise-hc-filtering";
 
 
     @ArgumentCollection
@@ -212,6 +212,12 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
     @Hidden
     @Argument(fullName = "avoid-strand-bias-in-active-region")
     public boolean STRATIFICATION_FOR_ACTIVE_REGION = false;
+
+
+    @Advanced
+    @Hidden
+    @Argument(fullName = STEPWISE_FITLERING_ARGUMENT, doc = "If enabled, this will create a FlowBasedAligner to use for filtering haplotypes before using another likelihoods engine for scoring.")
+    public boolean stepwiseFiltering = false;
 
 
 

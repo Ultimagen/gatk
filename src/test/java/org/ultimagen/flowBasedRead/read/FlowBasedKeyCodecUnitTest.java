@@ -8,6 +8,9 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.ultimagen.variantRecalling.TrimmedReadsReaderUnitTest;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class FlowBasedKeyCodecUnitTest extends GATKBaseTest {
 
     @DataProvider(name = "testData")
@@ -56,4 +59,27 @@ public class FlowBasedKeyCodecUnitTest extends GATKBaseTest {
         Assert.assertEquals(byteKeyAsString,
                 expectedClippedKeyAsString != null ? expectedClippedKeyAsString : expectedKeyAsString);
     }
+
+    @DataProvider(name="makeReadArrayTests")
+    public Object[][] makeByteArrayTests(){
+        List<Object[]> tests = new ArrayList<>();
+        tests.add(new Object[]{new byte[]{'T','T','T','A','T','G','C'}, new byte[]{10,10,10,10,10,10,10}, "ACTG", (byte)0, new byte[]{0,0,10,10,10,10,10,10,10,10}});
+        tests.add(new Object[]{new byte[]{'T','T','T','A','T','G','C'}, new byte[]{10,10,10,10,10,10,10}, "ACTG", (byte)10, new byte[]{10,10,10,10,10,10,10,10,10,10}});
+        tests.add(new Object[]{new byte[]{'T','T','T','A','T','G','C'}, new byte[]{10,5,10,10,10,10,10}, "ACTG", (byte)0, new byte[]{0,0,5,5,10,10,10,10,10,10}});
+        tests.add(new Object[]{new byte[]{'T','T','T','A','T','G','C'}, new byte[]{10,25,10,10,10,10,10}, "ACTG", (byte)0, new byte[]{0,0,10,10,10,10,10,10,10,10}});
+        tests.add(new Object[]{new byte[]{'T','T','T','A','T','G','C'}, new byte[]{1,2,3,4,5,6,7}, "ACTG", (byte)0, new byte[]{0,0,1,1,4,4,5,6,6,7}});
+
+        return tests.toArray(new Object[][]{});
+    }
+
+    @Test (dataProvider = "makeReadArrayTests")
+    public void testBaseArray2KeySpace(final byte[] readBases, final byte[] qualArray, final String flowOrder, final byte defualtQual, final byte[] expected) {
+        final int[] flowBases = FlowBasedKeyCodec.base2key(readBases, flowOrder);
+
+        final byte[] result = FlowBasedKeyCodec.baseArray2KeySpace(readBases, flowBases.length, qualArray, defualtQual, flowOrder);
+
+        Assert.assertEquals(flowBases.length, result.length, "Read bases in flow space and baseArray2KeySpace do not match in length");
+        Assert.assertEquals(result, expected);
+    }
+
 }

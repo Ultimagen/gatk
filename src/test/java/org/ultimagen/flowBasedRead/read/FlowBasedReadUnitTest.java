@@ -10,7 +10,6 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.ultimagen.flowBasedRead.read.FlowBasedRead;
 import org.ultimagen.flowBasedRead.utils.FlowBasedAlignmentArgumentCollection;
 
 import java.io.File;
