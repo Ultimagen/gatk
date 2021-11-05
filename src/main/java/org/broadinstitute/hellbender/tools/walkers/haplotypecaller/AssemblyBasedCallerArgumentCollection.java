@@ -352,14 +352,14 @@ public abstract class AssemblyBasedCallerArgumentCollection {
      * The filtering is done by removing all haplotypes that contribute this allele.
      */
 
-    public final float PREFILTER_QUAL_THRESHOLD = 30;
-    public final float PREFILTER_SOR_THRESHOLD = 3;
+    public static final float PREFILTER_QUAL_THRESHOLD = 30;
+    public static final float PREFILTER_SOR_THRESHOLD = 3;
 
 
-    public final String FILTER_ALLELES = "flow-filter-alleles";
-    public final String FILTER_ALLELES_QUAL_THRESHOLD = "flow-filter-alleles-qual-threshold";
-    public final String FILTER_ALLELES_SOR_THRESHOLD = "flow-filter-alleles-sor-threshold";
-    public final String FILTER_ALLELES_FILTER_LONE_ALLELES = "flow-filter-lone-alleles";
+    public static final String FILTER_ALLELES = "flow-filter-alleles";
+    public static final String FILTER_ALLELES_QUAL_THRESHOLD = "flow-filter-alleles-qual-threshold";
+    public static final String FILTER_ALLELES_SOR_THRESHOLD = "flow-filter-alleles-sor-threshold";
+    public static final String FILTER_ALLELES_FILTER_LONE_ALLELES = "flow-filter-lone-alleles";
 
     public final String FILTER_ALLELES_DEBUG_GRAPH = "flow-filter-alleles-debug-graphs";
 
