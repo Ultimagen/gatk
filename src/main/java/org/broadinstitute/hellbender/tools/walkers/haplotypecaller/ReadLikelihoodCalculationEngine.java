@@ -1,12 +1,18 @@
 package org.broadinstitute.hellbender.tools.walkers.haplotypecaller;
 
+import com.google.common.annotations.VisibleForTesting;
+import htsjdk.samtools.SAMFileHeader;
+import org.apache.commons.lang3.tuple.Pair;
 import org.broadinstitute.hellbender.utils.QualityUtils;
+import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.genotyper.SampleList;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
+import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 
 import java.io.PrintStream;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.ToDoubleFunction;
@@ -15,13 +21,18 @@ import java.util.function.ToDoubleFunction;
  * Common interface for assembly-haplotype vs reads likelihood engines.
  */
 public interface ReadLikelihoodCalculationEngine extends AutoCloseable {
+    final int MAX_STR_UNIT_LENGTH = 8;
+    final int MAX_REPEAT_LENGTH   = 20;
+
     enum Implementation {
         /**
          * Classic full pair-hmm all haplotypes vs all reads.
          */
         PairHMM,
 
-        FlowBased
+        FlowBased,
+
+        FlowBasedHMM
     }
 
 
@@ -38,9 +49,34 @@ public interface ReadLikelihoodCalculationEngine extends AutoCloseable {
      * @return never {@code null}, and with at least one entry for input sample (keys in {@code perSampleReadList}.
      *    The value maps can be potentially empty though.
      */
-    public AlleleLikelihoods<GATKRead, Haplotype> computeReadLikelihoods(AssemblyResultSet assemblyResultSet, SampleList samples,
+    public default AlleleLikelihoods<GATKRead, Haplotype> computeReadLikelihoods(AssemblyResultSet assemblyResultSet, SampleList samples,
                                                                          Map<String, List<GATKRead>> perSampleReadList,
-                                                                         boolean filterPoorly);
+                                                                         boolean filterPoorly) {
+        Utils.nonNull(assemblyResultSet, "assemblyResultSet is null");
+        final List<Haplotype> haplotypeList = assemblyResultSet.getHaplotypeList();
+        final SAMFileHeader hdr= assemblyResultSet.getRegionForGenotyping().getHeader();
+
+        return computeReadLikelihoods(haplotypeList, hdr, samples, perSampleReadList, filterPoorly);
+    }
+
+    /**
+     * Implementation of computeReadLikelihoods that is intended to be implemented by implementers. Calculates the likelihood of the reads
+     * across many samples evaluated against haplotypes resulting from the active region assembly prcess.
+     *
+     * @param haplotypeList List of haplotypes over which to to score likelihoods.
+     * @param hdr header to extract read metadata for calling from.
+     * @param samples the list of targeted samples.
+     * @param perSampleReadList input read sets stratified per sample.
+     *
+     * @throws IllegalArgumentException if any parameter is {@code null}.
+     *
+     * @return never {@code null}, and with at least one entry for input sample (keys in {@code perSampleReadList}.
+     *    The value maps can be potentially empty though.
+     */
+    public AlleleLikelihoods<GATKRead, Haplotype> computeReadLikelihoods(final List<Haplotype> haplotypeList,
+                                                                         final SAMFileHeader hdr,
+                                                                         final SampleList samples,
+                                                                         final Map<String, List<GATKRead>> perSampleReadList, final boolean filterPoorly);
 
     /**
      * This method must be called when the client is done with likelihood calculations.
@@ -143,5 +179,77 @@ public interface ReadLikelihoodCalculationEngine extends AutoCloseable {
     static final int MAXIMUM_DYNAMIC_QUAL_THRESHOLD_ENTRY_BASEQ = 40;
     static final int DYNAMIC_QUAL_THRESHOLD_TABLE_ENTRY_LENGTH = 3;
     static final int DYNAMIC_QUAL_THRESHOLD_TABLE_ENTRY_MEAN_OFFSET = 1;
+
+
+    /**
+     * The expected rate of random sequencing errors for a read originating from its true haplotype.
+     *
+     * For example, if this is 0.01, then we'd expect 1 error per 100 bp.
+     */
+    double DEFAULT_EXPECTED_ERROR_RATE_PER_BASE = 0.02;
+
+    @VisibleForTesting
+    static Pair<byte[], Integer> findTandemRepeatUnits(byte[] readBases, int offset) {
+        int maxBW = 0;
+        byte[] bestBWRepeatUnit = {readBases[offset]};
+        for (int str = 1; str <= MAX_STR_UNIT_LENGTH; str++) {
+            // fix repeat unit length
+            //edge case: if candidate tandem repeat unit falls beyond edge of read, skip
+            if (offset+1-str < 0) {
+                break;
+            }
+
+            // get backward repeat unit and # repeats
+            maxBW = GATKVariantContextUtils.findNumberOfRepetitions(readBases, offset - str + 1,  str , readBases, 0, offset + 1, false);
+            if (maxBW > 1) {
+                bestBWRepeatUnit = Arrays.copyOfRange(readBases, offset - str + 1, offset + 1);
+                break;
+            }
+        }
+        byte[] bestRepeatUnit = bestBWRepeatUnit;
+        int maxRL = maxBW;
+
+        if (offset < readBases.length-1) {
+            byte[] bestFWRepeatUnit = {readBases[offset+1]};
+            int maxFW = 0;
+
+            for (int str = 1; str <= MAX_STR_UNIT_LENGTH; str++) {
+                // fix repeat unit length
+                //edge case: if candidate tandem repeat unit falls beyond edge of read, skip
+                if (offset+str+1 > readBases.length) {
+                    break;
+                }
+
+                // get forward repeat unit and # repeats
+                maxFW = GATKVariantContextUtils.findNumberOfRepetitions(readBases, offset + 1, str, readBases, offset + 1, readBases.length-offset -1, true);
+                if (maxFW > 1) {
+                    bestFWRepeatUnit = Arrays.copyOfRange(readBases, offset + 1, offset+str+1);
+                    break;
+                }
+            }
+            // if FW repeat unit = BW repeat unit it means we're in the middle of a tandem repeat - add FW and BW components
+            if (Arrays.equals(bestFWRepeatUnit, bestBWRepeatUnit)) {
+                maxRL = maxBW + maxFW;
+                bestRepeatUnit = bestFWRepeatUnit; // arbitrary
+            } else {
+                // tandem repeat starting forward from current offset.
+                // It could be the case that best BW unit was different from FW unit, but that BW still contains FW unit.
+                // For example, TTCTT(C) CCC - at (C) place, best BW unit is (TTC)2, best FW unit is (C)3.
+                // but correct representation at that place might be (C)4.
+                // Hence, if the FW and BW units don't match, check if BW unit can still be a part of FW unit and add
+                // representations to total
+                final byte[] testString = Arrays.copyOfRange(readBases, 0, offset + 1);
+                maxBW = GATKVariantContextUtils.findNumberOfRepetitions(bestFWRepeatUnit, testString, false);
+                maxRL = maxFW + maxBW;
+                bestRepeatUnit = bestFWRepeatUnit;
+            }
+        }
+
+        if(maxRL > MAX_REPEAT_LENGTH) {
+            maxRL = MAX_REPEAT_LENGTH;
+        }
+        return Pair.of(bestRepeatUnit, maxRL);
+    }
+
 
 }

@@ -92,7 +92,7 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
     public void traverse() {
 
         // inits
-        final ReadLikelihoodCalculationEngine   likelihoodCalculationEngine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(hcArgs.likelihoodArgs, hcArgs.fbargs, false);
+        final ReadLikelihoodCalculationEngine   likelihoodCalculationEngine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(hcArgs.likelihoodArgs, hcArgs.fbargs, false, hcArgs.likelihoodArgs.likelihoodEngineImplementation);
         final String[]                          sampleNames = {SAMPLE_NAME_DEFAULT};
         final SampleList                        samplesList = new IndexedSampleList(Arrays.asList(sampleNames));
         final HaplotypeCallerGenotypingEngine   genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samplesList, !hcArgs.doNotRunPhysicalPhasing, false);

@@ -1716,4 +1716,69 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
 
         IntegrationTestSpec.assertEqualTextFiles(output, expected);
     }
+
+    @Test
+    public void testVcfBeforeRebase_flowBasedHMM() throws Exception {
+        Utils.resetRandomGenerator();
+        final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
+        final File output = createTempFile("output", ".vcf");
+
+        final File expected = new File(TEST_FILES_DIR, "test_flowBasedHMM.vcf");
+        final String outputPath = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expected.getAbsolutePath() : output.getAbsolutePath();
+
+        final ArgumentsBuilder args = new ArgumentsBuilder()
+                .addReference(hg38Reference)
+                .addInterval("chr9:81149486-81177047")
+                .addOutput(outputPath)
+                .addInput(input)
+                .add("smith-waterman", "FASTEST_AVAILABLE")
+                .add("likelihood-calculation-engine", "FlowBasedHMM")
+                .add("strand-bias-pileup-p", "0.01")
+                .add("mbq", "0")
+                .add("kmer-size", 10)
+                .add("flow-filter-alleles", true)
+                .add("flow-filter-alleles-sor-threshold", 40)
+                .add("flow-assembly-collapse-hmer-size", 12)
+                .add("flow-matrix-mods", "10,12,11,12")
+                .add("flow-filter-lone-alleles", true)
+                .add(StandardArgumentDefinitions.ADD_OUTPUT_VCF_COMMANDLINE, false);
+
+        runCommandLine(args);
+        if ( ! UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
+            IntegrationTestSpec.assertEqualTextFiles(output, expected);
+        }
+    }
+
+    @Test
+    public void testVcfBeforeRebase_flowBasedHMM_stepwise() throws Exception {
+        Utils.resetRandomGenerator();
+        final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
+        final File output = createTempFile("output", ".vcf");
+
+        final File expected = new File(TEST_FILES_DIR, "test_flowBasedHMM_Stepwise.vcf");
+        final String outputPath = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expected.getAbsolutePath() : output.getAbsolutePath();
+
+        final ArgumentsBuilder args = new ArgumentsBuilder()
+                .addReference(hg38Reference)
+                .addInterval("chr9:81149486-81177047")
+                .addOutput(outputPath)
+                .addInput(input)
+                .add("smith-waterman", "FASTEST_AVAILABLE")
+                .add("likelihood-calculation-engine", "FlowBasedHMM")
+                .add("strand-bias-pileup-p", "0.01")
+                .add("mbq", "0")
+                .add("kmer-size", 10)
+                .add("flow-filter-alleles", true)
+                .add("flow-filter-alleles-sor-threshold", 40)
+                .add("flow-assembly-collapse-hmer-size", 12)
+                .add("flow-matrix-mods", "10,12,11,12")
+                .addFlag("use-flow-aligner-for-stepwise-hc-filtering")
+                .add("flow-filter-lone-alleles", true)
+                .add(StandardArgumentDefinitions.ADD_OUTPUT_VCF_COMMANDLINE, false);
+
+        runCommandLine(args);
+        if ( ! UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
+            IntegrationTestSpec.assertEqualTextFiles(output, expected);
+        }
+    }
 }

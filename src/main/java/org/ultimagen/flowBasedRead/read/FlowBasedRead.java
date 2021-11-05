@@ -1,5 +1,7 @@
 package org.ultimagen.flowBasedRead.read;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.squareup.okhttp.internal.Util;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMFileHeader;
@@ -62,7 +64,34 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     static private int minimalReadLength = MINIMAL_READ_LENGTH;
 
-     /**
+
+    /**
+     * Various methods for storing arrays of pre-computed qualities to be used in {@link org.ultimagen.flowBasedRead.alignment.FlowBasedHMMEngine}.
+     */
+    public byte[] getReadInsQuals() {
+        return readInsQuals;
+    }
+    public void setReadInsQuals(byte[] readInsQuals) {
+        this.readInsQuals = readInsQuals;
+    }
+    public byte[] getReadDelQuals() {
+        return readDelQuals;
+    }
+    public void setReadDelQuals(byte[] readDelQuals) {
+        this.readDelQuals = readDelQuals;
+    }
+    public byte[] getOverallGCP() {
+        return overallGCP;
+    }
+    public void setOverallGCP(byte[] overallGCP) {
+        this.overallGCP = overallGCP;
+    }
+    private byte[] readInsQuals;
+    private byte[] readDelQuals;
+    private byte[] overallGCP;
+
+    /**
+
      * Constructor from GATKRead. flow order, hmer and arguments
      * @param read GATK read
      * @param flowOrder flow order string (one cycle)
@@ -371,7 +400,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         final int clipRight = clipRightPair[0];
         final int rightHmerClip = clipRightPair[1];
 
-        applyClipping(clipLeft, leftHmerClip, clipRight, rightHmerClip, true);
+        applyClipping(clipLeft, leftHmerClip, clipRight, rightHmerClip, false);
 
         setDirection(Direction.REFERENCE);
 

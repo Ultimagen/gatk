@@ -49,6 +49,7 @@ import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.broadinstitute.hellbender.utils.variant.HomoSapiensConstants;
 import org.broadinstitute.hellbender.utils.variant.writers.GVCFWriter;
 import org.broadinstitute.hellbender.utils.genotyper.SampleList;
+import org.ultimagen.flowBasedRead.alignment.FlowBasedAlignmentEngine;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
 import org.ultimagen.flowBasedRead.utils.AlleleLikelihoodWriter;
 import org.ultimagen.haplotypeCalling.AlleleFilteringHC;
@@ -93,6 +94,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
     private ReadThreadingAssembler assemblyEngine = null;
 
     private ReadLikelihoodCalculationEngine likelihoodCalculationEngine = null;
+    private ReadLikelihoodCalculationEngine filterStepLikelihoodCalculationEngine = null;
 
     private HaplotypeCallerGenotypingEngine genotypingEngine = null;
 
@@ -267,7 +269,22 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         haplotypeBAMWriter = AssemblyBasedCallerUtils.createBamWriter(hcArgs, createBamOutIndex, createBamOutMD5, readsHeader);
         alleleLikelihoodWriter = AssemblyBasedCallerUtils.createAlleleLikelihoodWriter(hcArgs);
         assemblyEngine = hcArgs.createReadThreadingAssembler();
-        likelihoodCalculationEngine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(hcArgs.likelihoodArgs, hcArgs.fbargs, !hcArgs.softClipLowQualityEnds);
+        likelihoodCalculationEngine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(hcArgs.likelihoodArgs, hcArgs.fbargs, !hcArgs.softClipLowQualityEnds, hcArgs.likelihoodArgs.likelihoodEngineImplementation);
+
+
+        //Some sanity checking of the stepwise filtering approach
+        if (hcArgs.stepwiseFiltering) {
+            if (hcArgs.likelihoodArgs.likelihoodEngineImplementation == ReadLikelihoodCalculationEngine.Implementation.FlowBased) {
+                throw new UserException("'--"+ HaplotypeCallerArgumentCollection.STEPWISE_FITLERING_ARGUMENT + "' is specified but the selected likelihoods engine is FlowBased. This is invalid.");
+            }
+            if (!hcArgs.filterAlleles) {
+                throw new UserException("'--"+ HaplotypeCallerArgumentCollection.STEPWISE_FITLERING_ARGUMENT + "' is specified, but allele filtering is disabled. Please enable allele filtering with '--"+AssemblyBasedCallerArgumentCollection.FILTER_ALLELES+"'");
+            }
+        }
+
+        filterStepLikelihoodCalculationEngine = (hcArgs.stepwiseFiltering?
+                AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(hcArgs.likelihoodArgs, hcArgs.fbargs, !hcArgs.softClipLowQualityEnds, ReadLikelihoodCalculationEngine.Implementation.FlowBased)
+                : null);
     }
 
     private boolean isVCFMode() {
@@ -740,8 +757,12 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
 
         // Calculate the likelihoods: CPU intensive part.
-        readLikelihoods =
-                likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads, true);
+        if (hcArgs.stepwiseFiltering) {
+            readLikelihoods = filterStepLikelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads, true);
+        } else {
+            readLikelihoods =
+                    likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads, true);
+        }
 
         alleleLikelihoodWriter.ifPresent(
                 writer -> writer.writeAlleleLikelihoods(readLikelihoods));
@@ -768,7 +789,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
 
 
-        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
+        AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
         Set<Integer> suspiciousLocations = new HashSet<>();
         if (hcArgs.filterAlleles) {
             logger.debug("Filtering alleles");
@@ -787,9 +808,6 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             subsettedReadLikelihoodsFinal = uncollapsedReadLikelihoods;
         }
 
-        //Realign reads to their best haplotype.
-        final Map<GATKRead, GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(subsettedReadLikelihoodsFinal, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner);
-        subsettedReadLikelihoodsFinal.changeEvidence(readRealignments);
 
         // Note: we used to subset down at this point to only the "best" haplotypes in all samples for genotyping, but there
         //  was a bad interaction between that selection and the marginalization that happens over each event when computing
@@ -797,6 +815,18 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         //  haplotype containing C as reference (and vice versa).  Now this is fine if all possible haplotypes are included
         //  in the genotyping, but we lose information if we select down to a few haplotypes.  [EB]
         haplotypes = subsettedReadLikelihoodsFinal.alleles();
+
+        // Reproscess with the HMM if we are in stepwise filtering mode
+        if (hcArgs.stepwiseFiltering) {
+            subsettedReadLikelihoodsFinal = (likelihoodCalculationEngine).computeReadLikelihoods(
+                    subsettedReadLikelihoodsFinal.alleles(),
+                    assemblyResult.getRegionForGenotyping().getHeader(),
+                    samplesList, reads, true);
+        }
+
+        //Realign reads to their best haplotype.
+        final Map<GATKRead, GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(subsettedReadLikelihoodsFinal, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner);
+        subsettedReadLikelihoodsFinal.changeEvidence(readRealignments);
 
         if (HaplotypeCallerGenotypingDebugger.isEnabled()) {
             for (int counter = 0; counter < readLikelihoods.sampleEvidence(0).size(); counter++) {

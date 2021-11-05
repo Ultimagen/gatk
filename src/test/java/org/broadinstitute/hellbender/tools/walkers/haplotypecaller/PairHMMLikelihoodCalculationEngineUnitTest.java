@@ -18,7 +18,6 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import java.io.File;
 import java.util.*;
 
 /**
@@ -130,7 +129,7 @@ public final class PairHMMLikelihoodCalculationEngineUnitTest extends GATKBaseTe
 
         for ( int i = 1; i < insQuals.length; i++ ) {
 
-            final int repeatLengthFromCovariate = PairHMMLikelihoodCalculationEngine.findTandemRepeatUnits(readString.getBytes(), i-1).getRight();
+            final int repeatLengthFromCovariate = ReadLikelihoodCalculationEngine.findTandemRepeatUnits(readString.getBytes(), i-1).getRight();
             final byte adjustedScore = PairHMMLikelihoodCalculationEngine.getErrorModelAdjustedQual(repeatLengthFromCovariate, 3.0);
 
             Assert.assertEquals(insQuals[i - 1], adjustedScore);

@@ -5,9 +5,9 @@ import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.ArgumentCollection;
 import org.broadinstitute.barclay.argparser.Hidden;
 import org.broadinstitute.hellbender.engine.GATKPath;
-import org.broadinstitute.hellbender.utils.dragstr.DragstrParams;
 import org.broadinstitute.hellbender.utils.QualityUtils;
 import org.broadinstitute.hellbender.utils.pairhmm.PairHMM;
+import org.ultimagen.flowBasedRead.alignment.FlowBasedHMMEngine;
 
 import java.io.Serializable;
 
@@ -49,7 +49,7 @@ public final class LikelihoodEngineArgumentCollection implements Serializable {
 
     @Advanced
     @Argument(fullName="expected-mismatch-rate-for-read-disqualification", doc="Error rate used to set expectation for post HMM read disqualification based on mismatches", optional = true)
-    public double expectedErrorRatePerBase = PairHMMLikelihoodCalculationEngine.DEFAULT_EXPECTED_ERROR_RATE_PER_BASE;
+    public double expectedErrorRatePerBase = ReadLikelihoodCalculationEngine.DEFAULT_EXPECTED_ERROR_RATE_PER_BASE;
 
     /**
      * The PairHMM implementation to use for genotype likelihood calculations. The various implementations balance a tradeoff of accuracy and runtime.
@@ -112,6 +112,19 @@ public final class LikelihoodEngineArgumentCollection implements Serializable {
 
     @ArgumentCollection
     public PairHMMNativeArgumentCollection pairHMMNativeArgs = new PairHMMNativeArgumentCollection();
+
+
+    //TODO all of these are placeholder arguments and should really bbe either generalized or deleted:
+    @Hidden
+    @Argument(fullName="flow-hmm-engine-min-indel-adjust", doc="FlowBasedHMM Indel qualities below this threshold will be reduced to this minimum")
+    public int minUsableIndelScoreToUse = FlowBasedHMMEngine.MIN_USABLE_Q_SCORE_DEFAULT;
+    @Hidden
+    @Argument(fullName="flow-hmm-engine-flat-insertion-penatly", doc="FlowBasedHMM flat insertion penalty for frameshifts")
+    public int flatInsertionPenatly = 45;
+    @Hidden
+    @Argument(fullName="flow-hmm-engine-flat-deletion-penatly", doc="FlowBasedHMM flat deletion penalty for frameshifts")
+    public int flatDeletionPenalty =45;
+
 }
 
 
