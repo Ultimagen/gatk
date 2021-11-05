@@ -15,13 +15,13 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.ultimagen.FlowConstants;
 import org.ultimagen.flowBasedRead.read.FlowBasedHaplotype;
+import org.ultimagen.flowBasedRead.read.FlowBasedKeyCodec;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
 import org.ultimagen.flowBasedRead.utils.Direction;
 import org.ultimagen.flowBasedRead.utils.FlowBasedAlignmentArgumentCollection;
 
 import java.util.*;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.ToDoubleFunction;
@@ -340,9 +340,9 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
                 logger.debug("read        " + read.getName() + " " + read.getBasesString());
                 logger.debug("haplotype.f " + read.getName() + " " + new String(haplotype.getFlowOrderArray()));
                 logger.debug("read.f      " + read.getName() + " " + new String(read.getFlowOrderArray()));
-                logger.debug("haplotype.K " + read.getName() + " " + FlowBasedRead.keyAsString(haplotype.getKey()));
-                logger.debug("haplotype.k " + read.getName() + " " + FlowBasedRead.keyAsString(Arrays.copyOfRange(haplotype.getKey(), clipLeft, clipRight)));
-                logger.debug("read.k      " + read.getName() + " " + FlowBasedRead.keyAsString(read.getKey()));
+                logger.debug("haplotype.K " + read.getName() + " " + FlowBasedKeyCodec.keyAsString(haplotype.getKey()));
+                logger.debug("haplotype.k " + read.getName() + " " + FlowBasedKeyCodec.keyAsString(Arrays.copyOfRange(haplotype.getKey(), clipLeft, clipRight)));
+                logger.debug("read.k      " + read.getName() + " " + FlowBasedKeyCodec.keyAsString(read.getKey()));
                 logger.debug("starting point: " + read.getName() + " " + startingPoint);
             }
 
@@ -407,9 +407,9 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
                 logger.debug("read        " + read.getName() + " " + read.getBasesString());
                 logger.debug("haplotype.f " + read.getName() + " " + new String(haplotype.getFlowOrderArray()));
                 logger.debug("read.f      " + read.getName() + " " + new String(read.getFlowOrderArray()));
-                logger.debug("haplotype.K " + read.getName() + " " + FlowBasedRead.keyAsString(haplotype.getKey()));
-                logger.debug("haplotype.k " + read.getName() + " " + FlowBasedRead.keyAsString(key));
-                logger.debug("read.k      " + read.getName() + " " + FlowBasedRead.keyAsString(read.getKey()));
+                logger.debug("haplotype.K " + read.getName() + " " + FlowBasedKeyCodec.keyAsString(haplotype.getKey()));
+                logger.debug("haplotype.k " + read.getName() + " " + FlowBasedKeyCodec.keyAsString(key));
+                logger.debug("read.k      " + read.getName() + " " + FlowBasedKeyCodec.keyAsString(read.getKey()));
                 logger.debug("starting point: " + read.getName() + " " + startingPoint);
             }
 
