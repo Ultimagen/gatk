@@ -38,6 +38,7 @@ import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.ultimagen.flowBasedRead.alignment.FlowBasedAlignmentEngine;
+import org.ultimagen.flowBasedRead.alignment.FlowBasedHMMEngine;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
 import org.ultimagen.flowBasedRead.utils.AlleleLikelihoodWriter;
 import org.ultimagen.flowBasedRead.utils.FlowBasedAlignmentArgumentCollection;
@@ -233,17 +234,18 @@ public final class AssemblyBasedCallerUtils {
      */
 
     public static ReadLikelihoodCalculationEngine createLikelihoodCalculationEngine(final LikelihoodEngineArgumentCollection likelihoodArgs, final boolean handleSoftClips) {
-        return createLikelihoodCalculationEngine(likelihoodArgs, new FlowBasedAlignmentArgumentCollection(), handleSoftClips);
+        return createLikelihoodCalculationEngine(likelihoodArgs, new FlowBasedAlignmentArgumentCollection(), handleSoftClips, likelihoodArgs.likelihoodEngineImplementation);
     }
 
     public static ReadLikelihoodCalculationEngine createLikelihoodCalculationEngine(final LikelihoodEngineArgumentCollection likelihoodArgs,
                                                                                     final FlowBasedAlignmentArgumentCollection flowBasedArgs,
-                                                                                    final boolean handleSoftclips) {
+                                                                                    final boolean handleSoftclips,
+                                                                                    final ReadLikelihoodCalculationEngine.Implementation implementation) {
         //AlleleLikelihoods::normalizeLikelihoods uses Double.NEGATIVE_INFINITY as a flag to disable capping
         final double log10GlobalReadMismappingRate = likelihoodArgs.phredScaledGlobalReadMismappingRate < 0 ? Double.NEGATIVE_INFINITY
                 : QualityUtils.qualToErrorProbLog10(likelihoodArgs.phredScaledGlobalReadMismappingRate);
 
-        switch ( likelihoodArgs.likelihoodEngineImplementation) {
+        switch ( implementation) {
             // TODO these constructors should eventually be matched so they both incorporate all the same ancilliary arguments
             case PairHMM:
                 return new PairHMMLikelihoodCalculationEngine((byte) likelihoodArgs.gcpHMM, likelihoodArgs.dontUseDragstrPairHMMScores ? null : DragstrParamUtils.parse(likelihoodArgs.dragstrParams),
@@ -252,6 +254,10 @@ public final class AssemblyBasedCallerUtils {
                 likelihoodArgs.expectedErrorRatePerBase, !likelihoodArgs.disableSymmetricallyNormalizeAllelesToReference, likelihoodArgs.disableCapReadQualitiesToMapQ, handleSoftclips);
             case FlowBased:
                 return new FlowBasedAlignmentEngine(flowBasedArgs, log10GlobalReadMismappingRate, likelihoodArgs.expectedErrorRatePerBase, likelihoodArgs.enableDynamicReadDisqualification, likelihoodArgs.readDisqualificationThresholdConstant);
+            case FlowBasedHMM:
+                return new FlowBasedHMMEngine(flowBasedArgs, (byte) likelihoodArgs.gcpHMM, log10GlobalReadMismappingRate, likelihoodArgs.expectedErrorRatePerBase, likelihoodArgs.pcrErrorModel,
+                        likelihoodArgs.dontUseDragstrPairHMMScores ? null : DragstrParamUtils.parse(likelihoodArgs.dragstrParams), likelihoodArgs.enableDynamicReadDisqualification, likelihoodArgs.readDisqualificationThresholdConstant,
+                        likelihoodArgs.minUsableIndelScoreToUse, (byte) likelihoodArgs.flatDeletionPenalty, (byte) likelihoodArgs.flatInsertionPenatly);
             default:
                 throw new UserException("Unsupported likelihood calculation engine.");
         }

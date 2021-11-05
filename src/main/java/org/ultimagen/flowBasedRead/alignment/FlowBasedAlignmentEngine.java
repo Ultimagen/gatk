@@ -70,30 +70,45 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
     }
 
     /**
+     * Finds the correct FlowOrder to be used for engine calculation
+     */
+    static String findFlowOrderForReadGroups(final SAMFileHeader hdr, final String flowOrder, final FlowBasedAlignmentArgumentCollection fbargs) {
+        String resultFlowOrder = flowOrder;
+        if ( resultFlowOrder == null && hdr.getReadGroups().size() > 0 ) {
+            //find the right flow order for the haplotypes (should fit to that of the reads)
+            for ( final SAMReadGroupRecord rg : hdr.getReadGroups() ) {
+                resultFlowOrder = rg.getAttribute("FO");
+                if ( resultFlowOrder != null && resultFlowOrder.length() >= fbargs.flowOrderCycleLength ) {
+                    resultFlowOrder = resultFlowOrder.substring(0, fbargs.flowOrderCycleLength);
+                    break;
+                }
+            }
+        }
+        return resultFlowOrder;
+    }
+
+    /**
      * Read/haplotype likelihood calculation for all samples
-     * @param assemblyResultSet the input assembly results.
      * @param samples the list of targeted samples.
      * @param perSampleReadList the input read sets stratified per sample.
      *
      * @param filterPoorly - if the poorly modeled reads should be removed
      * @return
      */
-    @Override
-    public AlleleLikelihoods<GATKRead, Haplotype> computeReadLikelihoods(final AssemblyResultSet assemblyResultSet,
+    public AlleleLikelihoods<GATKRead, Haplotype> computeReadLikelihoods(final List<Haplotype> haplotypeList,
+                                                                         final SAMFileHeader hdr,
                                                                          final SampleList samples,
                                                                          final Map<String, List<GATKRead>> perSampleReadList, final boolean filterPoorly) {
-        Utils.nonNull(assemblyResultSet, "assemblyResultSet is null");
         Utils.nonNull(samples, "samples is null");
         Utils.nonNull(perSampleReadList, "perSampleReadList is null");
+        Utils.nonNull(haplotypeList, "haplotypeList is null");
 
-        final List<Haplotype> haplotypeList = assemblyResultSet.getHaplotypeList();
         final AlleleList<Haplotype> haplotypes = new IndexedAlleleList<>(haplotypeList);
 
         // Add likelihoods for each sample's reads to our result
         final AlleleLikelihoods<GATKRead, Haplotype> result = new AlleleLikelihoods<>(samples, haplotypes, perSampleReadList);
         final int sampleCount = result.numberOfSamples();
         for (int i = 0; i < sampleCount; i++) {
-            final SAMFileHeader hdr= assemblyResultSet.getRegionForGenotyping().getHeader();
             computeReadLikelihoods(result.sampleMatrix(i), hdr);
         }
 
@@ -168,16 +183,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             processedReads.add(tmp);
         }
 
-        if ( flowOrder == null && hdr.getReadGroups().size() > 0 ) {
-            //find the right flow order for the haplotypes (should fit to that of the reads)
-            for ( final SAMReadGroupRecord rg : hdr.getReadGroups() ) {
-                flowOrder = rg.getAttribute("FO");
-                if ( flowOrder != null && flowOrder.length() >= fbargs.flowOrderCycleLength ) {
-                    flowOrder = flowOrder.substring(0, fbargs.flowOrderCycleLength);
-                    break;
-                }
-            }
-        }
+        flowOrder = findFlowOrderForReadGroups(hdr, flowOrder, fbargs);
         if ( flowOrder == null ) {
             throw new GATKException("Unable to perform flow based alignment without the flow order");
         }
@@ -222,12 +228,9 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
                 for (int j = 0; j < likelihoods.evidenceCount(); j++) {
                     final double likelihood = haplotypeReadMatching(fbh, processedReads.get(j));
                     likelihoods.set(i, j, likelihood);
-//                    if (logger.isDebugEnabled())
-//                        logger.debug("likelihood: " + likelihood + " " + processedReads.get(j).getName() + " " + fbh.getBaseString());
                 }
             }
         }
-
     }
 
 
@@ -467,8 +470,9 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         }
 
         result.normalizeLikelihoods(log10globalReadMismappingRate, symmetricallyNormalizeAllelesToReference);
-        if ( filterPoorly )
+        if ( filterPoorly ) {
             result.filterPoorlyModeledEvidence(log10MinTrueLikelihood(expectedErrorRatePerBase, false));
+        }
 
         return result;
     }
