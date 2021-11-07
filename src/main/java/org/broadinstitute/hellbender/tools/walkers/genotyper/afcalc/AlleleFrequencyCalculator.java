@@ -3,25 +3,20 @@ package org.broadinstitute.hellbender.tools.walkers.genotyper.afcalc;
 import htsjdk.variant.variantcontext.*;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
-import org.apache.commons.collections4.ListUtils;
-import org.apache.commons.lang.math.IntRange;
 import org.apache.commons.math3.special.Gamma;
 import org.apache.commons.math3.util.MathArrays;
-import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.*;
 import org.broadinstitute.hellbender.utils.dragstr.DragstrParams;
 import org.broadinstitute.hellbender.utils.Dirichlet;
 import org.broadinstitute.hellbender.utils.IndexRange;
 import org.broadinstitute.hellbender.utils.MathUtils;
 import org.broadinstitute.hellbender.utils.Utils;
-import org.broadinstitute.hellbender.utils.genotyper.AlleleList;
-import org.ultimagen.haplotypeCalling.LocationAndAllele;
+import org.ultimagen.haplotypeCalling.AlleleAndContext;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -130,8 +125,8 @@ public final class AlleleFrequencyCalculator {
 
         final List<Integer> alleleLengths = new ArrayList<>();
         for (Allele al : gls.asListOfAlleles()) {
-            if (al instanceof LocationAndAllele) {
-                alleleLengths.add(((LocationAndAllele) al).maxAlleleLength());
+            if (al instanceof AlleleAndContext) {
+                alleleLengths.add(((AlleleAndContext) al).maxAlleleLength());
             } else {
                 alleleLengths.add(al.length());
             }
