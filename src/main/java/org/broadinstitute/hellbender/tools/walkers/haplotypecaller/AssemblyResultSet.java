@@ -12,7 +12,7 @@ import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.haplotype.EventMap;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.param.ParamUtils;
-import org.ultimagen.haplotypeCalling.LHWRefView;
+import org.ultimagen.haplotypeCalling.HaplotypeCollapsing;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -47,7 +47,7 @@ public final class AssemblyResultSet {
     private OptionalInt lastMaxMnpDistanceUsed = OptionalInt.empty();
     private boolean debug;
     private static final Logger logger = LogManager.getLogger(AssemblyResultSet.class);
-    private LHWRefView refView;
+    private HaplotypeCollapsing haplotypeCollapsing;
 
     /**
      * Constructs a new empty assembly result set.
@@ -570,12 +570,12 @@ public final class AssemblyResultSet {
         this.debug = debug;
     }
 
-    public LHWRefView getRefView() {
-        return refView;
+    public HaplotypeCollapsing getHaplotypeCollapsing() {
+        return haplotypeCollapsing;
     }
 
-    public void setRefView(LHWRefView refView) {
-        this.refView = refView;
+    public void setHaplotypeCollapsing(HaplotypeCollapsing haplotypeCollapsing) {
+        this.haplotypeCollapsing = haplotypeCollapsing;
     }
 
     public void replaceAllHaplotypes(Set<Haplotype> list) {

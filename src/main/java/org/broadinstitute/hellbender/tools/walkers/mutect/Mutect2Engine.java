@@ -51,7 +51,7 @@ import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 import org.ultimagen.haplotypeCalling.AlleleFilteringMutect;
-import org.ultimagen.haplotypeCalling.LHWRefView;
+import org.ultimagen.haplotypeCalling.HaplotypeCollapsing;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -234,7 +234,7 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
                 .filter(vc -> MTAC.forceCallFiltered || vc.isNotFiltered()).collect(Collectors.toList());
 
         final AssemblyResultSet untrimmedAssemblyResult = AssemblyBasedCallerUtils.assembleReads(originalAssemblyRegion, givenAlleles, MTAC, header, samplesList, logger, referenceReader, assemblyEngine, aligner, false, MTAC.fbargs);
-        final LHWRefView refView = untrimmedAssemblyResult.getRefView();
+        final HaplotypeCollapsing haplotypeCollapsing = untrimmedAssemblyResult.getHaplotypeCollapsing();
 
         final SortedSet<VariantContext> allVariationEvents = untrimmedAssemblyResult.getVariationEvents(MTAC.maxMnpDistance);
         final AssemblyRegionTrimmer.Result trimmingResult = trimmer.trim(originalAssemblyRegion, allVariationEvents, referenceContext);
@@ -262,11 +262,11 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
         List<Haplotype> haplotypes = readLikelihoods.alleles();
 
         final AlleleLikelihoods<GATKRead, Haplotype> uncollapsedReadLikelihoods;
-        if ( refView != null ) {
+        if ( haplotypeCollapsing != null ) {
 
-            haplotypes = refView.uncollapseHaplotypesByRef(haplotypes, true, false, null);
+            haplotypes = haplotypeCollapsing.uncollapseHaplotypes(haplotypes, false, null);
             logger.debug(String.format("%d haplotypes before uncollapsing", haplotypes.size()));
-            Map<Haplotype, List<Haplotype>> identicalHaplotypesMap = LHWRefView.identicalByUncollapsingHaplotypeMap(haplotypes);
+            Map<Haplotype, List<Haplotype>> identicalHaplotypesMap = HaplotypeCollapsing.identicalBySequence(haplotypes);
             readLikelihoods.changeAlleles(haplotypes);
             uncollapsedReadLikelihoods = readLikelihoods.marginalize(identicalHaplotypesMap);
             logger.debug(String.format("%d haplotypes after uncollapsing", uncollapsedReadLikelihoods.numberOfAlleles()));

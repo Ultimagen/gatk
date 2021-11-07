@@ -23,7 +23,7 @@ import org.broadinstitute.hellbender.utils.param.ParamUtils;
 import org.broadinstitute.hellbender.utils.read.CigarUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
-import org.ultimagen.haplotypeCalling.LHWRefView;
+import org.ultimagen.haplotypeCalling.HaplotypeCollapsing;
 
 import java.io.File;
 import java.io.IOException;
@@ -135,7 +135,7 @@ public final class ReadThreadingAssembler {
                                               final ReadErrorCorrector readErrorCorrector,
                                               final SAMFileHeader header,
                                               final SmithWatermanAligner aligner,
-                                              final LHWRefView refView) {
+                                              final HaplotypeCollapsing haplotypeCollapsing) {
         Utils.nonNull(assemblyRegion, "Assembly engine cannot be used with a null AssemblyRegion.");
         Utils.nonNull(assemblyRegion.getPaddedSpan(), "Active region must have an extended location.");
         Utils.nonNull(refHaplotype, "Reference haplotype cannot be null.");
@@ -153,8 +153,8 @@ public final class ReadThreadingAssembler {
 
         final List<AbstractReadThreadingGraph> nonRefRTGraphs = new LinkedList<>();
         final List<SeqGraph> nonRefSeqGraphs = new LinkedList<>();
-        if ( refView != null )
-            logger.debug("starting runLocalAssembly with refView: " + refView);
+        if ( haplotypeCollapsing != null )
+            logger.debug("starting runLocalAssembly with haplotypeCollapsing: " + haplotypeCollapsing);
         final AssemblyResultSet resultSet = new AssemblyResultSet();
         resultSet.setRegionForGenotyping(assemblyRegion);
         resultSet.setFullReferenceWithPadding(fullReferenceWithPadding);
@@ -162,7 +162,7 @@ public final class ReadThreadingAssembler {
         final SimpleInterval activeRegionExtendedLocation = assemblyRegion.getPaddedSpan();
         refHaplotype.setGenomeLocation(activeRegionExtendedLocation);
         resultSet.add(refHaplotype);
-        resultSet.setRefView(refView);
+        resultSet.setHaplotypeCollapsing(haplotypeCollapsing);
         // either follow the old method for building graphs and then assembling or assemble and haplotype call before expanding kmers
         if (generateSeqGraph) {
             assembleKmerGraphsAndHaplotypeCall(refHaplotype, refLoc, header, aligner,
@@ -412,8 +412,8 @@ public final class ReadThreadingAssembler {
 
 
             // uncollapse haplotypes now?
-            if ( resultSet != null && resultSet.getRefView() != null ) {
-                returnHaplotypes = new LinkedHashSet<>(resultSet.getRefView().uncollapseHaplotypesByRef(resultSet.getHaplotypeList(), true, true, null));
+            if ( resultSet != null && resultSet.getHaplotypeCollapsing() != null ) {
+                returnHaplotypes = new LinkedHashSet<>(resultSet.getHaplotypeCollapsing().uncollapseHaplotypes(resultSet.getHaplotypeList(), true, null));
                 if (resultSet!=null) { //linkedDebruijnGraph does not  have a resultSet?
                     resultSet.replaceAllHaplotypes(returnHaplotypes);
                 }

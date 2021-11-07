@@ -8,7 +8,6 @@ import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.argparser.ArgumentCollection;
-import org.broadinstitute.barclay.argparser.BetaFeature;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
 import org.broadinstitute.barclay.argparser.ExperimentalFeature;
 import org.broadinstitute.barclay.help.DocumentedFeature;
@@ -30,7 +29,7 @@ import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
-import org.ultimagen.haplotypeCalling.LHWRefView;
+import org.ultimagen.haplotypeCalling.HaplotypeCollapsing;
 
 import java.util.*;
 
@@ -121,13 +120,13 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                     final SimpleInterval  haplotypeSpan = new SimpleInterval(bestHaplotypes.get(0).getGenomeLocation());
                     final byte[]          refBases = reference.queryAndPrefetch(haplotypeSpan).getBases();
 
-                    LHWRefView            refView = null;
+                    HaplotypeCollapsing haplotypeCollapsing = null;
                     final List<Haplotype> processedHaplotypes = new LinkedList<>();
                     if ( (hcArgs.flowAssemblyCollapseHKerSize > 0)
-                                    && LHWRefView.needsCollapsing(refBases, hcArgs.flowAssemblyCollapseHKerSize, logger, false) ) {
-                        refView = new LHWRefView(hcArgs.flowAssemblyCollapseHKerSize, hcArgs.flowAssemblyCollapsePartialMode, refBases, haplotypeSpan, logger, false,
+                                    && HaplotypeCollapsing.needsCollapsing(refBases, hcArgs.flowAssemblyCollapseHKerSize, logger, false) ) {
+                        haplotypeCollapsing = new HaplotypeCollapsing(hcArgs.flowAssemblyCollapseHKerSize, hcArgs.flowAssemblyCollapsePartialMode, refBases, haplotypeSpan, logger, false,
                                 SmithWatermanAligner.getAligner(SmithWatermanAligner.Implementation.FASTEST_AVAILABLE));
-                        processedHaplotypes.addAll(refView.uncollapseHaplotypesByRef(bestHaplotypes, false, true, refBases));
+                        processedHaplotypes.addAll(haplotypeCollapsing.uncollapseHaplotypes(bestHaplotypes, true, refBases));
                     }
                     else {
                         processedHaplotypes.addAll(bestHaplotypes);
