@@ -1,9 +1,12 @@
 package org.broadinstitute.hellbender.utils;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.broadinstitute.hellbender.exceptions.UserException;
 
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.Random;
 
 /**
@@ -350,5 +353,38 @@ public final class BaseUtils {
         }
         // the only possibility left is G/T
         return 'K';
+    }
+
+    // iterator for iterating over the hmers of a bases array
+    public static class HmerIterator implements Iterator<Pair<Byte,Integer>> {
+
+        final private byte[]    bases;          // bytes to break into hmers
+        private int             nextOffset;     // offset to be used in next() hmer
+
+        public HmerIterator(final byte[] bases) {
+            this.bases = bases;
+            this.nextOffset = 0;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return nextOffset < bases.length;
+        }
+
+        @Override
+        public Pair<Byte,Integer> next() {
+
+            // scan until end of hmer or end of bases
+            final int           startingOffset = nextOffset;
+            final byte          hmerBase = bases[nextOffset++];
+            int                 hmerLength = 1;
+            while ( nextOffset < bases.length && bases[nextOffset] == hmerBase ) {
+                hmerLength++;
+                nextOffset++;
+            }
+
+            // return hmer
+            return new ImmutablePair<>(hmerBase, hmerLength);
+        }
     }
 }

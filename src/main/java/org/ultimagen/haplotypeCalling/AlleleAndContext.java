@@ -7,12 +7,12 @@ import htsjdk.variant.variantcontext.Allele;
  * not in the way it is done on LocationAndAlleles
  */
 
-public class LocationAndAllele extends Allele {
+public class AlleleAndContext extends Allele {
     final static public long serialVersionUID = 1L;
     private final int loc;
     private final String contig;
     private final Allele refAllele;
-    public LocationAndAllele(final String contig, final int loc, final Allele allele, final Allele refAllele) {
+    public AlleleAndContext(final String contig, final int loc, final Allele allele, final Allele refAllele) {
         super(allele, false);
         this.loc = loc;
         this.contig = contig;
@@ -34,7 +34,7 @@ public class LocationAndAllele extends Allele {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        final org.ultimagen.haplotypeCalling.LocationAndAllele that = (org.ultimagen.haplotypeCalling.LocationAndAllele) o;
+        final AlleleAndContext that = (AlleleAndContext) o;
 
         if (loc != that.loc) return false;
         return super.equals(that) && this.refAllele.equals(that.getRefAllele());

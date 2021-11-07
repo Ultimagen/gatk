@@ -3,8 +3,6 @@ package org.broadinstitute.hellbender.tools.walkers.genotyper.afcalc;
 import htsjdk.variant.variantcontext.*;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
-import org.apache.commons.collections4.ListUtils;
-import org.apache.commons.lang.math.IntRange;
 import org.apache.commons.math3.special.Gamma;
 import org.apache.commons.math3.util.MathArrays;
 import org.broadinstitute.hellbender.utils.*;
@@ -14,8 +12,7 @@ import org.broadinstitute.hellbender.utils.Dirichlet;
 import org.broadinstitute.hellbender.utils.IndexRange;
 import org.broadinstitute.hellbender.utils.MathUtils;
 import org.broadinstitute.hellbender.utils.Utils;
-import org.broadinstitute.hellbender.utils.genotyper.AlleleList;
-import org.ultimagen.haplotypeCalling.LocationAndAllele;
+import org.ultimagen.haplotypeCalling.AlleleAndContext;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeAlleleCounts;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeCalculationArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeLikelihoodCalculator;
@@ -25,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -157,8 +153,8 @@ public final class AlleleFrequencyCalculator {
 
         final List<Integer> alleleLengths = new ArrayList<>();
         for (Allele al : gls.asListOfAlleles()) {
-            if (al instanceof LocationAndAllele) {
-                alleleLengths.add(((LocationAndAllele) al).maxAlleleLength());
+            if (al instanceof AlleleAndContext) {
+                alleleLengths.add(((AlleleAndContext) al).maxAlleleLength());
             } else {
                 alleleLengths.add(al.length());
             }
@@ -209,6 +205,7 @@ public final class AlleleFrequencyCalculator {
 
         // re-usable buffers of the log10 genotype posteriors of genotypes missing each allele
         final List<DoubleArrayList> log10AbsentPosteriors = IntStream.range(0,numAlleles).mapToObj(n -> new DoubleArrayList()).collect(Collectors.toList());
+
         for (final Genotype g : genotypes) {
             if (!GenotypeUtils.genotypeIsUsableForAFCalculation(g)) {
                 continue;
@@ -239,12 +236,10 @@ public final class AlleleFrequencyCalculator {
             // for each allele, we collect the log10 probabilities of genotypes in which the allele is absent, then add (in log space)
             // to get the log10 probability that the allele is absent in this sample
             log10AbsentPosteriors.forEach(DoubleArrayList::clear);  // clear the buffers.  Note that this is O(1) due to the primitive backing array
-            log10PresentPosteriors.forEach(DoubleArrayList::clear);  // clear the buffers.  Note that this is O(1) due to the primitive backing array
 
             for (int genotype = 0; genotype < glCalc.genotypeCount(); genotype++) {
                 final double log10GenotypePosterior = log10GenotypePosteriors[genotype];
                 glCalc.genotypeAlleleCountsAt(genotype).forEachAbsentAlleleIndex(a -> log10AbsentPosteriors.get(a).add(log10GenotypePosterior), numAlleles);
-                glCalc.genotypeAlleleCountsAt(genotype).forEachPresentAlleleIndex(a -> log10PresentPosteriors.get(a).add(log10GenotypePosterior), numAlleles);
             }
 
             final double[] log10PNoAllele = log10AbsentPosteriors.stream()

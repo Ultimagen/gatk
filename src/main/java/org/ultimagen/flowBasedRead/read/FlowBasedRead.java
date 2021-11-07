@@ -1,7 +1,5 @@
 package org.ultimagen.flowBasedRead.read;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.squareup.okhttp.internal.Util;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMFileHeader;
@@ -21,7 +19,6 @@ import org.broadinstitute.hellbender.utils.read.CigarUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
-import org.ultimagen.flowBasedRead.utils.Direction;
 import org.ultimagen.flowBasedRead.utils.FlowBasedAlignmentArgumentCollection;
 
 import java.io.*;
@@ -89,6 +86,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private byte[] readInsQuals;
     private byte[] readDelQuals;
     private byte[] overallGCP;
+
+    public enum Direction {
+        REFERENCE, SYNTHESIS
+    }
 
     /**
 
