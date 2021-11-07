@@ -148,6 +148,8 @@ public class VariantRecallerResultWriter {
                         line.append(' ');
                         line.append(read.isReverseStrand() ? 1 : 0);
                         line.append(' ');
+                        line.append(read.getMappingQuality());
+                        line.append(' ');
                         line.append(StringUtils.join(ArrayUtils.toObject(lineValues), " "));
 
                         // add bytes at variant location?
@@ -181,6 +183,7 @@ public class VariantRecallerResultWriter {
                             line.append(bases);
                             line.append(' ');
                             line.append(firstBaseUnclippedOfs);
+                            line.append(' ');
                             line.append(fileHeader.getReadGroup(read.getReadGroup()).getSample());
                             vcLines.add(new Tuple<>(sortKey, line.toString()));
                         }

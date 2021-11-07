@@ -295,12 +295,28 @@ public final class ReadUtils {
         return read.isReverseStrand() ? read.getUnclippedEnd() : read.getUnclippedStart();
     }
 
-   public static int getSelectedRecordStart(final GATKRead rec, AtomicInteger endUncertainty, SAMFileHeader header, MarkDuplicatesSparkArgumentCollection mdArgs) {
-        if ( endUncertainty == null && mdArgs.FLOW_SKIP_START_HOMOPOLYMERS != 0 ) {
-            byte[]      bases = rec.getBasesNoCopy();
-            int         ofs = 0;
-            byte        hmerBase = bases[ofs];
-            byte[]      flowOrder = getReadFlowOrder(header, rec);
+    /**
+     * Get a starting location for the read, mainly for the purpose of comparing it with another one to find duplicates.
+     * To reduce uniqueness, there might be different definitions of what a read start is. To begin with, it can be the
+     * (hard) clipped or unclipped start. Furthermore, the MarkDuplicates tool defines additional options for determining
+     * the start location, such as skipping the first HMER, allowing for uncertainty or the returning of the unclipped
+     * location based on a mapping quality value threshold.
+     *
+     * Note that this function operates in the REFERENCE direction - meaning that for reverse reads it should be called to
+     * get the read's end.
+     *
+     * @param gatkRead - read to get the MarkDuplicates' start location
+     * @param uncertain - location might be uncertain
+     * @param header - reads file SAMHeader
+     * @param mdArgs - MarkDuplicates argument collection
+     * @return - read start location, for MarkDuplicates
+     */
+   public static int getMarkDupReadStart(final GATKRead gatkRead, final boolean uncertain, final SAMFileHeader header, final MarkDuplicatesSparkArgumentCollection mdArgs) {
+        if ( !uncertain && mdArgs.FLOW_SKIP_START_HOMOPOLYMERS != 0 ) {
+            final byte[]      bases = gatkRead.getBasesNoCopy();
+            final byte[]      flowOrder = getReadFlowOrder(header, gatkRead);
+
+            byte        hmerBase = bases[0];
             int         flowOrderOfs = 0;
             int         hmersLeft = mdArgs.FLOW_SKIP_START_HOMOPOLYMERS;      // number of hmer left to trim
 
@@ -314,11 +330,11 @@ public final class ReadUtils {
 
             int         hmerSize = 1;
             for ( ; hmerSize < bases.length ; hmerSize++ )
-                if (bases[ofs + hmerSize] != hmerBase) {
+                if (bases[hmerSize] != hmerBase) {
                     if ( --hmersLeft <= 0 )
                         break;
                     else {
-                        hmerBase = bases[ofs + hmerSize];
+                        hmerBase = bases[hmerSize];
                         if ( flowOrder != null ) {
                             if ( ++flowOrderOfs >= flowOrder.length )
                                 flowOrderOfs = 0;
@@ -332,25 +348,26 @@ public final class ReadUtils {
                         }
                     }
                 }
-            int     start = rec.getUnclippedStart() + hmerSize;
-            return mdArgs.FLOW_USE_CLIPPED_LOCATIONS ? Math.max(start, rec.getStart()) : start;
+            final int     start = gatkRead.getUnclippedStart() + hmerSize;
+            return mdArgs.FLOW_USE_CLIPPED_LOCATIONS ? Math.max(start, gatkRead.getStart()) : start;
         }
-        else if ( tmTagIddicatesUnclipped(rec, mdArgs.FLOW_Q_IS_KNOWN_END) ) {
-            return rec.getUnclippedStart();
-        } else if ( endUncertainty != null && tmTagIddicatesNoUncertianty(rec) ) {
+        else if ( tmTagIddicatesUnclipped(gatkRead, mdArgs.FLOW_Q_IS_KNOWN_END) ) {
+            return gatkRead.getUnclippedStart();
+        } else if ( uncertain && tmTagIddicatesNoUncertianty(gatkRead) ) {
             return FLOW_BASED_INSIGNIFICANT_END_UNCERTIANTY;
         } else if ( mdArgs.FLOW_USE_CLIPPED_LOCATIONS ) {
-            return rec.getStart();
+            return gatkRead.getStart();
         } else
-            return rec.getUnclippedStart();
+            return gatkRead.getUnclippedStart();
     }
 
-    public static int getSelectedRecordEnd(final GATKRead rec, AtomicInteger endUncertainty, SAMFileHeader header, MarkDuplicatesSparkArgumentCollection mdArgs) {
-        if ( endUncertainty == null && mdArgs.FLOW_SKIP_START_HOMOPOLYMERS != 0 ) {
-            byte[]      bases = rec.getBasesNoCopy();
-            int         ofs = 0;
-            byte        hmerBase = bases[bases.length - 1 - ofs];
-            byte[]      flowOrder = getReadFlowOrder(header, rec);
+    // this method complements getMarkDupReadStart with respect to the read's end location for MarkDuplicates
+    public static int getMarkDupReadEnd(final GATKRead gatkRead, boolean uncertain, SAMFileHeader header, MarkDuplicatesSparkArgumentCollection mdArgs) {
+        if ( !uncertain && mdArgs.FLOW_SKIP_START_HOMOPOLYMERS != 0 ) {
+            final byte[]      bases = gatkRead.getBasesNoCopy();
+            final byte[]      flowOrder = getReadFlowOrder(header, gatkRead);
+
+            byte        hmerBase = bases[bases.length - 1];
             int         flowOrderOfs = 0;
             int         hmersLeft = mdArgs.FLOW_SKIP_START_HOMOPOLYMERS;      // number of hmer left to trim
 
@@ -364,11 +381,11 @@ public final class ReadUtils {
 
             int         hmerSize = 1;
             for ( ; hmerSize < bases.length ; hmerSize++ )
-                if (bases[bases.length - 1 - hmerSize - ofs] != hmerBase) {
+                if (bases[bases.length - 1 - hmerSize] != hmerBase) {
                     if ( --hmersLeft <= 0 )
                         break;
                     else {
-                        hmerBase = bases[bases.length - 1 - hmerSize - ofs];
+                        hmerBase = bases[bases.length - 1 - hmerSize];
                         if ( flowOrder != null ) {
                             if (++flowOrderOfs >= flowOrder.length)
                                 flowOrderOfs = 0;
@@ -382,17 +399,17 @@ public final class ReadUtils {
                         }
                     }
                 }
-            int     end = rec.getUnclippedEnd() - hmerSize;
-            return mdArgs.FLOW_USE_CLIPPED_LOCATIONS ? Math.min(end, rec.getEnd()) : end;
+            final int     end = gatkRead.getUnclippedEnd() - hmerSize;
+            return mdArgs.FLOW_USE_CLIPPED_LOCATIONS ? Math.min(end, gatkRead.getEnd()) : end;
         }
-        else if ( tmTagIddicatesUnclipped(rec, mdArgs.FLOW_Q_IS_KNOWN_END) ) {
-            return rec.getUnclippedEnd();
-        } else if ( endUncertainty != null && tmTagIddicatesNoUncertianty(rec) ) {
+        else if ( tmTagIddicatesUnclipped(gatkRead, mdArgs.FLOW_Q_IS_KNOWN_END) ) {
+            return gatkRead.getUnclippedEnd();
+        } else if ( uncertain && tmTagIddicatesNoUncertianty(gatkRead) ) {
             return FLOW_BASED_INSIGNIFICANT_END_UNCERTIANTY;
         } else if ( mdArgs.FLOW_USE_CLIPPED_LOCATIONS ) {
-            return rec.getEnd();
+            return gatkRead.getEnd();
         } else
-            return rec.getUnclippedEnd();
+            return gatkRead.getUnclippedEnd();
     }
 
     public static boolean tmTagIddicatesNoUncertianty(final GATKRead rec) {

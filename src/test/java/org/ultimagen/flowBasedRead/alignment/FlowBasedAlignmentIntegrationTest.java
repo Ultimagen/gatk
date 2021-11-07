@@ -8,10 +8,11 @@ import org.ultimagen.TestFileVerifySame;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.regex.Pattern;
 
 public class FlowBasedAlignmentIntegrationTest extends CommandLineProgramTest {
 
-    protected static String    testDir = publicTestDir + "/large";
+    private static String    testDir = publicTestDir + "/large";
 
     @Test
     public void testMatrix() throws IOException {
@@ -35,8 +36,10 @@ public class FlowBasedAlignmentIntegrationTest extends CommandLineProgramTest {
 
         // verify that output file has been created
         // walk the output and expected files, compare non-comment lines
+        // we are using a specialsed verifier to accomodate for rounding errors
         Assert.assertTrue((new File(outputPath)).exists());
-        TestFileVerifySame.verifySame(outputPath, publicTestDir + "/" + FlowTestConstants.FLOW_BASED_ALIGNMENT_DATA_DIR + "/input_jukebox_for_test.alm");
+        TestFileVerifySame      tester = new TestFileVerifySame.NearlySameDoubles();
+        tester.verifySame(outputPath, publicTestDir + "/" + FlowTestConstants.FLOW_BASED_ALIGNMENT_DATA_DIR + "/input_jukebox_for_test.alm");
     }
 
     @Override

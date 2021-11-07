@@ -270,77 +270,6 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
         return new CalledHaplotypes(phasedCalls, calledHaplotypes);
     }
 
-
-    // Note: this is used in VariantRecaller
-    public Map<Integer,AlleleLikelihoods<GATKRead, Allele>> assignGenotypeLikelihoods2(final List<Haplotype> haplotypes,
-                                                      final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods,
-                                                      final Map<String, List<GATKRead>> perSampleFilteredReadList,
-                                                      final byte[] ref,
-                                                      final SimpleInterval refLoc,
-                                                      final SimpleInterval activeRegionWindow,
-                                                      final FeatureContext tracker,
-                                                      final List<VariantContext> givenAlleles,
-                                                      final boolean emitReferenceConfidence,
-                                                      final int maxMnpDistance,
-                                                      final SAMFileHeader header,
-                                                      final boolean withBamOut) {
-        // sanity check input arguments
-        Utils.nonEmpty(haplotypes, "haplotypes input should be non-empty and non-null");
-        Utils.validateArg(readLikelihoods != null && readLikelihoods.numberOfSamples() > 0, "readLikelihoods input should be non-empty and non-null");
-        Utils.validateArg(ref != null && ref.length > 0, "ref bytes input should be non-empty and non-null");
-        Utils.nonNull(refLoc, "refLoc must be non-null");
-        Utils.validateArg(refLoc.size() == ref.length, " refLoc length must match ref bytes");
-        Utils.nonNull(activeRegionWindow, "activeRegionWindow must be non-null");
-        Utils.nonNull(givenAlleles, "givenAlleles must be non-null");
-        Utils.validateArg(refLoc.contains(activeRegionWindow), "refLoc must contain activeRegionWindow");
-        ParamUtils.isPositiveOrZero(maxMnpDistance, "maxMnpDistance may not be negative.");
-
-        // update the haplotypes so we're ready to call, getting the ordered list of positions on the reference
-        // that carry events among the haplotypes
-        final SortedSet<Integer> startPosKeySet = EventMap.buildEventMapsForHaplotypes(haplotypes, ref, refLoc, hcArgs.assemblerArgs.debugAssembly, maxMnpDistance);
-
-        final int ploidy = configuration.genotypeArgs.samplePloidy;
-
-
-        if (withBamOut) {
-            //add annotations to reads for alignment regions and calling regions
-            AssemblyBasedCallerUtils.annotateReadLikelihoodsWithRegions(readLikelihoods, activeRegionWindow);
-        }
-
-        Map<Integer,AlleleLikelihoods<GATKRead, Allele>>    result = new LinkedHashMap<>();
-        for( final int loc : startPosKeySet ) {
-            if( loc < activeRegionWindow.getStart() || loc > activeRegionWindow.getEnd() ) {
-                continue;
-            }
-
-            final List<VariantContext> eventsAtThisLoc = AssemblyBasedCallerUtils.getVariantContextsFromActiveHaplotypes(loc,
-                    haplotypes, true);
-
-
-            final List<VariantContext> eventsAtThisLocWithSpanDelsReplaced = replaceSpanDels(eventsAtThisLoc,
-                    Allele.create(ref[loc - refLoc.getStart()], true), loc);
-
-            VariantContext mergedVC = AssemblyBasedCallerUtils.makeMergedVariantContext(eventsAtThisLocWithSpanDelsReplaced);
-
-            if( mergedVC == null ) {
-                continue;
-            }
-
-            final Map<Allele, List<Haplotype>> alleleMapper = AssemblyBasedCallerUtils.createAlleleMapper(mergedVC, loc, haplotypes, !hcArgs.disableSpanningEventGenotyping);
-
-            if( hcArgs.assemblerArgs.debugAssembly && logger != null ) {
-                logger.info("Genotyping event at " + loc + " with alleles = " + mergedVC.getAlleles());
-            }
-
-            AlleleLikelihoods<GATKRead, Allele> readAlleleLikelihoods = readLikelihoods.marginalize(alleleMapper);
-
-            result.put(loc, readAlleleLikelihoods);
-        }
-
-        return result;
-    }
-
-
     /**
      * If there is potential to use DRAGstr in the region based on the event map, then this method composes the
      *   STR finder.
@@ -427,7 +356,7 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
     }
 
     @VisibleForTesting
-    static List<VariantContext> replaceSpanDels(final List<VariantContext> eventsAtThisLoc, final Allele refAllele, final int loc) {
+    static public List<VariantContext> replaceSpanDels(final List<VariantContext> eventsAtThisLoc, final Allele refAllele, final int loc) {
         return eventsAtThisLoc.stream().map(vc -> replaceWithSpanDelVC(vc, refAllele, loc)).collect(Collectors.toList());
     }
 
@@ -568,6 +497,7 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
         Utils.validateArg(allelesToKeep!=null, "alleles to keep is null");
         Utils.validateArg(!allelesToKeep.contains(null), "alleles to keep contains null elements");
         Utils.validateArg(allelesToKeep.stream().anyMatch(Allele::isReference), "alleles to keep doesn't contain reference allele!");
+        Utils.validateArg(inputVC.getAlleles().containsAll(allelesToKeep), "alleles to keep is not a subset of input VC alleles");
         if(inputVC.getAlleles().size() == allelesToKeep.size()) return inputVC;
 
         final VariantContextBuilder vcb = new VariantContextBuilder(inputVC);

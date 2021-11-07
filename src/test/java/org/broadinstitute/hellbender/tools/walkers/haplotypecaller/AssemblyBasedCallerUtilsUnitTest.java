@@ -693,6 +693,21 @@ public class AssemblyBasedCallerUtilsUnitTest extends GATKBaseTest {
         });
 
 
+        // location forced to be after alleles - to activate Allele.SPAN_DEL insertion into the result
+        HashSet<Allele>         deletionLocationAfterAlleles = new HashSet<>(deletionStartingAtLocVc.getAlleles());
+        deletionLocationAfterAlleles.add(Allele.SPAN_DEL);
+        tests.add(new Object[]{
+                deletionStartingAtLocVc,
+                deletionStartingAtLocVc.getStart() + 1,
+                Arrays.asList(snpHaplotype, refHaplotype, deletionStartingAtLocHaplotype),
+                Maps.asMap(new HashSet<>(deletionLocationAfterAlleles),
+                        (key) -> {
+                            if ( key.equals(Allele.SPAN_DEL) ) return Arrays.asList(deletionStartingAtLocHaplotype);
+                            if (deletionStartingAtLocAlleles.get(1).equals(key)) return Arrays.asList();
+                            return Arrays.asList(snpHaplotype, refHaplotype);
+                        })
+        });
+
         return tests.toArray(new Object[][]{});
     }
 

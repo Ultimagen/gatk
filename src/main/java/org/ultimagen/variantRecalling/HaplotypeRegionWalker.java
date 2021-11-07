@@ -20,6 +20,13 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+/**
+ * a service class for HaplotypeBasedVariableRecaller that reads a SAM/BAM file, interprets the reads as haplotypes
+ * and called a provided consumer with the 'best' haplotypes found for a given quary location.
+ *
+ * The notion of best is controlled by a fittnessScore - which is related to the distance between the query location
+ * and the haplotype boundaries (less is better)
+ */
 public class HaplotypeRegionWalker {
 
     private static final Logger logger = LogManager.getLogger(HaplotypeRegionWalker.class);

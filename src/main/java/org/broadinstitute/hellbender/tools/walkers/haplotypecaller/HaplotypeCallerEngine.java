@@ -50,11 +50,10 @@ import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.broadinstitute.hellbender.utils.variant.HomoSapiensConstants;
 import org.broadinstitute.hellbender.utils.variant.writers.GVCFWriter;
 import org.broadinstitute.hellbender.utils.genotyper.SampleList;
-import org.ultimagen.flowBasedRead.alignment.FlowBasedAlignmentEngine;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
 import org.ultimagen.flowBasedRead.utils.AlleleLikelihoodWriter;
 import org.ultimagen.haplotypeCalling.AlleleFilteringHC;
-import org.ultimagen.haplotypeCalling.LHWRefView;
+import org.ultimagen.haplotypeCalling.HaplotypeCollapsing;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -544,18 +543,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
      */
     @Override
     public ActivityProfileState isActive(final AlignmentContext context, final ReferenceContext ref, final FeatureContext features) {
-        if (!hcArgs.STRATIFICATION_FOR_ACTIVE_REGION) {
-            return isActive_(context, ref, features, AlignmentContext.ReadOrientation.COMPLETE);
-        } else {
-            final ActivityProfileState forwardState = isActive_(context, ref, features, AlignmentContext.ReadOrientation.FORWARD);
-            final ActivityProfileState reverseState = isActive_(context, ref, features, AlignmentContext.ReadOrientation.REVERSE);
-
-            final double prob = Math.sqrt(forwardState.isActiveProb() * reverseState.isActiveProb());
-            final ActivityProfileState.Type resultState = forwardState.getResultState() == NONE && reverseState.getResultState() == NONE ? NONE : HIGH_QUALITY_SOFT_CLIPS;
-            final double mean = (forwardState.getResultValue().doubleValue() + reverseState.getResultValue().doubleValue()) / 2;
-
-            return new ActivityProfileState(forwardState.getLoc(), prob, resultState, mean);
-        }
+        return isActive_(context, ref, features, AlignmentContext.ReadOrientation.COMPLETE);
     }
 
     private ActivityProfileState isActive_(final AlignmentContext context, final ReferenceContext ref, final FeatureContext features, final AlignmentContext.ReadOrientation stratification ) {
@@ -603,38 +591,6 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             isActiveProb = vcOut == null ? 0.0 : QualityUtils.qualToProb(vcOut.getPhredScaledQual());
         }
 
-        if (hcArgs.strandBiasPileupPValue > 0 && isActiveProb > 0) {
-            int altFwd = 0;
-            int altRev = 0;
-            int refFwd = 0;
-            int refRev = 0;
-            for (final PileupElement pe : context.getBasePileup()) {
-                final boolean reverse = pe.getRead().isReverseStrand();
-                if (ReferenceConfidenceModel.isAltBeforeAssembly(pe, ref.getBase())) {
-                    if (reverse) {
-                        altRev++;
-                    } else {
-                        altFwd++;
-                    }
-                } else {
-                    if (reverse) {
-                        refRev++;
-                    } else {
-                        refFwd++;
-                    }
-                }
-            }
-
-            final int minAlt = Math.min(altFwd, altRev);
-            final int maxAlt = Math.max(altFwd, altRev);
-
-            final boolean isStrandArtifact = !(minAlt > STRAND_RATIO_TO_AUTOMATICALLY_ACCEPT_ACTIVE_PILEUP * maxAlt) &&
-                    (minAlt < STRAND_RATIO_TO_AUTOMATICALLY_REJECT_ACTIVE_PILEUP * maxAlt || FisherStrand.pValueForContingencyTable(new int[][] { {refFwd, refRev}, {altFwd, altRev}}) < hcArgs.strandBiasPileupPValue);
-
-            if (isStrandArtifact) {
-                return new ActivityProfileState(ref.getInterval(), 0.0);
-            }
-        }
         return new ActivityProfileState(ref.getInterval(), isActiveProb, averageHQSoftClips.mean() > AVERAGE_HQ_SOFTCLIPS_HQ_BASES_THRESHOLD ? ActivityProfileState.Type.HIGH_QUALITY_SOFT_CLIPS : ActivityProfileState.Type.NONE, averageHQSoftClips.mean() );
 
     }
@@ -774,19 +730,16 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
 
         // Calculate the likelihoods: CPU intensive part.
-        if (hcArgs.stepwiseFiltering) {
-            readLikelihoods = filterStepLikelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads, true);
-        } else {
-            readLikelihoods =
-                    likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads, true);
-        }
+        // flow based alignment might add an extra step of uncollapsing - implemented by uncollapseReadLikelihoods
+        // non-flow based alignment will not be affected.
+        readLikelihoods = uncollapseReadLikelihoods(untrimmedAssemblyResult,
+                hcArgs.stepwiseFiltering
+                        ? filterStepLikelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads, true)
+                        : likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads, true));
 
         alleleLikelihoodWriter.ifPresent(
                 writer -> writer.writeAlleleLikelihoods(readLikelihoods));
 
-        // Realign reads to their best haplotype.
-        final Map<GATKRead, GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(readLikelihoods, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner, assemblerThreadPool, readToHaplotypeSWParameters);
-        readLikelihoods.changeEvidence(readRealignments);
         haplotypes = readLikelihoods.alleles();
         final AlleleLikelihoods<GATKRead, Haplotype> uncollapsedReadLikelihoods;
         if ( refView != null ) {
@@ -816,16 +769,16 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
             AlleleFilteringHC alleleFilter = new AlleleFilteringHC(hcArgs, assemblyDebugOutStream, genotypingEngine);
             //need to update haplotypes to find the alleles
-            EventMap.buildEventMapsForHaplotypes(uncollapsedReadLikelihoods.alleles(),
+            EventMap.buildEventMapsForHaplotypes(readLikelihoods.alleles(),
                     assemblyResult.getFullReferenceWithPadding(),
                     assemblyResult.getPaddedReferenceLoc(),
                     hcArgs.assemblerArgs.debugAssembly,
                     hcArgs.maxMnpDistance);
-            subsettedReadLikelihoodsFinal = alleleFilter.filterAlleles(uncollapsedReadLikelihoods, assemblyResult.getPaddedReferenceLoc().getStart(), suspiciousLocations);
+            subsettedReadLikelihoodsFinal = alleleFilter.filterAlleles(readLikelihoods, assemblyResult.getPaddedReferenceLoc().getStart(), suspiciousLocations);
 
         } else {
             logger.debug("Not filtering alleles");
-            subsettedReadLikelihoodsFinal = uncollapsedReadLikelihoods;
+            subsettedReadLikelihoodsFinal = readLikelihoods;
         }
 
 
@@ -914,6 +867,31 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                     .stream()
                     .map(RMSMappingQuality.getInstance()::finalizeRawMQ)
                     .collect(Collectors.toList());
+        }
+    }
+
+    // possibly uncollapse the haplotypes inside a read likelihood matrix
+    private AlleleLikelihoods<GATKRead, Haplotype> uncollapseReadLikelihoods(final AssemblyResultSet assemblyResultSet, final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods) {
+
+        if ( assemblyResultSet.getHaplotypeCollapsing() != null ) {
+
+            List<Haplotype>     haplotypes = readLikelihoods.alleles();
+
+            haplotypes = assemblyResultSet.getHaplotypeCollapsing().uncollapseHaplotypes(haplotypes, false, null);
+            if ( logger.isDebugEnabled() ) {
+                logger.debug(String.format("%d haplotypes before uncollapsing", haplotypes.size()));
+            }
+            Map<Haplotype, List<Haplotype>> identicalHaplotypesMap = HaplotypeCollapsing.identicalBySequence(haplotypes);
+            readLikelihoods.changeAlleles(haplotypes);
+            final AlleleLikelihoods<GATKRead, Haplotype>  uncollapsedReadLikelihoods = readLikelihoods.marginalize(identicalHaplotypesMap);
+
+            if ( logger.isDebugEnabled() ) {
+                logger.debug(String.format("%d haplotypes after uncollapsing", uncollapsedReadLikelihoods.numberOfAlleles()));
+            }
+
+            return uncollapsedReadLikelihoods;
+        } else {
+            return readLikelihoods;
         }
     }
 

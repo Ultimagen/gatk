@@ -36,6 +36,6 @@ public class HaplotypeBasedVariantRecallerIntegrationTest extends CommandLinePro
         // verify that output file has been created
         // walk the output and expected files, compare non-comment lines
         Assert.assertTrue((new File(outputPath)).exists());
-        TestFileVerifySame.verifySame(outputPath, vcTestDir + "/bam1_bam2_output.csv");
+        (new TestFileVerifySame.NearlySameDoubles()).verifySame(outputPath, vcTestDir + "/bam1_bam2_output.csv");
     }
 }

@@ -18,6 +18,12 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Function;
 
+/**
+ * a service class for HaplotypeBasedVariableRecaller that reads SAM/BAM files.
+ *
+ * For each given location (query location) it returns reads from all files that fall into the region after
+ * trimming them accordign to span of a given variant context
+ */
 public class TrimmedReadsReader {
 
     private final List<SamReader>         samReaders = new LinkedList<>();

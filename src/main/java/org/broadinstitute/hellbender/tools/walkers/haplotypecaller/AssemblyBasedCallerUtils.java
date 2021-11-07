@@ -42,7 +42,7 @@ import org.ultimagen.flowBasedRead.alignment.FlowBasedHMMEngine;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
 import org.ultimagen.flowBasedRead.utils.AlleleLikelihoodWriter;
 import org.ultimagen.flowBasedRead.utils.FlowBasedAlignmentArgumentCollection;
-import org.ultimagen.haplotypeCalling.LHWRefView;
+import org.ultimagen.haplotypeCalling.HaplotypeCollapsing;
 
 import java.io.File;
 import java.util.*;
@@ -343,12 +343,12 @@ public final class AssemblyBasedCallerUtils {
 
         // estblish reference mapper, if needed
 
-        final LHWRefView refView = (argumentCollection.flowAssemblyCollapseHKerSize > 0 && LHWRefView.needsCollapsing(refHaplotype.getBases(), argumentCollection.flowAssemblyCollapseHKerSize, logger, argumentCollection.assemblerArgs.debugAssembly))
-                                            ? new LHWRefView(argumentCollection.flowAssemblyCollapseHKerSize, argumentCollection.flowAssemblyCollapsePartialMode, fullReferenceWithPadding,
+        final HaplotypeCollapsing haplotypeCollapsing = (argumentCollection.flowAssemblyCollapseHKerSize > 0 && HaplotypeCollapsing.needsCollapsing(refHaplotype.getBases(), argumentCollection.flowAssemblyCollapseHKerSize, logger, argumentCollection.assemblerArgs.debugAssembly))
+                                            ? new HaplotypeCollapsing(argumentCollection.flowAssemblyCollapseHKerSize, argumentCollection.flowAssemblyCollapsePartialMode, fullReferenceWithPadding,
                 paddedReferenceLoc, logger, argumentCollection.assemblerArgs.debugAssembly, aligner)
                                             : null;
-        if ( refView != null )
-            logger.debug("deploying refView on " + paddedReferenceLoc + ", region: " + region);
+        if ( haplotypeCollapsing != null )
+            logger.debug("deploying haplotypeCollapsing on " + paddedReferenceLoc + ", region: " + region);
 
         try {
             final AssemblyResultSet assemblyResultSet = assemblyEngine.runLocalAssembly(
@@ -358,9 +358,9 @@ public final class AssemblyBasedCallerUtils {
                     paddedReferenceLoc,
                     readErrorCorrector,
                     header, aligner,
-                    refView,
-                    , danglingEndSWParameters, haplotypeToReferenceSWParameters);
-            assemblyResultSet.setRefView(refView);
+                    haplotypeCollapsing,
+                    danglingEndSWParameters, haplotypeToReferenceSWParameters);
+            assemblyResultSet.setHaplotypeCollapsing(haplotypeCollapsing);
 
             if (!givenAlleles.isEmpty()) {
                 addGivenAlleles(region.getPaddedSpan().getStart(), givenAlleles, argumentCollection.maxMnpDistance, aligner, haplotypeToReferenceSWParameters, refHaplotype, assemblyResultSet);
