@@ -102,7 +102,7 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     public String alleleLikelihoodMatrixPath=null;
 
     @Advanced
-    @Argument(fullName = ALLELE_LIKELIHOOD_MATRIX_INTERVAL, doc="File to write alleleLikelihoodMatrix", optional=true)
+    @Argument(fullName = ALLELE_LIKELIHOOD_MATRIX_INTERVAL, doc="Interval for which to write the alleleLikelihoodMatrix", optional=true)
     public String alleleLikelihoodMatrixInterval=null;
 
     @Advanced
