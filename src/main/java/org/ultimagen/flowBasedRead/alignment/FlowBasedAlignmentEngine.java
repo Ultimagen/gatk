@@ -6,7 +6,6 @@ import htsjdk.samtools.SAMReadGroupRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.exceptions.GATKException;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyResultSet;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.ReadLikelihoodCalculationEngine;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.*;
@@ -17,7 +16,6 @@ import org.ultimagen.FlowConstants;
 import org.ultimagen.flowBasedRead.read.FlowBasedHaplotype;
 import org.ultimagen.flowBasedRead.read.FlowBasedKeyCodec;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
-import org.ultimagen.flowBasedRead.utils.Direction;
 import org.ultimagen.flowBasedRead.utils.FlowBasedAlignmentArgumentCollection;
 
 import java.util.*;
@@ -255,7 +253,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
      */
     public double haplotypeReadMatching(final FlowBasedHaplotype haplotype, final FlowBasedRead read) throws GATKException {
 
-        if (read.getDirection() != Direction.REFERENCE ) {
+        if (read.getDirection() != FlowBasedRead.Direction.REFERENCE ) {
             throw new GATKException.ShouldNeverReachHereException("Read should be aligned with the reference");
         }
 

@@ -13,10 +13,35 @@ import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAlignment;
 import org.broadinstitute.hellbender.utils.read.AlignmentThreadingUtils;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
-public class LHWRefView {
+/**
+ * Utility class, useful for flow based applications, implementing a workaround for long homopolymers handling.
+ *
+ * <h3>Why is HaplotypeCollapsing useful</h3>
+ *
+ * Flow based applications represent sequences of bases as a series of homopolymers encoded as a flow key.
+ * The flow key  consists of the lengths for each homopolymers, with spacers (0 length) according to a running flow order.
+ * (a full definition of flow space encoding is beyond the scope of this class).
+ *
+ * Lengths expressed in the key are limited to small number, usually between 10 and 12. This corrosponds to
+ * limitations present in the source of the flow reads.
+ *
+ * References and haplotypes derived from them do not possess this limitation. Therefore, they may contain homopolymers of lengths
+ * exceeding the ones represented by flow based reads. This presents a challenge when performing operations combining
+ * flow based reads and haplotypes originating from a reference. One such application is HaplotypeCalling.
+ *
+ * To overcome this, it is suggested that such applications may benefit from using a synthetic view of the reference which
+ * collapses homopolymers longer than the ones that can be represented by flow based reads. By doing so, the artifacts of
+ * this mismatch in spaces (base, flow) may be drastically reduced.
+ *
+ * Still, one is mostly interested in results (Haplotypes) in the original reference space, where no limit is imposed
+ * on the length of a homopolymer. This gives rise to the common operation provided by this class: the 'uncollapsing' of
+ * haplotypes so that long homopolymers are restored according to the reference they are aligned to.
+ *
+ * To perform this 'uncollapsing' the class employs several heuristics.
+ *
+ */
+public class HaplotypeCollapsing {
 
     final private int             hmerSizeThreshold;
     final private boolean         partialMode;
@@ -27,7 +52,13 @@ public class LHWRefView {
     final private boolean         debug;
     final private SmithWatermanAligner aligner;
 
-    public LHWRefView(final int hmerSizeThreshold, final boolean partialMode, final byte[] fullRef, final Locatable refLoc, final Logger logger, final boolean debug, final SmithWatermanAligner aligner) {
+    // uncollapseByRef result tuple
+    private static class UncollapseResult {
+        byte[]      bases;
+        int         offset;
+        boolean     collapsed;
+    }
+    public HaplotypeCollapsing(final int hmerSizeThreshold, final boolean partialMode, final byte[] fullRef, final Locatable refLoc, final Logger logger, final boolean debug, final SmithWatermanAligner aligner) {
 
         this.hmerSizeThreshold = hmerSizeThreshold;
         this.partialMode = partialMode;
@@ -37,56 +68,64 @@ public class LHWRefView {
         this.debug = debug;
         this.aligner = aligner;
         if ( debug ) {
-            logger.info("LHWRefView: >" + hmerSizeThreshold + "hmer, refLoc: " + refLoc + " fullRef:");
-            logger.info(basesAsString(fullRef));
+            logger.info("HaplotypeCollapsing: >" + hmerSizeThreshold + "hmer, refLoc: " + refLoc + " fullRef:");
+            logger.info(new String(fullRef));
         }
     }
 
-    public static boolean needsCollapsing(byte[] bases, int hmerSizeThreshold, final Logger logger, final boolean debug) {
+    public static boolean needsCollapsing(final byte[] bases, final int hmerSizeThreshold, final Logger logger, final boolean debug) {
 
         byte    lastBase = 0;
         int     baseSameCount = 0;
 
-        if ( debug ) {
+        if ( logger.isDebugEnabled() ) {
             logger.debug("checking for >" + hmerSizeThreshold + "hmer in:");
-            logger.debug(basesAsString(bases));
+            logger.debug(new String(bases));
         }
 
         // check if has at least one sequence of stable bases larger than threshold
-        int         baseIndex = 0;
         for  ( byte base : bases ) {
             if ( base == lastBase ) {
                 if ( ++baseSameCount >= hmerSizeThreshold ) {
-                    if ( debug )
-                        logger.debug("will collapse. found a stable sequence of at least " + (baseSameCount+1) + " of " + Character.toString((char)lastBase));
+                    if ( logger.isDebugEnabled() ) {
+                        logger.debug("will collapse. found a stable sequence of at least " + (baseSameCount + 1) + " of " + Character.toString((char) lastBase));
+                    }
                     return true;
                 }
             } else {
                 lastBase = base;
                 baseSameCount = 0;
             }
-            baseIndex++;
         }
 
-        if ( debug )
+        if ( logger.isDebugEnabled() ) {
             logger.debug("will not collapse");
+        }
         return false;
     }
 
-    public static Map<Haplotype, List<Haplotype>> identicalByUncollapsingHaplotypeMap(List<Haplotype> haplotypes) {
-        Map<String, List<Haplotype>> sequenceMap = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
-        haplotypes.forEach(h->sequenceMap.get(h.getBaseString()).add(h));
-        Map<Haplotype, List<Haplotype>> result = new HashMap<>();
-        sequenceMap.values().forEach( h->result.put(h.get(0), h));
-        Haplotype refHaplotype = AlleleFiltering.findReferenceHaplotype(haplotypes);
+    public static Map<Haplotype, List<Haplotype>> identicalBySequence(final List<Haplotype> haplotypes) {
 
-        // reference haplotype should always remain after collapsing identical haplotypes
-        if (refHaplotype==null)
+        // create a map where each node's value contains a list of haplotypes with an identical sequence
+        final Map<String, List<Haplotype>> sequenceMap = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
+        haplotypes.forEach(h -> sequenceMap.get(h.getBaseString()).add(h));
+
+        // create a map where each node's key is a haplotype and the value is the list of all haplotypes (incl self) with same sequence
+        final Map<Haplotype, List<Haplotype>> result = new HashMap<>();
+        sequenceMap.values().forEach(h -> result.put(h.get(0), h));
+
+        // find reference haplotype, there should always be one
+        Haplotype refHaplotype = AlleleFiltering.findReferenceHaplotype(haplotypes);
+        if ( refHaplotype == null )
             throw new IllegalArgumentException("Reference haplotype missing from the list of alleles");
 
-        if (!result.containsKey(refHaplotype)){
+        // make sure that result map contains the reference haplotype as one of the keys. rearrange if not
+        if ( !result.containsKey(refHaplotype) ) {
             for ( Haplotype k : result.keySet()) {
-                if (result.get(k).contains(refHaplotype)){
+                //  is the reference haplotype on this noode?
+                if ( result.get(k).contains(refHaplotype) ) {
+
+                    // switch node to be key'ed by the reference haplotype
                     result.put(refHaplotype, result.get(k));
                     result.remove(k);
                     break;
@@ -97,22 +136,23 @@ public class LHWRefView {
         return result;
     }
 
-    public List<Haplotype> uncollapseHaplotypesByRef(final Collection<Haplotype> haplotypes, boolean log, boolean limit, byte[] refBases) {
+    public List<Haplotype> uncollapseHaplotypes(final Collection<Haplotype> haplotypes, final boolean limit, final byte[] refBasesArg) {
 
         final List<Haplotype>       result = new LinkedList<>();
         final Map<Locatable, byte[]> refMap = new LinkedHashMap<>();
         int                         alignmentStartHapwrtRef = 0;
+        byte[]                      refBases = refBasesArg;
 
         // locate reference haplotype, if needed, also collect refMap
         for ( Haplotype h : haplotypes ) {
-            if (h.isReference()) {
-                if (refBases == null) {
+            if ( h.isReference() ) {
+                if ( refBases == null ) {
                     refBases = h.getBases();
                     alignmentStartHapwrtRef = h.getAlignmentStartHapwrtRef();
                 }
             } else {
                 byte[] ref = refMap.get(h.getGenomeLocation());
-                if (ref == null) {
+                if ( ref == null ) {
                     ref = uncollapsedPartialRef(h.getGenomeLocation());
                     refMap.put(h.getGenomeLocation(), ref);
                 }
@@ -120,64 +160,54 @@ public class LHWRefView {
         }
 
         // uncollapse haplotypes
-        for (Haplotype h : haplotypes) {
-            Haplotype alignedHaplotype = uncollapseSingleHaplotypeByRef(h, limit, refMap);
+        for ( Haplotype h : haplotypes ) {
+            final Haplotype alignedHaplotype = uncollapseSingleHaplotype(h, limit, refMap);
             alignedHaplotype.setUniquenessValue(result.size());
             result.add(alignedHaplotype);
         }
 
         // if we had a reference, generate cigar against it
         if ( refBases != null ) {
-            for (Haplotype h : result) {
-                if (!h.isReference()) {
-                    SmithWatermanAlignment alignment = aligner.align(refBases, h.getBases(), SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
+            for ( Haplotype h : result ) {
+                if ( !h.isReference() ) {
+                    final SmithWatermanAlignment alignment = aligner.align(refBases, h.getBases(), SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
                     h.setCigar(alignment.getCigar());
                     h.setAlignmentStartHapwrtRef(alignment.getAlignmentOffset() + alignmentStartHapwrtRef);
                 }
             }
         }
 
-        if ( log ) {
-            int         i = 0;
-            for (Haplotype h : haplotypes)
-                logHaplotype(h, "COL_" + (limit ? "P1_" : "P2_"), i++);
-            i = 0;
-            for (Haplotype h : result)
-                logHaplotype(h, "UNCOL_" + (limit ? "P1_" : "P2_"), i++);
-        }
-
         return result;
     }
 
-    private Haplotype uncollapseSingleHaplotypeByRef(final Haplotype h, boolean limit, Map<Locatable, byte[]> refMap) {
+    private Haplotype uncollapseSingleHaplotype(final Haplotype h, final boolean limit, final Map<Locatable, byte[]> refMap) {
 
         if ( !h.isReference() ) {
 
             // find ref for this location
             byte[] ref = refMap.get(h.getGenomeLocation());
-            if (ref == null) {
+            if ( ref == null ) {
                 ref = uncollapsedPartialRef(h.getGenomeLocation());
                 refMap.put(h.getGenomeLocation(), ref);
             }
-            AtomicInteger offset = new AtomicInteger();
-            AtomicBoolean didCollapse = new AtomicBoolean(false);
-            AtomicBoolean didCollapseRev = new AtomicBoolean(false);
-            byte[] alignedBases = uncollapseByRef(h.getBases(), ref, offset, false, didCollapse);
-            byte[] alignedBases1 = uncollapseByRef(h.getBases(), ref, offset, true, didCollapseRev);
-            if (alignedBases1.length > alignedBases.length) {
-                alignedBases = alignedBases1;
-                didCollapse.set(didCollapseRev.get());
+
+            // uncollapse haplotype, select direction producing a stronger/longer result
+            final UncollapseResult      resultFwd = uncollapseByRef(h.getBases(), ref, false);
+            final UncollapseResult      resultRev = uncollapseByRef(h.getBases(), ref, true);
+            final UncollapseResult      result = (resultRev.bases.length > resultFwd.bases.length) ? resultRev : resultFwd;
+
+            // limit?
+            if ( limit ) {
+                result.bases = collapseBases(result.bases);
             }
 
-            byte[] orgAlignedBases = alignedBases;
-            if (limit)
-                alignedBases = collapseBases(orgAlignedBases);
-            Haplotype alignedHaplotype = new Haplotype(alignedBases, h.isReference());
+            // build haplotype
+            Haplotype alignedHaplotype = new Haplotype(result.bases, h.isReference());
             alignedHaplotype.setScore(h.getScore());
             alignedHaplotype.setGenomeLocation(h.getGenomeLocation());
             alignedHaplotype.setEventMap(h.getEventMap());
-            alignedHaplotype.setAlignmentStartHapwrtRef(offset.get());
-            alignedHaplotype.setCollapsed(didCollapse.get());
+            alignedHaplotype.setAlignmentStartHapwrtRef(result.offset);
+            alignedHaplotype.setCollapsed(result.collapsed);
 
             return alignedHaplotype;
         } else {
@@ -185,15 +215,14 @@ public class LHWRefView {
         }
     }
 
-    private byte[] collapseBases(byte[] fullBases) {
+    private byte[] collapseBases(final byte[] fullBases) {
 
         // collapsed sequence would not be longer than full sequence
-        byte[]          collapsedBases = new byte[fullBases.length];
+        final byte[]          collapsedBases = new byte[fullBases.length];
 
         // loop while trimming
         byte    lastBase = 0;
         int     baseSameCount = 0;
-        int     srcOfs = 0;
         int     dstOfs = 0;
         boolean firstHomopolymer = true;
         for  ( byte base : fullBases ) {
@@ -207,49 +236,52 @@ public class LHWRefView {
                 }
             } else {
                 // unstable, simply store
-                if ( lastBase != 0 )
+                if ( lastBase != 0 ) {
                     firstHomopolymer = false;
+                }
                 lastBase = base;
                 baseSameCount = 0;
 
                 collapsedBases[dstOfs++] = base;
             }
-            srcOfs++;
         }
 
         // adjust size of collapsedBases
         // not very efficient as it allocates copies the data.
         // do we really need the array to be the right size?
-        collapsedBases = Arrays.copyOf(collapsedBases, dstOfs);
-
-        return collapsedBases;
+        return Arrays.copyOf(collapsedBases, dstOfs);
     }
 
     private byte[] uncollapsedPartialRef(final Locatable ucLoc) {
 
-        int         ucOfs = ucLoc.getStart() - refLoc.getStart();
-        int         size = ucLoc.getLengthOnReference();
-        byte[]      bases =  Arrays.copyOfRange(fullRef, ucOfs, ucOfs + size);
+        final int         ucOfs = ucLoc.getStart() - refLoc.getStart();
+        final int         size = ucLoc.getLengthOnReference();
+        final byte[]      bases =  Arrays.copyOfRange(fullRef, ucOfs, ucOfs + size);
 
         if ( debug ) {
             logger.info("uncollapsedPartialRef: cOfs: " + ucOfs + ", size: " + size + ", bases:");
-            logger.info(basesAsString(bases));
+            logger.info(new String(bases));
         }
 
         return bases;
     }
 
-    private byte[] uncollapseByRef(byte[] bases, byte[] ref, AtomicInteger offsetResult, boolean rev, AtomicBoolean didCollapse) {
+    private UncollapseResult uncollapseByRef(final byte[] basesArg, final byte[] refArg, final boolean rev) {
+
+        // prepeare result and working vars
+        final UncollapseResult  uncollapseResult = new UncollapseResult();
+        byte[]                  bases = basesArg;
+        byte[]                  ref = refArg;
 
         if ( debug ) {
             logger.info("bases, ref, finalResult:");
-            logger.info(basesAsString(bases));
-            logger.info(basesAsString(ref));
+            logger.info(new String(bases));
+            logger.info(new String(ref));
         }
 
         if ( rev ) {
-            byte[]      basesRev = Arrays.copyOf(bases, bases.length);
-            byte[]      refRev = Arrays.copyOf(ref, ref.length);
+            final byte[]      basesRev = Arrays.copyOf(bases, bases.length);
+            final byte[]      refRev = Arrays.copyOf(ref, ref.length);
             SequenceUtil.reverseComplement(basesRev);
             SequenceUtil.reverseComplement(refRev);
             bases = basesRev;
@@ -257,7 +289,7 @@ public class LHWRefView {
         }
 
         // use aligner to get CIGAR
-        SmithWatermanAlignment alignment = AlignmentThreadingUtils.getSimilarAlignerForCurrentThread(aligner).align(ref, bases, SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
+        final SmithWatermanAlignment alignment = AlignmentThreadingUtils.getSimilarAlignerForCurrentThread(aligner).align(ref, bases, SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
         if ( debug )
             logger.info("alignment.offset: " + alignment.getAlignmentOffset() + ", cigar: " + alignment.getCigar());
 
@@ -286,38 +318,36 @@ public class LHWRefView {
             } else {
 
                 // check if the incoming bases contain a homopolymer
-                int pad = 0;
-                int chkPad = 1;
-                byte[] fwdSlice = Arrays.copyOfRange(bases, basesOfs, Math.min(basesOfs + hmerSizeThreshold + pad, bases.length));
-                byte[] bckSlice = Arrays.copyOfRange(bases, Math.max(0, basesOfs - hmerSizeThreshold - pad), basesOfs);
-                if ( needsCollapsing(fwdSlice, hmerSizeThreshold - chkPad, logger, debug) ||
-                        needsCollapsing(bckSlice, hmerSizeThreshold - chkPad, logger, debug) ) {
+                final byte[] fwdSlice = Arrays.copyOfRange(bases, basesOfs, Math.min(basesOfs + hmerSizeThreshold, bases.length));
+                final byte[] bckSlice = Arrays.copyOfRange(bases, Math.max(0, basesOfs - hmerSizeThreshold), basesOfs);
+                if ( needsCollapsing(fwdSlice, hmerSizeThreshold - 1, logger, debug) ||
+                        needsCollapsing(bckSlice, hmerSizeThreshold - 1, logger, debug) ) {
 
 
                     // check for a delete at the end of an hmer or at the beginning
                     if (onHomoPolymer(ref, refOfs - hmerSizeThreshold, ref[refOfs], hmerSizeThreshold)) {
                         // fill with base until end of homopolymer on the ref
-                        byte            base = ref[refOfs];
+                        final byte            base = ref[refOfs];
                         for (int size = 0; (size < c.getLength()) ; size++) {
                             if ( partialMode && ref[refOfs + size] != base )
                                 break;
                             result[resultOfs++] = base;
                         }
-                        didCollapse.set(true);
+                        uncollapseResult.collapsed = true;
 
                     } else if (onHomoPolymer(ref, refOfs + c.getLength(), ref[refOfs + c.getLength() - 1], hmerSizeThreshold)) {
                         // fill with base until start of homopolymer on the ref
-                        byte            base = ref[refOfs + c.getLength() - 1];
+                        final byte            base = ref[refOfs + c.getLength() - 1];
                         for (int size = 0; (size < c.getLength()) ; size++) {
                             if ( partialMode && ref[refOfs + c.getLength() - 1 - size] != base )
                                 break;
                             result[resultOfs++] = base;
                         }
-                        didCollapse.set(true);
+                        uncollapseResult.collapsed = true;
                     }
                 }
             }
-            if (c.getOperator().consumesReferenceBases())
+            if ( c.getOperator().consumesReferenceBases() )
                 refOfs += c.getLength();
         }
 
@@ -328,17 +358,18 @@ public class LHWRefView {
             SequenceUtil.reverseComplement(finalResult);
 
         if ( debug ) {
-            logger.info(basesAsString(finalResult));
+            logger.info(new String(finalResult));
         }
 
-        // return offset?
-        if ( offsetResult != null )
-            offsetResult.set(alignment.getAlignmentOffset());
+        // return offset
+        uncollapseResult.offset = alignment.getAlignmentOffset();
 
-        return finalResult;
+        // return bases
+        uncollapseResult.bases = finalResult;
+        return uncollapseResult;
     }
 
-    private boolean onHomoPolymer(byte[] bases, int ofs, byte base, int length)
+    private boolean onHomoPolymer(final byte[] bases, final int ofs, final byte base, final int length)
     {
         for ( int tick = 0 ; tick < hmerSizeThreshold ; tick++ ) {
             if ( sameBase(bases, ofs + tick, base, length) )
@@ -347,49 +378,22 @@ public class LHWRefView {
         return false;
     }
 
-    private boolean sameBase(byte[] bases, int ofs, byte base, int length)
+    private boolean sameBase(final byte[] bases, final int ofsArg, final byte base, final int lengthArg)
     {
+        int     ofs = ofsArg;
+        int     length = lengthArg;
         try {
             // has enough bases?
-            if (ofs + length > bases.length)
+            if ( (ofs + length) > bases.length )
                 return false;
-            while (length-- != 0) {
-                if (bases[ofs++] != base)
+            while ( length-- != 0 ) {
+                if ( bases[ofs++] != base ) {
                     return false;
+                }
             }
             return true;
         } catch (ArrayIndexOutOfBoundsException e) {
             return false;
         }
     }
-
-    private static int logHaplotype_i = 0;
-    private void logHaplotype(Haplotype h, String label, int i) {
-        if ( debug ) {
-            String      name = label + "_" + (logHaplotype_i++) + "_" + i;
-            String      contig = h.getGenomeLocation().getContig();
-            int         start = h.getGenomeLocation().getStart();
-            String      cigar = h.getCigar() != null ? h.getCigar().toString() : "?";
-            String      bases = h.getDisplayString();
-            if ( h.isReference() )
-                name += "_REF";
-
-            byte[]      q = new byte[bases.length()];
-            Arrays.fill(q, (byte)40);
-            String      quals = new String(q);
-
-            String      line = String.format("%s\t0\t%s\t%d\t60\t%s\t*\t0\t0\t%s\t%s\tRG:Z:%s",
-                                                    name, contig, start, cigar, bases, quals, label);
-
-            logger.info(String.format("==SAM==\t%s", line));
-        }
-    }
-
-    private static String basesAsString(byte[] bases) {
-        StringBuilder   sb = new StringBuilder();
-        sb.append(String.format("len: %d, bases: ", bases.length));
-        sb.append(new String(bases));
-        return sb.toString();
-    }
-
 }

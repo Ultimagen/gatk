@@ -61,7 +61,6 @@ public class AlleleFilteringHC extends AlleleFiltering {
 
         final int[] asPL = genotypingLikelihoods.sampleLikelihoods(0).getAsPLs();
 
-        //retVal = Math.min(asPL[1], asPL[2]) - asPL[0]; // if this is "large", reject the allele.
         logger.debug(() -> String.format("GAL:: %s: %d %d %d", allele.toString(), asPL[0], asPL[1], asPL[2]));
         return (int)phredScaledConfidence;
     }

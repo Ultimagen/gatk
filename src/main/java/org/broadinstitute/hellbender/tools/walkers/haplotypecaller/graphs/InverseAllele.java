@@ -2,6 +2,14 @@ package org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs;
 
 import htsjdk.variant.variantcontext.Allele;
 
+/**
+ * Utility class for defining a "not" allele concept that is used to score haplotypes that are not supporting the allele.
+ * In the context of AlleleFiltering we basically score an allele (set of haplotypes that support the allele) versus
+ * the not allele: set of haplotypes that do not support this allele
+ *
+ * @author Ilya Soifer &lt;ilya.soifer@ultimagen.com
+ */
+
 public class InverseAllele extends Allele {
     final static public long serialVersionUID = 1L;
 

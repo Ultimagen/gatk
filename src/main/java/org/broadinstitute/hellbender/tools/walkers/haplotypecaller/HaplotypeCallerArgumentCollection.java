@@ -210,12 +210,6 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
 
     @Advanced
     @Hidden
-    @Argument(fullName = "avoid-strand-bias-in-active-region")
-    public boolean STRATIFICATION_FOR_ACTIVE_REGION = false;
-
-
-    @Advanced
-    @Hidden
     @Argument(fullName = STEPWISE_FITLERING_ARGUMENT, doc = "If enabled, this will create a FlowBasedAligner to use for filtering haplotypes before using another likelihoods engine for scoring.")
     public boolean stepwiseFiltering = false;
 

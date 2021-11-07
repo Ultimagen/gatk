@@ -10,10 +10,8 @@ import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.read.markduplicates.LibraryIdGenerator;
 import org.broadinstitute.hellbender.utils.read.markduplicates.MarkDuplicatesScoringStrategy;
 import org.broadinstitute.hellbender.utils.read.markduplicates.ReadsKey;
-import picard.sam.markduplicates.util.ReadEnds;
 
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Class representing a single read fragment at a particular start location without a mapped mate.
@@ -30,12 +28,11 @@ public class FlowFragment extends Fragment {
     public FlowFragment(final GATKRead first, final SAMFileHeader header, int partitionIndex, MarkDuplicatesScoringStrategy scoringStrategy, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
         super(first, header, partitionIndex, scoringStrategy, headerLibraryMap, mdArgs);
 
-        int        start = first.isReverseStrand() ? ReadUtils.getSelectedRecordEnd(first, null, header, mdArgs) : ReadUtils.getSelectedRecordStart(first, null, header, mdArgs);
+        int        start = first.isReverseStrand() ? ReadUtils.getMarkDupReadEnd(first, false, header, mdArgs) : ReadUtils.getMarkDupReadStart(first, false, header, mdArgs);
         int        endUncert = 0;
         if ( mdArgs.FLOW_END_LOCATION_SIGNIFICANT ) {
-            AtomicInteger endUncertainty = new AtomicInteger(mdArgs.ENDS_READ_UNCERTAINTY);
-            this.end = !first.isReverseStrand() ? ReadUtils.getSelectedRecordEnd(first, endUncertainty, header, mdArgs) : ReadUtils.getSelectedRecordStart(first, endUncertainty, header, mdArgs);
-            endUncert = endUncertainty.intValue();
+            endUncert = mdArgs.ENDS_READ_UNCERTAINTY;
+            this.end = !first.isReverseStrand() ? ReadUtils.getMarkDupReadEnd(first, true, header, mdArgs) : ReadUtils.getMarkDupReadStart(first, true, header, mdArgs);
         }
         this.key = ReadsKey.getKeyForFragment(start,
                 isRead1ReverseStrand(),
