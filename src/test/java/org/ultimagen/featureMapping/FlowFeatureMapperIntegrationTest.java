@@ -44,7 +44,7 @@ public class FlowFeatureMapperIntegrationTest extends CommandLineProgramTest {
         Assert.assertTrue(outputFile.exists());
 
         // walk the output and expected files, compare non-comment lines
-        TestFileVerifySame.verifySame(outputFile, expectedFile);
+        (new TestFileVerifySame()).verifySame(outputFile, expectedFile);
     }
 
 }
