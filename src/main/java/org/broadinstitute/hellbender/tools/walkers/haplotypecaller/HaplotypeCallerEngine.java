@@ -674,7 +674,6 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
         // run the local assembler, getting back a collection of information on how we should proceed
         final AssemblyResultSet untrimmedAssemblyResult =  AssemblyBasedCallerUtils.assembleReads(region, givenAlleles, hcArgs, readsHeader, samplesList, logger, referenceReader, assemblyEngine, aligner, !hcArgs.doNotCorrectOverlappingBaseQualities, hcArgs.fbargs);
-        final HaplotypeCollapsing haplotypeCollapsing = untrimmedAssemblyResult.getHaplotypeCollapsing();
 
         if (assemblyDebugOutStream != null) {
             try {
@@ -756,37 +755,15 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
 
         // Calculate the likelihoods: CPU intensive part.
-        if (hcArgs.stepwiseFiltering) {
-            readLikelihoods = filterStepLikelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads, true);
-        } else {
-            readLikelihoods =
-                    likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads, true);
-        }
+        // flow based alignment might add an extra step of uncollapsing - implemented by uncollapseReadLikelihoods
+        // non-flow based alignment will not be affected.
+        readLikelihoods = uncollapseReadLikelihoods(untrimmedAssemblyResult,
+                hcArgs.stepwiseFiltering
+                        ? filterStepLikelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads, true)
+                        : likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads, true));
 
         alleleLikelihoodWriter.ifPresent(
                 writer -> writer.writeAlleleLikelihoods(readLikelihoods));
-
-        haplotypes = readLikelihoods.alleles();
-        final AlleleLikelihoods<GATKRead, Haplotype> uncollapsedReadLikelihoods;
-        if ( haplotypeCollapsing != null ) {
-
-            haplotypes = haplotypeCollapsing.uncollapseHaplotypes(haplotypes, false, null);
-            if ( logger.isDebugEnabled() ) {
-                logger.debug(String.format("%d haplotypes before uncollapsing", haplotypes.size()));
-            }
-            Map<Haplotype, List<Haplotype>> identicalHaplotypesMap = HaplotypeCollapsing.identicalBySequence(haplotypes);
-            readLikelihoods.changeAlleles(haplotypes);
-            uncollapsedReadLikelihoods = readLikelihoods.marginalize(identicalHaplotypesMap);
-            if ( logger.isDebugEnabled() ) {
-                logger.debug(String.format("%d haplotypes after uncollapsing", uncollapsedReadLikelihoods.numberOfAlleles()));
-            }
-        } else {
-            if ( logger.isDebugEnabled() ) {
-                logger.debug(String.format("Not performing uncollapsing with %d haplotypes", readLikelihoods.numberOfAlleles()));
-            }
-            uncollapsedReadLikelihoods = readLikelihoods;
-        }
-
 
         AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
         Set<Integer> suspiciousLocations = new HashSet<>();
@@ -795,16 +772,16 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
             AlleleFilteringHC alleleFilter = new AlleleFilteringHC(hcArgs, assemblyDebugOutStream, genotypingEngine);
             //need to update haplotypes to find the alleles
-            EventMap.buildEventMapsForHaplotypes(uncollapsedReadLikelihoods.alleles(),
+            EventMap.buildEventMapsForHaplotypes(readLikelihoods.alleles(),
                     assemblyResult.getFullReferenceWithPadding(),
                     assemblyResult.getPaddedReferenceLoc(),
                     hcArgs.assemblerArgs.debugAssembly,
                     hcArgs.maxMnpDistance);
-            subsettedReadLikelihoodsFinal = alleleFilter.filterAlleles(uncollapsedReadLikelihoods, assemblyResult.getPaddedReferenceLoc().getStart(), suspiciousLocations);
+            subsettedReadLikelihoodsFinal = alleleFilter.filterAlleles(readLikelihoods, assemblyResult.getPaddedReferenceLoc().getStart(), suspiciousLocations);
 
         } else {
             logger.debug("Not filtering alleles");
-            subsettedReadLikelihoodsFinal = uncollapsedReadLikelihoods;
+            subsettedReadLikelihoodsFinal = readLikelihoods;
         }
 
 
@@ -893,6 +870,31 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                     .stream()
                     .map(RMSMappingQuality.getInstance()::finalizeRawMQ)
                     .collect(Collectors.toList());
+        }
+    }
+
+    // possibly uncollapse the haplotypes inside a read likelihood matrix
+    private AlleleLikelihoods<GATKRead, Haplotype> uncollapseReadLikelihoods(final AssemblyResultSet assemblyResultSet, final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods) {
+
+        if ( assemblyResultSet.getHaplotypeCollapsing() != null ) {
+
+            List<Haplotype>     haplotypes = readLikelihoods.alleles();
+
+            haplotypes = assemblyResultSet.getHaplotypeCollapsing().uncollapseHaplotypes(haplotypes, false, null);
+            if ( logger.isDebugEnabled() ) {
+                logger.debug(String.format("%d haplotypes before uncollapsing", haplotypes.size()));
+            }
+            Map<Haplotype, List<Haplotype>> identicalHaplotypesMap = HaplotypeCollapsing.identicalBySequence(haplotypes);
+            readLikelihoods.changeAlleles(haplotypes);
+            final AlleleLikelihoods<GATKRead, Haplotype>  uncollapsedReadLikelihoods = readLikelihoods.marginalize(identicalHaplotypesMap);
+
+            if ( logger.isDebugEnabled() ) {
+                logger.debug(String.format("%d haplotypes after uncollapsing", uncollapsedReadLikelihoods.numberOfAlleles()));
+            }
+
+            return uncollapsedReadLikelihoods;
+        } else {
+            return readLikelihoods;
         }
     }
 
