@@ -527,18 +527,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
      */
     @Override
     public ActivityProfileState isActive(final AlignmentContext context, final ReferenceContext ref, final FeatureContext features) {
-        if (!hcArgs.STRATIFICATION_FOR_ACTIVE_REGION) {
-            return isActive_(context, ref, features, AlignmentContext.ReadOrientation.COMPLETE);
-        } else {
-            final ActivityProfileState forwardState = isActive_(context, ref, features, AlignmentContext.ReadOrientation.FORWARD);
-            final ActivityProfileState reverseState = isActive_(context, ref, features, AlignmentContext.ReadOrientation.REVERSE);
-
-            final double prob = Math.sqrt(forwardState.isActiveProb() * reverseState.isActiveProb());
-            final ActivityProfileState.Type resultState = forwardState.getResultState() == NONE && reverseState.getResultState() == NONE ? NONE : HIGH_QUALITY_SOFT_CLIPS;
-            final double mean = (forwardState.getResultValue().doubleValue() + reverseState.getResultValue().doubleValue()) / 2;
-
-            return new ActivityProfileState(forwardState.getLoc(), prob, resultState, mean);
-        }
+        return isActive_(context, ref, features, AlignmentContext.ReadOrientation.COMPLETE);
     }
 
     private ActivityProfileState isActive_(final AlignmentContext context, final ReferenceContext ref, final FeatureContext features, final AlignmentContext.ReadOrientation stratification ) {
@@ -586,38 +575,6 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             isActiveProb = vcOut == null ? 0.0 : QualityUtils.qualToProb(vcOut.getPhredScaledQual());
         }
 
-        if (hcArgs.strandBiasPileupPValue > 0 && isActiveProb > 0) {
-            int altFwd = 0;
-            int altRev = 0;
-            int refFwd = 0;
-            int refRev = 0;
-            for (final PileupElement pe : context.getBasePileup()) {
-                final boolean reverse = pe.getRead().isReverseStrand();
-                if (ReferenceConfidenceModel.isAltBeforeAssembly(pe, ref.getBase())) {
-                    if (reverse) {
-                        altRev++;
-                    } else {
-                        altFwd++;
-                    }
-                } else {
-                    if (reverse) {
-                        refRev++;
-                    } else {
-                        refFwd++;
-                    }
-                }
-            }
-
-            final int minAlt = Math.min(altFwd, altRev);
-            final int maxAlt = Math.max(altFwd, altRev);
-
-            final boolean isStrandArtifact = !(minAlt > STRAND_RATIO_TO_AUTOMATICALLY_ACCEPT_ACTIVE_PILEUP * maxAlt) &&
-                    (minAlt < STRAND_RATIO_TO_AUTOMATICALLY_REJECT_ACTIVE_PILEUP * maxAlt || FisherStrand.pValueForContingencyTable(new int[][] { {refFwd, refRev}, {altFwd, altRev}}) < hcArgs.strandBiasPileupPValue);
-
-            if (isStrandArtifact) {
-                return new ActivityProfileState(ref.getInterval(), 0.0);
-            }
-        }
         return new ActivityProfileState(ref.getInterval(), isActiveProb, averageHQSoftClips.mean() > AVERAGE_HQ_SOFTCLIPS_HQ_BASES_THRESHOLD ? ActivityProfileState.Type.HIGH_QUALITY_SOFT_CLIPS : ActivityProfileState.Type.NONE, averageHQSoftClips.mean() );
 
     }
