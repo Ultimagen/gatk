@@ -944,6 +944,12 @@ public interface GATKRead extends Locatable {
         }
     }
 
-    void hardClipAttributes(int copyStart, int newLength);
+    /**
+     * Clip key attributes that may change after a hard clipping operation
+     *
+     * @param newStart - zero based offset of the new start of the read bases (in relationship to the original read)
+     * @param newLength - new length of read, after hard clipping
+     */
+    void hardClipAttributes(final int newStart, final int newLength);
 }
 
