@@ -32,6 +32,9 @@ public class SAMRecordToGATKReadAdapter implements GATKRead, Serializable {
     private transient Integer cachedAdaptorBoundary = null;
     private transient Integer cachedCigarLength = null;
 
+    // reads with of flow-based origin might contain these attributes which are sequence (length and content) dependent
+    private static final String[] ATTRIBUTES_TO_HARD_CLIP = new String[]{"ti", "tp"};
+
     private void clearCachedValues() {
         cachedSoftStart = null;
         cachedSoftEnd = null;
@@ -756,18 +759,20 @@ public class SAMRecordToGATKReadAdapter implements GATKRead, Serializable {
         samRecord.reverseComplement(true);
     }
 
+    /**
+     * Clip spefific attributes that change after a hard clipping operation
+     *
+     */
     @Override
-    public void hardClipAttributes(int copyStart, int newLength)
+    public void hardClipAttributes(final int newStart, final int newLength)
     {
-        String [] tagsToTrim = {"ti", "tp"};
-        for (String tagName : tagsToTrim) {
-            // trim ti
-            if (samRecord.hasAttribute(tagName)) {
+        // reads with of flow-based origin might contain these attributes which are sequence (length and content) dependent
+        for (String attributeName : ATTRIBUTES_TO_HARD_CLIP) {
+            if (samRecord.hasAttribute(attributeName)) {
+                final byte[] attribute = samRecord.getByteArrayAttribute(attributeName);
+                final byte[] trimmedAttribute = Arrays.copyOfRange(attribute, newStart, newStart + newLength);
 
-                final byte[] tag = samRecord.getByteArrayAttribute(tagName);
-                final byte[] trimmedTag = Arrays.copyOfRange(tag, copyStart, copyStart + newLength);
-
-                samRecord.setAttribute(tagName, trimmedTag);
+                samRecord.setAttribute(attributeName, trimmedAttribute);
             }
         }
     }
