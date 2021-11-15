@@ -22,10 +22,13 @@ import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.*;
 import org.broadinstitute.hellbender.utils.IntervalUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
+import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.genotyper.IndexedSampleList;
 import org.broadinstitute.hellbender.utils.genotyper.SampleList;
+import org.broadinstitute.hellbender.utils.haplotype.EventMap;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
+import org.broadinstitute.hellbender.utils.param.ParamUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
@@ -94,7 +97,6 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
         final ReadLikelihoodCalculationEngine   likelihoodCalculationEngine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(hcArgs.likelihoodArgs, hcArgs.fbargs, false, hcArgs.likelihoodArgs.likelihoodEngineImplementation);
         final String[]                          sampleNames = {SAMPLE_NAME_DEFAULT};
         final SampleList                        samplesList = new IndexedSampleList(Arrays.asList(sampleNames));
-        final HaplotypeCallerGenotypingEngine   genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samplesList, !hcArgs.doNotRunPhysicalPhasing, false);
         final ReferenceDataSource               reference = ReferenceDataSource.of(referenceArguments.getReferencePath());
         final VariantRecallerResultWriter       resultWriter = new VariantRecallerResultWriter(vrArgs.matrixCsvFile);
         final FeatureDataSource<VariantContext> dataSource = new FeatureDataSource<VariantContext>(
@@ -172,19 +174,12 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                         // assign
                         final Map<String, List<GATKRead>> perSampleFilteredReadList = perSampleReadList;
                         final SAMFileHeader readsHeader = samReader.getFileHeader();
-                        final Map<Integer, AlleleLikelihoods<GATKRead, Allele>> genotypeLikelihoods = genotypingEngine.assignGenotypeLikelihoods2(
+                        final Map<Integer, AlleleLikelihoods<GATKRead, Allele>> genotypeLikelihoods = simplifiedAssignGenotypeLikelihood(
                                 processedHaplotypes,
                                 readLikelihoods,
-                                perSampleFilteredReadList,
                                 assemblyResult.getFullReferenceWithPadding(),
                                 assemblyResult.getPaddedReferenceLoc(),
-                                regionForGenotyping.getSpan(),
-                                null,
-                                variants,
-                                false,
-                                hcArgs.maxMnpDistance,
-                                readsHeader,
-                                false);
+                                regionForGenotyping.getSpan());
 
                         genotypeLikelihoodsList.add(genotypeLikelihoods);
                         assemblyResultList.add(assemblyResult);
@@ -208,5 +203,38 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                 getCommandLineParser().getPluginDescriptor(GATKReadFilterPluginDescriptor.class);
         return readFilterPlugin.getMergedCountingReadFilter(samFileHeader);
     }
+
+    // this is a very simplified version of HaplotypeCallerGenotypingEngine.assignGenotypeLikelihood (which is far too complex to adapt to the recaller's basic function)
+    public Map<Integer,AlleleLikelihoods<GATKRead, Allele>> simplifiedAssignGenotypeLikelihood(final List<Haplotype> haplotypes,
+                                                                                               final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods,
+                                                                                               final byte[] ref,
+                                                                                               final SimpleInterval refLoc,
+                                                                                               final SimpleInterval activeRegionWindow) {
+        Map<Integer,AlleleLikelihoods<GATKRead, Allele>>    result = new LinkedHashMap<>();
+
+        // walk on starting locations for haplotypes
+        for( final int loc : EventMap.buildEventMapsForHaplotypes(haplotypes, ref, refLoc, hcArgs.assemblerArgs.debugAssembly, hcArgs.maxMnpDistance) ) {
+
+            if ( activeRegionWindow.contains(new SimpleInterval(activeRegionWindow.getContig(), loc, loc)) ) {
+
+                // collect events
+                final List<VariantContext> eventsAtThisLoc = AssemblyBasedCallerUtils.getVariantContextsFromActiveHaplotypes(loc,
+                        haplotypes, true);
+                final List<VariantContext> eventsAtThisLocWithSpanDelsReplaced = HaplotypeCallerGenotypingEngine.replaceSpanDels(eventsAtThisLoc,
+                        Allele.create(ref[loc - refLoc.getStart()], true), loc);
+                final VariantContext mergedVC = AssemblyBasedCallerUtils.makeMergedVariantContext(eventsAtThisLocWithSpanDelsReplaced);
+                if (mergedVC != null) {
+
+                    // assign likelihoods
+                    final Map<Allele, List<Haplotype>> alleleMapper = AssemblyBasedCallerUtils.createAlleleMapper(mergedVC, loc, haplotypes, !hcArgs.disableSpanningEventGenotyping);
+
+                    result.put(loc, readLikelihoods.marginalize(alleleMapper));
+                }
+            }
+        }
+
+        return result;
+    }
+
 }
 
