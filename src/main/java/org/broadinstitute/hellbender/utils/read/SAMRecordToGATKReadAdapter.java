@@ -762,6 +762,7 @@ public class SAMRecordToGATKReadAdapter implements GATKRead, Serializable {
     /**
      * Clip spefific attributes that change after a hard clipping operation
      *
+     * This is specific for flow-based reads but harmless for non-flow-based ones.
      */
     @Override
     public void hardClipAttributes(final int newStart, final int newLength)
