@@ -19,9 +19,9 @@ The output is textual. Each matrix contains several sections. As section begins 
 and follows with the section data organised as a two dimentional matrix over several lines.
  */
 public class AlleleLikelihoodWriter<EVIDENCE extends Locatable, A extends Allele> implements AutoCloseable {
-    Path outputPath;
-    SimpleInterval outputInterval;
-    FileWriter output;
+    final Path outputPath;
+    final SimpleInterval outputInterval;
+    final FileWriter output;
 
 
     public AlleleLikelihoodWriter(final Path _outputPath, final SimpleInterval _interval) {
@@ -38,11 +38,11 @@ public class AlleleLikelihoodWriter<EVIDENCE extends Locatable, A extends Allele
      * Add a likelihood matrix to the output. Only haplotypes falling within the output interval will be output
      * @param likelihoods - matrix to add
      */
-    public void writeAlleleLikelihoods(AlleleLikelihoods<GATKRead, Haplotype> likelihoods){
-        List<String> samples = likelihoods.samples();
-        List<Haplotype> haplotypes = likelihoods.alleles();
+    public void writeAlleleLikelihoods(final AlleleLikelihoods<GATKRead, Haplotype> likelihoods){
+        final List<String> samples = likelihoods.samples();
+        final List<Haplotype> haplotypes = likelihoods.alleles();
 
-        Haplotype first_hap = haplotypes.get(0);
+        final Haplotype first_hap = haplotypes.get(0);
         try {
             if (first_hap.getLocation().getContig().equals(outputInterval.getContig())) {
                 if (((first_hap.getStartPosition() >= outputInterval.getStart()) && (first_hap.getStartPosition() <= outputInterval.getEnd())) &&
@@ -57,7 +57,7 @@ public class AlleleLikelihoodWriter<EVIDENCE extends Locatable, A extends Allele
                     for (int s = 0; s < samples.size(); s++) {
                         output.write(String.format(">> Sample %s\n", samples.get(s)));
                         output.write(">>> Reads\n");
-                        List<GATKRead> reads = likelihoods.sampleEvidence(s);
+                        final List<GATKRead> reads = likelihoods.sampleEvidence(s);
                         for (int i = 0; i < reads.size(); i++) {
                             output.write(String.format("%04d\t%s\n", i, reads.get(i).getName()));
                         }
