@@ -12,10 +12,18 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 
+/*
+A class for logging likelihood matrics, possibly constrained by an (include-only) output interval
+
+The output is textual. Each matrix contains several sections. As section begins with a heading line (staring with >> <heading-name>(
+and follows with the section data organised as a two dimentional matrix over several lines.
+ */
 public class AlleleLikelihoodWriter<EVIDENCE extends Locatable, A extends Allele> implements AutoCloseable {
     Path outputPath;
     SimpleInterval outputInterval;
     FileWriter output;
+
+
     public AlleleLikelihoodWriter(final Path _outputPath, final SimpleInterval _interval) {
         this.outputPath = _outputPath;
         this.outputInterval = _interval;
@@ -26,6 +34,10 @@ public class AlleleLikelihoodWriter<EVIDENCE extends Locatable, A extends Allele
         }
     }
 
+    /**
+     * Add a likelihood matrix to the output. Only haplotypes falling within the output interval will be output
+     * @param likelihoods - matrix to add
+     */
     public void writeAlleleLikelihoods(AlleleLikelihoods<GATKRead, Haplotype> likelihoods){
         List<String> samples = likelihoods.samples();
         List<Haplotype> haplotypes = likelihoods.alleles();
