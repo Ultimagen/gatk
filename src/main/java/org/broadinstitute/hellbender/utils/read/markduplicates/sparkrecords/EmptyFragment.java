@@ -12,7 +12,6 @@ import org.broadinstitute.hellbender.utils.read.markduplicates.ReadsKey;
 import picard.sam.markduplicates.util.ReadEnds;
 
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Dummy class representing a mated read fragment at a particular start position to be used for accounting
@@ -39,7 +38,7 @@ public final class EmptyFragment extends PairedEnds {
     public EmptyFragment(GATKRead read, SAMFileHeader header, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
         super(0, null);
 
-        int        start = read.isReverseStrand() ? ReadUtils.getSelectedRecordEnd(read, null, header, mdArgs) : ReadUtils.getSelectedRecordStart(read, null, header, mdArgs);
+        int        start = read.isReverseStrand() ? ReadUtils.getMarkDupReadEnd(read, false, header, mdArgs) : ReadUtils.getMarkDupReadStart(read, false, header, mdArgs);
         this.R1R = read.isReverseStrand();
         this.key = ReadsKey.getKeyForFragment(start,
                 isRead1ReverseStrand(),

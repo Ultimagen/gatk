@@ -1,8 +1,6 @@
 package org.broadinstitute.hellbender.utils.read.markduplicates.sparkrecords;
 
 import htsjdk.samtools.SAMFileHeader;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.cmdline.argumentcollections.MarkDuplicatesSparkArgumentCollection;
 import org.broadinstitute.hellbender.tools.spark.transforms.markduplicates.MarkDuplicatesSparkUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
@@ -13,7 +11,6 @@ import org.broadinstitute.hellbender.utils.read.markduplicates.ReadsKey;
 import picard.sam.markduplicates.util.ReadEnds;
 
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Class representing a single read fragment at a particular start location without a mapped mate.
@@ -33,7 +30,7 @@ public class Fragment extends TransientFieldPhysicalLocation {
     public Fragment(final GATKRead first, final SAMFileHeader header, int partitionIndex, MarkDuplicatesScoringStrategy scoringStrategy, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
         super(partitionIndex, first.getName());
 
-        int        start = first.isReverseStrand() ? ReadUtils.getSelectedRecordEnd(first, null, header, mdArgs) : ReadUtils.getSelectedRecordStart(first, null, header, mdArgs);
+        int        start = first.isReverseStrand() ? ReadUtils.getMarkDupReadEnd(first, false, header, mdArgs) : ReadUtils.getMarkDupReadStart(first, false, header, mdArgs);
 
         this.R1R = first.isReverseStrand();
         this.key = ReadsKey.getKeyForFragment(start,
