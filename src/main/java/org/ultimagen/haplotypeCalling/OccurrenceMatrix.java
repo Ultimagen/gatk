@@ -69,7 +69,10 @@ public class OccurrenceMatrix<R,C> {
         }
     }
 
-
+    /**
+     * find pairs of columns which do not both have a true value at any row
+     * @return - pairs of found columns
+     */
     public List<Pair<C, C>> nonCoOcurringColumns() {
 
         List<Pair<Integer, Integer>> result = new ArrayList<>();
@@ -95,6 +98,11 @@ public class OccurrenceMatrix<R,C> {
         return vc_result;
     }
 
+    /**
+     * Analyse columns for being independent of each other.
+     * @param nonCoOcurringColumns - pairs of columns which do not both have a true value at any row (non-cooccurring)
+     * @return - list of columns sets. The columns in each set are non-cooccurring with at least one other member
+     */
     public List<Set<C>> getIndependentSets(List<Pair<C,C>> nonCoOcurringColumns){
         Graph<C, DefaultEdge> nonConnectedAllelesGraph = new SimpleGraph<>(DefaultEdge.class);
         colNames.stream().forEach(x -> nonConnectedAllelesGraph.addVertex(x));
@@ -102,18 +110,20 @@ public class OccurrenceMatrix<R,C> {
 
         ConnectivityInspector<C, DefaultEdge> ci = new ConnectivityInspector<>(nonConnectedAllelesGraph);
         List<Set<C>> result = ci.connectedSets();
-        logger.debug (() -> String.format("GIS: Received %d alleles that generate %d connected components", colNames.size(), result.size()));
-        logger.debug ("GIS: Here are the components:");
 
-        for (int i = 0 ; i < result.size(); i++) {
-            String str = new String();
-            for ( C allele: result.get(i)){
-                str += " ";
-                str += allele.toString();
+        // debug log messages
+        if ( logger.isDebugEnabled() ) {
+            logger.debug(String.format("GIS: Received %d alleles that generate %d connected components", colNames.size(), result.size()));
+            logger.debug("GIS: Here are the components:");
+
+            for (int i = 0; i < result.size(); i++) {
+                String str = new String();
+                for (C allele : result.get(i)) {
+                    str += " ";
+                    str += allele.toString();
+                }
+                logger.debug(String.format("---- GIS: (%d) %s", i, str));
             }
-            final int tmp_i = i;
-            final String tmp_str = str;
-            logger.debug(() -> String.format("---- GIS: (%d) %s", tmp_i, tmp_str)); //is this the right way to convert i to final/essentially final?
         }
 
         return result;
