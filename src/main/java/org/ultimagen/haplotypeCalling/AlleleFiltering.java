@@ -12,6 +12,7 @@ import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.walkers.annotator.StrandOddsRatio;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyBasedCallerArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.InverseAllele;
+import org.broadinstitute.hellbender.utils.BaseUtils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
@@ -20,7 +21,6 @@ import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.io.ComponentNameProvider;
 import org.jgrapht.io.DOTExporter;
 import org.jgrapht.io.IntegerComponentNameProvider;
-import org.ultimagen.flowBasedRead.read.FlowBasedHaplotype;
 
 import java.io.*;
 import java.util.*;
@@ -408,11 +408,7 @@ public abstract class AlleleFiltering {
                             -1,
                             commonPrefixLengthRight));
 
-            Pair<FlowBasedHaplotype, FlowBasedHaplotype> fbh = new ImmutablePair<>(haplotype2FlowHaplotype(modifiedHaplotypes.getLeft()),
-                                                                                   haplotype2FlowHaplotype(modifiedHaplotypes.getRight()));
-
-            if (fbh.getLeft().equalUpToHmerChange(fbh.getRight()))
-            {
+            if ( equalUpToHmerChange(modifiedHaplotypes.getLeft(), modifiedHaplotypes.getRight()) ) {
                 result.add(allelePair);
             }
 
@@ -431,15 +427,6 @@ public abstract class AlleleFiltering {
         }
         return null;
     }
-
-
-    private FlowBasedHaplotype haplotype2FlowHaplotype(Haplotype hap) {
-        // Note: We don't actually care about the flow order here since we only ask if the haplotypes are hmer indel of each other
-        // cases where the hmer is zero in one haplotype are not counted as hmer indel.
-        FlowBasedHaplotype flowBasedHaplotype = new FlowBasedHaplotype(hap, "TACG");
-        return flowBasedHaplotype;
-    }
-
 
     private int getCommonPrefixLength(Allele al1, Allele al2){
         if (al1.length()!=al2.length()){
@@ -602,6 +589,44 @@ public abstract class AlleleFiltering {
             logger.error("Unable to write a DOT file" + String.format("allele.interaction.%s.%d-%d.dot", contig, rangeStart, rangeEnd));
             throw new RuntimeException();
         }
+    }
+
+    // are haplotypes different only in a single hmer's length?
+    private boolean equalUpToHmerChange(Haplotype h1, Haplotype h2) {
+
+        final BaseUtils.HmerIterator  i1 = new BaseUtils.HmerIterator(h1.getBases());
+        final BaseUtils.HmerIterator  i2 = new BaseUtils.HmerIterator(h2.getBases());
+
+        // walk the haplotype hmers, look for differences
+        boolean         acceptableDiffAlreadyFound = false;
+        while ( i1.hasNext() && i2.hasNext() ) {
+
+            // get hmers
+            final Pair<Byte,Integer>      p1 = i1.next();
+            final Pair<Byte,Integer>      p2 = i2.next();
+
+            // base must be the same
+            if ( p1.getLeft() != p2.getLeft() ) {
+                return false;
+            }
+
+            // if length the same, continue to next hmer
+            if ( p1.getRight() == p2.getRight() ) {
+                continue;
+            }
+
+            // hmers are of the same base but of different length.
+            // make sure we only allow one such hmer
+            if ( acceptableDiffAlreadyFound ) {
+                return false;
+            } else {
+                acceptableDiffAlreadyFound = true;
+            }
+        }
+
+        // if here, hmers are the same or only a single one is different.
+        // In any case, bother haplotypes should be out of hmers by now
+        return i1.hasNext() == i2.hasNext();
     }
 
 }
