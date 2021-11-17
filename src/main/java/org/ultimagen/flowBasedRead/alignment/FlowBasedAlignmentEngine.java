@@ -257,7 +257,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             throw new GATKException.ShouldNeverReachHereException("Read should be aligned with the reference");
         }
 
-        if (!read.isTrimmedToHaplotype()) {
+        if (!read.isBaseClipped()) {
             throw new GATKException.ShouldNeverReachHereException("Reads should be trimmed to the haplotype");
         }
 

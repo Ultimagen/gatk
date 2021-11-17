@@ -254,5 +254,7 @@ public class GATKVCFHeaderLines {
         addInfoLine(new VCFInfoHeaderLine(HAPLOTYPE_EQUIVALENCE_COUNTS_KEY, VCFHeaderLineCount.UNBOUNDED, VCFHeaderLineType.Integer, "Counts of support for haplotype groups excluding difference at the site in question."));
         addInfoLine(new VCFInfoHeaderLine(HAPLOTYPE_COMPLEXITY_KEY, VCFHeaderLineCount.A, VCFHeaderLineType.Integer, "Edit distances of each alt allele's most common supporting haplotype from closest germline haplotype, excluding differences at the site in question."));
         addInfoLine(new VCFInfoHeaderLine(HAPLOTYPE_DOMINANCE_KEY, VCFHeaderLineCount.A, VCFHeaderLineType.Float, "For each alt allele, fraction of read support that best fits the most-supported haplotype containing the allele"));
+        addInfoLine(new VCFInfoHeaderLine(HAPLOTYPES_BEFORE_FILTERING_KEY, 1, VCFHeaderLineType.Integer, "Haplotypes detected by the assembly region before haplotype filtering is applied"));
+        addInfoLine(new VCFInfoHeaderLine(HAPLOTYPES_FILTERED_KEY, 1, VCFHeaderLineType.Integer, "Haplotypes filtered out by the haplotype filtering code"));
     }
 }

@@ -128,7 +128,8 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
                                                       final int maxMnpDistance,
                                                       final SAMFileHeader header,
                                                       final boolean withBamOut,
-                                                      final Set<Integer> suspiciousLocations) {
+                                                      final Set<Integer> suspiciousLocations,
+                                                      final AlleleLikelihoods<GATKRead, Haplotype> preFilteringAlleleLikelihoods) {
         // sanity check input arguments
         Utils.nonEmpty(haplotypes, "haplotypes input should be non-empty and non-null");
         Utils.validateArg(readLikelihoods != null && readLikelihoods.numberOfSamples() > 0, "readLikelihoods input should be non-empty and non-null");
@@ -245,7 +246,7 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
                         emitReferenceConfidence, alleleMapper, readAlleleLikelihoods, call, variantCallingRelevantOverlap);
 
                 VariantContext annotatedCall = makeAnnotatedCall(ref, refLoc, tracker, header, mergedVC,
-                        mergedAllelesListSizeBeforePossibleTrimming, readAlleleLikelihoods, call, annotationEngine);
+                        mergedAllelesListSizeBeforePossibleTrimming, readAlleleLikelihoods, call, annotationEngine, preFilteringAlleleLikelihoods);
 
                 if (suspiciousLocations.contains(loc)){
                     annotatedCall.getCommonInfo().putAttribute(GATKVCFConstants.POSSIBLE_FP_ADJACENT_TP_KEY, true);
@@ -508,14 +509,14 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
     }
 
     @VisibleForTesting
-    static protected VariantContext makeAnnotatedCall(byte[] ref, SimpleInterval refLoc, FeatureContext tracker, SAMFileHeader header, VariantContext mergedVC, int mergedAllelesListSizeBeforePossibleTrimming, AlleleLikelihoods<GATKRead, Allele> readAlleleLikelihoods, VariantContext call, VariantAnnotatorEngine annotationEngine) {
+    static protected VariantContext makeAnnotatedCall(byte[] ref, SimpleInterval refLoc, FeatureContext tracker, SAMFileHeader header, VariantContext mergedVC, int mergedAllelesListSizeBeforePossibleTrimming, AlleleLikelihoods<GATKRead, Allele> readAlleleLikelihoods, VariantContext call, VariantAnnotatorEngine annotationEngine, final AlleleLikelihoods<GATKRead, Haplotype> preFilteringAlleleLikelihoods) {
         final SimpleInterval locus = new SimpleInterval(mergedVC);
         final SAMSequenceDictionary sequenceDictionary = header.getSequenceDictionary();
         final SimpleInterval refLocInterval= new SimpleInterval(refLoc);
         final ReferenceDataSource refData = new ReferenceMemorySource(new ReferenceBases(ref, refLocInterval), sequenceDictionary);
         final ReferenceContext referenceContext = new ReferenceContext(refData, locus, refLocInterval);
 
-        final VariantContext untrimmedResult =  annotationEngine.annotateContext(call, tracker, referenceContext, readAlleleLikelihoods, a -> true);
+        final VariantContext untrimmedResult =  annotationEngine.annotateContext(call, tracker, referenceContext, readAlleleLikelihoods, Optional.empty(), Optional.empty(), Optional.ofNullable(preFilteringAlleleLikelihoods), a -> true);
         if ( mergedVC.getAttribute(AssemblyBasedCallerUtils.EXT_COLLAPSED_TAG) != null )
             untrimmedResult.getCommonInfo().putAttribute(AssemblyBasedCallerUtils.EXT_COLLAPSED_TAG,
                                     mergedVC.getAttribute(AssemblyBasedCallerUtils.EXT_COLLAPSED_TAG));

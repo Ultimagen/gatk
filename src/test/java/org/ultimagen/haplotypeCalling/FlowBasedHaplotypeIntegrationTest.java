@@ -30,7 +30,7 @@ public class FlowBasedHaplotypeIntegrationTest extends GATKBaseTest {
     public Object[][] gethaplotypeMatchingTestData() {
         final Object[][]        testData = {
 
-                { null, "X", 100 }
+                { publicTestDir + "/large/FlowBasedHaplotype_HC_flow_chr9.part.bam", null, 100 }
         };
 
         return testData;
@@ -53,14 +53,14 @@ public class FlowBasedHaplotypeIntegrationTest extends GATKBaseTest {
         for ( final SAMRecord rec : reader ) {
             final SAMRecordToGATKReadAdapter tmp = new SAMRecordToGATKReadAdapter(rec);
             if (!tmp.getAttributeAsString("RG").startsWith("ArtificialHaplotype")) {
-                if (tmp.getAttributeAsString(("CR")).equals(CRValue)) {
+                if ((CRValue == null ) || tmp.getAttributeAsString(("CR")).equals(CRValue)) {
                     if ( count_reads < limit ) {
                         reads.add(tmp);
                         count_reads++;
                     }
                 }
             } else {
-                if (tmp.getAttributeAsString(("CR")).equals(CRValue) ) {
+                if ((CRValue == null) || tmp.getAttributeAsString(("CR")).equals(CRValue) ) {
                     ChromosomeInterval gl = new ChromosomeInterval(tmp.getContig(), tmp.getStart(), tmp.getEnd());
                     if ( count_haplotypes < limit ) {
                         Haplotype hap = new Haplotype(tmp.getBases(), gl);
@@ -91,7 +91,7 @@ public class FlowBasedHaplotypeIntegrationTest extends GATKBaseTest {
         final FlowBasedAlignmentEngine fbe = new FlowBasedAlignmentEngine(new FlowBasedAlignmentArgumentCollection(), -5, 0.02, false, PairHMMLikelihoodCalculationEngine.DEFAULT_DYNAMIC_DISQUALIFICATION_SCALE_FACTOR);
 
         final AlleleLikelihoods<GATKRead, Haplotype> haplotypeReadLikelihoods =
-                fbe.computeReadLikelihoods(haplotypes, reads, true, null);
+                fbe.computeReadLikelihoods(haplotypes, reads, true, reader.getFileHeader());
         logger.debug("haplotypeReadLikelihoods: " + haplotypeReadLikelihoods);
     }
 }
