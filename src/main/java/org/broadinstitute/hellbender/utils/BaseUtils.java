@@ -1,6 +1,5 @@
 package org.broadinstitute.hellbender.utils;
 
-import com.sun.org.apache.xpath.internal.operations.String;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.broadinstitute.hellbender.exceptions.UserException;
