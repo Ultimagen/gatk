@@ -786,7 +786,8 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                 hcArgs.maxMnpDistance,
                 readsHeader,
                 haplotypeBAMWriter.isPresent(),
-                suspiciousLocations);
+                suspiciousLocations,
+                readLikelihoods);
 
         if ( haplotypeBAMWriter.isPresent() ) {
             final Set<Haplotype> calledHaplotypeSet = new HashSet<>(calledHaplotypes.getCalledHaplotypes());

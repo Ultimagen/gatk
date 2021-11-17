@@ -296,7 +296,7 @@ public final class VariantAnnotatorEngine {
                                           final ReferenceContext ref,
                                           final AlleleLikelihoods<GATKRead, Allele> likelihoods,
                                           final Predicate<VariantAnnotation> addAnnot) {
-        return annotateContext(vc, features, ref, likelihoods, Optional.empty(), Optional.empty(), addAnnot);
+        return annotateContext(vc, features, ref, likelihoods, Optional.empty(), Optional.empty(), Optional.empty(), addAnnot);
     }
 
     /**
@@ -313,7 +313,8 @@ public final class VariantAnnotatorEngine {
                                           final ReferenceContext ref,
                                           final AlleleLikelihoods<GATKRead, Allele> readLikelihoods,
                                           final Optional<AlleleLikelihoods<Fragment, Allele>> fragmentLikelihoods,
-                                          final Optional<AlleleLikelihoods<Fragment, Haplotype>> haplotypeLikelihoods,
+                                          final Optional<AlleleLikelihoods<Fragment, Haplotype>> fragmentHaplotypeLikelihoods,
+                                          final Optional<AlleleLikelihoods<GATKRead, Haplotype>> readHaplotypeAlleleLikelihoods,
                                           final Predicate<VariantAnnotation> addAnnot) {
         Utils.nonNull(vc, "vc cannot be null");
         Utils.nonNull(features, "features cannot be null");
@@ -321,10 +322,10 @@ public final class VariantAnnotatorEngine {
 
         // annotate genotypes, creating another new VC in the process
         final VariantContextBuilder builder = new VariantContextBuilder(vc);
-        builder.genotypes(annotateGenotypes(ref, features, vc, readLikelihoods, fragmentLikelihoods, haplotypeLikelihoods, addAnnot));
+        builder.genotypes(annotateGenotypes(ref, features, vc, readLikelihoods, fragmentLikelihoods, fragmentHaplotypeLikelihoods, addAnnot));
         final VariantContext newGenotypeAnnotatedVC = builder.make();
 
-        final Map<String, Object> infoAnnotMap = addInfoAnnotations(vc, features, ref, readLikelihoods, fragmentLikelihoods, haplotypeLikelihoods, addAnnot, newGenotypeAnnotatedVC);
+        final Map<String, Object> infoAnnotMap = addInfoAnnotations(vc, features, ref, readLikelihoods, fragmentLikelihoods, fragmentHaplotypeLikelihoods, readHaplotypeAlleleLikelihoods, addAnnot, newGenotypeAnnotatedVC);
 
         // create a new VC with info and genotype annotations
         final VariantContext annotated = builder.attributes(infoAnnotMap).make();
@@ -335,7 +336,8 @@ public final class VariantAnnotatorEngine {
 
     private Map<String, Object> addInfoAnnotations(VariantContext vc, FeatureContext features, ReferenceContext ref,
                                                    AlleleLikelihoods<GATKRead, Allele> likelihoods, final Optional<AlleleLikelihoods<Fragment, Allele>> fragmentLikelihoods,
-                                                   final Optional<AlleleLikelihoods<Fragment, Haplotype>> haplotypeLikelihoods, Predicate<VariantAnnotation> addAnnot, VariantContext newGenotypeAnnotatedVC) {
+                                                   final Optional<AlleleLikelihoods<Fragment, Haplotype>> haplotypeLikelihoods, final Optional<AlleleLikelihoods<GATKRead, Haplotype>> readHaplotypeAlleleLikelihoods,
+                                                   Predicate<VariantAnnotation> addAnnot, VariantContext newGenotypeAnnotatedVC) {
         final Map<String, Object> infoAnnotMap = new LinkedHashMap<>(newGenotypeAnnotatedVC.getAttributes());
         annotateExpressions(vc, features, ref, infoAnnotMap);
 
@@ -352,9 +354,12 @@ public final class VariantAnnotatorEngine {
                 }
             }
         }
-        if (fragmentLikelihoods.isPresent() && haplotypeLikelihoods.isPresent()) {
+        //TODO this whole thing should be refactored if this is useful or ripped out.
+        if ((fragmentLikelihoods.isPresent() && haplotypeLikelihoods.isPresent()) || readHaplotypeAlleleLikelihoods.isPresent()) {
             jumboInfoAnnotations.stream()
-                    .map(annot -> annot.annotate(ref, features, vc, likelihoods, fragmentLikelihoods.get(), haplotypeLikelihoods.get()))
+                    .map(annot -> annot.annotate(ref, features, vc, likelihoods,
+                            fragmentLikelihoods.isPresent()? fragmentLikelihoods.get() : null,
+                            haplotypeLikelihoods.isPresent()? haplotypeLikelihoods.get(): readHaplotypeAlleleLikelihoods.get()))
                     .forEach(infoAnnotMap::putAll);
         }
         return infoAnnotMap;

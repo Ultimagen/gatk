@@ -143,6 +143,8 @@ public final class GATKVCFConstants {
     public static final String HAPLOTYPE_EQUIVALENCE_COUNTS_KEY =   "HEC";
     public static final String HAPLOTYPE_COMPLEXITY_KEY =           "HAPCOMP";
     public static final String HAPLOTYPE_DOMINANCE_KEY =            "HAPDOM";
+    public static final String HAPLOTYPES_BEFORE_FILTERING_KEY =    "ASSEMBLED_HAPS";
+    public static final String HAPLOTYPES_FILTERED_KEY =            "FILTERED_HAPS";
     public final static String TRANSMISSION_PROBABILITY_KEY =       "TP"; //PhaseByTransmission
 
     // ultima annotations

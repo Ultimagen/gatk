@@ -72,6 +72,8 @@ public abstract class AlleleFiltering {
         subsettedReadLikelihoodsFinal = subsetHaplotypesByAlleles(readLikelihoods, hcArgs, activeWindowStart, suspiciousLocations);
         logger.debug("SHA:: filter alleles - end");
 
+        readLikelihoods.setFilteredHaplotypeCount(readLikelihoods.numberOfAlleles() - subsettedReadLikelihoodsFinal.numberOfAlleles());
+
         if (assemblyDebugOutStream != null) {
             try {
                 assemblyDebugOutStream.write("\nThere were " + subsettedReadLikelihoodsFinal.alleles().size() + " haplotypes found after subsetting by alleles. Here they are:\n");

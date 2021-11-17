@@ -14,6 +14,7 @@ import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.engine.filters.MappingQualityReadFilter;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.tools.walkers.annotator.Annotation;
+import org.broadinstitute.hellbender.tools.walkers.annotator.HaplotypeFilteringAnnotation;
 import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeAssignmentMethod;
 import org.broadinstitute.hellbender.transformers.DRAGENMappingQualityReadTransformer;
@@ -200,6 +201,9 @@ public final class HaplotypeCaller extends AssemblyRegionWalker {
     public Collection<Annotation> makeVariantAnnotations() {
         final boolean confidenceMode = hcArgs.emitReferenceConfidence != ReferenceConfidenceMode.NONE;
         final Collection<Annotation> annotations = super.makeVariantAnnotations();
+        if (hcArgs.filterAlleles) {
+            annotations.add(new HaplotypeFilteringAnnotation());
+        }
         return confidenceMode? HaplotypeCallerEngine.filterReferenceConfidenceAnnotations(annotations): annotations;
     }
 

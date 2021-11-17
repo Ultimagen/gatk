@@ -10,7 +10,6 @@ import org.apache.commons.collections.ListUtils;
 import org.apache.commons.math3.stat.descriptive.rank.Median;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.broadinstitute.hellbender.utils.IndexRange;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerGenotypingDebugger;
 import org.broadinstitute.hellbender.utils.MathUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
@@ -42,6 +41,7 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
 
     private boolean isNaturalLog = false;
     private SimpleInterval subsettedGenomicLoc;
+    private int filteredHaplotypeCount = 0;
 
     public boolean isNaturalLog() {
         return isNaturalLog;
@@ -1223,6 +1223,14 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
     public void changeAlleles(List<A> newAlleles) {
         alleles = new IndexedAlleleList<>(newAlleles);
     }
+
+    public int getFilteredHaplotypeCount() {
+        return filteredHaplotypeCount;
+    }
+    public void setFilteredHaplotypeCount(int filteredHaplotypeCout) {
+        this.filteredHaplotypeCount = filteredHaplotypeCout;
+    }
+
     /**
      * Contains information about the best allele for a unit of evidence.
      */
