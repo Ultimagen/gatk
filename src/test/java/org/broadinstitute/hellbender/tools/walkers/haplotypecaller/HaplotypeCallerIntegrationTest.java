@@ -52,7 +52,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
     // instead of actually running the tests. Can be used with "./gradlew test -Dtest.single=HaplotypeCallerIntegrationTest"
     // to update all of the exact-match tests at once. After you do this, you should look at the
     // diffs in the new expected outputs in git to confirm that they are consistent with expectations.
-    public static final boolean UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS = false;
+    public static final boolean UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS = true;
 
     public static final String TEST_FILES_DIR = toolsTestDir + "haplotypecaller/";
 
@@ -1546,7 +1546,9 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
 
         runCommandLine(args);
 
-        IntegrationTestSpec.assertEqualTextFiles(output, expected);
+        if ( ! UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
+            IntegrationTestSpec.assertEqualTextFiles(output, expected);
+        }
     }
 
     @Test
@@ -1555,11 +1557,13 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         final File output = createTempFile("output", ".vcf");
 
         final File expected = new File(TEST_FILES_DIR, "test_output.keep.lone.g.vcf");
+        final String outputPath = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expected.getAbsolutePath() : output.getAbsolutePath();
+
 
         final ArgumentsBuilder args = new ArgumentsBuilder()
                 .addReference(hg38Reference)
                 .addInterval("chr9:81149486-81177047")
-                .addOutput(output)
+                .addOutput(outputPath)
                 .addInput(input)
                 .add("smith-waterman", "FASTEST_AVAILABLE")
                 .add("likelihood-calculation-engine", "FlowBased")
@@ -1575,7 +1579,9 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
 
         runCommandLine(args);
 
-        IntegrationTestSpec.assertEqualTextFiles(output, expected);
+        if ( !UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
+            IntegrationTestSpec.assertEqualTextFiles(output, expected);
+        }
     }
 
     @Test
@@ -1585,11 +1591,12 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         final File output = createTempFile("output", ".vcf");
 
         final File expected = new File(TEST_FILES_DIR, "test_output.vcf");
+        final String outputPath = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expected.getAbsolutePath() : output.getAbsolutePath();
 
         final ArgumentsBuilder args = new ArgumentsBuilder()
                 .addReference(hg38Reference)
                 .addInterval("chr9:81149486-81177047")
-                .addOutput(output)
+                .addOutput(outputPath)
                 .addInput(input)
                 .add("smith-waterman", "FASTEST_AVAILABLE")
                 .add("likelihood-calculation-engine", "FlowBased")
@@ -1604,7 +1611,88 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
 
         runCommandLine(args);
 
-        IntegrationTestSpec.assertEqualTextFiles(output, expected);
+        if ( ! UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
+            IntegrationTestSpec.assertEqualTextFiles(output, expected);
+        }
+    }
+
+    @Test
+    public void testVcfWithAssemblyComplexityAnnotation() throws Exception {
+        Utils.resetRandomGenerator();
+        final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
+        final File output = createTempFile("testVcfWithAssemblyComplexityAnnotation", ".vcf");
+        final File expected = new File(TEST_FILES_DIR, "test_output_assemblyAnnotations.vcf");
+        final String outputPath = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expected.getAbsolutePath() : output.getAbsolutePath();
+
+        final ArgumentsBuilder args = new ArgumentsBuilder()
+                .addReference(hg38Reference)
+                .addInterval("chr9:81149486-81177047")
+                .addOutput(outputPath)
+                .addInput(input)
+                .add("smith-waterman", "FASTEST_AVAILABLE")
+                .add("likelihood-calculation-engine", "FlowBased")
+                .add("mbq", "0")
+                .add("kmer-size", 10)
+                .add("flow-filter-alleles", true)
+                .add("flow-filter-alleles-sor-threshold", 40)
+                .add("flow-assembly-collapse-hmer-size", 12)
+                .add("flow-matrix-mods", "10,12,11,12")
+                .add("flow-filter-lone-alleles", true)
+                .add("A", "AssemblyComplexity")
+                .addFlag("assembly-complexity-reference-mode")
+                .add(StandardArgumentDefinitions.ADD_OUTPUT_VCF_COMMANDLINE, false);
+
+        runCommandLine(args);
+
+        if ( ! UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
+            IntegrationTestSpec.assertEqualTextFiles(output, expected);
+        }
+    }
+
+    @Test
+    public void testVcfWithAssemblyComplexityAnnotationRevamp() throws Exception {
+        Utils.resetRandomGenerator();
+        final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
+        final File output = createTempFile("testVcfWithAssemblyComplexityAnnotation", ".vcf");
+        final File expected = new File(TEST_FILES_DIR, "test_output_assemblyAnnotations_GVCF.vcf");
+        final String outputPath = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expected.getAbsolutePath() : output.getAbsolutePath();
+
+        final ArgumentsBuilder args = new ArgumentsBuilder()
+                .addReference(hg38Reference)
+                .addInterval("chr9:81149486-81177047")
+                .addOutput(outputPath)
+                .addInput(input)
+                .add("mbq", 0).
+                addFlag("flow-filter-alleles")
+                .add("flow-filter-alleles-sor-threshold","3")
+                .add("flow-assembly-collapse-hmer-size ","12")
+                .add("flow-matrix-mods","10,12,11,12")
+                .add("bam-writer-type","CALLED_HAPLOTYPES_NO_READS")
+                .addFlag("apply-frd")
+                .add("ERC","GVCF")
+                .add("minimum-mapping-quality","1")
+                .add("mapping-quality-threshold-for-genotyping","1")
+                .addFlag("override-fragment-softclip-check")
+                .add("flow-likelihood-parallel-threads","2")
+                .addFlag("flow-likelihood-optimized-comp")
+                .addFlag("adaptive-pruning")
+                .add("pruning-lod-threshold","3.0")
+                .addFlag("enable-dynamic-read-disqualification-for-genotyping")
+                .add("dynamic-read-disqualification-threshold","10")
+                .add("G","StandardAnnotation")
+                .add("G","StandardHCAnnotation")
+                .add("G","AS_StandardAnnotation")
+                .add("GQB","10").add("GQB","20").add("GQB","30").add("GQB","40").add("GQB","50").add("GQB","60").add("GQB","70").add("GQB","80").add("GQB","90")
+                .add("likelihood-calculation-engine","FlowBased")
+                .add("A", "AssemblyComplexity")
+                .addFlag("assembly-complexity-reference-mode")
+                .add(StandardArgumentDefinitions.ADD_OUTPUT_VCF_COMMANDLINE, false);
+
+        runCommandLine(args);
+
+        if ( ! UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
+            IntegrationTestSpec.assertEqualTextFiles(output, expected);
+        }
     }
 
     /**

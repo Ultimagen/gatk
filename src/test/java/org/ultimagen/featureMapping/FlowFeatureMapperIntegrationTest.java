@@ -12,14 +12,21 @@ import java.io.IOException;
 
 public class FlowFeatureMapperIntegrationTest extends CommandLineProgramTest {
 
+    public static final boolean UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS = false;
+
     protected static String    vcTestDir = publicTestDir + FlowTestConstants.FEATURE_MAPPING_DATA_DIR;
+
+    @Test
+    public void assertThatExpectedOutputUpdateToggleIsDisabled() {
+        Assert.assertFalse(UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS, "The toggle to update expected outputs should not be left enabled");
+    }
 
     @Test
     public void testBasic() throws IOException {
 
         final File outputDir = createTempDir("testFlowFeatureMapperTest");
-        final File outputFile = new File(outputDir + "/snv_feature_mapper_output.vcf");
         final File expectedFile = new File(vcTestDir + "/snv_feature_mapper_output.vcf");
+        final File outputFile = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expectedFile : new File(outputDir + "/snv_feature_mapper_output.vcf");
 
         final String[] args = new String[] {
                 "-R", largeFileTestDir + "/Homo_sapiens_assembly38.fasta.gz",
@@ -44,7 +51,9 @@ public class FlowFeatureMapperIntegrationTest extends CommandLineProgramTest {
         Assert.assertTrue(outputFile.exists());
 
         // walk the output and expected files, compare non-comment lines
-        (new TestFileVerifySame()).verifySame(outputFile, expectedFile);
+        if ( !UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
+            (new TestFileVerifySame()).verifySame(outputFile, expectedFile);
+        }
     }
 
 }
