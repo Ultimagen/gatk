@@ -10,28 +10,6 @@ public class FlowBasedKeyCodec {
      * Converts base space sequence to flow space
      * @param bases base space sequence
      * @param flowOrder flow order
-     * @param clipping maximal flow value to output (at most 127).
-     * @return Array of flow values
-     */
-    static protected byte[] base2key(final byte[] bases, final String flowOrder, int clipping) {
-
-        clipping = Math.min(clipping, 127);
-
-        final int[]       intKeys = base2key(bases, flowOrder);
-        final byte[]      byteKeys = new byte[intKeys.length];
-        int         i = 0;
-
-        for ( final int intKey : intKeys ) {
-            byteKeys[i++] = (byte)((intKey < clipping) ? intKey : clipping);
-        }
-
-        return byteKeys;
-    }
-
-    /**
-     * Converts base space sequence to flow space
-     * @param bases base space sequence
-     * @param flowOrder flow order
      * @return Array of flow values
      */
 

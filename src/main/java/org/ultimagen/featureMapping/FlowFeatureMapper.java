@@ -356,7 +356,7 @@ public final class FlowFeatureMapper extends ReadWalker {
 
             // analyze read
             final FlowBasedRead flowRead2 = new FlowBasedRead(fr.read, rgInfo.flowOrder, rgInfo.maxClass, hcArgs.fbargs);
-            final byte[]        key2 = flowRead2.getKey();
+            final int[]        key2 = flowRead2.getKey();
             for ( int i = 0 ; i < key2.length ; i++ ) {
                 final double      p1 = flowRead2.getProb(i, key2[i]);
                 for ( int j = 0 ; j < rgInfo.maxClass ; j++ ) {
