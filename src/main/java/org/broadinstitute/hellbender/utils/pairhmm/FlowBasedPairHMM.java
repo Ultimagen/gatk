@@ -51,9 +51,8 @@ public class FlowBasedPairHMM extends PairHMM {
      * @param haplotypeFlows the bases of the haplotype
      * @param readFlows      the bases of the read
      * @param read           the read with the ability to compute qual
-     * @param startIndex     where to start updating the distanceMatrix (in case this read is similar to the previous read)
      */
-    void initializePriors(final int[] haplotypeFlows, final byte[] haplotypeFlowOrder, final byte[] readFlows, final byte[] readFlowOrder, final FlowBasedRead read, final int startIndex) {
+    void initializePriors(final int[] haplotypeFlows, final byte[] haplotypeFlowOrder, final int[] readFlows, final byte[] readFlowOrder, final FlowBasedRead read) {
 
         // initialize the prior matrix for all combinations of read x haplotype bases
         // Abusing the fact that java initializes arrays with 0.0, so no need to fill in rows and columns below 2.
@@ -127,7 +126,7 @@ public class FlowBasedPairHMM extends PairHMM {
         int readIndex = 0;
         for(final FlowBasedRead read : processedReads){
 
-            final byte[] readKey = read.getKey();
+            final int[] readKey = read.getKey();
 
             final byte[] readInsQuals = read.getReadInsQuals();
             final byte[] readDelQuals = read.getReadDelQuals();
@@ -171,7 +170,7 @@ public class FlowBasedPairHMM extends PairHMM {
 
 
 
-    protected double subComputekeayLikelihoodGivenHaplotypeKeysLog10(int hapStartIndex, int[] haplotypeKey, final byte[] haplotypeFlowOrder, byte[] readKey, final byte[] readFlowOrder,
+    protected double subComputekeayLikelihoodGivenHaplotypeKeysLog10(int hapStartIndex, int[] haplotypeKey, final byte[] haplotypeFlowOrder, int[] readKey, final byte[] readFlowOrder,
                                                                      final FlowBasedRead read, byte[] insertionGOP, byte[] deletionGOP, byte[] overallGCP, boolean recacheReadValues) {
 
         int thisReadPaddedLength = readKey.length + 1 + FLOW_SIZE;
@@ -221,7 +220,7 @@ public class FlowBasedPairHMM extends PairHMM {
             constantsAreInitialized = true;
         }
 
-        initializePriors(haplotypeKey, haplotypeFlowOrder, readKey, readFlowOrder, read, hapStartIndex);
+        initializePriors(haplotypeKey, haplotypeFlowOrder, readKey, readFlowOrder, read);
 
         for (int i = 1+FLOW_SIZE; i < thisReadPaddedLength; i++) {
             // +1 here is because hapStartIndex is 0-based, but our matrices are 1 based
