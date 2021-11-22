@@ -38,27 +38,97 @@ development and testing
 public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRead, FlowBasedReadInterface, Serializable {
 
     private static final long serialVersionUID = 42L;
-    protected static int N_ASCII=78;
+    private final Logger logger = LogManager.getLogger(this.getClass());
 
-    private SAMRecord samRecord;
-    private byte[] forwardSequence;
-    private byte[] key;
-    private int [] flow2base;
-    private int maxHmer;
-    private byte[] flowOrder;
-    private double[][] flowMatrix;
-    private boolean validKey;
-    private Direction direction = Direction.SYNTHESIS;
-    private boolean trimmedToHaplotype = false;
-    private int trimLeftBase = 0 ;
-    private int trimRightBase = 0 ;
+    // constants
+    protected static int N_ASCII=78;
     static private final int MINIMAL_READ_LENGTH = 10; // check if this is the right number
     static private final int MAXIMAL_MAXHMER = 100;
     private final double MINIMAL_CALL_PROB = 0.1;
+
+    /**
+     * The sam record from which this flow based read originated
+     */
+    private SAMRecord samRecord;
+
+    /**
+     * The read's sequence, always in forward direction
+     */
+    private byte[] forwardSequence;
+
+    /**
+     * The flow key for the read - i.e. lengths of hmers in an flow order.
+     *
+     * For example, assuming a flow order of TGCA, and a forward sequence of GGAAT, the key will be 0,2,0,2,1
+     */
+    private byte[] key;
+
+    /**
+     * the maping of key elements to their origin locations in the sequence. Entry n contains the offset in the sequence
+     * where the hmer described by this key element starts.
+     */
+    private int [] flow2base;
+
+    /**
+     * The maximal length of an hmer that can be encoded (normally in the 10-12 range)
+     */
+    private int maxHmer;
+
+    /**
+     * The order in which flow key in encoded (See decription for key field). Flow order may be wrapped if a longer one
+     * needed.
+     */
+    private byte[] flowOrder;
+
+    /**
+     * The probability matrix for this read. [n][m] position represents that probablity that an hmer of n length will be
+     * present at the m key position. Therefore, the first dimention is in the maxHmer order, where the second dimension
+     * is length(key).
+     */
+    private double[][] flowMatrix;
+
+    /**
+     * The validity status of the key. Certain operations may produce undefined/errornous results. This is signaled by
+     * the read being marked with a validKey == false
+     */
+    private boolean validKey;
+
+    /**
+     * The direction of this read. After being red, the direction will also swing to be REFERENCE
+     */
+    private Direction direction = Direction.SYNTHESIS;
+
+    /**
+     * Was base clipping applied to this read? (normally to trim a read to the span of a haplotype)
+     */
+    private boolean baseClipped = false;
+
+    /**
+     * If applyBaseClipping was called, the left trimming that was actually applied to the read
+     */
+    private int trimLeftBase = 0 ;
+
+    /**
+     * If applyBaseClipping was called, the right trimming that was actually applied to the read
+     */
+    private int trimRightBase = 0 ;
+
+    /**
+     * The flow based argument collection under which this read was created
+     */
     private final FlowBasedAlignmentArgumentCollection fbargs;
-    private final Logger logger = LogManager.getLogger(this.getClass());
+
+    /**
+     * This matrix contains logic for modifying the flow matrix as it is read in.
+     *
+     * If the value of [n] is not zero, then the hmer probability for hmer length n will be copied to the [n] position
+     * For the implementation logic, see fillFlowMatrix
+     */
     static private int[] flowMatrixModsInstructions = new int[MAXIMAL_MAXHMER];
 
+    /**
+     * This allows tools to reduce/enlarge the lower limit of read size for clipping operations.
+     */
     static private int minimalReadLength = MINIMAL_READ_LENGTH;
 
 
@@ -567,13 +637,13 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         final int clipRight = clipRightPair[0];
         final int rightHmerClip = clipRightPair[1];
         if (getLength() - clipLeftBase - clipRightBase < minimalReadLength) {
-            trimmedToHaplotype = true;
-            validKey =false;
-            trimLeftBase =clipLeftBase;
+            baseClipped = true;
+            validKey = false;
+            trimLeftBase = clipLeftBase;
             trimRightBase = clipRightBase;
         } else {
             applyClipping(clipLeft, leftHmerClip, clipRight, rightHmerClip, spread);
-            trimmedToHaplotype = true;
+            baseClipped = true;
             trimLeftBase = clipLeftBase;
             trimRightBase = clipRightBase;
         }
@@ -792,8 +862,8 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     public int seqLength(){
         return forwardSequence.length;
     }
-    public boolean isTrimmedToHaplotype() {
-        return trimmedToHaplotype;
+    public boolean isBaseClipped() {
+        return baseClipped;
     }
 
     public int getTrimmedStart() {
