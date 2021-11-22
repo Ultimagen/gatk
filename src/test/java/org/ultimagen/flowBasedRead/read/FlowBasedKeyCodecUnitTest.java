@@ -51,13 +51,6 @@ public class FlowBasedKeyCodecUnitTest extends GATKBaseTest {
         Assert.assertNotNull(intKey);
         final String        intKeyAsString = StringUtils.join(intKey, ',');
         Assert.assertEquals(intKeyAsString, expectedKeyAsString);
-
-        // byte version
-        final byte[]         byteKey = FlowBasedKeyCodec.base2key(basesAsString.getBytes(), flowOrder, 1000);
-        Assert.assertNotNull(byteKey);
-        final String        byteKeyAsString = StringUtils.join(byteKey, ',');
-        Assert.assertEquals(byteKeyAsString,
-                expectedClippedKeyAsString != null ? expectedClippedKeyAsString : expectedKeyAsString);
     }
 
     @DataProvider(name="makeReadArrayTests")

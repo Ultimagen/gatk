@@ -61,7 +61,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
      *
      * For example, assuming a flow order of TGCA, and a forward sequence of GGAAT, the key will be 0,2,0,2,1
      */
-    private byte[] key;
+    private int[] key;
 
     /**
      * the maping of key elements to their origin locations in the sequence. Entry n contains the offset in the sequence
@@ -252,7 +252,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
        // generate key (base to flow space)
         setDirection(Direction.REFERENCE);  // base is always in reference/alignment direction
-        key = FlowBasedKeyCodec.base2key(samRecord.getReadBases(), _flowOrder, 1000);
+        key = FlowBasedKeyCodec.base2key(samRecord.getReadBases(), _flowOrder);
         flow2base = FlowBasedKeyCodec.getKey2Base(key);
         flowOrder = FlowBasedKeyCodec.getFlow2Base(_flowOrder, key.length);
 
@@ -277,7 +277,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         // apply key and qual/ti to matrix
         int     qualOfs = 0;
         for ( int i = 0 ; i < key.length ; i++ ) {
-            final byte        run = key[i];
+            final int        run = key[i];
 
             // the probability is not divided by two for hmers of length 1
             if ( run == 1 ) {
@@ -318,7 +318,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         // generate key (base to flow space)
         setDirection(Direction.REFERENCE);  // base is always in reference/alignment direction
 
-        key = FlowBasedKeyCodec.base2key(samRecord.getReadBases(), _flowOrder, 1000);
+        key = FlowBasedKeyCodec.base2key(samRecord.getReadBases(), _flowOrder);
         flow2base = FlowBasedKeyCodec.getKey2Base(key);
         flowOrder = FlowBasedKeyCodec.getFlow2Base(_flowOrder, key.length);
 
@@ -343,7 +343,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         // apply key and qual/tp to matrix
         int     qualOfs = 0; //converts between base -> flow
         for ( int i = 0 ; i < key.length ; i++ ) {
-            final byte        run = key[i];
+            final int        run = key[i];
             if (run > 0) {
                 parseSingleHmer(probs, tp, i, run, qualOfs);
             }
@@ -363,7 +363,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     //convert qualities from the single hmer to a column in a flow matrix
     private void parseSingleHmer(final double[] probs, final byte[] tp, final int flowIdx,
-                                 final byte flowCall, final int qualOfs){
+                                 final int flowCall, final int qualOfs){
         for (int i = qualOfs ; i < qualOfs+flowCall; i++) {
             if (tp[i]!=0) {
                 final int loc = Math.max(Math.min(flowCall+tp[i], maxHmer),0);
@@ -435,7 +435,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
 
     private void validateSequence(){
-        for (final byte b : key) {
+        for (final int b : key) {
             if (b > maxHmer - 1) {
                 validKey = false;
             }
@@ -523,7 +523,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     // used for development of the new basecalling, but not in production code
     private void readFlowMatrix(final String _flowOrder) {
 
-        key = getAttributeAsByteArray("kr");
+        key = getAttributeAsIntArray("kr", true);
 
         // creates a translation from flow # to base #
         flow2base = FlowBasedKeyCodec.getKey2Base(key);
@@ -538,11 +538,11 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             }
         }
 
-        byte [] kh = getAttributeAsByteArray( "kh" );
+        int [] kh = getAttributeAsIntArray( "kh" , true);
         int [] kf = getAttributeAsIntArray("kf", false);
         int [] kd = getAttributeAsIntArray( "kd", true);
 
-        final byte [] key_kh = key;
+        final int [] key_kh = key;
         final int [] key_kf = new int[key.length];
         for ( int i = 0 ; i < key_kf.length ; i++)
             key_kf[i] = i;
@@ -560,7 +560,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         validateSequence();
     }
 
-    private void fillFlowMatrix(final byte [] kh, final int [] kf,
+    private void fillFlowMatrix(final int [] kh, final int [] kf,
                                 final double [] kdProbs ) {
         for ( int i = 0 ; i < kh.length; i++ ) {
             // normal matrix filling
@@ -592,7 +592,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
-    private static int findFirstNonZero(final byte[] array){
+    private static int findFirstNonZero(final int[] array){
         int result = -1;
         for (int i = 0 ; i < array.length; i++){
             if (array[i]!=0) {
@@ -603,7 +603,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         return result;
     }
 
-    private static int findLastNonZero(final byte[] array){
+    private static int findLastNonZero(final int[] array){
         int result = -1;
         for (int i = array.length-1 ; i >= 0; i--){
             if (array[i]!=0) {
@@ -771,7 +771,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         int stopClip = 0;
 
-        final byte[] rkey = new byte[key.length];
+        final int[] rkey = new int[key.length];
         for (int i = 0 ; i < key.length; i++ ){
             rkey[i] = key[key.length-1-i];
         }
@@ -843,7 +843,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         return key.length;
     }
 
-    public byte[] getKey() {
+    public int[] getKey() {
         return key;
     }
 
@@ -930,7 +930,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
-    private void removeLongIndels(final byte [] key_kh ){
+    private void removeLongIndels(final int [] key_kh ){
         for ( int i = 0 ; i < getNFlows(); i++ ) {
             for (int j = 0; j < getMaxHmer()+1; j++){
                 if (Math.abs(j-key_kh[i])>1){
@@ -940,7 +940,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
-    private void removeOneToZeroProbs(final byte [] key_kh) {
+    private void removeOneToZeroProbs(final int [] key_kh) {
         for (int i = 0 ; i < getNFlows(); i++){
             if (key_kh[i] == 0){
                 for (int j = 1; j < getMaxHmer()+1; j++){
@@ -964,9 +964,9 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
-    private void smoothIndels(final byte [] kr ) {
+    private void smoothIndels(final int [] kr ) {
         for ( int i = 0 ; i < kr.length; i++ ){
-            final byte idx = kr[i];
+            final int idx = kr[i];
             if (( idx > 1 ) && ( idx < maxHmer) ) {
                 final double tmp = (flowMatrix[idx - 1][i] + flowMatrix[idx + 1][i]) / 2;
                 flowMatrix[idx - 1][i] = tmp;
@@ -975,9 +975,9 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
-    private void reportInsOrDel(final byte [] kr ) {
+    private void reportInsOrDel(final int [] kr ) {
         for ( int i = 0 ; i < kr.length; i++ ){
-            final byte idx = kr[i];
+            final int idx = kr[i];
             if (( idx > 1 ) && ( idx < maxHmer) ) {
                 if ((flowMatrix[idx-1][i] > fbargs.fillingValue) && (flowMatrix[idx+1][i] > fbargs.fillingValue)) {
                     final int fixCell = flowMatrix[idx-1][i] > flowMatrix[idx+1][i] ? idx+1 : idx-1;
@@ -1011,7 +1011,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     }
 
 
-    private void reportMaxNProbsHmer(final byte [] key) {
+    private void reportMaxNProbsHmer(final int [] key) {
         final double [] tmpContainer = new double[maxHmer];
         for (int i = 0 ; i < key.length;i++){
 
