@@ -19,6 +19,7 @@ public class Feature implements Comparable<Feature> {
     int         nonIdentMBasesOnRead;
     int         featuresOnRead;
     int         refEditDistance;
+    int         index;
 
     public Feature(GATKRead read, FlowFeatureMapperArgumentCollection.MappingFeatureEnum  type, byte[] readBases,
                    byte[] refBases, int readBasesOffset, int start, int offsetDelta) {

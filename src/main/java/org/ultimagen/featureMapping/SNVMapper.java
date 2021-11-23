@@ -70,6 +70,7 @@ public class SNVMapper implements FeatureMapper {
                 refOfs += length;
             }
         }
+        int         hardLength = read.getUnclippedEnd() - read.getUnclippedStart() + 1;
 
         // walk the cigar (again) looking for features
         readOfs = 0;
@@ -108,6 +109,10 @@ public class SNVMapper implements FeatureMapper {
                         Feature     feature = Feature.makeSNV(read, readOfs, ref[refOfs], referenceContext.getStart() + refOfs, readOfs - refOfs);
                         feature.nonIdentMBasesOnRead = nonIdentMBases;
                         feature.refEditDistance = refEditDistance;
+                        if ( !read.isReverseStrand() )
+                            feature.index = readOfs;
+                        else
+                            feature.index = hardLength - readOfs;
                         features.add(feature);
                     }
                 }
