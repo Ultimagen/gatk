@@ -83,7 +83,7 @@ public final class FlowFeatureMapper extends ReadWalker {
     private static final String     VCF_MAPQ = "X_MAPQ";
     private static final String     VCF_CIGAR = "X_CIGAR";
     private static final String     VCF_READ_COUNT = "X_READ-COUNT";
-    private static final String     VCF_FILTERED_COUNT = "X_FILTERED-COUNT";
+    private static final String     VCF_FILTERED_COUNT = "X_FILTERED_COUNT";
     private static final String     VCF_FC1 = "X_FC1";
     private static final String     VCF_FC2 = "X_FC2";
     private static final String     VCF_LENGTH = "X_LENGTH";
