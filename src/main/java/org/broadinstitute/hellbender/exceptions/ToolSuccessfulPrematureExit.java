@@ -1,4 +1,4 @@
-package org.ultimagen.groundTruth;
+package org.broadinstitute.hellbender.exceptions;
 
 public class ToolSuccessfulPrematureExit extends RuntimeException {
 
