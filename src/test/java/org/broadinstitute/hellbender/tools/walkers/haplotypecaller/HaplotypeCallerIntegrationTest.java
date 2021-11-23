@@ -1482,11 +1482,12 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         final File output = createTempFile("output", ".vcf");
 
         final File expected = new File(TEST_FILES_DIR, "test_output.g.vcf");
+        final String outputPath = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expected.getAbsolutePath() : output.getAbsolutePath();
 
         final ArgumentsBuilder args = new ArgumentsBuilder()
                 .addReference(hg38Reference)
                 .addInterval("chr9:81149486-81177047")
-                .addOutput(output)
+                .addOutput(outputPath)
                 .addInput(input)
                 .add("smith-waterman", "FASTEST_AVAILABLE")
                 .add("likelihood-calculation-engine", "FlowBased")
