@@ -10,7 +10,7 @@ import org.broadinstitute.hellbender.utils.ClassUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.config.ConfigFactory;
 import org.broadinstitute.hellbender.utils.runtime.RuntimeUtils;
-import org.ultimagen.groundTruth.ToolSuccessfulPrematureExit;
+import org.broadinstitute.hellbender.exceptions.ToolSuccessfulPrematureExit;
 
 import java.io.PrintStream;
 import java.io.Serializable;
