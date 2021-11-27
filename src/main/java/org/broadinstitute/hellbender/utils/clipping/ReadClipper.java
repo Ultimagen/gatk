@@ -320,7 +320,7 @@ public class ReadClipper {
     }
 
     public static GATKRead hardClipSoftClippedBases (final GATKRead read) {
-        return hardClipSoftClippedBases(read, 0);
+        return new ReadClipper(read).hardClipSoftClippedBases();
     }
     public static GATKRead hardClipSoftClippedBases (final GATKRead read, int clipExtraBases) {
         return new ReadClipper(read,clipExtraBases).hardClipSoftClippedBases();

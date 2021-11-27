@@ -14,6 +14,14 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+/**
+ * Filtering haplotypes that contribute weak alleles to the genotyping. This is a version that determines if allele is weak using
+ * Mutect2 model.
+ *
+ * @author Ilya Soifer &lt;ilya.soifer@ultimagen.com&gt;
+ * @author Yossi Farjoun &lt;farjoun@broadinstitute.org&gt;
+ *
+ */
 
 public class AlleleFilteringMutect extends AlleleFiltering {
     private SomaticGenotypingEngine genotypingEngine;
@@ -24,6 +32,17 @@ public class AlleleFilteringMutect extends AlleleFiltering {
         genotypingEngine = _genotypingEngine;
     }
 
+    /**
+     * Calculate calculate genotype likelihood of requirement of an allele. Specifically, calculates the likelihood
+     * of the data given that allele versus the likelihood of the data when all haplotypes containing the allele are removed
+     * This is very similar to what is done in the callMutations function in MutectEngine, but here the haplotypes that do
+     * not support the allele are all haplotypes that do not contain the allele rather than only the haplotypes that support reference
+     * etc.
+     *
+     * @param alleleLikelihoods
+     * @param allele
+     * @return
+     */
 
     int getAlleleLikelihood(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele) {
 
