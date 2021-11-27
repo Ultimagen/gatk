@@ -677,17 +677,21 @@ public final class AssemblyBasedCallerUtils {
                         // because we're in GGA mode and it's not an allele we want
                         continue;
                     }
-                    // the event starts prior to the current location, so it's a spanning deletion
-                } else if (spanningEvent.getStart() < loc) {
-                    if (!result.containsKey(Allele.SPAN_DEL)) {
-                        result.put(Allele.SPAN_DEL, new ArrayList<>());
-                    }
-                    result.get(Allele.SPAN_DEL).add(h);
-                    break;
                 } else {
-                    // the event starts  the current location, so it's neither the allele nor the reference
-                    continue;
+                    if (emitSpanningDels) {
+                        // the event starts prior to the current location, so it's a spanning deletion
+                        if (!result.containsKey(Allele.SPAN_DEL)) {
+                            result.put(Allele.SPAN_DEL, new ArrayList<>());
+                        }
+                        result.get(Allele.SPAN_DEL).add(h);
+                        // there might be a del+ins at the site in question and this would miss one of them unless its a continue
+                        break; //Why is there a break here? Shouldn't this be a continue? Why should the first spanning event overlap?A
+                    } else {
+                        result.get(ref).add(h);
+                        break;
+                    }
                 }
+
             }
 
         }

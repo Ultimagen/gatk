@@ -30,6 +30,15 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+/**
+ * Filtering haplotypes that contribute weak alleles to the genotyping. This is a version that determines if allele is weak using
+ * HaplotypeCaller model.
+ *
+ * @author Ilya Soifer &lt;ilya.soifer@ultimagen.com&gt;
+ * @author Yossi Farjoun &lt;farjoun@broadinstitute.org&gt;
+ *
+ */
+
 public class AlleleFilteringHC extends AlleleFiltering {
     private HaplotypeCallerGenotypingEngine genotypingEngine;
     private AlleleFrequencyCalculator afCalc;
@@ -41,7 +50,16 @@ public class AlleleFilteringHC extends AlleleFiltering {
          afCalc = AlleleFrequencyCalculator.makeCalculator(config);
     }
 
-
+    /**
+     * Calculate calculate genotype likelihood of requirement of an allele. Specifically, calculates the likelihood
+     * of the data given that allele versus the likelihood of the data when all haplotypes containing the allele are removed
+     * This is very similar to what is done in the genotyping engine, but here the haplotypes that do not support the allele
+     * are all haplotypes that do not contain the allele.
+     *
+     * @param alleleLikelihoods
+     * @param allele
+     * @return
+     */
     int getAlleleLikelihood(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele) {
         final Allele notAllele = InverseAllele.of(allele, true);
 
