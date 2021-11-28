@@ -28,7 +28,6 @@ import org.ultimagen.featureMapping.FlowFeatureMapper;
 import org.ultimagen.flowBasedRead.alignment.FlowBasedAlignmentEngine;
 import org.ultimagen.flowBasedRead.read.FlowBasedHaplotype;
 import org.ultimagen.flowBasedRead.read.FlowBasedRead;
-import org.ultimagen.flowBasedRead.utils.Direction;
 import picard.cmdline.programgroups.BaseCallingProgramGroup;
 
 import java.io.IOException;
@@ -216,7 +215,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         locationTranslator = new AncestralContigLocationTranslator(ancestralTranslatorsBasePath);
 
         // create likelihood engine
-        ReadLikelihoodCalculationEngine engine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(hcArgs.likelihoodArgs, hcArgs.fbargs, false);
+        ReadLikelihoodCalculationEngine engine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(hcArgs.likelihoodArgs, false);
         if ( engine instanceof FlowBasedAlignmentEngine) {
             likelihoodCalculationEngine = (FlowBasedAlignmentEngine)engine;
         } else {
@@ -650,7 +649,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         // create flow read
         final FlowBasedRead   flowRead = new FlowBasedRead(read, rgInfo.flowOrder, rgInfo.maxClass, hcArgs.fbargs);
         if ( read.isReverseStrand() ) {
-            flowRead.setDirection(Direction.SYNTHESIS);
+            flowRead.setDirection(FlowBasedRead.Direction.SYNTHESIS);
             flowRead.applyAlignment();
         }
 
@@ -674,7 +673,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         // create flow read
         final FlowBasedRead           flowRead = new FlowBasedRead(read, rgInfo.flowOrder, rgInfo.maxClass, hcArgs.fbargs);
         if ( read.isReverseStrand() ) {
-            flowRead.setDirection(Direction.SYNTHESIS);
+            flowRead.setDirection(FlowBasedRead.Direction.SYNTHESIS);
             flowRead.applyAlignment();
         }
 
@@ -794,7 +793,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         return "\"" + Arrays.toString(key).replaceAll("\\[|\\]|\\s", "") + "\"";
     }
 
-    private String flowKeyAsCsvString(byte[] key, final String seq, final String flowOrder) {
+    private String flowKeyAsCsvString(int[] key, final String seq, final String flowOrder) {
         final StringBuilder     sb = new StringBuilder();
 
         sb.append("\"");
@@ -889,7 +888,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         cols.put("ReadCigar", read.getCigar());
 
         final String    readSeq = reverseComplement(read.getBasesString(), read.isReverseStrand());
-        final byte[]    readKey = reverse(flowRead.getKey(), read.isReverseStrand());
+        final int[]     readKey = reverse(flowRead.getKey(), read.isReverseStrand());
         final String    readFlowOrder = reverseComplement(getReadGroupInfo(getHeaderForReads(), read).flowOrder, read.isReverseStrand());
         cols.put("ReadSequence", readSeq);
         cols.put("ReadKey", flowKeyAsCsvString(readKey, readSeq, readFlowOrder));
@@ -984,15 +983,15 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         return !isReversed ? bases : reverseComplement(bases);
     }
 
-    private byte[] reverse(final byte[] bytes) {
-        final byte[] result = new byte[bytes.length];
+    private int[] reverse(final int[] bytes) {
+        final int[] result = new int[bytes.length];
         System.arraycopy(bytes, 0, result, 0, result.length);
         FlowBasedRead.reverse(result, result.length);
 
         return result;
     }
 
-    private byte[] reverse(final byte[] bytes, final boolean isReversed) {
+    private int[] reverse(final int[] bytes, final boolean isReversed) {
         return !isReversed ? bytes : reverse(bytes);
     }
 

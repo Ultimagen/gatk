@@ -482,7 +482,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     }
 
 
-    private static void reverse(final int []a, final int n)
+    public static void reverse(final int []a, final int n)
     {
         int i, t;
         for (i = 0; i < n / 2; i++) {
