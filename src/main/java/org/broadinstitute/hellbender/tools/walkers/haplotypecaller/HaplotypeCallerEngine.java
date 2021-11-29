@@ -648,7 +648,6 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         // run the local assembler, getting back a collection of information on how we should proceed
         final AssemblyResultSet untrimmedAssemblyResult =  AssemblyBasedCallerUtils.assembleReads(region, givenAlleles, hcArgs, readsHeader, samplesList, logger, referenceReader, assemblyEngine, aligner, !hcArgs.doNotCorrectOverlappingBaseQualities, hcArgs.fbargs);
         ReadThreadingAssembler.addAssembledVariantsToEventMapOutput(untrimmedAssemblyResult, assembledEventMapVariants, hcArgs.maxMnpDistance, assembledEventMapVcfOutputWriter);
-        final LHWRefView refView = untrimmedAssemblyResult.getRefView();
 
         if (assemblyDebugOutStream != null) {
             try {
@@ -740,28 +739,6 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         alleleLikelihoodWriter.ifPresent(
                 writer -> writer.writeAlleleLikelihoods(readLikelihoods));
 
-        haplotypes = readLikelihoods.alleles();
-        final AlleleLikelihoods<GATKRead, Haplotype> uncollapsedReadLikelihoods;
-        if ( refView != null ) {
-
-            haplotypes = refView.uncollapseHaplotypesByRef(haplotypes, true, false, null);
-            if ( logger.isDebugEnabled() ) {
-                logger.debug(String.format("%d haplotypes before uncollapsing", haplotypes.size()));
-            }
-            Map<Haplotype, List<Haplotype>> identicalHaplotypesMap = LHWRefView.identicalByUncollapsingHaplotypeMap(haplotypes);
-            readLikelihoods.changeAlleles(haplotypes);
-            uncollapsedReadLikelihoods = readLikelihoods.marginalize(identicalHaplotypesMap);
-            if ( logger.isDebugEnabled() ) {
-                logger.debug(String.format("%d haplotypes after uncollapsing", uncollapsedReadLikelihoods.numberOfAlleles()));
-            }
-        } else {
-            if ( logger.isDebugEnabled() ) {
-                logger.debug(String.format("Not performing uncollapsing with %d haplotypes", readLikelihoods.numberOfAlleles()));
-            }
-            uncollapsedReadLikelihoods = readLikelihoods;
-        }
-
-
         AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
         Set<Integer> suspiciousLocations = new HashSet<>();
         if (hcArgs.filterAlleles) {
@@ -798,7 +775,8 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
 
         //Realign reads to their best haplotype.
-        final Map<GATKRead, GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(subsettedReadLikelihoodsFinal, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner);
+        final SWParameters readToHaplotypeSWParameters = hcArgs.getReadToHaplotypeSWParameters();
+        final Map<GATKRead, GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(subsettedReadLikelihoodsFinal, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner, readToHaplotypeSWParameters);
         subsettedReadLikelihoodsFinal.changeEvidence(readRealignments);
 
         if (HaplotypeCallerGenotypingDebugger.isEnabled()) {

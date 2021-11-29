@@ -126,8 +126,10 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                     final List<Haplotype> processedHaplotypes = new LinkedList<>();
                     if ( (hcArgs.flowAssemblyCollapseHKerSize > 0)
                                     && HaplotypeCollapsing.needsCollapsing(refBases, hcArgs.flowAssemblyCollapseHKerSize, logger, false) ) {
-                        haplotypeCollapsing = new HaplotypeCollapsing(hcArgs.flowAssemblyCollapseHKerSize, hcArgs.flowAssemblyCollapsePartialMode, refBases, haplotypeSpan, logger, false,
-                                SmithWatermanAligner.getAligner(SmithWatermanAligner.Implementation.FASTEST_AVAILABLE));
+                        haplotypeCollapsing = new HaplotypeCollapsing(hcArgs.flowAssemblyCollapseHKerSize,
+                                hcArgs.flowAssemblyCollapsePartialMode, refBases, haplotypeSpan, logger, false,
+                                SmithWatermanAligner.getAligner(SmithWatermanAligner.Implementation.FASTEST_AVAILABLE),
+                                hcArgs.getHaplotypeToReferenceSWParameters());
                         processedHaplotypes.addAll(haplotypeCollapsing.uncollapseHaplotypes(bestHaplotypes, true, refBases));
                     }
                     else {

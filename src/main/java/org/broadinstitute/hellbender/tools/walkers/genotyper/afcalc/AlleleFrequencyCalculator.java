@@ -210,10 +210,10 @@ public final class AlleleFrequencyCalculator {
             if (!GenotypeUtils.genotypeIsUsableForAFCalculation(g)) {
                 continue;
             }
-            final int ploidy = g.getPloidy() == 0 ? defaultPloidy : sampleGenotype.getPloidy();
+            final int ploidy = g.getPloidy() == 0 ? defaultPloidy : g.getPloidy();
             final GenotypeLikelihoodCalculator glCalc = GL_CALCS.getInstance(ploidy, numAlleles);
 
-            final double[] log10GenotypePosteriors = log10NormalizedGenotypePosteriors(sampleGenotype, glCalc, log10AlleleFrequencies);
+            final double[] log10GenotypePosteriors = log10NormalizedGenotypePosteriors(g, glCalc, log10AlleleFrequencies);
 
             //the total probability
             if (!spanningDeletionPresent) {

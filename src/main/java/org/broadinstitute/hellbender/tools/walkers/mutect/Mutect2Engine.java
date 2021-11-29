@@ -274,8 +274,8 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
 
         final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods = likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult,samplesList,reads, true);
         readLikelihoods.switchToNaturalLog();
-
-        final Map<GATKRead,GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(readLikelihoods, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner);
+        final SWParameters readToHaplotypeSWParameters = MTAC.getReadToHaplotypeSWParameters();
+        final Map<GATKRead,GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(readLikelihoods, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner, readToHaplotypeSWParameters);
         readLikelihoods.changeEvidence(readRealignments);
         List<Haplotype> haplotypes = readLikelihoods.alleles();
 
@@ -294,8 +294,6 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
         }
 
 
-        final SWParameters readToHaplotypeSWParameters = MTAC.getReadToHaplotypeSWParameters();
-        final Map<GATKRead,GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(readLikelihoods, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner, readToHaplotypeSWParameters);
         final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
 
         Set<Integer> suspiciousLocations = new HashSet<>();
