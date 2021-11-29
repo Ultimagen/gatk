@@ -103,7 +103,7 @@ public final class AssemblyBasedCallerUtils {
      * </p>
      * @return never {@code null}
      */
-    public static Map<GATKRead, GATKRead> realignReadsToTheirBestHaplotype(final AlleleLikelihoods<GATKRead, Haplotype> originalReadLikelihoods, final Haplotype refHaplotype, final Locatable paddedReferenceLoc, final SmithWatermanAligner aligner, final ForkJoinPool threadPool, final SWParameters readToHaplotypeSWParameters) {
+    public static Map<GATKRead, GATKRead> realignReadsToTheirBestHaplotype(final AlleleLikelihoods<GATKRead, Haplotype> originalReadLikelihoods, final Haplotype refHaplotype, final Locatable paddedReferenceLoc, final SmithWatermanAligner aligner, final SWParameters readToHaplotypeSWParameters) {
         final Collection<AlleleLikelihoods<GATKRead, Haplotype>.BestAllele> bestAlleles = originalReadLikelihoods.bestAllelesBreakingTies(HAPLOTYPE_ALIGNMENT_TIEBREAKING_PRIORITY);
         final Map<GATKRead, GATKRead> result = new HashMap<>(bestAlleles.size());
 
@@ -345,7 +345,7 @@ public final class AssemblyBasedCallerUtils {
 
         final HaplotypeCollapsing haplotypeCollapsing = (argumentCollection.flowAssemblyCollapseHKerSize > 0 && HaplotypeCollapsing.needsCollapsing(refHaplotype.getBases(), argumentCollection.flowAssemblyCollapseHKerSize, logger, argumentCollection.assemblerArgs.debugAssembly))
                                             ? new HaplotypeCollapsing(argumentCollection.flowAssemblyCollapseHKerSize, argumentCollection.flowAssemblyCollapsePartialMode, fullReferenceWithPadding,
-                paddedReferenceLoc, logger, argumentCollection.assemblerArgs.debugAssembly, aligner)
+                paddedReferenceLoc, logger, argumentCollection.assemblerArgs.debugAssembly, aligner, argumentCollection.getHaplotypeToReferenceSWParameters())
                                             : null;
         if ( haplotypeCollapsing != null )
             logger.debug("deploying haplotypeCollapsing on " + paddedReferenceLoc + ", region: " + region);

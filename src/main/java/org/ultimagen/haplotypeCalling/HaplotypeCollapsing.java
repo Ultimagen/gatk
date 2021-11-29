@@ -7,6 +7,7 @@ import htsjdk.samtools.util.Locatable;
 import htsjdk.samtools.util.SequenceUtil;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.gatk.nativebindings.smithwaterman.SWOverhangStrategy;
+import org.broadinstitute.gatk.nativebindings.smithwaterman.SWParameters;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAlignment;
@@ -51,14 +52,15 @@ public class HaplotypeCollapsing {
     final private Logger          logger;
     final private boolean         debug;
     final private SmithWatermanAligner aligner;
-
+    final private SWParameters alignmentParameters;
     // uncollapseByRef result tuple
     private static class UncollapseResult {
         byte[]      bases;
         int         offset;
         boolean     collapsed;
     }
-    public HaplotypeCollapsing(final int hmerSizeThreshold, final boolean partialMode, final byte[] fullRef, final Locatable refLoc, final Logger logger, final boolean debug, final SmithWatermanAligner aligner) {
+    public HaplotypeCollapsing(final int hmerSizeThreshold, final boolean partialMode, final byte[] fullRef, final Locatable refLoc, final Logger logger,
+                               final boolean debug, final SmithWatermanAligner aligner, final SWParameters swParameters) {
 
         this.hmerSizeThreshold = hmerSizeThreshold;
         this.partialMode = partialMode;
@@ -67,6 +69,7 @@ public class HaplotypeCollapsing {
         this.logger = logger;
         this.debug = debug;
         this.aligner = aligner;
+        this.alignmentParameters = swParameters;
         if ( debug ) {
             logger.info("HaplotypeCollapsing: >" + hmerSizeThreshold + "hmer, refLoc: " + refLoc + " fullRef:");
             logger.info(new String(fullRef));
@@ -170,7 +173,8 @@ public class HaplotypeCollapsing {
         if ( refBases != null ) {
             for ( Haplotype h : result ) {
                 if ( !h.isReference() ) {
-                    final SmithWatermanAlignment alignment = aligner.align(refBases, h.getBases(), SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
+                    final SmithWatermanAlignment alignment = aligner.align(refBases, h.getBases(),
+                            alignmentParameters, SWOverhangStrategy.INDEL);
                     h.setCigar(alignment.getCigar());
                     h.setAlignmentStartHapwrtRef(alignment.getAlignmentOffset() + alignmentStartHapwrtRef);
                 }
@@ -289,7 +293,8 @@ public class HaplotypeCollapsing {
         }
 
         // use aligner to get CIGAR
-        final SmithWatermanAlignment alignment = AlignmentThreadingUtils.getSimilarAlignerForCurrentThread(aligner).align(ref, bases, SmithWatermanAligner.ORIGINAL_DEFAULT, SWOverhangStrategy.INDEL);
+        final SmithWatermanAlignment alignment = AlignmentThreadingUtils.getSimilarAlignerForCurrentThread(aligner).align(ref, bases,
+                alignmentParameters, SWOverhangStrategy.INDEL);
         if ( debug )
             logger.info("alignment.offset: " + alignment.getAlignmentOffset() + ", cigar: " + alignment.getCigar());
 
