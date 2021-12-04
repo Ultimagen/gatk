@@ -12,6 +12,7 @@ import org.broadinstitute.hellbender.engine.spark.AssemblyRegionArgumentCollecti
 import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerEngine;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerEngineFactory;
 import org.broadinstitute.hellbender.utils.IntervalUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.fasta.CachingIndexedFastaSequenceFile;
@@ -65,7 +66,7 @@ public class AssemblyRegionIteratorUnitTest extends GATKBaseTest {
             assemblyRegionArgs.minAssemblyRegionSize = minRegionSize;
             assemblyRegionArgs.maxAssemblyRegionSize = maxRegionSize;
             assemblyRegionArgs.assemblyRegionPadding = assemblyRegionPadding;
-            final AssemblyRegionEvaluator evaluator = new HaplotypeCallerEngine(hcArgs, assemblyRegionArgs, false, false,
+            final AssemblyRegionEvaluator evaluator = HaplotypeCallerEngineFactory.newInstance(hcArgs, assemblyRegionArgs, false, false,
                     readsSource.getHeader(), referenceReader, new VariantAnnotatorEngine(new ArrayList<>(), hcArgs.dbsnp.dbsnp, hcArgs.comps, false, false));
             final ReadCoordinateComparator readComparator = new ReadCoordinateComparator(readsSource.getHeader());
 
