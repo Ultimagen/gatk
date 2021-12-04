@@ -74,52 +74,52 @@ import static org.broadinstitute.hellbender.utils.activityprofile.ActivityProfil
  * -Repeatedly call {@link #callRegion} to call variants in each region, and add them to your writer
  * -When done, call {@link #shutdown}. Close the writer you got from {@link #makeVCFWriter} yourself.
  */
-public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
+public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
     private static final Logger logger = LogManager.getLogger(HaplotypeCallerEngine.class);
 
-    private final HaplotypeCallerArgumentCollection hcArgs;
+    protected final HaplotypeCallerArgumentCollection hcArgs;
 
-    private final SAMFileHeader readsHeader;
+    protected final SAMFileHeader readsHeader;
 
-    private ReferenceConfidenceModel referenceConfidenceModel = null;
+    protected ReferenceConfidenceModel referenceConfidenceModel = null;
 
-    private AssemblyRegionTrimmer trimmer;
+    protected AssemblyRegionTrimmer trimmer;
 
-    private final OutputStreamWriter assemblyDebugOutStream;
+    protected final OutputStreamWriter assemblyDebugOutStream;
 
     // the genotyping engine for the isActive() determination
     private MinimalGenotypingEngine activeRegionEvaluationGenotyperEngine = null;
 
-    private ReadThreadingAssembler assemblyEngine = null;
+    protected ReadThreadingAssembler assemblyEngine = null;
 
-    private ReadLikelihoodCalculationEngine likelihoodCalculationEngine = null;
+    protected ReadLikelihoodCalculationEngine likelihoodCalculationEngine = null;
     private ReadLikelihoodCalculationEngine filterStepLikelihoodCalculationEngine = null;
 
-    private HaplotypeCallerGenotypingEngine genotypingEngine = null;
+    protected HaplotypeCallerGenotypingEngine genotypingEngine = null;
 
     private VariantAnnotatorEngine annotationEngine = null;
 
     // fasta reference reader to supplement the edges of the reference sequence
-    private final ReferenceSequenceFile referenceReader;
+    protected final ReferenceSequenceFile referenceReader;
 
     // writes Haplotypes to a bam file when the -bamout option is specified
-    private Optional<HaplotypeBAMWriter> haplotypeBAMWriter;
+    protected Optional<HaplotypeBAMWriter> haplotypeBAMWriter;
 
     // writes Variants from assembly graph
     private Optional<VariantContextWriter> assembledEventMapVcfOutputWriter;
     private Optional<PriorityQueue<VariantContext>> assembledEventMapVariants;
 
-    private Optional<AlleleLikelihoodWriter<GATKRead, Haplotype>> alleleLikelihoodWriter;
+    protected Optional<AlleleLikelihoodWriter<GATKRead, Haplotype>> alleleLikelihoodWriter;
 
     private Set<String> sampleSet;
-    private SampleList samplesList;
+    protected SampleList samplesList;
 
     private final boolean forceCallingAllelesPresent;
 
     private byte minTailQuality;
 
-    private SmithWatermanAligner aligner;
+    protected SmithWatermanAligner aligner;
 
     private final DragstrParams dragstrParams;
 
@@ -170,7 +170,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
      */
     private static final double STRAND_RATIO_TO_AUTOMATICALLY_REJECT_ACTIVE_PILEUP = 0.1;
 
-    private static final List<VariantContext> NO_CALLS = Collections.emptyList();
+    protected static final List<VariantContext> NO_CALLS = Collections.emptyList();
 
     private static final Allele FAKE_REF_ALLELE = Allele.create("N", true); // used in isActive function to call into UG Engine. Should never appear anywhere in a VCF file
     private static final Allele FAKE_ALT_ALLELE = Allele.create("<FAKE_ALT>", false); // used in isActive function to call into UG Engine. Should never appear anywhere in a VCF file
@@ -646,7 +646,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
 
         // run the local assembler, getting back a collection of information on how we should proceed
-        final AssemblyResultSet untrimmedAssemblyResult =  AssemblyBasedCallerUtils.assembleReads(region, givenAlleles, hcArgs, readsHeader, samplesList, logger, referenceReader, assemblyEngine, aligner, !hcArgs.doNotCorrectOverlappingBaseQualities, hcArgs.fbargs);
+        final AssemblyResultSet untrimmedAssemblyResult =  AssemblyBasedCallerUtils.assembleReads(region, givenAlleles, hcArgs, readsHeader, samplesList, logger, referenceReader, assemblyEngine, aligner, !hcArgs.doNotCorrectOverlappingBaseQualities, hcArgs.fbargs, false);
         ReadThreadingAssembler.addAssembledVariantsToEventMapOutput(untrimmedAssemblyResult, assembledEventMapVariants, hcArgs.maxMnpDistance, assembledEventMapVcfOutputWriter);
 
         if (assemblyDebugOutStream != null) {
@@ -875,7 +875,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
     }
 
 
-    private boolean containsCalls(final CalledHaplotypes calledHaplotypes) {
+    protected boolean containsCalls(final CalledHaplotypes calledHaplotypes) {
         return calledHaplotypes.getCalls().stream()
                 .flatMap(call -> call.getGenotypes().stream())
                 .anyMatch(Genotype::isCalled);
@@ -889,8 +889,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
      * @param needsToBeFinalized should the region be finalized before computing the ref model (should be false if already done)
      * @return a list of variant contexts (can be empty) to emit for this ref region
      */
-    private List<VariantContext> referenceModelForNoVariation(final AssemblyRegion region, final boolean needsToBeFinalized, final List<VariantContext> VCpriors) {
-
+    protected List<VariantContext> referenceModelForNoVariation(final AssemblyRegion region, final boolean needsToBeFinalized, final List<VariantContext> VCpriors) {
         if ( emitReferenceConfidence() ) {
             //TODO - why the activeRegion cannot manage its own one-time finalization and filtering?
             //TODO - perhaps we can remove the last parameter of this method and the three lines below?
@@ -948,7 +947,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
     }
 
-    private Set<GATKRead> filterNonPassingReads( final AssemblyRegion activeRegion ) {
+    protected Set<GATKRead> filterNonPassingReads( final AssemblyRegion activeRegion ) {
         // TODO: can we unify this additional filtering with makeStandardHCReadFilter()?
 
         final Set<GATKRead> readsToRemove = new LinkedHashSet<>();
@@ -975,7 +974,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         return hcArgs.emitReferenceConfidence != ReferenceConfidenceMode.NONE;
     }
 
-    private void removeReadsFromAllSamplesExcept(final String targetSample, final AssemblyRegion activeRegion) {
+    protected void removeReadsFromAllSamplesExcept(final String targetSample, final AssemblyRegion activeRegion) {
         final Set<GATKRead> readsToRemove = new LinkedHashSet<>();
         for( final GATKRead rec : activeRegion.getReads() ) {
             if( ! ReadUtils.getSampleName(rec, readsHeader).equals(targetSample) ) {

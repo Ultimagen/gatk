@@ -358,6 +358,24 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     public static final String FILTER_ALLELES_SOR_THRESHOLD = "flow-filter-alleles-sor-threshold";
     public static final String FILTER_ALLELES_FILTER_LONE_ALLELES = "flow-filter-lone-alleles";
 
+    public final String OFF_RAMP_TYPE = "off-ramp-type";
+    public final String OFF_RAMP_FILE = "off-ramp-file";
+    public final String ON_RAMP_TYPE = "on-ramp-type";
+    public final String ON_RAMP_FILE = "on-ramp-file";
+
+    public enum OffRampTypeEnum {
+        NONE,
+        PRE_FILTER_OFF,
+        PRE_ASSEMBLER_OFF,
+        POST_ASSEMBLER_OFF,
+    };
+
+    public enum OnRampTypeEnum {
+        NONE,
+        POST_FILTER_ON,
+        POST_ASSEMBLER_ON
+    };
+
     public final String FILTER_ALLELES_DEBUG_GRAPH = "flow-filter-alleles-debug-graphs";
 
 
@@ -385,5 +403,35 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     @Advanced
     @Argument(fullName = FILTER_ALLELES_DEBUG_GRAPH, doc = "Write an interaction graph in allele filtering", optional=true)
     public boolean writeFilteringGraphs = false;
+
+    @Advanced
+    @Hidden
+    @Argument(fullName = OFF_RAMP_TYPE, doc = "ramps: Type of off ramp", optional=true)
+    public OffRampTypeEnum offRampType=null;
+
+    @Advanced
+    @Hidden
+    @Argument(fullName = OFF_RAMP_FILE, doc = "ramps: File to use for writing ramp", optional=true)
+    public String offRampFile=null;
+
+    @Advanced
+    @Hidden
+    @Argument(fullName = ON_RAMP_TYPE, doc = "ramp: Type of on ramp", optional=true)
+    public OnRampTypeEnum onRampType=null;
+
+    @Advanced
+    @Hidden
+    @Argument(fullName = ON_RAMP_FILE, doc = "ramps: File to use for reading ramp", optional=true)
+    public String onRampFile=null;
+
+    @Advanced
+    @Hidden
+    @Argument(fullName = "ramps-debug-reads", doc = "ramp: reads to print debug messages for", optional=true)
+    public String rampsDebugReads =null;
+
+    @Advanced
+    @Hidden
+    @Argument(fullName = "ramps-debug-post-assembler-on", doc = "ramp: debug post assembler on ramp", optional=true)
+    public boolean rampsDebugPostAssemblerOn =false;
 
 }

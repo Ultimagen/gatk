@@ -401,4 +401,28 @@ public class HaplotypeCollapsing {
             return false;
         }
     }
+
+    public static Map<Haplotype, List<Haplotype>> identicalByUncollapsingHaplotypeMap(List<Haplotype> haplotypes) {
+        Map<String, List<Haplotype>> sequenceMap = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
+        haplotypes.forEach(h->sequenceMap.get(h.getBaseString()).add(h));
+        Map<Haplotype, List<Haplotype>> result = new HashMap<>();
+        sequenceMap.values().forEach( h->result.put(h.get(0), h));
+        Haplotype refHaplotype = AlleleFiltering.findReferenceHaplotype(haplotypes);
+
+        // reference haplotype should always remain after collapsing identical haplotypes
+        if (refHaplotype==null)
+            throw new IllegalArgumentException("Reference haplotype missing from the list of alleles");
+
+        if (!result.containsKey(refHaplotype)){
+            for ( Haplotype k : result.keySet()) {
+                if (result.get(k).contains(refHaplotype)){
+                    result.put(refHaplotype, result.get(k));
+                    result.remove(k);
+                    break;
+                }
+            }
+        }
+
+        return result;
+    }
 }

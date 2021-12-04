@@ -55,12 +55,13 @@ import java.util.stream.Collectors;
  */
 public final class AssemblyBasedCallerUtils {
 
-    static final int REFERENCE_PADDING_FOR_ASSEMBLY = 500;
+    public static final int REFERENCE_PADDING_FOR_ASSEMBLY = 500;
     public static final int NUM_HAPLOTYPES_TO_INJECT_FORCE_CALLING_ALLELES_INTO = 5;
     public static final String SUPPORTED_ALLELES_TAG="XA";
     public static final String CALLABLE_REGION_TAG = "CR";
     public static final String ALIGNMENT_REGION_TAG = "AR";
     public static final String EXT_COLLAPSED_TAG = "XC";
+    public static final String EXT_SPECIAL_TAG = "XS"; // added to haplotype to assist in reading them back in with all fields restored.
     public static final Function<Haplotype, Double> HAPLOTYPE_ALIGNMENT_TIEBREAKING_PRIORITY = h -> {
         final Cigar cigar = h.getCigar();
         final int referenceTerm = (h.isReference() ? 1 : 0);
@@ -308,7 +309,8 @@ public final class AssemblyBasedCallerUtils {
                                                   final ReadThreadingAssembler assemblyEngine,
                                                   final SmithWatermanAligner aligner,
                                                   final boolean correctOverlappingBaseQualities,
-                                                  final FlowBasedAlignmentArgumentCollection fbargs){
+                                                  final FlowBasedAlignmentArgumentCollection fbargs,
+                                                  final boolean bypassAssembly){
         finalizeRegion(region,
                 argumentCollection.assemblerArgs.errorCorrectReads,
                 argumentCollection.dontUseSoftClippedBases,
@@ -359,7 +361,8 @@ public final class AssemblyBasedCallerUtils {
                     readErrorCorrector,
                     header, aligner,
                     haplotypeCollapsing,
-                    danglingEndSWParameters, haplotypeToReferenceSWParameters);
+                    danglingEndSWParameters, haplotypeToReferenceSWParameters,
+                    bypassAssembly);
             assemblyResultSet.setHaplotypeCollapsing(haplotypeCollapsing);
 
             if (!givenAlleles.isEmpty()) {
