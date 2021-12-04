@@ -134,7 +134,6 @@ public class HaplotypeBAMWriter implements AutoCloseable {
         Utils.nonNull(haplotypes, "haplotypes cannot be null");
         Utils.nonNull(paddedReferenceLoc, "paddedReferenceLoc cannot be null");
         Utils.nonNull(calledHaplotypes, "calledHaplotypes cannot be null");
-        Utils.nonNull(readLikelihoods, "readLikelihoods cannot be null");
         Utils.nonNull(bestHaplotypes, "bestHaplotypes cannot be null");
 
         if (writerType.equals(WriterType.CALLED_HAPLOTYPES) || writerType.equals(WriterType.CALLED_HAPLOTYPES_NO_READS)){
@@ -147,7 +146,7 @@ public class HaplotypeBAMWriter implements AutoCloseable {
             writeHaplotypesAsReads(haplotypes, new LinkedHashSet<>(bestHaplotypes), paddedReferenceLoc, callableRegion);
         }
 
-        if ( !writerType.equals(WriterType.CALLED_HAPLOTYPES_NO_READS) ) {
+        if ( !writerType.equals(WriterType.CALLED_HAPLOTYPES_NO_READS) && (readLikelihoods != null) ) {
             final int sampleCount = readLikelihoods.numberOfSamples();
             for (int i = 0; i < sampleCount; i++) {
                 for (final GATKRead read : readLikelihoods.sampleEvidence(i)) {
@@ -233,6 +232,16 @@ public class HaplotypeBAMWriter implements AutoCloseable {
         }
         if (haplotype.isCollapsed())
             record.setAttribute(AssemblyBasedCallerUtils.EXT_COLLAPSED_TAG, "1");
+
+        // add special
+        record.setAttribute(AssemblyBasedCallerUtils.EXT_SPECIAL_TAG,
+                String.format("%d,%s,%d,%s",
+                                    haplotype.isReference() ? 1 : 0,
+                                    Double.toString(haplotype.getScore()),
+                                    haplotype.getAlignmentStartHapwrtRef(),
+                                    (callableRegion == null)
+                                            ? "" : String.format("%s:%d-%d", callableRegion.getContig(),
+                                                    callableRegion.getStart(), callableRegion.getEnd())));
 
         output.add(new SAMRecordToGATKReadAdapter(record));
     }

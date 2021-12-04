@@ -67,12 +67,12 @@ public final class AssemblyRegionTrimmer {
          * Holds the smaller range that contain all relevant callable variants in the
          * input active region (not considering the extension).
          */
-        protected final SimpleInterval variantSpan;
+        protected /*final*/ SimpleInterval variantSpan;
 
         /**
          * The trimmed variant region span including the extension.
          */
-        protected final SimpleInterval paddedSpan;
+        protected /*final*/ SimpleInterval paddedSpan;
 
         /**
          * Creates a trimming result given all its properties.
@@ -106,6 +106,22 @@ public final class AssemblyRegionTrimmer {
          */
         public AssemblyRegion getVariantRegion() {
             Utils.validate(isVariationPresent(), "There is no variation present.");
+            return originalRegion.trim(variantSpan, paddedSpan);
+        }
+
+        /**
+         * Returns the trimmed variant containing region. This version of the method potentially initialises
+         * the variantSpan and paddedSpan fields if they are not yet set.
+         *
+         * @throws IllegalStateException if there is no variation detected.
+         *
+         * @return never {@code null}.
+         */
+        public AssemblyRegion getVariantRegion(SimpleInterval variantSpan, SimpleInterval paddedSpan) {
+            if ( this.variantSpan == null )
+                this.variantSpan = variantSpan;
+            if ( this.paddedSpan == null )
+                this.paddedSpan = paddedSpan;
             return originalRegion.trim(variantSpan, paddedSpan);
         }
 

@@ -162,7 +162,7 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
 
     // Internally used constructor.
     @SuppressWarnings({"unchecked", "rawtypes"})
-    AlleleLikelihoods(final AlleleList alleles,
+    public AlleleLikelihoods(final AlleleList alleles,
                       final SampleList samples,
                       final List<List<EVIDENCE>> evidenceBySampleIndex,
                       final List<List<EVIDENCE>> filteredEvidenceBySampleIndex,
