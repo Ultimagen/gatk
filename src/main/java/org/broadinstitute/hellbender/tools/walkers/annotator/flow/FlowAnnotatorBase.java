@@ -54,6 +54,11 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
 
         boolean     notCalculated;
 
+        // number of Allele.SPAN_DEL alleles found. These are ignored in determiing eligibility.
+        int         spanDelCount;
+        int         firstNonSpanDelIndex;
+        int         refIndex;
+
         protected LocalContext(final ReferenceContext ref,
                                final VariantContext vc,
                                final AlleleLikelihoods<GATKRead, Allele> likelihoods) {
@@ -150,6 +155,7 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
     // "indel_classify" and "indel_length"
     protected void indelClassify(final VariantContext vc, final LocalContext localContext) {
 
+        localContext.spanDelCount = 0;
         if ( vc.isIndel() ) {
 
             final List<String>      indelClassify = new LinkedList<>();
@@ -158,13 +164,33 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
             for ( Allele a : vc.getAlleles() ) {
                 if ( !a.isReference() ) {
                     indelClassify.add(refLength < a.length() ? C_INSERT : C_DELETE);
-                    indelLength.add(Math.abs(refLength - a.length()));
+                    if ( !a.equals(Allele.SPAN_DEL) ) {
+                        indelLength.add(Math.abs(refLength - a.length()));
+                    } else {
+                        indelLength.add(null);
+                        localContext.spanDelCount++;
+                    }
                 }
             }
             localContext.attributes.put(GATKVCFConstants.FLOW_INDEL_CLASSIFY, localContext.indel = indelClassify);
             localContext.attributes.put(GATKVCFConstants.FLOW_INDEL_LENGTH, localContext.indelLength = indelLength);
         } else {
             localContext.attributes.put(GATKVCFConstants.FLOW_INDEL_CLASSIFY, C_NA);
+        }
+
+        // find first non-SPAN_DEL allele, refIndex
+        int         index = 0;
+        localContext.firstNonSpanDelIndex = -1;
+        for ( Allele a : vc.getAlleles() ) {
+            if ( a.isReference() ) {
+                localContext.refIndex = index;
+            }
+            else if ( !a.equals(Allele.SPAN_DEL) ) {
+                if ( localContext.firstNonSpanDelIndex < 0 ) {
+                    localContext.firstNonSpanDelIndex = index;
+                }
+            }
+            index++;
         }
     }
 
@@ -174,7 +200,8 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
     protected void isHmerIndel(final VariantContext vc, final LocalContext localContext) {
 
         // this is (currently) computed only when there is exactly one non reference allele
-        if ( vc.isIndel() && localContext.indel.size() == 1 && vc.getAlleles().size() == 2 ) {
+        if ( vc.isIndel() && (localContext.indel.size() - localContext.spanDelCount) == 1
+                && (vc.getAlleles().size() - localContext.spanDelCount) == 2 ) {
 
             // establish flow order
             if ( localContext.flowOrder == null ) {
@@ -182,9 +209,8 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
 
 
             // access alleles
-            final int         refIndex = vc.getAlleles().get(0).isReference() ? 0 : 1;
-            final Allele      ref = vc.getAlleles().get(refIndex);
-            final Allele      alt = vc.getAlleles().get(1 - refIndex);
+            final Allele      ref = vc.getAlleles().get(localContext.refIndex);
+            final Allele      alt = vc.getAlleles().get(localContext.firstNonSpanDelIndex);
 
             // get byte before and after
             final byte        before = getReferenceNucleotide(localContext, vc.getStart() - 1);
@@ -293,7 +319,7 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
 
         // establish flow order
         String      css = C_NA;
-        if ( !vc.isIndel() && vc.getAlleles().size() == 2 ) {
+        if ( !vc.isIndel() && (vc.getAlleles().size() - localContext.spanDelCount) == 2 ) {
 
             // establish flow order
             if ( localContext.flowOrder == null ) {
@@ -301,9 +327,8 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
             }
 
             // access alleles
-            final int         refIndex = vc.getAlleles().get(0).isReference() ? 0 : 1;
-            final Allele      ref = vc.getAlleles().get(refIndex);
-            final Allele      alt = vc.getAlleles().get(1 - refIndex);
+            final Allele      ref = vc.getAlleles().get(localContext.refIndex);
+            final Allele      alt = vc.getAlleles().get(localContext.firstNonSpanDelIndex);
 
             // convert to flow space
             final int[]       refKey = generateKeyFromSequence(localContext.leftMotif + ref.getBaseString() + localContext.rightMotif, localContext.flowOrder, true);
