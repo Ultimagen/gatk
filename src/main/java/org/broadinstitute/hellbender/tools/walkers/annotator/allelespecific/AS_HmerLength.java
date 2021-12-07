@@ -7,6 +7,7 @@ import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.walkers.annotator.AnnotationUtils;
 import org.broadinstitute.hellbender.tools.walkers.annotator.InfoFieldAnnotation;
+import org.broadinstitute.hellbender.tools.walkers.annotator.flow.StandardFlowBasedAnnotation;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeAssignmentMethod;
 import org.broadinstitute.hellbender.tools.walkers.variantutils.LeftAlignAndTrimVariants;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
@@ -32,7 +33,7 @@ import java.util.*;
  * drop the annotation.
  */
 @DocumentedFeature(groupName= HelpConstants.DOC_CAT_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_ANNOTATORS_SUMMARY, summary="Allele-specific length of homopolymer (longer of either ref or alt)")
-public class AS_HmerLength implements InfoFieldAnnotation, AS_StandardAnnotation, AlleleSpecificAnnotation {
+public class AS_HmerLength implements InfoFieldAnnotation, StandardFlowBasedAnnotation, AlleleSpecificAnnotation {
     protected final OneShotLogger warning = new OneShotLogger(this.getClass());
     @Override
     public Map<String, Object> annotate(ReferenceContext ref, VariantContext vc, AlleleLikelihoods<GATKRead, Allele> likelihoods) {
