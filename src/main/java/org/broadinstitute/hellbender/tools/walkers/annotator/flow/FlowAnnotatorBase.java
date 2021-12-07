@@ -155,7 +155,6 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
     // "indel_classify" and "indel_length"
     protected void indelClassify(final VariantContext vc, final LocalContext localContext) {
 
-        localContext.spanDelCount = 0;
         if ( vc.isIndel() ) {
 
             final List<String>      indelClassify = new LinkedList<>();
@@ -163,12 +162,12 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
             final int               refLength = vc.getReference().length();
             for ( Allele a : vc.getAlleles() ) {
                 if ( !a.isReference() ) {
-                    indelClassify.add(refLength < a.length() ? C_INSERT : C_DELETE);
                     if ( !a.equals(Allele.SPAN_DEL) ) {
+                        indelClassify.add(refLength < a.length() ? C_INSERT : C_DELETE);
                         indelLength.add(Math.abs(refLength - a.length()));
                     } else {
+                        indelClassify.add(null);
                         indelLength.add(null);
-                        localContext.spanDelCount++;
                     }
                 }
             }
@@ -180,12 +179,16 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
 
         // find first non-SPAN_DEL allele, refIndex
         int         index = 0;
+        localContext.spanDelCount = 0;
         localContext.firstNonSpanDelIndex = -1;
         for ( Allele a : vc.getAlleles() ) {
             if ( a.isReference() ) {
                 localContext.refIndex = index;
             }
-            else if ( !a.equals(Allele.SPAN_DEL) ) {
+            else if ( a.equals(Allele.SPAN_DEL) ) {
+                localContext.spanDelCount++;
+            }
+            else {
                 if ( localContext.firstNonSpanDelIndex < 0 ) {
                     localContext.firstNonSpanDelIndex = index;
                 }
