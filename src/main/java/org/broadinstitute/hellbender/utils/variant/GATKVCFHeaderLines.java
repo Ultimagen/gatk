@@ -244,7 +244,7 @@ public class GATKVCFHeaderLines {
         // flow annotations
         addInfoLine(new VCFInfoHeaderLine(FLOW_INDEL_CLASSIFY, VCFHeaderLineCount.A, VCFHeaderLineType.String, "Flow: indel class: ins, del, NA"));
         addInfoLine(new VCFInfoHeaderLine(FLOW_INDEL_LENGTH, VCFHeaderLineCount.A, VCFHeaderLineType.Integer, "Flow: length of indel"));
-        addInfoLine(new VCFInfoHeaderLine(FLOW_HMER_INDEL_LENGTH, VCFHeaderLineCount.A, VCFHeaderLineType.Integer, "Flow: length of the hmer indel, if so"));
+        addInfoLine(new VCFInfoHeaderLine(FLOW_HMER_INDEL_LENGTH, 1, VCFHeaderLineType.Integer, "Flow: length of the hmer indel, if so"));
         addInfoLine(new VCFInfoHeaderLine(FLOW_HMER_INDEL_NUC, 1, VCFHeaderLineType.String, "Flow: nucleotide of the hmer indel, if so"));
         addInfoLine(new VCFInfoHeaderLine(FLOW_LEFT_MOTIF, 1, VCFHeaderLineType.String, "Flow: motif to the left of the indel"));
         addInfoLine(new VCFInfoHeaderLine(FLOW_RIGHT_MOTIF, 1, VCFHeaderLineType.String, "Flow: motif to the right of the indel"));

@@ -54,8 +54,8 @@ import org.broadinstitute.hellbender.utils.reference.ReferenceUtils;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
-import org.ultimagen.haplotypeCalling.AlleleFilteringMutect;
-import org.ultimagen.haplotypeCalling.HaplotypeCollapsing;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AlleleFilteringMutect;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCollapsing;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 
 import java.io.File;

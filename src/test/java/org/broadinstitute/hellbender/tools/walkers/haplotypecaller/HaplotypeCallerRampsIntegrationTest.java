@@ -4,10 +4,8 @@ import org.broadinstitute.hellbender.CommandLineProgramTest;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.testutils.ArgumentsBuilder;
 import org.broadinstitute.hellbender.testutils.IntegrationTestSpec;
-import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.ultimagen.variantRecalling.TrimmedReadsReaderUnitTest;
 
 import java.io.File;
 

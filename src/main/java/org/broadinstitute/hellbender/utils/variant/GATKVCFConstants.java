@@ -148,7 +148,7 @@ public final class GATKVCFConstants {
     public final static String TRANSMISSION_PROBABILITY_KEY =       "TP"; //PhaseByTransmission
     public static final String FRAGMENT_ALLELE_DEPTHS =             "FAD";
 
-    // ultima annotations
+    // flow annotations
     public final static String FLOW_INDEL_CLASSIFY =                "X_IC";
     public final static String FLOW_INDEL_LENGTH =                  "X_IL";
     public final static String FLOW_HMER_INDEL_LENGTH =             "X_HIL";

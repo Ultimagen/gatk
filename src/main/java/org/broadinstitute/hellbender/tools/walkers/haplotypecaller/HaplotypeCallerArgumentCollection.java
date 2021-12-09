@@ -11,7 +11,7 @@ import org.broadinstitute.hellbender.cmdline.argumentcollections.DbsnpArgumentCo
 import org.broadinstitute.hellbender.engine.FeatureInput;
 import org.broadinstitute.hellbender.engine.GATKPath;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.StandardCallerArgumentCollection;
-import org.ultimagen.flowBasedRead.utils.FlowBasedAlignmentArgumentCollection;
+import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
 
 import java.io.Serializable;
 import java.util.ArrayList;
