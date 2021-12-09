@@ -17,9 +17,7 @@ import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.haplotype.EventMap;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
-import org.ultimagen.haplotypeCalling.AlleleFilteringHC;
-import org.ultimagen.haplotypeCalling.HaplotypeCollapsing;
-import org.ultimagen.haplotypeCalling.ramps.RampUtils;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.ramps.RampUtils;
 
 import java.io.IOException;
 import java.util.*;

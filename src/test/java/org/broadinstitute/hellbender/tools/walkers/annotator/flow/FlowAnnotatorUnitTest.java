@@ -48,22 +48,22 @@ public class FlowAnnotatorUnitTest {
                 {
                         // a simple SNP
                         "GTATC A ACATCGGA", "C",
-                        "NA", null, "0", null, "GTATC", "ACATC", "0.3", "non-skip"
+                        "NA", null, null, null, "GTATC", "ACATC", "0.3", "non-skip"
                 },
                 {
                         // a possible-cycle-skip SNP
                         "GTATC A TCATCGGA", "C",
-                        "NA", null, "0", null, "GTATC", "TCATC", "0.3", "possible-cycle-skip"
+                        "NA", null, null, null, "GTATC", "TCATC", "0.3", "possible-cycle-skip"
                 },
                 {
                         // a cycle-skip SNP
                         "GTATC A ACATCGGA", "T",
-                        "NA", null, "0", null, "GTATC", "ACATC", "0.3", "cycle-skip"
+                        "NA", null, null, null, "GTATC", "ACATC", "0.3", "cycle-skip"
                 },
                 {
                         // not hmer indel
                         "TATCT CA TTGACCAA", "C",
-                        "del", "1", "1", null, "ATCTC", "TTGAC", "0.3", "NA"
+                        "del", "1", null, null, "ATCTC", "TTGAC", "0.3", "NA"
                 },
                 {
                         // del hmer indel
@@ -73,7 +73,7 @@ public class FlowAnnotatorUnitTest {
                 {
                         // ins hmer indel
                         "TATCT C ATTGACCAA", "CA",
-                        "ins", "1", "2", "A", "ATCTC", "TTGAC", "0.3", "NA"
+                        "ins", "1", "1", "A", "ATCTC", "TTGAC", "0.3", "NA"
                 }
         };
 
@@ -152,16 +152,14 @@ public class FlowAnnotatorUnitTest {
             String       key = expectedAttrs.get(n);
             String       elem = testResults[n];
             String       keyMsg = "on " + key + " " + msg;
-            if ( elem != null ) {
-                if ( elem.charAt(0) != '!' ) {
-                    Object       v = attrs.get(key);
-                    if (v instanceof List) {
-                        v = StringUtils.join((List) v, ",");
-                    }
-                    Assert.assertEquals(v.toString(), elem, keyMsg);
+            if ( elem != null && elem.charAt(0) != '!' ) {
+                Object v = attrs.get(key);
+                if (v instanceof List) {
+                    v = StringUtils.join((List) v, ",");
                 }
-            } else {
-                Assert.assertFalse(attrs.containsKey(key), keyMsg + " value: " + attrs.get(key));
+                Assert.assertEquals(v.toString(), elem, keyMsg);
+            } else if ( elem == null ) {
+                Assert.assertFalse(attrs.containsKey(key), keyMsg);
             }
         }
     }

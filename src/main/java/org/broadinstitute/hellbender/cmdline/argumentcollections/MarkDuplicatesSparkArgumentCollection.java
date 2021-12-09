@@ -60,10 +60,10 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
     @Argument(doc = "Treat tm:Q as tm:Q.", optional = true)
     public boolean FLOW_Q_IS_KNOWN_END = false;
 
-    @Argument(doc = "Emit additional debugging info specific to ultima flow. Default false.", optional = true)
+    @Argument(doc = "Emit additional debugging info specific to flow. Default false.", optional = true)
     public boolean DEBUG_ULTIMA_DUPS = false;
 
-    @Argument(doc = "Emit additional debugging info specific to ultima flow: read name. Default null", optional = true)
+    @Argument(doc = "Emit additional debugging info specific to flow: read name. Default null", optional = true)
     public List<String> DEBUG_ULTIMA_READ_NAME = null;
 
 }

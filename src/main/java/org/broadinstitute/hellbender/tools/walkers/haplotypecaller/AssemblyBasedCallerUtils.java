@@ -37,12 +37,8 @@ import org.broadinstitute.hellbender.utils.read.*;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
-import org.ultimagen.flowBasedRead.alignment.FlowBasedAlignmentEngine;
-import org.ultimagen.flowBasedRead.alignment.FlowBasedHMMEngine;
-import org.ultimagen.flowBasedRead.read.FlowBasedRead;
-import org.ultimagen.flowBasedRead.utils.AlleleLikelihoodWriter;
-import org.ultimagen.flowBasedRead.utils.FlowBasedAlignmentArgumentCollection;
-import org.ultimagen.haplotypeCalling.HaplotypeCollapsing;
+import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
+import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
 
 import java.io.File;
 import java.util.*;

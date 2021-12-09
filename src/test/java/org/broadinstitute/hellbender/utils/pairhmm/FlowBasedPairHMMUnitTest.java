@@ -17,8 +17,8 @@ import org.broadinstitute.hellbender.utils.read.ArtificialReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.testng.Assert;
 import org.testng.annotations.Test;
-import org.ultimagen.flowBasedRead.alignment.FlowBasedHMMEngine;
-import org.ultimagen.flowBasedRead.utils.FlowBasedAlignmentArgumentCollection;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.FlowBasedHMMEngine;
+import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
 
 import java.util.*;
 

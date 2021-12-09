@@ -7,18 +7,13 @@ import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.exceptions.GATKException;
-import org.broadinstitute.hellbender.tools.walkers.annotator.AnnotationUtils;
 import org.broadinstitute.hellbender.tools.walkers.annotator.InfoFieldAnnotation;
-import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeAssignmentMethod;
-import org.broadinstitute.hellbender.tools.walkers.variantutils.LeftAlignAndTrimVariants;
-import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.logging.OneShotLogger;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
-import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
-import org.ultimagen.flowBasedRead.read.FlowBasedRead;
+import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -49,7 +44,7 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
 
         List<String> indel;
         List<Integer> indelLength;
-        List<String>  hmerIndelLength;
+        int         hmerIndelLength;
         String      leftMotif;
         String      rightMotif;
 
@@ -160,6 +155,7 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
     // "indel_classify" and "indel_length"
     protected void indelClassify(final VariantContext vc, final LocalContext localContext) {
 
+        localContext.spanDelCount = 0;
         if ( vc.isIndel() ) {
 
             final List<String>      indelClassify = new LinkedList<>();
@@ -167,12 +163,12 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
             final int               refLength = vc.getReference().length();
             for ( Allele a : vc.getAlleles() ) {
                 if ( !a.isReference() ) {
+                    indelClassify.add(refLength < a.length() ? C_INSERT : C_DELETE);
                     if ( !a.equals(Allele.SPAN_DEL) ) {
-                        indelClassify.add(refLength < a.length() ? C_INSERT : C_DELETE);
                         indelLength.add(Math.abs(refLength - a.length()));
                     } else {
-                        indelClassify.add(null);
                         indelLength.add(null);
+                        localContext.spanDelCount++;
                     }
                 }
             }
@@ -184,16 +180,12 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
 
         // find first non-SPAN_DEL allele, refIndex
         int         index = 0;
-        localContext.spanDelCount = 0;
         localContext.firstNonSpanDelIndex = -1;
         for ( Allele a : vc.getAlleles() ) {
             if ( a.isReference() ) {
                 localContext.refIndex = index;
             }
-            else if ( a.equals(Allele.SPAN_DEL) ) {
-                localContext.spanDelCount++;
-            }
-            else {
+            else if ( !a.equals(Allele.SPAN_DEL) ) {
                 if ( localContext.firstNonSpanDelIndex < 0 ) {
                     localContext.firstNonSpanDelIndex = index;
                 }
@@ -206,9 +198,6 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
     This function determines if the vc is an hmer indel. If so, it marks it as such
      */
     protected void isHmerIndel(final VariantContext vc, final LocalContext localContext) {
-
-        localContext.hmerIndelLength = calcHmerIndelLength(vc, localContext);
-        localContext.attributes.put(GATKVCFConstants.FLOW_HMER_INDEL_LENGTH, String.join(AnnotationUtils.ALLELE_SPECIFIC_REDUCED_DELIM, localContext.hmerIndelLength));
 
         // this is (currently) computed only when there is exactly one non reference allele
         if ( vc.isIndel() && (localContext.indel.size() - localContext.spanDelCount) == 1
@@ -272,6 +261,8 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
 
             // if here, we found the difference.
             final byte            nuc = localContext.flowOrder.getBytes()[diffIndex % localContext.flowOrder.length()];
+            localContext.hmerIndelLength = refKey[diffIndex];
+            localContext.attributes.put(GATKVCFConstants.FLOW_HMER_INDEL_LENGTH, localContext.hmerIndelLength);
             localContext.attributes.put(GATKVCFConstants.FLOW_HMER_INDEL_NUC, Character.toString((char)nuc));
 
             // at this point, we can generate the right motif (for the hmer indel) as we already have the location
@@ -440,88 +431,4 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
     public void setFlowOrder(final List<String> flowOrder) {
         this.flowOrder = flowOrder;
     }
-
-    // this copy was transfered from AS_HmerLength
-    private List<String> calcHmerIndelLength(final VariantContext vc, final LocalContext localContext) {
-
-        //Don't assume variants are left aligned or trimmed
-        final VariantContext fixedVc = GATKVariantContextUtils.leftAlignAndTrim(vc, localContext.ref, LeftAlignAndTrimVariants.DEFAULT_MAX_LEADING_BASES, true);
-        final List<VariantContext> splitVcs = GATKVariantContextUtils.splitVariantContextToBiallelics(fixedVc, true, GenotypeAssignmentMethod.BEST_MATCH_TO_ORIGINAL, false);
-        final SimpleInterval refWindowFromVcStart = new SimpleInterval (fixedVc.getContig(), fixedVc.getStart(), localContext.ref.getWindow().getEnd());
-        final List<String> hmerLengths = new LinkedList<>();
-
-        for (final VariantContext splitVariant : splitVcs) {
-            //splitVariant is now biallelic so we can get the first (only) alt allele.
-            final Allele altAllele = splitVariant.getAlternateAllele(0);
-
-            if (splitVariant.isSNP()) {
-                hmerLengths.add(String.valueOf(0));
-            } else if (splitVariant.isMNP()) {
-                hmerLengths.add(String.valueOf(0));
-            } else if (splitVariant.isSymbolic()) {
-                hmerLengths.add("");
-            } else {
-                //INDELs are anchored on the left by an unchanged base, so the h-mer base in question is the second base from variant start in the longer allele.
-                final Allele longerAllele = splitVariant.getReference().length() > altAllele.length() ? splitVariant.getReference() : altAllele;
-                final byte base = longerAllele.getBases()[1];
-                int altHmerLength = 0;
-                for (int i=1; i < altAllele.getBases().length; i++) {
-                    final byte curBase = altAllele.getBases()[i];
-                    if (curBase == base) {
-                        altHmerLength++;
-                    } else {
-                        altHmerLength = 0;
-                        break;
-                    }
-                }
-
-                int refHmerLength = 0;
-                boolean isFirstBaseOfRef = true;
-                for (Byte refBase : localContext.ref.getBases(refWindowFromVcStart)) {
-                    if (isFirstBaseOfRef) {
-                        isFirstBaseOfRef = false;
-                        continue;
-                    }
-                    if (base == refBase) {
-                        refHmerLength++;
-                    } else {
-                        break;
-                    }
-                }
-
-                //Still need to check if variant is actually an Hmer since we only checked the alt allele, not the
-                // ref allele (just the reference itself).
-                int finalHmerLength = variantIsHmer(splitVariant) ? refHmerLength + altHmerLength : 0;
-                hmerLengths.add(String.valueOf(finalHmerLength));
-            }
-        }
-
-        return hmerLengths;
-    }
-
-    /**
-     * Checks if biallelic INDEL is a homopolymer. Need to check either ref or alt are all one nucleotide (whichever is longer).
-     *
-     * @param vc Biallelic INDEL variant context. Must only have one alt allele.
-     */
-    private Boolean variantIsHmer(VariantContext vc) {
-        Allele refAllele = vc.getReference();
-        Allele altAllele = vc.getAlternateAllele(0);
-        Allele longerAllele = refAllele.length() > altAllele.length() ? refAllele : altAllele;
-        //INDELs are left aligned so start at the second base to test for an h-mer.
-        byte base = longerAllele.getBases()[1];
-        boolean isHmer = false;
-        for (int i=1; i < longerAllele.getBases().length; i++) {
-            final byte curBase = longerAllele.getBases()[i];
-            if (curBase != base) {
-                isHmer = false;
-                break;
-            } else {
-                isHmer = true;
-            }
-        }
-        return isHmer;
-    }
-
-
 }
