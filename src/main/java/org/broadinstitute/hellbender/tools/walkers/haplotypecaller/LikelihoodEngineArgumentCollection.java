@@ -7,7 +7,6 @@ import org.broadinstitute.barclay.argparser.Hidden;
 import org.broadinstitute.hellbender.engine.GATKPath;
 import org.broadinstitute.hellbender.utils.QualityUtils;
 import org.broadinstitute.hellbender.utils.pairhmm.PairHMM;
-import org.ultimagen.flowBasedRead.alignment.FlowBasedHMMEngine;
 
 import java.io.Serializable;
 

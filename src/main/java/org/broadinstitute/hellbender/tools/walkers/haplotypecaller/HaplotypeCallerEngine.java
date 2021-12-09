@@ -39,7 +39,6 @@ import org.broadinstitute.hellbender.utils.genotyper.*;
 import org.broadinstitute.hellbender.utils.haplotype.EventMap;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.haplotype.HaplotypeBAMWriter;
-import org.broadinstitute.hellbender.utils.pileup.PileupElement;
 import org.broadinstitute.hellbender.utils.read.AlignmentUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
@@ -50,18 +49,12 @@ import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.broadinstitute.hellbender.utils.variant.HomoSapiensConstants;
 import org.broadinstitute.hellbender.utils.variant.writers.GVCFWriter;
 import org.broadinstitute.hellbender.utils.genotyper.SampleList;
-import org.ultimagen.flowBasedRead.read.FlowBasedRead;
-import org.ultimagen.flowBasedRead.utils.AlleleLikelihoodWriter;
-import org.ultimagen.haplotypeCalling.AlleleFilteringHC;
-import org.ultimagen.haplotypeCalling.HaplotypeCollapsing;
+import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static org.broadinstitute.hellbender.utils.activityprofile.ActivityProfileState.Type.HIGH_QUALITY_SOFT_CLIPS;
-import static org.broadinstitute.hellbender.utils.activityprofile.ActivityProfileState.Type.NONE;
 
 /**
  * The core engine for the HaplotypeCaller that does all of the actual work of the tool.

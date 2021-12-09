@@ -6,7 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.engine.spark.AssemblyRegionArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.annotator.*;
-import org.ultimagen.haplotypeCalling.ramps.*;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.ramps.*;
 
 import java.io.IOException;
 import java.util.*;

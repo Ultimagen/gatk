@@ -2,13 +2,14 @@ package org.broadinstitute.hellbender.utils.pairhmm;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.FlowBasedAlignmentEngine;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.LikelihoodMatrix;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
-import org.ultimagen.flowBasedRead.read.FlowBasedHaplotype;
-import org.ultimagen.flowBasedRead.read.FlowBasedKeyCodec;
-import org.ultimagen.flowBasedRead.read.FlowBasedRead;
+import org.broadinstitute.hellbender.utils.haplotype.FlowBasedHaplotype;
+import org.broadinstitute.hellbender.utils.read.FlowBasedKeyCodec;
+import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 
 import java.util.List;
 
@@ -17,7 +18,7 @@ import static org.broadinstitute.hellbender.utils.pairhmm.PairHMMModel.deletionT
 import static org.broadinstitute.hellbender.utils.pairhmm.PairHMMModel.matchToDeletion;
 
 /**
- * Class for performing the pair HMM for global alignment in FlowSpace. See {@link org.ultimagen.flowBasedRead.alignment.FlowBasedAlignmentEngine} and {@link LoglessPairHMM}.
+ * Class for performing the pair HMM for global alignment in FlowSpace. See {@link FlowBasedAlignmentEngine} and {@link LoglessPairHMM}.
  */
 public class FlowBasedPairHMM extends PairHMM {
     static final double INITIAL_CONDITION = Math.pow(2, 1020);
