@@ -1,19 +1,19 @@
-package org.broadinstitute.hellbender.tools.walkers.featuremapping;
+package org.broadinstitute.hellbender.tools.walkers.groundtruth;
 
 import org.broadinstitute.hellbender.CommandLineProgramTest;
-import org.testng.Assert;
-import org.testng.annotations.Test;
 import org.broadinstitute.hellbender.tools.walkers.variantrecalling.FlowTestConstants;
 import org.broadinstitute.hellbender.tools.walkers.variantrecalling.TestFileVerifySame;
+import org.testng.Assert;
+import org.testng.annotations.Test;
 
 import java.io.File;
 import java.io.IOException;
 
-public class FlowFeatureMapperIntegrationTest extends CommandLineProgramTest {
+public class GroundTruthReadsBuilderIntegrationTest extends CommandLineProgramTest {
 
     public static final boolean UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS = false;
 
-    private static String testDir = publicTestDir + FlowTestConstants.FEATURE_MAPPING_DATA_DIR;
+    private static String testDir = publicTestDir + FlowTestConstants.GROUND_TRUTH_DATA_DIR;
 
     @Test
     public void assertThatExpectedOutputUpdateToggleIsDisabled() {
@@ -23,27 +23,31 @@ public class FlowFeatureMapperIntegrationTest extends CommandLineProgramTest {
     @Test
     public void testBasic() throws IOException {
 
-        final File outputDir = createTempDir("testFlowFeatureMapperTest");
-        final File expectedFile = new File(testDir + "/snv_feature_mapper_output.vcf");
-        final File outputFile = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expectedFile : new File(outputDir + "/snv_feature_mapper_output.vcf");
+        final File outputDir = createTempDir("testGroundTruthTest");
+        final File expectedFile = new File(testDir + "/ground_truth_output.csv");
+        final File outputFile = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expectedFile : new File(outputDir + "/ground_truth_output.csv");
 
         final String[] args = new String[] {
                 "-R", largeFileTestDir + "/Homo_sapiens_assembly38.fasta.gz",
-                "-O", outputFile.getAbsolutePath(),
-                "-I", testDir + "/snv_feature_mapper_input.bam",
+                "-I", testDir + "/150548_1-UGAv3-2.highconf.q60.chr6_30000000_40000000.cram",
+                "--maternal-ref", testDir + "/chr6_HG001_maternal.fa",
+                "--paternal-ref", testDir + "/chr6_HG001_paternal.fa",
+                "--ancestral-translators-base-path", testDir,
+                "--output-csv", outputFile.getAbsolutePath(),
+                "--subsampling-ratio", "1.0",
+                "--intervals", "chr6:31172223-32980498",
                 "--smith-waterman", "FASTEST_AVAILABLE",
                 "--likelihood-calculation-engine", "FlowBased",
                 "-mbq", "0",
                 "--kmer-size", "10",
-                "--copy-attr", "tr",
-                "--limit-score", "100",
-                "--min-score", "0",
-                "--snv-identical-bases", "10",
-                "--debug-negatives", "false",
-                "--debug-read-name", "150451-BC94-0645901755"
+                "--gt-debug", "false",
+                "--output-flow-length", "404",
+                "--haplotype-output-padding-size", "0",
+                "--fill-trimmed-reads", "false",
+                "--fill-softclipped-reads", "false",
+                "--max-output-reads", "0"
         };
 
-        // run the tool
         runCommandLine(args);  // no assert, just make sure we don't throw
 
         // make sure we've generated the otuput file
@@ -54,5 +58,4 @@ public class FlowFeatureMapperIntegrationTest extends CommandLineProgramTest {
             (new TestFileVerifySame()).verifySame(outputFile, expectedFile);
         }
     }
-
 }

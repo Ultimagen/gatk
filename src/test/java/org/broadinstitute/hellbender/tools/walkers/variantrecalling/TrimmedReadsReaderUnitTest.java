@@ -3,8 +3,6 @@ package org.broadinstitute.hellbender.tools.walkers.variantrecalling;
 import htsjdk.samtools.SamReader;
 import htsjdk.samtools.util.Locatable;
 import org.broadinstitute.hellbender.GATKBaseTest;
-import org.broadinstitute.hellbender.tools.walkers.variantrecalling.FlowTestConstants;
-import org.broadinstitute.hellbender.tools.walkers.variantrecalling.TrimmedReadsReader;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 import org.testng.Assert;
@@ -20,7 +18,7 @@ import java.util.Map;
 
 public class TrimmedReadsReaderUnitTest extends GATKBaseTest {
 
-    protected static String    vcTestDir = publicTestDir + FlowTestConstants.VARIANT_CALLING_DATA_DIR;
+    private static String testDir = publicTestDir + FlowTestConstants.VARIANT_CALLING_DATA_DIR;
 
     private static class BamSource {
         final String      filename;
@@ -59,7 +57,7 @@ public class TrimmedReadsReaderUnitTest extends GATKBaseTest {
         // establish paths
         List<Path>  paths = new LinkedList<>();
         for ( int i = 0 ; i < bamSources.length ; i++ ) {
-            paths.add(FileSystems.getDefault().getPath(vcTestDir, bamSources[i].filename));
+            paths.add(FileSystems.getDefault().getPath(testDir, bamSources[i].filename));
         }
 
         // create reader
