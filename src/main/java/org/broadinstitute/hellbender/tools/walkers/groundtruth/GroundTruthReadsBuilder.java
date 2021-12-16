@@ -14,6 +14,7 @@ import org.broadinstitute.barclay.argparser.ArgumentCollection;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
 import org.broadinstitute.barclay.argparser.ExperimentalFeature;
 import org.broadinstitute.barclay.help.DocumentedFeature;
+import org.broadinstitute.hellbender.cmdline.programgroups.FlowBasedProgramGroup;
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.ToolSuccessfulPrematureExit;
@@ -99,7 +100,7 @@ import java.util.zip.GZIPOutputStream;
 @CommandLineProgramProperties(
         summary = "Ground Truth Reads Builder",
         oneLineSummary = "Pproduces a flexible and robust ground truth set for base calling training",
-        programGroup = BaseCallingProgramGroup.class
+        programGroup = FlowBasedProgramGroup.class
 )
 
 @DocumentedFeature
