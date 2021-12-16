@@ -43,18 +43,6 @@ public class FlowFragment extends Fragment {
         this.flowScore = (this.end != ReadUtils.FLOW_BASED_INSIGNIFICANT_END_UNCERTIANTY)
                 ? ((mdArgs.FLOW_QUALITY_SUM_STRATEGY && isFlow(first)) ? computeFlowDuplicateScore(first, start, end) : scoringStrategy.score(first))
                 : -1;
-        if ( mdArgs.DEBUG_ULTIMA_DUPS || isDebugUltimaRead(mdArgs, first) ) {
-            logger.info(String.format("F [%s %s] : unc %d-%d : clp %d-%d -> %d-%d(%d) %d",
-                    first.getName(), first.isReverseStrand() ? "R" : "N",
-                    first.getUnclippedStart(), first.getUnclippedEnd(),
-                    first.getStart(), first.getEnd(),
-                    start, end, endUncert, this.flowScore));
-        }
-
-    }
-
-    private boolean isDebugUltimaRead(MarkDuplicatesSparkArgumentCollection mdArgs, GATKRead first) {
-        return mdArgs.DEBUG_ULTIMA_READ_NAME != null && mdArgs.DEBUG_ULTIMA_READ_NAME.contains(first.getName());
     }
 
     private short computeFlowDuplicateScore(GATKRead rec, int start, int end) {
