@@ -60,6 +60,9 @@ public final class HelpConstants {
     public final static String DOC_CAT_METHYLATION_DISCOVERY = "Methylation-Specific Tools";
     public final static String DOC_CAT_METHYLATION_DISCOVERY_SUMMARY = "Tools that perform methylation calling, processing bisulfite sequenced, methylation-aware aligned BAM";
 
+    public final static String DOC_CAT_SHORT_FLOW_BASED = "Flow Based Tools";
+    public final static String DOC_CAT_SHORT_FLOW_BASED_SUMMARY = "Tools designed specifically to operate on flow based data";
+
     // End GATK Program groups
 
     /**

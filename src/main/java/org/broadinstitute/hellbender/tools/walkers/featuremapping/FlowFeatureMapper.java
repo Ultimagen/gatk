@@ -13,6 +13,7 @@ import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.argparser.*;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
+import org.broadinstitute.hellbender.cmdline.programgroups.FlowBasedProgramGroup;
 import org.broadinstitute.hellbender.cmdline.programgroups.ShortVariantDiscoveryProgramGroup;
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.exceptions.GATKException;
@@ -64,7 +65,7 @@ import java.util.*;
 @CommandLineProgramProperties(
         summary = "Mapping features (flow space processing)",
         oneLineSummary = "Map/find features in BAM file, output VCF. Initially mapping SNVs",
-        programGroup = ShortVariantDiscoveryProgramGroup.class
+        programGroup = FlowBasedProgramGroup.class
 )
 
 
