@@ -1,5 +1,6 @@
 package org.broadinstitute.hellbender.cmdline.argumentcollections;
 
+import org.broadinstitute.barclay.argparser.Advanced;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.utils.read.markduplicates.MarkDuplicatesScoringStrategy;
@@ -20,6 +21,8 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
     public static final String DUPLICATE_TAGGING_POLICY_LONG_NAME = "duplicate-tagging-policy";
     public static final String REMOVE_ALL_DUPLICATE_READS = "remove-all-duplicates";
     public static final String REMOVE_SEQUENCING_DUPLICATE_READS = "remove-sequencing-duplicates";
+
+    public static final String FLOW_MD_MODE_LONG_NAME = "flow-mode";
 
     @Argument(shortName = StandardArgumentDefinitions.DUPLICATE_SCORING_STRATEGY_SHORT_NAME, fullName = StandardArgumentDefinitions.DUPLICATE_SCORING_STRATEGY_LONG_NAME, doc = "The scoring strategy for choosing the non-duplicate among candidates.")
     public MarkDuplicatesScoringStrategy duplicatesScoringStrategy = MarkDuplicatesScoringStrategy.SUM_OF_BASE_QUALITIES;
@@ -66,4 +69,7 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
     @Argument(doc = "Emit additional debugging info specific to flow: read name. Default null", optional = true)
     public List<String> DEBUG_ULTIMA_READ_NAME = null;
 
+    @Advanced
+    @Argument(fullName = FLOW_MD_MODE_LONG_NAME, optional = true, doc="Single argument for enabling the bulk of Flow Based features. NOTE: THIS WILL OVERWRITE PROVIDED ARGUMENT CHECK TOOL INFO TO SEE WHICH ARGUMENTS ARE SET).")
+    public Boolean flowMode = false;
 }

@@ -71,6 +71,8 @@ public class M2ArgumentCollection extends AssemblyBasedCallerArgumentCollection 
     public static final String LOD_BAND_LONG_NAME = "gvcf-lod-band";
     public static final String LOD_BAND_SHORT_NAME = "LODB";
 
+    public static final String FLOW_M2_MODE_LONG_NAME = "flow-mode";
+
     @Override
     protected int getDefaultMaxMnpDistance() { return 1; }
 
@@ -278,4 +280,8 @@ public class M2ArgumentCollection extends AssemblyBasedCallerArgumentCollection 
     @Advanced
     @Argument(fullName = INDEPENDENT_MATES_LONG_NAME, doc = "Allow paired reads to independently support different haplotypes.  Useful for validations with ill-designed synthetic data.", optional = true)
     public boolean independentMates = false;
+
+    @Advanced
+    @Argument(fullName = FLOW_M2_MODE_LONG_NAME, optional = true, doc="Single argument for enabling the bulk of Flow Based features. NOTE: THIS WILL OVERWRITE PROVIDED ARGUMENT CHECK TOOL INFO TO SEE WHICH ARGUMENTS ARE SET).")
+    public Boolean flowMode = false;
 }

@@ -21,6 +21,7 @@ import org.broadinstitute.hellbender.engine.spark.GATKSparkTool;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.utils.Utils;
+import org.broadinstitute.hellbender.utils.flow.FlowModeArgumentUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.read.markduplicates.GATKDuplicationMetrics;
@@ -381,5 +382,18 @@ public final class MarkDuplicatesSpark extends GATKSparkTool {
         }
         return false;
     }
+
+    /**
+     * mode adjustments
+     * @return
+     */
+    @Override
+    protected String[] customCommandLineValidation() {
+        if (markDuplicatesSparkArgumentCollection.flowMode) {
+            FlowModeArgumentUtils.setModeDefaults(markDuplicatesSparkArgumentCollection);
+        }
+        return null;
+    }
+
 
 }

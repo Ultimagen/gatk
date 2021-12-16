@@ -20,6 +20,7 @@ import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeAssignmentM
 import org.broadinstitute.hellbender.transformers.DRAGENMappingQualityReadTransformer;
 import org.broadinstitute.hellbender.transformers.ReadTransformer;
 import org.broadinstitute.hellbender.utils.fasta.CachingIndexedFastaSequenceFile;
+import org.broadinstitute.hellbender.utils.flow.FlowModeArgumentUtils;
 
 import java.util.Collection;
 import java.util.List;
@@ -163,14 +164,18 @@ public final class HaplotypeCaller extends AssemblyRegionWalker {
     }
 
     /**
-     * This is being used to set the mapping quality filter when in dragen mode... there are problems here...
+     * This is being used to set the mapping quality filter when in dragen and/or flow mode... there are problems here...
      */
+    @Override
     protected String[] customCommandLineValidation() {
         if (hcArgs.dragenMode) {
             final GATKReadFilterPluginDescriptor readFilterPlugin =
                     getCommandLineParser().getPluginDescriptor(GATKReadFilterPluginDescriptor.class);
             Optional<ReadFilter> filterOptional = readFilterPlugin.getResolvedInstances().stream().filter(rf -> rf instanceof MappingQualityReadFilter).findFirst();
             filterOptional.ifPresent(readFilter -> ((MappingQualityReadFilter) readFilter).minMappingQualityScore = 1);
+        }
+        if (hcArgs.flowMode) {
+            FlowModeArgumentUtils.setModeDefaults(hcArgs);
         }
         return null;
     }

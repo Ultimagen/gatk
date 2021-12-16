@@ -28,7 +28,10 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
     public static final String DO_NOT_CORRECT_OVERLAPPING_BASE_QUALITIES_LONG_NAME = "do-not-correct-overlapping-quality";
     public static final String OUTPUT_BLOCK_LOWER_BOUNDS = "floor-blocks";
     public static final String DRAGEN_GATK_MODE_LONG_NAME = "dragen-mode";
+    public static final String FLOW_GATK_MODE_LONG_NAME = "flow-mode";
     public static final String STEPWISE_FITLERING_ARGUMENT = "use-flow-aligner-for-stepwise-hc-filtering";
+
+
 
 
     @ArgumentCollection
@@ -138,6 +141,9 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
      */
     @Argument(fullName = DRAGEN_GATK_MODE_LONG_NAME, optional = true, doc="Single argument for enabling the bulk of DRAGEN-GATK features. NOTE: THIS WILL OVERWRITE PROVIDED ARGUMENT CHECK TOOL INFO TO SEE WHICH ARGUMENTS ARE SET).")
     public Boolean dragenMode = false;
+    @Advanced
+    @Argument(fullName = FLOW_GATK_MODE_LONG_NAME, optional = true, doc="Single argument for enabling the bulk of Flow Based features. NOTE: THIS WILL OVERWRITE PROVIDED ARGUMENT CHECK TOOL INFO TO SEE WHICH ARGUMENTS ARE SET).")
+    public Boolean flowMode = false;
     @Advanced
     @Argument(fullName = "apply-bqd", doc = "If enabled this argument will apply the DRAGEN-GATK BaseQualityDropout model to the genotyping model for filtering sites due to Linked Error mode.", optional = true)
     public boolean applyBQD = false;
