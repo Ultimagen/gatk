@@ -356,8 +356,8 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
         if ( inputSequence == null ) {
             return null;
         }
-        final String sequence = (ignoreNBases && inputSequence.indexOf('N') >= 0)
-                ? inputSequence.replace("N", "")
+        final String sequence = (ignoreNBases && ((inputSequence.indexOf('N') >= 0) || (inputSequence.indexOf('*') >= 0)))
+                ? inputSequence.replace("N", "").replace("*", "")
                 : inputSequence;
 
         // allocate maximal key, to be later copied into an array of the exact length.
