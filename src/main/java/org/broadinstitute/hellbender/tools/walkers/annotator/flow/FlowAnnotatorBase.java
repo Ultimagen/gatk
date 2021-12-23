@@ -169,7 +169,6 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
                         indelLength.add(Math.abs(refLength - a.length()));
                     } else {
                         indelLength.add(null);
-                        localContext.spanDelCount++;
                     }
                 }
             }
@@ -190,6 +189,8 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
                 if ( localContext.firstNonSpanDelIndex < 0 ) {
                     localContext.firstNonSpanDelIndex = index;
                 }
+            } else {
+                localContext.spanDelCount++;
             }
             index++;
         }
