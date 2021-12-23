@@ -11,6 +11,7 @@ import org.broadinstitute.hellbender.tools.walkers.annotator.InfoFieldAnnotation
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.logging.OneShotLogger;
+import org.broadinstitute.hellbender.utils.read.FlowBasedKeyCodec;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
@@ -221,8 +222,8 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
             final byte[]      altHap = buildHaplotype(before, alt.getBases(), after);
 
             // convert to flow space
-            final int[]       refKey = generateKeyFromSequence(new String(refHap), localContext.flowOrder, true);
-            final int[]       altKey = generateKeyFromSequence(new String(altHap), localContext.flowOrder, true);
+            final int[]       refKey = FlowBasedKeyCodec.base2key(refHap, localContext.flowOrder);
+            final int[]       altKey = FlowBasedKeyCodec.base2key(altHap, localContext.flowOrder);
             if ( refKey == null || altKey == null ) {
                 throw new GATKException("failed to generate key from reference or alternate sequence");
             }
@@ -331,8 +332,8 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
             final Allele      alt = vc.getAlleles().get(localContext.firstNonSpanDelIndex);
 
             // convert to flow space
-            final int[]       refKey = generateKeyFromSequence(localContext.leftMotif + ref.getBaseString() + localContext.rightMotif, localContext.flowOrder, true);
-            final int[]       altKey = generateKeyFromSequence(localContext.leftMotif + alt.getBaseString() + localContext.rightMotif, localContext.flowOrder, true);
+            final int[]       refKey = FlowBasedKeyCodec.base2key((localContext.leftMotif + ref.getBaseString() + localContext.rightMotif).getBytes(), localContext.flowOrder);
+            final int[]       altKey = FlowBasedKeyCodec.base2key((localContext.leftMotif + alt.getBaseString() + localContext.rightMotif).getBytes(), localContext.flowOrder);
 
             // assign initial css
             css = (refKey.length != altKey.length) ? C_CSS_CS : C_CSS_NS;
@@ -349,44 +350,6 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
         }
 
         localContext.attributes.put(GATKVCFConstants.FLOW_CYCLESKIP_STATUS, css);
-    }
-
-    private int[] generateKeyFromSequence(final String inputSequence, final String flowOrder, boolean ignoreNBases) {
-
-        if ( inputSequence == null ) {
-            return null;
-        }
-        final String sequence = (ignoreNBases && ((inputSequence.indexOf('N') >= 0) || (inputSequence.indexOf('*') >= 0)))
-                ? inputSequence.replace("N", "").replace("*", "")
-                : inputSequence;
-
-        // allocate maximal key, to be later copied into an array of the exact length.
-        final int[]       key = new int[sequence.length() * BASE_TYPE_COUNT];
-        final byte[]      seq = sequence.getBytes();
-        final byte[]      flow = flowOrder.getBytes();
-        int         pos = 0;
-        int         keySize = 0;
-        for ( int flowPos = 0 ; ; flowPos = (flowPos + 1) % flow.length ) {
-            byte    base = flow[flowPos];
-            int     hcount = 0;
-            for ( int i = pos ; i < seq.length ; i++ ) {
-                if ( (seq[i] == 'N') || (seq[i] == '*') ) {
-                    return null;
-                } else if ( seq[i] == base ) {
-                    hcount++;
-                } else {
-                    break;
-                }
-            }
-            if ( pos >= seq.length ) {
-                key[keySize++] = hcount;
-                break;
-            }
-            key[keySize++] = hcount;
-            pos += hcount;
-        }
-
-        return Arrays.copyOfRange(key, 0, keySize);
     }
 
     // get a single nucleoid from reference
