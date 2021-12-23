@@ -88,21 +88,6 @@ public class FlowBasedKeyCodec {
 
     /**
      * Prints the key as character-encoded string
-     * @param bytes  key array
-     * @return encoding
-     */
-    static public String keyAsString(final byte[] bytes)
-    {
-        final StringBuilder   sb = new StringBuilder();
-
-        for ( final byte b : bytes )
-            sb.append((char)((b < 10) ? ('0' + b) : ('A' + b - 10)));
-
-        return sb.toString();
-    }
-
-    /**
-     * Prints the key as character-encoded string
      * @param ints (key array)
      * @return encoded string
      */
