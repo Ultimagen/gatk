@@ -175,7 +175,7 @@ public final class HaplotypeCaller extends AssemblyRegionWalker {
             filterOptional.ifPresent(readFilter -> ((MappingQualityReadFilter) readFilter).minMappingQualityScore = 1);
         }
         if (hcArgs.flowMode) {
-            FlowModeArgumentUtils.setModeDefaults(hcArgs);
+            FlowModeArgumentUtils.setModeDefaults(getCommandLineParser(), hcArgs);
         }
         return null;
     }

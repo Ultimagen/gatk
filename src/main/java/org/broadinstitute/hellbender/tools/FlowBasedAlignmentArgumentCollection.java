@@ -24,7 +24,7 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     private static final String NUM_UNCERTAIN_FLOWS = "flow-number-of-uncertain-flows-to-clip";
     private static final String FIRST_UNCERTAIN_FLOW = "flow-nucleotide-of-first-uncertain-flow";
     private static final String FLOW_LIKELIHOOD_PARALLEL_THREADS = "flow-likelihood-parallel-threads";
-    private static final String FLOW_LIKELIHOOD_OPTIMIZED_COMP = "flow-likelihood-optimized-comp";
+    public static final String FLOW_LIKELIHOOD_OPTIMIZED_COMP = "flow-likelihood-optimized-comp";
 
 
     private static final double DEFAULT_RATIO_THRESHOLD = 0.003;

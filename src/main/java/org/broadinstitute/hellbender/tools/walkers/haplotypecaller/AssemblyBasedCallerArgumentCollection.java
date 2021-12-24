@@ -50,6 +50,10 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     public static final String SMITH_WATERMAN_READ_TO_HAPLOTYPE_GAP_OPEN_PENALTY_LONG_NAME = "smith-waterman-read-to-haplotype-gap-open-penalty";
     public static final String SMITH_WATERMAN_READ_TO_HAPLOTYPE_GAP_EXTEND_PENALTY_LONG_NAME = "smith-waterman-read-to-haplotype-gap-extend-penalty";
 
+    public static final String FLOW_ASSEMBLY_COLLAPSE_HMER_SIZE_LONG_NAME = "flow-assembly-collapse-hmer-size";
+    public static final String FLOW_MATRIX_MODS_LONG_NAME = "flow-matrix-mods";
+    public static final String FLOW_ASSEMBLY_COLLAPSE_PARTIAL_MODE_LONG_NAME = "flow-assembly-collapse-partial-mode";
+
     /** See documentation at {@link SmithWatermanAlignmentConstants#STANDARD_NGS}. */
     private static final SWParameters DEFAULT_DANGLING_END_SMITH_WATERMAN_PARAMETERS = SmithWatermanAlignmentConstants.STANDARD_NGS;
     /** See documentation at {@link SmithWatermanAlignmentConstants#NEW_SW_PARAMETERS}. */
@@ -321,15 +325,15 @@ public abstract class AssemblyBasedCallerArgumentCollection {
 
     @Hidden
     @Advanced
-    @Argument(fullName="flow-assembly-collapse-hmer-size", doc="Collapse reference regions with >Nhmer during assembly, normal value when used is 12", optional = true)
+    @Argument(fullName=FLOW_ASSEMBLY_COLLAPSE_HMER_SIZE_LONG_NAME, doc="Collapse reference regions with >Nhmer during assembly, normal value when used is 12", optional = true)
     public int flowAssemblyCollapseHKerSize = 0;
 
     @Advanced
-    @Argument(fullName="flow-matrix-mods", doc="Modifications to perform on the read flow matrix. Format is a list of src,dst,src,dst.... Operation is triggered when src is written. Example: 8,12,11,12", optional = true)
+    @Argument(fullName=FLOW_MATRIX_MODS_LONG_NAME, doc="Modifications to perform on the read flow matrix. Format is a list of src,dst,src,dst.... Operation is triggered when src is written. Example: 8,12,11,12", optional = true)
     public String flowMatrixMods = null;
 
     @Advanced
-    @Argument(fullName="flow-assembly-collapse-partial-mode", doc="Collapse only up to difference in reference", optional = true)
+    @Argument(fullName=FLOW_ASSEMBLY_COLLAPSE_PARTIAL_MODE_LONG_NAME, doc="Collapse only up to difference in reference", optional = true)
     public boolean flowAssemblyCollapsePartialMode = false;
 
     /**
