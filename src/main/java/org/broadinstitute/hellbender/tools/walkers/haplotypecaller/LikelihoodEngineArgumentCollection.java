@@ -21,9 +21,11 @@ public final class LikelihoodEngineArgumentCollection implements Serializable {
     public static final String DRAGSTR_HET_HOM_RATIO_FULLNAME = "dragstr-het-hom-ratio";
     public static final String DONT_USE_DRAGSTR_PAIRHMM_FULLNAME = "dont-use-dragstr-pair-hmm-scores";
 
+    public static final String LIKELIHOOD_CALCULATION_ENGINE_FULL_NAME = "likelihood-calculation-engine";
+
 
     @Advanced
-    @Argument(fullName = "likelihood-calculation-engine",
+    @Argument(fullName = LIKELIHOOD_CALCULATION_ENGINE_FULL_NAME,
             doc= "What likelihood calculation engine to use to calculate the relative likelihood of reads vs haplotypes", optional = true)
     public ReadLikelihoodCalculationEngine.Implementation likelihoodEngineImplementation = ReadLikelihoodCalculationEngine.Implementation.PairHMM;
 

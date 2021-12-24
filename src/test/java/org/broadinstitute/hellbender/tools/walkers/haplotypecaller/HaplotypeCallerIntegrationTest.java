@@ -1566,6 +1566,9 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
                 .addOutput(outputPath)
                 .addInput(input)
                 .add("flow-mode", true)
+                .add("kmer-size", 10)
+                .add("flow-filter-lone-alleles", true)
+                .add("flow-filter-alleles-sor-threshold", 40)
                 .add("ERC", "GVCF")
                 .add(StandardArgumentDefinitions.ADD_OUTPUT_VCF_COMMANDLINE, false);
 
