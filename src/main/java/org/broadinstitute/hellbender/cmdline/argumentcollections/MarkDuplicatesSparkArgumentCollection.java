@@ -24,6 +24,13 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
 
     public static final String FLOW_MD_MODE_LONG_NAME = "flow-mode";
 
+    public static final String FLOW_QUALITY_SUM_STRATEGY_LONG_NAME = "FLOW_QUALITY_SUM_STRATEGY";
+    public static final String FLOW_END_LOCATION_SIGNIFICANT_LONG_NAME = "FLOW_END_LOCATION_SIGNIFICANT";
+    public static final String ENDS_READ_UNCERTAINTY_LONG_NAME = "ENDS_READ_UNCERTAINTY";
+    public static final String FLOW_USE_CLIPPED_LOCATIONS_LONG_NAME = "FLOW_USE_CLIPPED_LOCATIONS";
+    public static final String FLOW_SKIP_START_HOMOPOLYMERS_LONG_NAME = "FLOW_SKIP_START_HOMOPOLYMERS";
+    public static final String FLOW_Q_IS_KNOWN_END_LONG_NAME = "FLOW_Q_IS_KNOWN_END";
+
     @Argument(shortName = StandardArgumentDefinitions.DUPLICATE_SCORING_STRATEGY_SHORT_NAME, fullName = StandardArgumentDefinitions.DUPLICATE_SCORING_STRATEGY_LONG_NAME, doc = "The scoring strategy for choosing the non-duplicate among candidates.")
     public MarkDuplicatesScoringStrategy duplicatesScoringStrategy = MarkDuplicatesScoringStrategy.SUM_OF_BASE_QUALITIES;
 
@@ -43,24 +50,24 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
             mutex = {MarkDuplicatesSparkArgumentCollection.DUPLICATE_TAGGING_POLICY_LONG_NAME, MarkDuplicatesSparkArgumentCollection.REMOVE_ALL_DUPLICATE_READS}, optional = true)
     public boolean removeSequencingDuplicates = false;
 
-    @Argument(doc = "Use specific quality summing strategy for flow based reads. The strategy ensures that the same " +
+    @Argument(fullName = FLOW_QUALITY_SUM_STRATEGY_LONG_NAME, doc = "Use specific quality summing strategy for flow based reads. The strategy ensures that the same " +
             "(and correct) quality value is used for all bases of the same homopolymer. Default false.", optional = true)
     public boolean FLOW_QUALITY_SUM_STRATEGY = false;
 
-    @Argument(doc = "Make end location of read be significant when considering duplicates, " +
+    @Argument(fullName = FLOW_END_LOCATION_SIGNIFICANT_LONG_NAME, doc = "Make end location of read be significant when considering duplicates, " +
             "in addition to the start location, which is always significant. Default false.", optional = true)
     public boolean FLOW_END_LOCATION_SIGNIFICANT = false;
 
-    @Argument(doc = "Maximal number of bases of reads ends difference that is marked as match. Default 0.", optional = true)
+    @Argument(fullName = ENDS_READ_UNCERTAINTY_LONG_NAME, doc = "Maximal number of bases of reads ends difference that is marked as match. Default 0.", optional = true)
     public int ENDS_READ_UNCERTAINTY = 0;
 
-    @Argument(doc = "Use clipped, rather than unclipped, when considering duplicates. Default false.", optional = true)
+    @Argument(fullName = FLOW_USE_CLIPPED_LOCATIONS_LONG_NAME, doc = "Use clipped, rather than unclipped, when considering duplicates. Default false.", optional = true)
     public boolean FLOW_USE_CLIPPED_LOCATIONS = false;
 
-    @Argument(doc = "Skip first N flows, when considering duplicates. Default 0.", optional = true)
+    @Argument(fullName = FLOW_SKIP_START_HOMOPOLYMERS_LONG_NAME, doc = "Skip first N flows, when considering duplicates. Default 0.", optional = true)
     public int FLOW_SKIP_START_HOMOPOLYMERS = 0;
 
-    @Argument(doc = "Treat tm:Q as tm:Q.", optional = true)
+    @Argument(fullName = FLOW_Q_IS_KNOWN_END_LONG_NAME, doc = "Treat tm:Q as tm:Q.", optional = true)
     public boolean FLOW_Q_IS_KNOWN_END = false;
 
     @Advanced

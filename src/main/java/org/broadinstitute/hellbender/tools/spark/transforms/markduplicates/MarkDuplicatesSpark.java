@@ -390,7 +390,7 @@ public final class MarkDuplicatesSpark extends GATKSparkTool {
     @Override
     protected String[] customCommandLineValidation() {
         if (markDuplicatesSparkArgumentCollection.flowMode) {
-            FlowModeArgumentUtils.setModeDefaults(markDuplicatesSparkArgumentCollection);
+            FlowModeArgumentUtils.setModeDefaults(getCommandLineParser(), markDuplicatesSparkArgumentCollection);
         }
         return null;
     }
