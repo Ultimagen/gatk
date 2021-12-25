@@ -14,6 +14,7 @@ import org.broadinstitute.hellbender.tools.walkers.mutect.filtering.FilterMutect
 import org.broadinstitute.hellbender.tools.walkers.readorientation.CollectF1R2CountsArgumentCollection;
 import org.broadinstitute.hellbender.utils.MathUtils;
 import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
+import org.broadinstitute.hellbender.utils.flow.FlowModeArgumentUtils;
 
 import java.io.File;
 import java.io.Serializable;
@@ -283,5 +284,5 @@ public class M2ArgumentCollection extends AssemblyBasedCallerArgumentCollection 
 
     @Advanced
     @Argument(fullName = FLOW_M2_MODE_LONG_NAME, optional = true, doc="Single argument for enabling the bulk of Flow Based features. NOTE: THIS WILL OVERWRITE PROVIDED ARGUMENT CHECK TOOL INFO TO SEE WHICH ARGUMENTS ARE SET).")
-    public Boolean flowMode = false;
+    public FlowModeArgumentUtils.FlowModeHC flowMode = FlowModeArgumentUtils.FlowModeHC.NONE;
 }
