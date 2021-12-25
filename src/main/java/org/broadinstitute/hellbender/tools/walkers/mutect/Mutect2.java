@@ -322,8 +322,8 @@ public final class Mutect2 extends AssemblyRegionWalker {
      */
     @Override
     protected String[] customCommandLineValidation() {
-        if (MTAC.flowMode) {
-            FlowModeArgumentUtils.setModeDefaults(getCommandLineParser(), MTAC);
+        if (MTAC.flowMode != FlowModeArgumentUtils.FlowModeHC.NONE) {
+            FlowModeArgumentUtils.setFlowModeHC(getCommandLineParser(), MTAC.flowMode);
         }
         return null;
     }
