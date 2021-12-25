@@ -14,27 +14,69 @@ import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.ReadLikelihoo
 import org.broadinstitute.hellbender.tools.walkers.mutect.M2ArgumentCollection;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.util.Arrays;
+import java.util.List;
+
 public class FlowModeArgumentUtils {
+
+    public enum FlowModeHC {
+        NONE(new String[]{}, null),
+
+        STANDARD(new String[]{
+                "mbq", "0",
+                "flow-filter-alleles", "true",
+                "flow-filter-alleles-sor-threshold", "3",
+                "flow-assembly-collapse-hmer-size", "12",
+                "flow-matrix-mods", "10,12,11,12",
+                "override-fragment-softclip-check", "true",
+                "flow-likelihood-parallel-threads", "2",
+                "flow-likelihood-optimized-comp", "true",
+                "likelihood-calculation-engine", "FlowBased"
+        }, null),
+
+        ADVANCED(new String[]{
+                "adaptive-pruning", "true",
+                "pruning-lod-threshold", "3.0",
+                "enable-dynamic-read-disqualification-for-genotyping", "true",
+                "dynamic-read-disqualification-threshold", "10",
+                "apply-frd", "true",
+                "minimum-mapping-quality", "1",
+                "mapping-quality-threshold-for-genotyping", "1"
+        }, STANDARD);
+
+        final String[] nameValuePairs;
+        final FlowModeHC parent;
+
+        FlowModeHC(final String[] nameValuePairs, final FlowModeHC parent) {
+            this.nameValuePairs = nameValuePairs;
+            this.parent = parent;
+        }
+    } ;
+
+    private static final String[] flowModeMD = {
+            MarkDuplicatesSparkArgumentCollection.FLOW_END_LOCATION_SIGNIFICANT_LONG_NAME, "true",
+            MarkDuplicatesSparkArgumentCollection.FLOW_USE_CLIPPED_LOCATIONS_LONG_NAME, "true",
+            MarkDuplicatesSparkArgumentCollection.ENDS_READ_UNCERTAINTY_LONG_NAME, "true",
+            MarkDuplicatesSparkArgumentCollection.FLOW_SKIP_START_HOMOPOLYMERS_LONG_NAME, "0"
+    };
+
 
     /**
      * set flow mode defauls for haplotype caller
      */
-    public static void setModeDefaults(CommandLineParser parser, HaplotypeCallerArgumentCollection args) {
-
-        set(parser, args);
-        if ( !hasBeenSet(parser, FlowBasedAlignmentArgumentCollection.FLOW_LIKELIHOOD_OPTIMIZED_COMP) ) {
-            args.fbargs.flowLikelihoodOptimizedComp = true;
-        }
+    public static void setFlowModeHC(CommandLineParser parser, FlowModeHC mode) {
+        setArgValues(parser, mode.nameValuePairs);
+        if ( mode.parent != null )
+            setFlowModeHC(parser, mode.parent);
     }
 
     /**
-     * set flow mode defaults for mutect2
+     * set flow mode defaults for mark duplicates spark
      */
-    public static void setModeDefaults(CommandLineParser parser, M2ArgumentCollection args) {
-        set(parser, args);
-        if ( !hasBeenSet(parser, FlowBasedAlignmentArgumentCollection.FLOW_LIKELIHOOD_OPTIMIZED_COMP) ) {
-            args.fbargs.flowLikelihoodOptimizedComp = true;
-        }
+    public static void setFlowModeMD(CommandLineParser parser) {
+        setArgValues(parser, flowModeMD);
     }
 
     /**
@@ -42,65 +84,12 @@ public class FlowModeArgumentUtils {
      *
      * We made an effort not to override arguments already provided on the commandline
      */
-    private static void set(CommandLineParser parser, AssemblyBasedCallerArgumentCollection args) {
+    private static void setArgValues(CommandLineParser parser, String[] nameValuePairs) {
 
-        if ( !hasBeenSet(parser, AssemblyBasedCallerArgumentCollection.SMITH_WATERMAN_LONG_NAME) ) {
-            args.smithWatermanImplementation = SmithWatermanAligner.Implementation.JAVA;
-        }
-
-        if ( !hasBeenSet(parser, LikelihoodEngineArgumentCollection.LIKELIHOOD_CALCULATION_ENGINE_FULL_NAME) ) {
-            args.likelihoodArgs.likelihoodEngineImplementation = ReadLikelihoodCalculationEngine.Implementation.FlowBased;
-        }
-
-        if ( !hasBeenSet(parser, AssemblyBasedCallerArgumentCollection.MIN_BASE_QUALITY_SCORE_LONG_NAME) ) {
-            args.minBaseQualityScore = 0;
-        }
-
-        if ( !hasBeenSet(parser, AssemblyBasedCallerArgumentCollection.FLOW_MATRIX_MODS_LONG_NAME) ) {
-            args.flowMatrixMods = "10,12,11,12";
-        }
-
-        if ( !hasBeenSet(parser, AssemblyBasedCallerArgumentCollection.FLOW_ASSEMBLY_COLLAPSE_HMER_SIZE_LONG_NAME) ) {
-            args.flowAssemblyCollapseHKerSize = 12;
-        }
-
-        if ( !hasBeenSet(parser, AssemblyBasedCallerArgumentCollection.FILTER_ALLELES) ) {
-            args.filterAlleles = true;
-        }
-
-        if ( !hasBeenSet(parser, AssemblyBasedCallerArgumentCollection.FILTER_ALLELES_FILTER_LONE_ALLELES) ) {
-            args.filterLoneAlleles = false;
-        }
-
-        if ( !hasBeenSet(parser, AssemblyBasedCallerArgumentCollection.FILTER_ALLELES_SOR_THRESHOLD) ) {
-            args.prefilterSorThreshold = 3;
-        }
-    }
-
-    /**
-     * set flow mode defaults for mark duplicates spark
-     */
-    public static void setModeDefaults(CommandLineParser parser, MarkDuplicatesSparkArgumentCollection args) {
-
-        /**
-         * TODO: fill these when values become known (or delete if no default needs to be set)
-         *
-         * NOTE: current values are the instance defaults
-         */
-        if ( !hasBeenSet(parser, MarkDuplicatesSparkArgumentCollection.FLOW_END_LOCATION_SIGNIFICANT_LONG_NAME) ) {
-            args.FLOW_END_LOCATION_SIGNIFICANT = true;
-        }
-
-        if ( !hasBeenSet(parser, MarkDuplicatesSparkArgumentCollection.FLOW_USE_CLIPPED_LOCATIONS_LONG_NAME) ) {
-            args.FLOW_USE_CLIPPED_LOCATIONS = true;
-        }
-
-        if ( !hasBeenSet(parser, MarkDuplicatesSparkArgumentCollection.ENDS_READ_UNCERTAINTY_LONG_NAME) ) {
-            args.ENDS_READ_UNCERTAINTY = 1;
-        }
-
-        if ( !hasBeenSet(parser, MarkDuplicatesSparkArgumentCollection.FLOW_SKIP_START_HOMOPOLYMERS_LONG_NAME) ) {
-            args.FLOW_SKIP_START_HOMOPOLYMERS = 0;
+        for ( int i = 0 ; i < nameValuePairs.length ; i += 2 ) {
+            if ( !hasBeenSet(parser, nameValuePairs[i]) ) {
+                setValue(parser, nameValuePairs[i], nameValuePairs[i+1]);
+            }
         }
     }
 
@@ -113,8 +102,22 @@ public class FlowModeArgumentUtils {
         } else {
             return false;
         }
-
     }
 
+    private static void setValue(CommandLineParser parser, String alias, String value) {
+        if ( parser instanceof CommandLineArgumentParser ) {
+            NamedArgumentDefinition namedArg = ((CommandLineArgumentParser)parser).getNamedArgumentDefinitionByAlias(alias);
+            if ( namedArg == null ) {
+                throw new IllegalArgumentException("alias not found: " + alias);
+            }
+
+            PrintStream         ps = new PrintStream(new ByteArrayOutputStream());
+            List<String>        values = Arrays.asList(value);
+            namedArg.setArgumentValues((CommandLineArgumentParser)parser, ps, values);
+        } else {
+            throw new IllegalArgumentException("command line parser is not CommandLineArgumentParser");
+        }
+
+    }
 
 }
