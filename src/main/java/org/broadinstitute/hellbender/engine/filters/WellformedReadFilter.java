@@ -40,7 +40,7 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
                 ReadFilterLibrary.CigarContainsNoNOperator.class
         }
 )
-public final class WellformedReadFilter extends ReadFilter {
+public class WellformedReadFilter extends ReadFilter {
     private static final long serialVersionUID = 1l;
 
     private ReadFilter wellFormedFilter = null;
@@ -52,17 +52,18 @@ public final class WellformedReadFilter extends ReadFilter {
     @Override
     public void setHeader(SAMFileHeader header) {
         super.setHeader(header);
-        createFilter();
+        wellFormedFilter = createFilter();
+        wellFormedFilter.setHeader(header);
     }
 
     public WellformedReadFilter(final SAMFileHeader header) {
         setHeader(header);
     }
 
-    private void createFilter() {
+    protected ReadFilter createFilter() {
         final AlignmentAgreesWithHeaderReadFilter alignmentAgreesWithHeader = new AlignmentAgreesWithHeaderReadFilter(samHeader);
 
-        wellFormedFilter = ReadFilterLibrary.VALID_ALIGNMENT_START
+        return ReadFilterLibrary.VALID_ALIGNMENT_START
                 .and(ReadFilterLibrary.VALID_ALIGNMENT_END)
                 .and(alignmentAgreesWithHeader)
                 .and(ReadFilterLibrary.HAS_READ_GROUP)
