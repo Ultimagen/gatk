@@ -49,7 +49,7 @@ public class FlowModeArgumentUtils {
     private static final String[] flowModeMD = {
             MarkDuplicatesSparkArgumentCollection.FLOW_END_LOCATION_SIGNIFICANT_LONG_NAME, "true",
             MarkDuplicatesSparkArgumentCollection.FLOW_USE_CLIPPED_LOCATIONS_LONG_NAME, "true",
-            MarkDuplicatesSparkArgumentCollection.ENDS_READ_UNCERTAINTY_LONG_NAME, "true",
+            MarkDuplicatesSparkArgumentCollection.ENDS_READ_UNCERTAINTY_LONG_NAME, "1",
             MarkDuplicatesSparkArgumentCollection.FLOW_SKIP_START_HOMOPOLYMERS_LONG_NAME, "0"
     };
 
