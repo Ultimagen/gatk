@@ -7,7 +7,6 @@ import org.broadinstitute.hellbender.utils.read.markduplicates.MarkDuplicatesSco
 import picard.sam.markduplicates.MarkDuplicates;
 
 import java.io.Serializable;
-import java.util.List;
 
 
 /**
@@ -25,9 +24,9 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
     public static final String FLOW_MD_MODE_LONG_NAME = "flow-mode";
 
     public static final String FLOW_QUALITY_SUM_STRATEGY_LONG_NAME = "FLOW_QUALITY_SUM_STRATEGY";
-    public static final String FLOW_END_LOCATION_SIGNIFICANT_LONG_NAME = "FLOW_END_LOCATION_SIGNIFICANT";
-    public static final String ENDS_READ_UNCERTAINTY_LONG_NAME = "ENDS_READ_UNCERTAINTY";
-    public static final String FLOW_USE_CLIPPED_LOCATIONS_LONG_NAME = "FLOW_USE_CLIPPED_LOCATIONS";
+    public static final String SINGLE_END_READS_END_POSITION_SIGNIFICANT = "SINLE_END_READS_END_POSITION_SIGNIFICANT";
+    public static final String FLOW_END_POS_UNCERTAINTY_LONG_NAME = "FLOW_END_POS_UNCERTAINTY";
+    public static final String SINGLE_END_READS_CLIPPING_IS_END_LONG_NAME = "SINGLE_END_READS_CLIPPING_IS_END";
     public static final String FLOW_SKIP_START_HOMOPOLYMERS_LONG_NAME = "FLOW_SKIP_START_HOMOPOLYMERS";
     public static final String FLOW_Q_IS_KNOWN_END_LONG_NAME = "FLOW_Q_IS_KNOWN_END";
 
@@ -54,14 +53,14 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
             "(and correct) quality value is used for all bases of the same homopolymer. Default false.", optional = true)
     public boolean FLOW_QUALITY_SUM_STRATEGY = false;
 
-    @Argument(fullName = FLOW_END_LOCATION_SIGNIFICANT_LONG_NAME, doc = "Make end location of read be significant when considering duplicates, " +
+    @Argument(fullName = SINGLE_END_READS_END_POSITION_SIGNIFICANT, doc = "Make end location of read be significant when considering duplicates, " +
             "in addition to the start location, which is always significant. Default false.", optional = true)
     public boolean FLOW_END_LOCATION_SIGNIFICANT = false;
 
-    @Argument(fullName = ENDS_READ_UNCERTAINTY_LONG_NAME, doc = "Maximal number of bases of reads ends difference that is marked as match. Default 0.", optional = true)
+    @Argument(fullName = FLOW_END_POS_UNCERTAINTY_LONG_NAME, doc = "Maximal number of bases of reads ends difference that is marked as match. Default 0.", optional = true)
     public int ENDS_READ_UNCERTAINTY = 0;
 
-    @Argument(fullName = FLOW_USE_CLIPPED_LOCATIONS_LONG_NAME, doc = "Use clipped, rather than unclipped, when considering duplicates. Default false.", optional = true)
+    @Argument(fullName = SINGLE_END_READS_CLIPPING_IS_END_LONG_NAME, doc = "Use clipped, rather than unclipped, when considering duplicates. Default false.", optional = true)
     public boolean FLOW_USE_CLIPPED_LOCATIONS = false;
 
     @Argument(fullName = FLOW_SKIP_START_HOMOPOLYMERS_LONG_NAME, doc = "Skip first N flows, when considering duplicates. Default 0.", optional = true)
