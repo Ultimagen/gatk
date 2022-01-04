@@ -66,7 +66,7 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
     @Argument(fullName = FLOW_SKIP_START_HOMOPOLYMERS_LONG_NAME, doc = "Skip first N flows, when considering duplicates. Default 0.", optional = true)
     public int FLOW_SKIP_START_HOMOPOLYMERS = 0;
 
-    @Argument(fullName = FLOW_Q_IS_KNOWN_END_LONG_NAME, doc = "Treat tm:Q as tm:Q.", optional = true)
+    @Argument(fullName = FLOW_Q_IS_KNOWN_END_LONG_NAME, doc = "Treat reads clipped on tm:Q as known end position (default: false)", optional = true)
     public boolean FLOW_Q_IS_KNOWN_END = false;
 
     @Advanced
