@@ -30,6 +30,11 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
     protected static final String   C_CSS_PCS = "possible-cycle-skip";
     protected static final String   C_CSS_NS = "non-skip";
 
+    protected static final String   C_SNP = "snp";
+    protected static final String   C_NON_H_MER = "non-h-indel";
+    protected static final String   C_H_MER = "h-indel";
+
+
     protected static final int      MOTIF_SIZE = 5;
     protected static final int      GC_CONTENT_SIZE = 10;
     protected static final int      BASE_TYPE_COUNT = 4;
@@ -45,20 +50,13 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
 
         List<String> indel;
         List<Integer> indelLength;
-        int         hmerIndelLength;
-        String      leftMotif;
-        String      rightMotif;
-
-        String      refAlleleHmerAndRightMotif;
+        List<Integer> hmerIndelLength;
+        List<String>  leftMotif;
+        List<String>  rightMotif;
 
         Map<String, Object> attributes = new LinkedHashMap<>();
 
         boolean     notCalculated;
-
-        // number of Allele.SPAN_DEL alleles found. These are ignored in determiing eligibility.
-        int         spanDelCount;
-        int         firstNonSpanDelIndex;
-        int         refIndex;
 
         protected LocalContext(final ReferenceContext ref,
                                final VariantContext vc,
@@ -156,63 +154,89 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
     // "indel_classify" and "indel_length"
     protected void indelClassify(final VariantContext vc, final LocalContext localContext) {
 
-        localContext.spanDelCount = 0;
-        if ( vc.isIndel() ) {
-
-            final List<String>      indelClassify = new LinkedList<>();
-            final List<Integer>     indelLength = new LinkedList<>();
-            final int               refLength = vc.getReference().length();
-            for ( Allele a : vc.getAlleles() ) {
-                if ( !a.isReference() ) {
-                    indelClassify.add(refLength < a.length() ? C_INSERT : C_DELETE);
-                    if ( !a.equals(Allele.SPAN_DEL) ) {
-                        indelLength.add(Math.abs(refLength - a.length()));
-                    } else {
-                        indelLength.add(null);
-                    }
-                }
-            }
-            localContext.attributes.put(GATKVCFConstants.FLOW_INDEL_CLASSIFY, localContext.indel = indelClassify);
-            localContext.attributes.put(GATKVCFConstants.FLOW_INDEL_LENGTH, localContext.indelLength = indelLength);
-        } else {
-            localContext.attributes.put(GATKVCFConstants.FLOW_INDEL_CLASSIFY, C_NA);
-        }
-
-        // find first non-SPAN_DEL allele, refIndex
-        int         index = 0;
-        localContext.firstNonSpanDelIndex = -1;
+        final List<String>      indelClassify = new LinkedList<>();
+        final List<Integer>     indelLength = new LinkedList<>();
+        final int               refLength = vc.getReference().length();
         for ( Allele a : vc.getAlleles() ) {
-            if ( a.isReference() ) {
-                localContext.refIndex = index;
-            }
-            else if ( !a.equals(Allele.SPAN_DEL) ) {
-                if ( localContext.firstNonSpanDelIndex < 0 ) {
-                    localContext.firstNonSpanDelIndex = index;
+            if ( !a.isReference() ) {
+                indelClassify.add(refLength == a.length() ? C_NA : (refLength < a.length() ? C_INSERT : C_DELETE));
+                if ( !a.equals(Allele.SPAN_DEL) && (a.length() != refLength) ) {
+                    indelLength.add(Math.abs(refLength - a.length()));
+                } else {
+                    indelLength.add(null);
                 }
-            } else {
-                localContext.spanDelCount++;
             }
-            index++;
         }
+        localContext.attributes.put(GATKVCFConstants.FLOW_INDEL_CLASSIFY, localContext.indel = indelClassify);
+        localContext.attributes.put(GATKVCFConstants.FLOW_INDEL_LENGTH, localContext.indelLength = indelLength);
     }
+
+    // "indel_classify" and "indel_length"
+    protected void variantType(final VariantContext vc, final LocalContext localContext) {
+        List<Allele> alleles = vc.getAlternateAlleles();
+        boolean isSnp = true;
+        for (int i = 0;  i < alleles.size(); i++){
+            if (alleles.get(i).equals(Allele.SPAN_DEL)){
+                continue;
+            }
+            if (!localContext.indel.get(i).equals(C_NA)){
+                isSnp=false;
+            }
+        }
+        if (isSnp){
+            localContext.attributes.put(GATKVCFConstants.FLOW_VARIANT_TYPE, C_SNP);
+            return;
+        }
+
+        boolean isHmer = true;
+        for (int i = 0;  i < alleles.size(); i++){
+            if (alleles.get(i).equals(Allele.SPAN_DEL)){
+                continue;
+            }
+            if ((localContext.hmerIndelLength.get(i)==null) || (localContext.hmerIndelLength.get(i)==0)){
+                isHmer=false;
+            }
+        }
+
+        if (isHmer){
+            localContext.attributes.put(GATKVCFConstants.FLOW_VARIANT_TYPE, C_H_MER);
+            return;
+        }
+
+        localContext.attributes.put(GATKVCFConstants.FLOW_VARIANT_TYPE, C_NON_H_MER);
+    }
+
 
     /*
     This function determines if the vc is an hmer indel. If so, it marks it as such
      */
     protected void isHmerIndel(final VariantContext vc, final LocalContext localContext) {
 
-        // this is (currently) computed only when there is exactly one non reference allele
-        if ( vc.isIndel() && (localContext.indel.size() - localContext.spanDelCount) == 1
-                && (vc.getAlleles().size() - localContext.spanDelCount) == 2 ) {
+        // loop over all allels
+        final List<Integer>     hmerIndelLength = new LinkedList<>();
+        final List<String>      hmerIndelNuc = new LinkedList<>();
+        final List<String>      rightMotif = new LinkedList<>();
+        for ( Allele a : vc.getAlleles() ) {
+
+            // skip reference
+            if ( a.isReference() ) {
+                continue;
+            }
 
             // establish flow order
             if ( localContext.flowOrder == null ) {
                 localContext.flowOrder = establishFlowOrder(localContext, localContext.likelihoods);}
 
+            // assume no meaningful result
+            hmerIndelLength.add(0);
+            hmerIndelNuc.add(null);
+            rightMotif.add(null);
 
             // access alleles
-            final Allele      ref = vc.getAlleles().get(localContext.refIndex);
-            final Allele      alt = vc.getAlleles().get(localContext.firstNonSpanDelIndex);
+            final Allele      ref = vc.getReference();
+            final Allele      alt = a;
+            if ( a.equals(Allele.SPAN_DEL) )
+                continue;;
 
             // get byte before and after
             final byte        before = getReferenceNucleotide(localContext, vc.getStart() - 1);
@@ -231,7 +255,7 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
 
             // key must be the same length to begin with
             if ( refKey.length != altKey.length ) {
-                return;
+                continue;
             }
 
             // key must have only one difference, which should not be between a zero and something
@@ -246,7 +270,9 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
                 // is this the (one) difference key?
                 if ( refKey[n] != altKey[n] ) {
                     if ( diffIndex >= 0 ) {
-                        return;
+                        // break away
+                        diffIndex = -1;
+                        break;
                     } else {
                         diffIndex = n;
                     }
@@ -255,23 +281,30 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
 
             // check if we've actually encountered a significant different key
             if ( diffIndex < 0 ) {
-                return;
+                continue;
             }
             if ( Math.min(refKey[diffIndex], altKey[diffIndex]) == 0 ) {
-                return;
+                continue;
             }
 
-            // if here, we found the difference.
+            // if here, we found the difference. replace last element of list
+            final int             length = refKey[diffIndex];
             final byte            nuc = localContext.flowOrder.getBytes()[diffIndex % localContext.flowOrder.length()];
-            localContext.hmerIndelLength = refKey[diffIndex];
-            localContext.attributes.put(GATKVCFConstants.FLOW_HMER_INDEL_LENGTH, localContext.hmerIndelLength);
-            localContext.attributes.put(GATKVCFConstants.FLOW_HMER_INDEL_NUC, Character.toString((char)nuc));
+            hmerIndelLength.set(hmerIndelLength.size() - 1, length);
+            hmerIndelNuc.set(hmerIndelNuc.size() - 1, Character.toString((char)nuc));
 
             // at this point, we can generate the right motif (for the hmer indel) as we already have the location
             // of the hmer-indel and the bases following it
-            localContext.rightMotif = new String(Arrays.copyOfRange(refHap, refBasesCountUpInclHmer, Math.min(refHap.length, refBasesCountUpInclHmer + MOTIF_SIZE)));
-            localContext.refAlleleHmerAndRightMotif = new String(Arrays.copyOfRange(refHap, 1, Math.min(refHap.length, refBasesCountUpInclHmer + MOTIF_SIZE)));
+            if ( a.length() != ref.length() ) {
+                final String    motif = new String(Arrays.copyOfRange(refHap, refBasesCountUpInclHmer, Math.min(refHap.length, refBasesCountUpInclHmer + MOTIF_SIZE)));
+                rightMotif.set(rightMotif.size() - 1, motif);
+            }
         }
+
+        // reflect back to attributs and context
+        localContext.attributes.put(GATKVCFConstants.FLOW_HMER_INDEL_LENGTH, localContext.hmerIndelLength = hmerIndelLength);
+        localContext.attributes.put(GATKVCFConstants.FLOW_HMER_INDEL_NUC, hmerIndelNuc);
+        localContext.rightMotif = rightMotif;
     }
 
     private byte[] buildHaplotype(final byte before, final byte[] bases, final byte[] after) {
@@ -288,19 +321,35 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
     protected void getLeftMotif(final VariantContext vc, final LocalContext localContext) {
 
         final int         refLength = vc.getReference().length();
+        final List<String> leftMotif = new LinkedList<>();
 
-        localContext.attributes.put(GATKVCFConstants.FLOW_LEFT_MOTIF, localContext.leftMotif = getRefMotif(localContext, vc.getStart() - MOTIF_SIZE, MOTIF_SIZE));
-        if ( vc.isIndel() ) {
-            localContext.attributes.put(GATKVCFConstants.FLOW_LEFT_MOTIF, localContext.leftMotif.substring(1) + vc.getReference().getBaseString().substring(0, 1));}
+        for ( Allele a : vc.getAlleles() ) {
+            if ( a.isReference() ) {
+                continue;
+            }
+
+            String  motif = getRefMotif(localContext, vc.getStart() - MOTIF_SIZE, MOTIF_SIZE);
+            if ( a.length() != refLength ) {
+                motif = motif.substring(1) + vc.getReference().getBaseString().substring(0, 1);
+            }
+            leftMotif.add(motif);
+        }
+
+        localContext.attributes.put(GATKVCFConstants.FLOW_LEFT_MOTIF, localContext.leftMotif = leftMotif);
     }
 
     protected void getRightMotif(final VariantContext vc, final LocalContext localContext) {
 
         final int         refLength = vc.getReference().length();
+        final String      motif = getRefMotif(localContext, vc.getStart() + refLength, MOTIF_SIZE);
 
-        if ( localContext.rightMotif == null ) {
-            localContext.rightMotif = getRefMotif(localContext, vc.getStart() + refLength, MOTIF_SIZE);
+        // fill empty entries (non indel alelles)
+        for ( int i = 0 ; i < localContext.rightMotif.size() ; i++ ) {
+            if ( localContext.rightMotif.get(i) == null ) {
+                localContext.rightMotif.set(i, motif);
+            }
         }
+
         localContext.attributes.put(GATKVCFConstants.FLOW_RIGHT_MOTIF, localContext.rightMotif);
     }
 
@@ -320,33 +369,46 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
     protected void cycleSkip(final VariantContext vc, final LocalContext localContext) {
 
         // establish flow order
-        String      css = C_NA;
-        if ( !vc.isIndel() && (vc.getAlleles().size() - localContext.spanDelCount) == 2 ) {
+        if ( localContext.flowOrder == null ) {
+            localContext.flowOrder = establishFlowOrder(localContext, localContext.likelihoods);
+        }
 
-            // establish flow order
-            if ( localContext.flowOrder == null ) {
-                localContext.flowOrder = establishFlowOrder(localContext, localContext.likelihoods);
+        // loop over alleles
+        final List<String>  css = new LinkedList<>();
+        final int           refLength = vc.getReference().length();
+        for ( Allele a : vc.getAlleles() ) {
+            if ( a.isReference() ) {
+                continue;
             }
 
-            // access alleles
-            final Allele      ref = vc.getAlleles().get(localContext.refIndex);
-            final Allele      alt = vc.getAlleles().get(localContext.firstNonSpanDelIndex);
+            // meaningful only for non indels
+            if ( a.equals(Allele.SPAN_DEL) || (a.length() != refLength) ) {
+                css.add(C_NA);
+            } else {
 
-            // convert to flow space
-            final int[]       refKey = FlowBasedKeyCodec.base2key((localContext.leftMotif + ref.getBaseString() + localContext.rightMotif).getBytes(), localContext.flowOrder);
-            final int[]       altKey = FlowBasedKeyCodec.base2key((localContext.leftMotif + alt.getBaseString() + localContext.rightMotif).getBytes(), localContext.flowOrder);
+                // access alleles
+                final Allele      ref = vc.getReference();
+                final Allele      alt = a;
 
-            // assign initial css
-            css = (refKey.length != altKey.length) ? C_CSS_CS : C_CSS_NS;
+                // convert to flow space
+                final int         i = css.size();   // always working on the last
+                final int[]       refKey = FlowBasedKeyCodec.base2key((localContext.leftMotif.get(i) + ref.getBaseString() + localContext.rightMotif.get(i)).getBytes(), localContext.flowOrder);
+                final int[]       altKey = FlowBasedKeyCodec.base2key((localContext.leftMotif.get(i) + (!alt.equals(Allele.SPAN_DEL) ? alt.getBaseString() : "") + localContext.rightMotif.get(i)).getBytes(), localContext.flowOrder);
 
-            // if same length (NS) then see if it is possible-cycle-skip
-            if ( css == C_CSS_NS ) {
-                for ( int n = 0 ; n < refKey.length ; n++ ) {
-                    if ( (refKey[n] == 0) ^ (altKey[n] == 0) ) {
-                        css = C_CSS_PCS;
-                        break;
+                // assign initial css
+                String            cssValue = (refKey.length != altKey.length) ? C_CSS_CS : C_CSS_NS;
+
+                // if same length (NS) then see if it is possible-cycle-skip
+                if ( cssValue == C_CSS_NS ) {
+                    for ( int n = 0 ; n < refKey.length ; n++ ) {
+                        if ( (refKey[n] == 0) ^ (altKey[n] == 0) ) {
+                            cssValue = C_CSS_PCS;
+                            break;
+                        }
                     }
                 }
+
+                css.add(cssValue);
             }
         }
 

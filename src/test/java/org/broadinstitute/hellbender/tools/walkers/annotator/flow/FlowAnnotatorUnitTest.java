@@ -48,32 +48,32 @@ public class FlowAnnotatorUnitTest {
                 {
                         // a simple SNP
                         "GTATC A ACATCGGA", "C",
-                        "NA", null, null, null, "GTATC", "ACATC", "0.3", "non-skip"
+                        "NA", "", "0", "", "GTATC", "ACATC", "0.3", "non-skip", "snp"
                 },
                 {
                         // a possible-cycle-skip SNP
                         "GTATC A TCATCGGA", "C",
-                        "NA", null, null, null, "GTATC", "TCATC", "0.3", "possible-cycle-skip"
+                        "NA", "", "0", "", "GTATC", "TCATC", "0.3", "possible-cycle-skip", "snp"
                 },
                 {
                         // a cycle-skip SNP
                         "GTATC A ACATCGGA", "T",
-                        "NA", null, null, null, "GTATC", "ACATC", "0.3", "cycle-skip"
+                        "NA", "", "0", "", "GTATC", "ACATC", "0.3", "cycle-skip", "snp"
                 },
                 {
                         // not hmer indel
                         "TATCT CA TTGACCAA", "C",
-                        "del", "1", null, null, "ATCTC", "TTGAC", "0.3", "NA"
+                        "del", "1", "0", "", "ATCTC", "TTGAC", "0.3", "NA", "non-h-indel"
                 },
                 {
                         // del hmer indel
                         "TATCTC AT TGACCAA", "A",
-                        "del", "1", "2", "T", "TCTCA", "GACCA", "0.4", "NA"
+                        "del", "1", "2", "T", "TCTCA", "GACCA", "0.4", "NA", "h-indel"
                 },
                 {
                         // ins hmer indel
                         "TATCT C ATTGACCAA", "CA",
-                        "ins", "1", "1", "A", "ATCTC", "TTGAC", "0.3", "NA"
+                        "ins", "1", "1", "A", "ATCTC", "TTGAC", "0.3", "NA", "h-indel"
                 }
         };
 
@@ -128,7 +128,7 @@ public class FlowAnnotatorUnitTest {
                           final String indelClass, final String indelLength,
                           final String hmerIndelLength, final String hmerIndelNuc,
                           final String leftMotif, final String rightMotif,
-                          final String gcContent, final String cycleskipStatus) {
+                          final String gcContent, final String cycleskipStatus, final String variantType) {
 
         // should be in same order as test data!!!!
         final List<String>      expectedAttrs = allKeys();
@@ -147,12 +147,12 @@ public class FlowAnnotatorUnitTest {
 
         // check that all expected attributes are there
         String[]        testResults = {indelClass, indelLength, hmerIndelLength, hmerIndelNuc,
-                leftMotif, rightMotif, gcContent, cycleskipStatus};
+                leftMotif, rightMotif, gcContent, cycleskipStatus, variantType};
         for ( int n = 0 ; n < 8 ; n++ ) {
             String       key = expectedAttrs.get(n);
             String       elem = testResults[n];
             String       keyMsg = "on " + key + " " + msg;
-            if ( elem != null && elem.charAt(0) != '!' ) {
+            if ( elem != null && !elem.startsWith("!") ) {
                 Object v = attrs.get(key);
                 if (v instanceof List) {
                     v = StringUtils.join((List) v, ",");
