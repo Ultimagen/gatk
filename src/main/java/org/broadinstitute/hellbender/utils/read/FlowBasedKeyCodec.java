@@ -1,6 +1,7 @@
 package org.broadinstitute.hellbender.utils.read;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.broadinstitute.hellbender.exceptions.GATKException;
 
 import java.util.ArrayList;
 
@@ -20,10 +21,13 @@ public class FlowBasedKeyCodec {
         int loc = 0;
         int flowNumber = 0 ;
         final int period = flowOrderBytes.length;
+        int periodGuard = 0;
         while ( loc < bases.length ) {
             final byte flowBase = flowOrderBytes[flowNumber%period];
             if ((bases[loc]!=flowBase) && ( bases[loc]!= FlowBasedRead.N_ASCII)) {
                 result.add(0);
+                if ( ++periodGuard > period )
+                    throw new GATKException("base2key periodGuard tripped, on " + new String(bases) + ", flowOrder: " + flowOrder);
             } else {
                 int count = 0;
                 while ( ( loc < bases.length) && ((bases[loc]==flowBase) || (bases[loc]== FlowBasedRead.N_ASCII)) ){
@@ -31,7 +35,7 @@ public class FlowBasedKeyCodec {
                     count ++;
                 }
                 result.add(count);
-
+                periodGuard = 0;
             }
             flowNumber++;
         }

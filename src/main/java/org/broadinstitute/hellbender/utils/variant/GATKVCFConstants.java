@@ -157,6 +157,7 @@ public final class GATKVCFConstants {
     public final static String FLOW_RIGHT_MOTIF =                   "X_RM";
     public final static String FLOW_GC_CONTENT =                    "X_GCC";
     public final static String FLOW_CYCLESKIP_STATUS =              "X_CSS";
+    public final static String FLOW_VARIANT_TYPE =                  "VARIANT_TYPE";
 
 
     // M2-specific FORMAT keys
