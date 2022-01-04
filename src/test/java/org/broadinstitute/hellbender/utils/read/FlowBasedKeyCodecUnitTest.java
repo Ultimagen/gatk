@@ -18,24 +18,26 @@ public class FlowBasedKeyCodecUnitTest extends GATKBaseTest {
         final Object[][]        testData = {
 
                 // trivial cases
-                { "T", "TGCA", "1", null },
-                { "TT", "TGCA", "2", null },
-                { "TGCA", "TGCA", "1,1,1,1", null },
-                { "TA", "TGCA", "1,0,0,1", null },
-                { "TTAATG", "TGCA", "2,0,0,2,1,1", null },
+                { "T", "TGCA", "1", false },
+                { "TT", "TGCA", "2", false },
+                { "TGCA", "TGCA", "1,1,1,1", false },
+                { "TA", "TGCA", "1,0,0,1", false },
+                { "TTAATG", "TGCA", "2,0,0,2,1,1", false },
 
                 // clipping
                 { "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT"
-                          , "TGCA", "130", "127" },
+                          , "TGCA", "130", false },
 
                 // N processing
-                { "TNTA", "TGCA", "3,0,0,1", null},
-                { "TTNA", "TGCA", "3,0,0,1", null},
-                { "TTAN", "TGCA", "2,0,0,2", null},
-                { "TTAN", "TGCA", "2,0,0,2", null},
-                { "NTTA", "TGCA", "3,0,0,1", null},
-                { "NGGA", "TGCA", "1,2,0,1", null},
-                { "NTGGA", "TGCA", "2,2,0,1", null}
+                { "TNTA", "TGCA", "3,0,0,1", false},
+                { "TTNA", "TGCA", "3,0,0,1", false},
+                { "TTAN", "TGCA", "2,0,0,2", false},
+                { "TTAN", "TGCA", "2,0,0,2", false},
+                { "NTTA", "TGCA", "3,0,0,1", false},
+                { "NGGA", "TGCA", "1,2,0,1", false},
+                { "NTGGA", "TGCA", "2,2,0,1", false},
+
+                { "NT*GGA", "TGCA", "2,2,0,1", true}
         };
 
         return testData;
@@ -43,13 +45,18 @@ public class FlowBasedKeyCodecUnitTest extends GATKBaseTest {
 
     @Test(dataProvider = "testData")
     public void testBase2Key(final String basesAsString, final String flowOrder,
-                                    final String expectedKeyAsString, final String expectedClippedKeyAsString) {
+                                    final String expectedKeyAsString, final boolean expectException) {
 
         // int version
-        final int[]         intKey = FlowBasedKeyCodec.base2key(basesAsString.getBytes(), flowOrder);
-        Assert.assertNotNull(intKey);
-        final String        intKeyAsString = StringUtils.join(intKey, ',');
-        Assert.assertEquals(intKeyAsString, expectedKeyAsString);
+        try {
+            final int[] intKey = FlowBasedKeyCodec.base2key(basesAsString.getBytes(), flowOrder);
+            Assert.assertNotNull(intKey);
+            final String        intKeyAsString = StringUtils.join(intKey, ',');
+            Assert.assertEquals(intKeyAsString, expectedKeyAsString);
+        } catch (Exception e) {
+            if ( !expectException )
+                throw e;
+        }
     }
 
     @DataProvider(name="makeReadArrayTests")

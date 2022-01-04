@@ -28,13 +28,11 @@ public class IndelClassify extends FlowAnnotatorBase implements StandardFlowBase
         if ( !localContext.notCalculated ) {
             indelClassify(vc, localContext);
         }
-
         return localContext.asAttributes();
     }
 
     @Override
     public List<String> getKeyNames() {
-
         return Collections.singletonList(GATKVCFConstants.FLOW_INDEL_CLASSIFY);
     }
 
