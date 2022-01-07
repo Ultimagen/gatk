@@ -63,7 +63,7 @@ public class FlowAnnotatorUnitTest {
                 {
                         // not hmer indel
                         "TATCT CA TTGACCAA", "C",
-                        "del", "1", "0", "", "ATCTC", "TTGAC", "0.3", "NA", "non-h-indel"
+                        "del", "1", "1", "A", "ATCTC", "TTGAC", "0.3", "NA", "non-h-indel"
                 },
                 {
                         // del hmer indel
@@ -73,7 +73,7 @@ public class FlowAnnotatorUnitTest {
                 {
                         // ins hmer indel
                         "TATCT C ATTGACCAA", "CA",
-                        "ins", "1", "1", "A", "ATCTC", "TTGAC", "0.3", "NA", "h-indel"
+                        "ins", "1", "2", "A", "ATCTC", "TTGAC", "0.3", "NA", "h-indel"
                 }
         };
 
