@@ -304,7 +304,6 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         // because RMSMappingQuality is both a reducible annotation and a standard annotation.
 
         return annotationEngine.getInfoAnnotations().stream()
-                .filter(infoFieldAnnotation -> !infoFieldAnnotation.getClass().getSimpleName().equals("AS_HmerLength"))
                 .filter(infoFieldAnnotation -> !infoFieldAnnotation.getClass().getSimpleName().equals("AS_StrandBiasMutectAnnotation"))
                 .anyMatch(infoFieldAnnotation -> infoFieldAnnotation.getClass().getSimpleName().startsWith("AS_")) ||
                 annotationEngine.getGenotypeAnnotations().stream()
