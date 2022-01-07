@@ -324,7 +324,7 @@ dependencies {
     }
 
     implementation 'org.jgrapht:jgrapht-core:1.1.0'
-    compile 'org.jgrapht:jgrapht-io:1.1.0'
+    implementation 'org.jgrapht:jgrapht-io:1.1.0'
 
     implementation('org.disq-bio:disq:' + disqVersion)
     implementation('org.apache.hadoop:hadoop-client:' + hadoopVersion) // should be a 'provided' dependency

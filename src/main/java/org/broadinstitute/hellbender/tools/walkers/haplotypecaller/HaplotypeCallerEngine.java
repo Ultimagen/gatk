@@ -323,7 +323,7 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
         if ( emitReferenceConfidence() ) {
             hcArgs.standardArgs.genotypeArgs.standardConfidenceForCalling = -0.0;
-            logger.info("Standard Emitting and Calling confidence set to " + hcArgs.standardArgs.genotypeArgs.STANDARD_CONFIDENCE_FOR_CALLING + " for reference-model confidence output");
+            logger.info("Standard Emitting and Calling confidence set to " + hcArgs.standardArgs.genotypeArgs.standardConfidenceForCalling + " for reference-model confidence output");
             if ( ! hcArgs.standardArgs.annotateAllSitesWithPLs ) {
                 logger.info("All sites annotated with PLs forced to true for reference-model confidence output");
             }
