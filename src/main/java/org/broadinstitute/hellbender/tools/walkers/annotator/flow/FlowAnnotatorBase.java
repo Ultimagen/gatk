@@ -196,6 +196,10 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
             if ((localContext.hmerIndelLength.get(i)==null) || (localContext.hmerIndelLength.get(i)==0)){
                 isHmer=false;
             }
+            if ((localContext.hmerIndelLength.get(i)==1) && (localContext.indel.equals(C_DELETE))){ // new definition 1->0 has hmer indel 1
+                isHmer=false;
+            }
+
         }
 
         if (isHmer){
@@ -283,12 +287,12 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
             if ( diffIndex < 0 ) {
                 continue;
             }
-            if ( Math.min(refKey[diffIndex], altKey[diffIndex]) == 0 ) {
+            if ( Math.max(refKey[diffIndex], altKey[diffIndex]) == 0 ) {
                 continue;
             }
 
             // if here, we found the difference. replace last element of list
-            final int             length = refKey[diffIndex];
+            final int             length = Math.max(refKey[diffIndex], altKey[diffIndex]);
             final byte            nuc = localContext.flowOrder.getBytes()[diffIndex % localContext.flowOrder.length()];
             hmerIndelLength.set(hmerIndelLength.size() - 1, length);
             hmerIndelNuc.set(hmerIndelNuc.size() - 1, Character.toString((char)nuc));
