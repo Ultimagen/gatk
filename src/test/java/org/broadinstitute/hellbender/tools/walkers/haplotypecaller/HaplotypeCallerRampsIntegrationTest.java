@@ -4,6 +4,7 @@ import org.broadinstitute.hellbender.CommandLineProgramTest;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.testutils.ArgumentsBuilder;
 import org.broadinstitute.hellbender.testutils.IntegrationTestSpec;
+import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -17,11 +18,16 @@ public class HaplotypeCallerRampsIntegrationTest extends CommandLineProgramTest 
     public static final String TEST_FILES_DIR = toolsTestDir + "haplotypecaller/";
 
     @Test
+    public void assertThatExpectedOutputUpdateToggleIsDisabled() {
+        Assert.assertFalse(UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS, "The toggle to update expected outputs should not be left enabled");
+    }
+
+    @Test
     public void testBasicNoRamps() throws Exception {
         final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
         final File output = createTempFile("output", ".vcf");
 
-        final File expected = new File(TEST_FILES_DIR, "test_output.g.vcf");
+        final File expected = new File(TEST_FILES_DIR, "ramps/test_noramps.expected.vcf");
         final String outputPath = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expected.getAbsolutePath() : output.getAbsolutePath();
 
         final ArgumentsBuilder args = buildCommonArguments(input, outputPath);
@@ -37,9 +43,9 @@ public class HaplotypeCallerRampsIntegrationTest extends CommandLineProgramTest 
     public Object[][] getOfframpTestData() {
 
         final Object[][]        testData = {
-                { "PRE_FILTER_OFF", "ramps/test_pre_filter_offramp.g.zip" },
-                { "PRE_ASSEMBLER_OFF", "ramps/test_pre_assembler_offramp.g.zip" },
-                { "POST_ASSEMBLER_OFF", "ramps/test_post_assembler_offramp.g.zip" }
+                { "PRE_FILTER_OFF", "ramps/test_pre_filter_offramp.expected.zip" },
+                { "PRE_ASSEMBLER_OFF", "ramps/test_pre_assembler_offramp.expected.zip" },
+                { "POST_ASSEMBLER_OFF", "ramps/test_post_assembler_offramp.expected.zip" }
         };
 
         return testData;
@@ -70,7 +76,7 @@ public class HaplotypeCallerRampsIntegrationTest extends CommandLineProgramTest 
     public Object[][] getOnrampTestData() {
 
         final Object[][]        testData = {
-                { "POST_ASSEMBLER_ON", "ramps/test_post_assembler_offramp.g.zip", "ramps/test_post_assembler_output.g.vcf" }
+                { "POST_ASSEMBLER_ON", "ramps/test_post_assembler_offramp.expected.zip", "ramps/test_post_assembler_output.expected.vcf" }
         };
 
         return testData;
