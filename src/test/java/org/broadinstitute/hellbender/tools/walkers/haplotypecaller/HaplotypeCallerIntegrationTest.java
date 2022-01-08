@@ -1524,7 +1524,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
         final File output = createTempFile("output", ".vcf");
 
-        final File expected = new File(TEST_FILES_DIR, "test_output.g.vcf");
+        final File expected = new File(TEST_FILES_DIR, "testGvcfBeforeRebase.expected.flowbased.vcf");
         final String outputPath = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expected.getAbsolutePath() : output.getAbsolutePath();
 
         final ArgumentsBuilder args = new ArgumentsBuilder()
@@ -1557,7 +1557,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
         final File output = createTempFile("output", ".vcf");
 
-        final File expected = new File(TEST_FILES_DIR, "test_output.g.standard.vcf");
+        final File expected = new File(TEST_FILES_DIR, "testGvcfBeforeRebaseUsingFlowModeStandard.expected.flowbased.vcf");
         final String outputPath = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expected.getAbsolutePath() : output.getAbsolutePath();
 
         final ArgumentsBuilder args = new ArgumentsBuilder()
@@ -1581,7 +1581,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
         final File output = createTempFile("output", ".vcf");
 
-        final File expected = new File(TEST_FILES_DIR, "test_output.g.advanced.vcf");
+        final File expected = new File(TEST_FILES_DIR, "testGvcfBeforeRebaseUsingFlowModeAdvanced.expected.flowbased.vcf");
         final String outputPath = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expected.getAbsolutePath() : output.getAbsolutePath();
 
         final ArgumentsBuilder args = new ArgumentsBuilder()
@@ -1605,7 +1605,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
         final File output = createTempFile("output", ".vcf");
 
-        final File expected = new File(TEST_FILES_DIR, "test_output.keep.lone.g.vcf");
+        final File expected = new File(TEST_FILES_DIR, "testGvcfKeepLoneAlleles.expected.flowbased.vcf");
         final String outputPath = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expected.getAbsolutePath() : output.getAbsolutePath();
 
 
@@ -1639,7 +1639,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
         final File output = createTempFile("output", ".vcf");
 
-        final File expected = new File(TEST_FILES_DIR, "test_output.vcf");
+        final File expected = new File(TEST_FILES_DIR, "testVcfBeforeRebase.expected.flowbased.vcf");
         final String outputPath = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expected.getAbsolutePath() : output.getAbsolutePath();
 
         final ArgumentsBuilder args = new ArgumentsBuilder()
@@ -1670,7 +1670,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         Utils.resetRandomGenerator();
         final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
         final File output = createTempFile("testVcfWithAssemblyComplexityAnnotation", ".vcf");
-        final File expected = new File(TEST_FILES_DIR, "test_output_assemblyAnnotations.vcf");
+        final File expected = new File(TEST_FILES_DIR, "testVcfWithAssemblyComplexityAnnotation.expected.flowbased.vcf");
         final String outputPath = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expected.getAbsolutePath() : output.getAbsolutePath();
 
         final ArgumentsBuilder args = new ArgumentsBuilder()
@@ -1703,7 +1703,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         Utils.resetRandomGenerator();
         final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
         final File output = createTempFile("testVcfWithAssemblyComplexityAnnotation", ".vcf");
-        final File expected = new File(TEST_FILES_DIR, "test_output_assemblyAnnotations_GVCF.vcf");
+        final File expected = new File(TEST_FILES_DIR, "testVcfWithAssemblyComplexityAnnotationRevamp.expected.flowbased.vcf");
         final String outputPath = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expected.getAbsolutePath() : output.getAbsolutePath();
 
         final ArgumentsBuilder args = new ArgumentsBuilder()
@@ -1836,7 +1836,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
         final File output = createTempFile("output", ".vcf");
 
-        final File expected = new File(TEST_FILES_DIR, "test_output.vcf");
+        final File expected = new File(TEST_FILES_DIR, "testVcfBeforeRebase.expected.flowbased.vcf");
 
         final ArgumentsBuilder args = new ArgumentsBuilder()
                 .addReference(hg38Reference)
@@ -1866,7 +1866,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
         final File output = createTempFile("output", ".vcf");
 
-        final File expected = new File(TEST_FILES_DIR, "test_output.vcf");
+        final File expected = new File(TEST_FILES_DIR, "testVcfBeforeRebase.expected.flowbased.vcf");
 
         final ArgumentsBuilder args = new ArgumentsBuilder()
                 .addReference(hg38Reference)
@@ -1897,7 +1897,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
         final File output = createTempFile("output", ".vcf");
 
-        final File expected = new File(TEST_FILES_DIR, "test_flowBasedHMM.vcf");
+        final File expected = new File(TEST_FILES_DIR, "test_flowBasedHMM.expected.vcf");
         final String outputPath = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expected.getAbsolutePath() : output.getAbsolutePath();
 
         final ArgumentsBuilder args = new ArgumentsBuilder()
@@ -1928,7 +1928,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
         final File output = createTempFile("output", ".vcf");
 
-        final File expected = new File(TEST_FILES_DIR, "test_flowBasedHMM_Stepwise.vcf");
+        final File expected = new File(TEST_FILES_DIR, "test_flowBasedHMM_Stepwise.expected.vcf");
         final String outputPath = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expected.getAbsolutePath() : output.getAbsolutePath();
 
         final ArgumentsBuilder args = new ArgumentsBuilder()
