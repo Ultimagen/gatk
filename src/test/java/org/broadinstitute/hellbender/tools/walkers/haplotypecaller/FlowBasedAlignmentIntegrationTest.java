@@ -11,15 +11,22 @@ import java.io.IOException;
 
 public class FlowBasedAlignmentIntegrationTest extends CommandLineProgramTest {
 
+    public static final boolean UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS = false;
     private static String    testDir = publicTestDir + "/large";
 
+    @Test
+    public void assertThatExpectedOutputUpdateToggleIsDisabled() {
+        Assert.assertFalse(UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS, "The toggle to update expected outputs should not be left enabled");
+    }
     @Test
     public void testMatrix() throws IOException {
 
         final File outputDir = createTempDir("testMatrix");
-        final String outputPath = outputDir + "/output.alm";
+        final File expectedFile = new File(publicTestDir + "/" + FlowTestConstants.FLOW_BASED_ALIGNMENT_DATA_DIR + "/input_jukebox_for_test.expected.alm");
+        final File outputFile = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expectedFile : new File(outputDir + "/output.alm");
+
         final String[] args = new String[] {
-                "-R", publicTestDir + "/" + FlowTestConstants.FLOW_BASED_ALIGNMENT_DATA_DIR + "/Homo_sapiens_assembly38.chr9.fasta",
+                "-R", publicTestDir + "/large/Homo_sapiens_assembly38.fasta.gz",
                 "-O", outputDir + "/ignored.vcf",
                 "-I", testDir + "/input_jukebox_for_test.bam",
                 "--smith-waterman", "FASTEST_AVAILABLE",
@@ -27,7 +34,7 @@ public class FlowBasedAlignmentIntegrationTest extends CommandLineProgramTest {
                 "-mbq", "0",
                 "--kmer-size", "10",
                 "--intervals", "chr9:81148694-81177540",
-                "--alm-path", outputPath,
+                "--alm-path", outputFile.getAbsolutePath(),
                 "--alm-interval", "chr9"
         };
 
@@ -36,9 +43,11 @@ public class FlowBasedAlignmentIntegrationTest extends CommandLineProgramTest {
         // verify that output file has been created
         // walk the output and expected files, compare non-comment lines
         // we are using a specialsed verifier to accomodate for rounding errors
-        Assert.assertTrue((new File(outputPath)).exists());
-        TestFileVerifySame      tester = new TestFileVerifySame.NearlySameDoubles();
-        tester.verifySame(outputPath, publicTestDir + "/" + FlowTestConstants.FLOW_BASED_ALIGNMENT_DATA_DIR + "/input_jukebox_for_test.alm");
+        Assert.assertTrue(outputFile.exists());
+        if ( !UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
+            TestFileVerifySame tester = new TestFileVerifySame.NearlySameDoubles();
+            tester.verifySame(outputFile, expectedFile);
+        }
     }
 
     @Override
