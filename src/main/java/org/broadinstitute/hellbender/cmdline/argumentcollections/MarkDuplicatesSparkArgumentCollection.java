@@ -78,4 +78,8 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
     @Advanced
     @Argument(fullName = FLOW_MD_MODE_LONG_NAME, optional = true, doc="Single argument for enabling the bulk of flow based features (should only be applied to flow based reads).")
     public Boolean flowMode = false;
+
+    public boolean isFlowEnabled() {
+        return FLOW_QUALITY_SUM_STRATEGY || FLOW_END_LOCATION_SIGNIFICANT || FLOW_USE_CLIPPED_LOCATIONS || FLOW_SKIP_START_HOMOPOLYMERS != 0;
+    }
 }

@@ -1357,4 +1357,12 @@ public final class ReadUtils {
     public static boolean readHasReasonableMQ(final GATKRead read){
         return read.getMappingQuality() != 0 && read.getMappingQuality() != QualityUtils.MAPPING_QUALITY_UNAVAILABLE;
     }
+
+    public static int getStrandedUnclippedStartForFlow(final GATKRead read, final SAMFileHeader header, final MarkDuplicatesSparkArgumentCollection mdArgs) {
+        return read.isReverseStrand() ? ReadUtils.getMarkDupReadEnd(read, false, header, mdArgs) : ReadUtils.getMarkDupReadStart(read, false, header, mdArgs);
+    }
+
+    public static int getStrandedUnclippedEndForFlow(GATKRead read, SAMFileHeader header, MarkDuplicatesSparkArgumentCollection mdArgs) {
+        return !read.isReverseStrand() ? ReadUtils.getMarkDupReadEnd(read, true, header, mdArgs) : ReadUtils.getMarkDupReadStart(read, true, header, mdArgs);
+    }
 }

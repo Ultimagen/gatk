@@ -30,9 +30,11 @@ public class FlowFragment extends Fragment {
     public FlowFragment(final GATKRead first, final SAMFileHeader header, int partitionIndex, MarkDuplicatesScoringStrategy scoringStrategy, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
         super(first, header, partitionIndex, scoringStrategy, headerLibraryMap, mdArgs);
 
-        int        start = first.isReverseStrand() ? ReadUtils.getMarkDupReadEnd(first, false, header, mdArgs) : ReadUtils.getMarkDupReadStart(first, false, header, mdArgs);
+        int        start = !mdArgs.isFlowEnabled()
+                                    ? ReadUtils.getStrandedUnclippedStart(first)
+                                    : ReadUtils.getStrandedUnclippedStartForFlow(first, header, mdArgs);
         if ( mdArgs.FLOW_END_LOCATION_SIGNIFICANT ) {
-            this.end = !first.isReverseStrand() ? ReadUtils.getMarkDupReadEnd(first, true, header, mdArgs) : ReadUtils.getMarkDupReadStart(first, true, header, mdArgs);
+            this.end = ReadUtils.getStrandedUnclippedEndForFlow(first, header, mdArgs);
         }
         this.key = ReadsKey.getKeyForFragment(start,
                 isRead1ReverseStrand(),
