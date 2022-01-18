@@ -7,7 +7,7 @@ import org.broadinstitute.barclay.argparser.Hidden;
 import java.io.Serializable;
 
 public class FlowBasedAlignmentArgumentCollection implements Serializable {
-    private static final long serialVersionUID = -3405667551696313040L;
+    private static final long serialVersionUID = 0;
 
     private static final String PROBABILITY_RATIO_THRESHOLD_LONG_NAME = "flow-probability-threshold";
     private static final String REMOVE_LONGER_THAN_ONE_INDELS = "flow-remove-non-single-base-pair-indels";
