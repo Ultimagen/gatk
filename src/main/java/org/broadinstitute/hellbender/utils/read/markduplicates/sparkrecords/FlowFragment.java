@@ -14,24 +14,24 @@ import org.broadinstitute.hellbender.utils.read.markduplicates.ReadsKey;
 import java.util.Map;
 
 /**
- * Class representing a single read fragment at a particular start location without a mapped mate.
+ * Flow-based specific class  representing a single read fragment at a particular start location without a mapped mate.
  *
  * This class holds onto as little information as possible in an attempt to prevent excessive serialization of
  * during the processing step of MarkDuplicatesSpark
+ *
+ * It differs from its parent class in that it takes into account the end of the fragment as well (if instructed
+ * to by FLOW_END_LOCATION_SIGNIFICANT). It also allows for an alternative flow-specific score function to be deployed.
  */
 public class FlowFragment extends Fragment {
     static final long serialVersionUID = 1L;
+    public static final String FLOW_DUPLICATE_SCORE_ATTR_NAME = "FlowDuplicateScore";
     protected final short flowScore;
-
-    private final static Logger logger = LogManager.getLogger(FlowFragment.class);
 
     public FlowFragment(final GATKRead first, final SAMFileHeader header, int partitionIndex, MarkDuplicatesScoringStrategy scoringStrategy, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
         super(first, header, partitionIndex, scoringStrategy, headerLibraryMap, mdArgs);
 
         int        start = first.isReverseStrand() ? ReadUtils.getMarkDupReadEnd(first, false, header, mdArgs) : ReadUtils.getMarkDupReadStart(first, false, header, mdArgs);
-        int        endUncert = 0;
         if ( mdArgs.FLOW_END_LOCATION_SIGNIFICANT ) {
-            endUncert = mdArgs.ENDS_READ_UNCERTAINTY;
             this.end = !first.isReverseStrand() ? ReadUtils.getMarkDupReadEnd(first, true, header, mdArgs) : ReadUtils.getMarkDupReadStart(first, true, header, mdArgs);
         }
         this.key = ReadsKey.getKeyForFragment(start,
@@ -45,21 +45,29 @@ public class FlowFragment extends Fragment {
                 : -1;
     }
 
+    // compute fragment score using a flow-based specific method - cache in transient attribute
     private short computeFlowDuplicateScore(GATKRead rec, int start, int end) {
 
-        Short storedScore = (Short)rec.getTransientAttribute("DuplicateScore");
+        Short storedScore = (Short)rec.getTransientAttribute(FLOW_DUPLICATE_SCORE_ATTR_NAME);
         if ( storedScore == null ) {
             short score = 0;
 
             score += (short) Math.min(getFlowSumOfBaseQualities(rec, start, end), Short.MAX_VALUE / 2);
 
             storedScore = score;
-            rec.setTransientAttribute("DuplicateScore", storedScore);
+            rec.setTransientAttribute(FLOW_DUPLICATE_SCORE_ATTR_NAME, storedScore);
         }
 
         return storedScore;
     }
 
+    /**
+     * A quality summing scoring strategy used for flow based reads.
+     *
+     * The method walks on the bases of the read, in the synthesis direction. For each base, the effective
+     * quality value is defined as the value on the first base on the hmer to which the base belongs to. The score
+     * is defined to be the sum of all effective values above a given threshold.
+     */
     private int getFlowSumOfBaseQualities(GATKRead rec, int start, int end) {
         int score = 0;
 
