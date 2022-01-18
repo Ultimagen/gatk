@@ -55,12 +55,12 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
     public boolean FLOW_QUALITY_SUM_STRATEGY = false;
 
     @Advanced
-    @Argument(fullName = SINGLE_END_READS_END_POSITION_SIGNIFICANT, doc = "Make end location of read be significant when considering duplicates, " +
+    @Argument(fullName = SINGLE_END_READS_END_POSITION_SIGNIFICANT, doc = "Make end location of read (fragment) be significant when considering duplicates, " +
             "in addition to the start location, which is always significant (should only be applied to flow based reads). Default false.", optional = true)
     public boolean FLOW_END_LOCATION_SIGNIFICANT = false;
 
     @Advanced
-    @Argument(fullName = FLOW_END_POS_UNCERTAINTY_LONG_NAME, doc = "Maximal number of bases of reads ends difference that is marked as match (should only be applied to flow based reads). Default 0.", optional = true)
+    @Argument(fullName = FLOW_END_POS_UNCERTAINTY_LONG_NAME, doc = "Maximal number of bases of reads (fragment) ends difference that is marked as match (should only be applied to flow based reads). Default 0.", optional = true)
     public int ENDS_READ_UNCERTAINTY = 0;
 
     @Advanced
@@ -72,7 +72,7 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
     public int FLOW_SKIP_START_HOMOPOLYMERS = 0;
 
     @Advanced
-    @Argument(fullName = FLOW_Q_IS_KNOWN_END_LONG_NAME, doc = "Treat reads clipped on tm:Q as known end position (should only be applied to flow based reads) (default: false)", optional = true)
+    @Argument(fullName = FLOW_Q_IS_KNOWN_END_LONG_NAME, doc = "Treat reads (fragment) clipped on tm:Q as known end position (should only be applied to flow based reads) (default: false)", optional = true)
     public boolean FLOW_Q_IS_KNOWN_END = false;
 
     @Advanced
