@@ -287,7 +287,7 @@ public class MarkDuplicatesSparkUtils {
     @SuppressWarnings("unchecked")
     private static JavaPairRDD<IndexPair<String>, Integer> markDuplicateRecords(final JavaPairRDD<ReadsKey, Iterable<MarkDuplicatesSparkRecord>> keyedPairs,
                                                                                 final OpticalDuplicateFinder finder, final boolean markOpticalDups,
-                                                                                final boolean flowEndLocationSignificant, final int flowEndUncert) {
+                                                                                final boolean handleFragmentEnds, final int flowEndUncert) {
         return keyedPairs.flatMapToPair(keyedPair -> {
             Iterable<MarkDuplicatesSparkRecord> pairGroups = keyedPair._2();
 
@@ -303,7 +303,7 @@ public class MarkDuplicatesSparkUtils {
             //empty MarkDuplicatesSparkRecord signify that a pair has a mate somewhere else
             // If there are any non-fragment placeholders at this site, mark everything as duplicates, otherwise compute the best score
             if (Utils.isNonEmpty(fragments) && !Utils.isNonEmpty(emptyFragments)) {
-                if ( !flowEndLocationSignificant ) {
+                if ( !handleFragmentEnds ) {
                     final Tuple2<IndexPair<String>, Integer> bestFragment = handleFragments(fragments, finder);
                     nonDuplicates.add(bestFragment);
                 } else {
