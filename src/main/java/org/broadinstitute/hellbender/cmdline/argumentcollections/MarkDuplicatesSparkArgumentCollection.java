@@ -23,12 +23,12 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
 
     public static final String FLOW_MD_MODE_LONG_NAME = "flow-mode";
 
-    public static final String FLOW_QUALITY_SUM_STRATEGY_LONG_NAME = "FLOW_QUALITY_SUM_STRATEGY";
-    public static final String SINGLE_END_READS_END_POSITION_SIGNIFICANT = "SINLE_END_READS_END_POSITION_SIGNIFICANT";
-    public static final String FLOW_END_POS_UNCERTAINTY_LONG_NAME = "FLOW_END_POS_UNCERTAINTY";
-    public static final String SINGLE_END_READS_CLIPPING_IS_END_LONG_NAME = "SINGLE_END_READS_CLIPPING_IS_END";
-    public static final String FLOW_SKIP_START_HOMOPOLYMERS_LONG_NAME = "FLOW_SKIP_START_HOMOPOLYMERS";
-    public static final String FLOW_Q_IS_KNOWN_END_LONG_NAME = "FLOW_Q_IS_KNOWN_END";
+    public static final String FLOW_QUALITY_SUM_STRATEGY_LONG_NAME = "flow-quality-sum-strategy";
+    public static final String SINGLE_END_READS_END_POSITION_SIGNIFICANT = "sinle-end-reads-end-position-significant";
+    public static final String FLOW_END_POS_UNCERTAINTY_LONG_NAME = "flow-end-pos-uncertainty";
+    public static final String SINGLE_END_READS_CLIPPING_IS_END_LONG_NAME = "single-end-reads-clipping-is-end";
+    public static final String FLOW_SKIP_START_HOMOPOLYMERS_LONG_NAME = "flow-skip-start-homopolymers";
+    public static final String FLOW_Q_IS_KNOWN_END_LONG_NAME = "flow-q-is-known-end";
 
     @Argument(shortName = StandardArgumentDefinitions.DUPLICATE_SCORING_STRATEGY_SHORT_NAME, fullName = StandardArgumentDefinitions.DUPLICATE_SCORING_STRATEGY_LONG_NAME, doc = "The scoring strategy for choosing the non-duplicate among candidates.")
     public MarkDuplicatesScoringStrategy duplicatesScoringStrategy = MarkDuplicatesScoringStrategy.SUM_OF_BASE_QUALITIES;
