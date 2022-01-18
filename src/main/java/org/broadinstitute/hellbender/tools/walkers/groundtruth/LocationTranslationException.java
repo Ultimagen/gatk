@@ -1,6 +1,8 @@
 package org.broadinstitute.hellbender.tools.walkers.groundtruth;
 
-public class LocationTranslationException extends RuntimeException {
+import org.broadinstitute.hellbender.exceptions.GATKException;
+
+public class LocationTranslationException extends GATKException {
 
     static final private long        serialVersionUID = 0;
 
