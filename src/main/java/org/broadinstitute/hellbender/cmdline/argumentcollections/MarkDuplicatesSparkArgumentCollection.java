@@ -49,27 +49,33 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
             mutex = {MarkDuplicatesSparkArgumentCollection.DUPLICATE_TAGGING_POLICY_LONG_NAME, MarkDuplicatesSparkArgumentCollection.REMOVE_ALL_DUPLICATE_READS}, optional = true)
     public boolean removeSequencingDuplicates = false;
 
+    @Advanced
     @Argument(fullName = FLOW_QUALITY_SUM_STRATEGY_LONG_NAME, doc = "Use specific quality summing strategy for flow based reads. The strategy ensures that the same " +
             "(and correct) quality value is used for all bases of the same homopolymer. Default false.", optional = true)
     public boolean FLOW_QUALITY_SUM_STRATEGY = false;
 
+    @Advanced
     @Argument(fullName = SINGLE_END_READS_END_POSITION_SIGNIFICANT, doc = "Make end location of read be significant when considering duplicates, " +
-            "in addition to the start location, which is always significant. Default false.", optional = true)
+            "in addition to the start location, which is always significant (should only be applied to flow based reads). Default false.", optional = true)
     public boolean FLOW_END_LOCATION_SIGNIFICANT = false;
 
-    @Argument(fullName = FLOW_END_POS_UNCERTAINTY_LONG_NAME, doc = "Maximal number of bases of reads ends difference that is marked as match. Default 0.", optional = true)
+    @Advanced
+    @Argument(fullName = FLOW_END_POS_UNCERTAINTY_LONG_NAME, doc = "Maximal number of bases of reads ends difference that is marked as match (should only be applied to flow based reads). Default 0.", optional = true)
     public int ENDS_READ_UNCERTAINTY = 0;
 
-    @Argument(fullName = SINGLE_END_READS_CLIPPING_IS_END_LONG_NAME, doc = "Use clipped, rather than unclipped, when considering duplicates. Default false.", optional = true)
+    @Advanced
+    @Argument(fullName = SINGLE_END_READS_CLIPPING_IS_END_LONG_NAME, doc = "Use clipped, rather than unclipped, when considering duplicates (should only be applied to flow based reads). Default false.", optional = true)
     public boolean FLOW_USE_CLIPPED_LOCATIONS = false;
 
-    @Argument(fullName = FLOW_SKIP_START_HOMOPOLYMERS_LONG_NAME, doc = "Skip first N flows, when considering duplicates. Default 0.", optional = true)
+    @Advanced
+    @Argument(fullName = FLOW_SKIP_START_HOMOPOLYMERS_LONG_NAME, doc = "Skip first N flows, when considering duplicates (should only be applied to flow based reads). Default 0.", optional = true)
     public int FLOW_SKIP_START_HOMOPOLYMERS = 0;
 
-    @Argument(fullName = FLOW_Q_IS_KNOWN_END_LONG_NAME, doc = "Treat reads clipped on tm:Q as known end position (default: false)", optional = true)
+    @Advanced
+    @Argument(fullName = FLOW_Q_IS_KNOWN_END_LONG_NAME, doc = "Treat reads clipped on tm:Q as known end position (should only be applied to flow based reads) (default: false)", optional = true)
     public boolean FLOW_Q_IS_KNOWN_END = false;
 
     @Advanced
-    @Argument(fullName = FLOW_MD_MODE_LONG_NAME, optional = true, doc="Single argument for enabling the bulk of Flow Based features. NOTE: THIS WILL OVERWRITE PROVIDED ARGUMENT CHECK TOOL INFO TO SEE WHICH ARGUMENTS ARE SET).")
+    @Argument(fullName = FLOW_MD_MODE_LONG_NAME, optional = true, doc="Single argument for enabling the bulk of flow based features (should only be applied to flow based reads).")
     public Boolean flowMode = false;
 }
