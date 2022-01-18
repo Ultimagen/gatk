@@ -307,7 +307,7 @@ public class MarkDuplicatesSparkUtils {
                     final Tuple2<IndexPair<String>, Integer> bestFragment = handleFragments(fragments, finder);
                     nonDuplicates.add(bestFragment);
                 } else {
-                    nonDuplicates.addAll(handleFlowFragments(fragments, finder, flowEndUncert));
+                    nonDuplicates.addAll(handleFragmentsWithEndPosition(fragments, finder, flowEndUncert));
                 }
 
             }
@@ -351,9 +351,25 @@ public class MarkDuplicatesSparkUtils {
                 .collect(Collectors.toList());
     }
 
-    private static List<Tuple2<IndexPair<String>, Integer>> handleFlowFragments(List<MarkDuplicatesSparkRecord> duplicateFragmentGroup, OpticalDuplicateFinder finder, final int endUncert) {
+    /***
+     * This function is similar to handleFragments except that it also takes into account the end position of the
+     * fragment with an optional margin of difference (uncetainty) allowed. (@see handleFragments)
+     *
+     * The main difference between this method and the standard processing done by handleFragments is therefore
+     * that it consideres the end of the fragment in the criteria for marking duplicates.
+     *
+     * If endUncert==0, the end (as well as the start) must match exactly to be considered a duplicate.
+     *
+     * Any other value of endUncert indicates the maximal difference in the end of fragment which will still
+     * be considered "the same" (in terms of being a duplicate). To further complicate, this difference is allowed to
+     * expand as long as there is a chain of fragments which maintain relationship between at them on some level.
+     *
+     * For example, with an endUncert==3, fragments end positions of 10 13 16 and 17 are all assigned to the
+     * same group, where 10 13 17 18 will be assigned to two groups (10,13 and 17,18).
+     */
+    private static List<Tuple2<IndexPair<String>, Integer>> handleFragmentsWithEndPosition(List<MarkDuplicatesSparkRecord> duplicateFragmentGroup, OpticalDuplicateFinder finder, final int endUncert) {
 
-        // easy case?
+        // easy case? (there is only one member)
         if (duplicateFragmentGroup.size() == 1) {
             return Collections.singletonList(new Tuple2<>(new IndexPair<>(duplicateFragmentGroup.get(0).getName(), duplicateFragmentGroup.get(0).getPartitionIndex()), 0));
         }
