@@ -2,7 +2,6 @@ package org.broadinstitute.hellbender.utils.read.markduplicates.sparkrecords;
 
 import htsjdk.samtools.SAMFileHeader;
 import org.broadinstitute.hellbender.cmdline.argumentcollections.MarkDuplicatesSparkArgumentCollection;
-import org.broadinstitute.hellbender.tools.spark.transforms.markduplicates.MarkDuplicatesSpark;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.read.markduplicates.MarkDuplicatesScoringStrategy;
@@ -20,7 +19,7 @@ public abstract class MarkDuplicatesSparkRecord {
     protected final int partitionIndex;
     protected final String name;
 
-    protected int end = ReadUtils.FLOW_BASED_INSIGNIFICANT_END_UNCERTIANTY;
+    protected int end = ReadUtils.FLOW_BASED_INSIGNIFICANT_END;
 
     MarkDuplicatesSparkRecord(int partitionIndex, String name) {
         this.name = name;
