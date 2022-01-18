@@ -38,7 +38,9 @@ public final class EmptyFragment extends PairedEnds {
     public EmptyFragment(GATKRead read, SAMFileHeader header, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
         super(0, null);
 
-        int        start = read.isReverseStrand() ? ReadUtils.getMarkDupReadEnd(read, false, header, mdArgs) : ReadUtils.getMarkDupReadStart(read, false, header, mdArgs);
+        int        start = !mdArgs.isFlowEnabled()
+                            ? ReadUtils.getStrandedUnclippedStart(read)
+                            : ReadUtils.getStrandedUnclippedStartForFlow(read, header, mdArgs);
         this.R1R = read.isReverseStrand();
         this.key = ReadsKey.getKeyForFragment(start,
                 isRead1ReverseStrand(),

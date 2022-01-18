@@ -30,7 +30,9 @@ public class Fragment extends TransientFieldPhysicalLocation {
     public Fragment(final GATKRead first, final SAMFileHeader header, int partitionIndex, MarkDuplicatesScoringStrategy scoringStrategy, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
         super(partitionIndex, first.getName());
 
-        int        start = first.isReverseStrand() ? ReadUtils.getMarkDupReadEnd(first, false, header, mdArgs) : ReadUtils.getMarkDupReadStart(first, false, header, mdArgs);
+        int        start = !mdArgs.isFlowEnabled()
+                                    ? ReadUtils.getStrandedUnclippedStart(first)
+                                    : ReadUtils.getStrandedUnclippedStartForFlow(first, header, mdArgs);
 
         this.R1R = first.isReverseStrand();
         this.key = ReadsKey.getKeyForFragment(start,
