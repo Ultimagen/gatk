@@ -25,7 +25,6 @@ import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A miscellaneous collection of utilities for working with reads, headers, etc.
@@ -33,7 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public final class ReadUtils {
 
-    static final public int     FLOW_BASED_INSIGNIFICANT_END_UNCERTIANTY = 0;
+    static final public int FLOW_BASED_INSIGNIFICANT_END = 0;
 
     private ReadUtils() {
     }
@@ -354,7 +353,7 @@ public final class ReadUtils {
         else if ( tmTagIddicatesUnclipped(gatkRead, mdArgs.FLOW_Q_IS_KNOWN_END) ) {
             return gatkRead.getUnclippedStart();
         } else if ( uncertain && tmTagIddicatesNoUncertianty(gatkRead) ) {
-            return FLOW_BASED_INSIGNIFICANT_END_UNCERTIANTY;
+            return FLOW_BASED_INSIGNIFICANT_END;
         } else if ( mdArgs.FLOW_USE_CLIPPED_LOCATIONS ) {
             return gatkRead.getStart();
         } else
@@ -405,7 +404,7 @@ public final class ReadUtils {
         else if ( tmTagIddicatesUnclipped(gatkRead, mdArgs.FLOW_Q_IS_KNOWN_END) ) {
             return gatkRead.getUnclippedEnd();
         } else if ( uncertain && tmTagIddicatesNoUncertianty(gatkRead) ) {
-            return FLOW_BASED_INSIGNIFICANT_END_UNCERTIANTY;
+            return FLOW_BASED_INSIGNIFICANT_END;
         } else if ( mdArgs.FLOW_USE_CLIPPED_LOCATIONS ) {
             return gatkRead.getEnd();
         } else

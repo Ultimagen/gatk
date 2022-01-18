@@ -375,12 +375,7 @@ public class MarkDuplicatesSparkUtils {
         }
 
         // sort on end to create/ensure consistency
-        duplicateFragmentGroup.sort(new Comparator<MarkDuplicatesSparkRecord>() {
-            @Override
-            public int compare(MarkDuplicatesSparkRecord o1, MarkDuplicatesSparkRecord o2) {
-                return o1.getEnd() - o2.getEnd();
-            }
-        });
+        Collections.sort(duplicateFragmentGroup, Comparator.comparingInt(MarkDuplicatesSparkRecord::getEnd));
 
         // this will accumulate the primary from each subgroup
         List<Tuple2<IndexPair<String>, Integer>> output = new ArrayList<>();
@@ -396,11 +391,11 @@ public class MarkDuplicatesSparkUtils {
             if ( subGroup.size() == 0 ) {
                 // first one?
                 subGroup.add(fragment);
-                if ( end != ReadUtils.FLOW_BASED_INSIGNIFICANT_END_UNCERTIANTY ) {
+                if ( end != ReadUtils.FLOW_BASED_INSIGNIFICANT_END) {
                     subGroupMinEnd = end - endUncert;
                     subGroupMaxEnd = end + endUncert;
                 }
-            } else if ( end == ReadUtils.FLOW_BASED_INSIGNIFICANT_END_UNCERTIANTY )  {
+            } else if ( end == ReadUtils.FLOW_BASED_INSIGNIFICANT_END)  {
                 // insignificant end, simply accumulate
                 subGroup.add(fragment);
             } else if ( subGroupMinEnd == 0 ) {
@@ -418,7 +413,7 @@ public class MarkDuplicatesSparkUtils {
                 output.add(handleFragments(subGroup, finder));
                 subGroup.clear();
                 subGroup.add(fragment);
-                if ( end != ReadUtils.FLOW_BASED_INSIGNIFICANT_END_UNCERTIANTY ) {
+                if ( end != ReadUtils.FLOW_BASED_INSIGNIFICANT_END) {
                     subGroupMinEnd = end - endUncert;
                     subGroupMaxEnd = end + endUncert;
                 } else {
