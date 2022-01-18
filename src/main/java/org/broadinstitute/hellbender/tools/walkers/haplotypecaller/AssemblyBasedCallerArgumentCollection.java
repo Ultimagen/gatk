@@ -368,16 +368,16 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     public final String ON_RAMP_FILE = "on-ramp-file";
 
     public enum OffRampTypeEnum {
-        NONE,
-        PRE_FILTER_OFF,
-        PRE_ASSEMBLER_OFF,
-        POST_ASSEMBLER_OFF,
+        NONE,                           // no off ramp
+        PRE_FILTER_OFF,                 // off ramp before the filtering step
+        PRE_ASSEMBLER_OFF,              // off ramp before the assemnbler
+        POST_ASSEMBLER_OFF,             // off ramp after the assembler
     };
 
     public enum OnRampTypeEnum {
-        NONE,
-        POST_FILTER_ON,
-        POST_ASSEMBLER_ON
+        NONE,                           // no on ramp
+        POST_FILTER_ON,                 // on ramp after the filter
+        POST_ASSEMBLER_ON               // on tamp after the aseembler
     };
 
     public final String FILTER_ALLELES_DEBUG_GRAPH = "flow-filter-alleles-debug-graphs";
@@ -408,24 +408,44 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     @Argument(fullName = FILTER_ALLELES_DEBUG_GRAPH, doc = "Write an interaction graph in allele filtering", optional=true)
     public boolean writeFilteringGraphs = false;
 
+    /**
+     * The following parameters related to an haplotype caller feature under development,
+     * colloquially called 'ramps'. In its essence, it attempts to break the monilithic
+     * haplotype calling process into a step-wise process, which can execute up until
+     * a specific step (an off ramp) and later be restored to run from that point (an on ramp)).
+     *
+     * When running the ramped haplotype caller one normally specifies either an off ramp or an on ramp.
+     *
+     * Specifying an off ramp of a specific type results in the process halting at the step
+     * associated with that ramp type and a state file (zip) being saved.
+     *
+     * Specifying an on ramp results in the process being restarted at the step associated
+     * with the ramp type using a state file previously created using an off ramp.
+     *
+     * So summarize, a ramp is defined by its type and the name of a state file. Off ramps
+     * create state files where on ramps read them.
+     *
+     * Ramp points (steps) are defined by the enums OnRampTypeEnum and OffRampTypeEnum.
+     */
+
     @Advanced
     @Hidden
-    @Argument(fullName = OFF_RAMP_TYPE, doc = "ramps: Type of off ramp", optional=true)
+    @Argument(fullName = OFF_RAMP_TYPE, doc = "ramps: Type of off-ramp, i.e. step in haplotype caller where the process should halt and a ramp state file be created", optional=true)
     public OffRampTypeEnum offRampType=null;
 
     @Advanced
     @Hidden
-    @Argument(fullName = OFF_RAMP_FILE, doc = "ramps: File to use for writing ramp", optional=true)
+    @Argument(fullName = OFF_RAMP_FILE, doc = "ramps: File to use for writing the off-ramp", optional=true)
     public String offRampFile=null;
 
     @Advanced
     @Hidden
-    @Argument(fullName = ON_RAMP_TYPE, doc = "ramp: Type of on ramp", optional=true)
+    @Argument(fullName = ON_RAMP_TYPE, doc = "ramp: Type of on-ramp, i.e. step in haplotype-caller where the process should be restored from using a given state file", optional=true)
     public OnRampTypeEnum onRampType=null;
 
     @Advanced
     @Hidden
-    @Argument(fullName = ON_RAMP_FILE, doc = "ramps: File to use for reading ramp", optional=true)
+    @Argument(fullName = ON_RAMP_FILE, doc = "ramps: File to use for reading on-ramp", optional=true)
     public String onRampFile=null;
 
     @Advanced
