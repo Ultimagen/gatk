@@ -21,7 +21,7 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
     public static final String REMOVE_ALL_DUPLICATE_READS = "remove-all-duplicates";
     public static final String REMOVE_SEQUENCING_DUPLICATE_READS = "remove-sequencing-duplicates";
 
-    public static final String FLOW_MD_MODE_LONG_NAME = "flow-mode";
+    public static final String FLOW_MD_MODE_LONG_NAME = "flowbased";
 
     public static final String FLOW_QUALITY_SUM_STRATEGY_LONG_NAME = "flow-quality-sum-strategy";
     public static final String SINGLE_END_READS_END_POSITION_SIGNIFICANT = "sinle-end-reads-end-position-significant";
