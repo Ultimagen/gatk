@@ -305,13 +305,14 @@ public final class ReadUtils {
      * get the read's end.
      *
      * @param gatkRead - read to get the MarkDuplicates' start location
-     * @param uncertain - location might be uncertain
+     * @param endSemantics - location is sought under end-of-fragment semantics
      * @param header - reads file SAMHeader
      * @param mdArgs - MarkDuplicates argument collection
      * @return - read start location, for MarkDuplicates
      */
-   public static int getMarkDupReadStart(final GATKRead gatkRead, final boolean uncertain, final SAMFileHeader header, final MarkDuplicatesSparkArgumentCollection mdArgs) {
-        if ( !uncertain && mdArgs.FLOW_SKIP_START_HOMOPOLYMERS != 0 ) {
+   public static int getMarkDupReadStart(final GATKRead gatkRead, final boolean endSemantics, final SAMFileHeader header, final MarkDuplicatesSparkArgumentCollection mdArgs) {
+
+        if ( !endSemantics && mdArgs.FLOW_SKIP_START_HOMOPOLYMERS != 0 ) {
             final byte[]      bases = gatkRead.getBasesNoCopy();
             final byte[]      flowOrder = getReadFlowOrder(header, gatkRead);
 
@@ -352,7 +353,7 @@ public final class ReadUtils {
         }
         else if ( tmTagIddicatesUnclipped(gatkRead, mdArgs.FLOW_Q_IS_KNOWN_END) ) {
             return gatkRead.getUnclippedStart();
-        } else if ( uncertain && tmTagIddicatesNoUncertianty(gatkRead) ) {
+        } else if ( endSemantics && tmTagIddicatesNoUncertianty(gatkRead) ) {
             return FLOW_BASED_INSIGNIFICANT_END;
         } else if ( mdArgs.FLOW_USE_CLIPPED_LOCATIONS ) {
             return gatkRead.getStart();
@@ -361,8 +362,9 @@ public final class ReadUtils {
     }
 
     // this method complements getMarkDupReadStart with respect to the read's end location for MarkDuplicates
-    public static int getMarkDupReadEnd(final GATKRead gatkRead, boolean uncertain, SAMFileHeader header, MarkDuplicatesSparkArgumentCollection mdArgs) {
-        if ( !uncertain && mdArgs.FLOW_SKIP_START_HOMOPOLYMERS != 0 ) {
+    public static int getMarkDupReadEnd(final GATKRead gatkRead, boolean endSemantics, SAMFileHeader header, MarkDuplicatesSparkArgumentCollection mdArgs) {
+
+        if ( !endSemantics && mdArgs.FLOW_SKIP_START_HOMOPOLYMERS != 0 ) {
             final byte[]      bases = gatkRead.getBasesNoCopy();
             final byte[]      flowOrder = getReadFlowOrder(header, gatkRead);
 
@@ -403,7 +405,7 @@ public final class ReadUtils {
         }
         else if ( tmTagIddicatesUnclipped(gatkRead, mdArgs.FLOW_Q_IS_KNOWN_END) ) {
             return gatkRead.getUnclippedEnd();
-        } else if ( uncertain && tmTagIddicatesNoUncertianty(gatkRead) ) {
+        } else if ( endSemantics && tmTagIddicatesNoUncertianty(gatkRead) ) {
             return FLOW_BASED_INSIGNIFICANT_END;
         } else if ( mdArgs.FLOW_USE_CLIPPED_LOCATIONS ) {
             return gatkRead.getEnd();
