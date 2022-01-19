@@ -21,9 +21,7 @@ import java.util.Map;
  * during the processing step of MarkDuplicatesSpark
  */
 public final class EmptyFragment extends PairedEnds {
-
-    private final static Logger logger = LogManager.getLogger(EmptyFragment.class);
-
+    
     protected transient ReadsKey key;
 
     private final boolean R1R;
