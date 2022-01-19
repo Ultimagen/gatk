@@ -28,7 +28,7 @@ public final class ReadTagValueFilter extends ReadFilter {
     private static final long serialVersionUID = 1L;
 
     @Argument(fullName = ReadFilterArgumentDefinitions.READ_FILTER_TAG,
-            doc = "Look for this tag in read", optional=true)
+            doc = "Look for this tag in read", optional=false)
     public String readFilterTagName = null;
 
     @Argument(fullName = ReadFilterArgumentDefinitions.READ_FILTER_TAG_COMP,
@@ -50,47 +50,12 @@ public final class ReadTagValueFilter extends ReadFilter {
         }
     }
 
-    @Argument(fullName=ReadFilterArgumentDefinitions.READ_FILTER_EXPRESSION_LONG_NAME, shortName="filter", doc="One or more JEXL expressions used to filter", optional=true)
-    public List<String> filterExpressions = new ArrayList<>();
-
-
     @Argument(fullName = ReadFilterArgumentDefinitions.READ_FILTER_TAG_OP,
             doc = "Compare value in tag to value with this operator. " +
                     "If T is the value in the tag, OP is the operation provided, " +
                     "and V is the value in read-filter-tag, then the " +
                     "read will pass the filter iff T OP V is true.", optional = true)
     public Operator readFilterTagOp = Operator.EQUAL;
-
-    private Lazy<List<Expression>> jexlExprs = new Lazy<>(() -> {
-        List<Expression>        l = new LinkedList<>();
-        for ( String expr : filterExpressions )
-            l.add(VariantContextUtils.engine.get().createExpression(expr));
-        return l;
-    });
-
-    private static class GATKReadJexlContext implements JexlContext {
-
-        final private GATKRead        read;
-
-        GATKReadJexlContext(final GATKRead read) {
-            this.read = read;
-        }
-
-        @Override
-        public Object get(final String name) {
-            return read.getAttributeAsString(name);
-        }
-
-        @Override
-        public void set(final String name, final Object value) {
-            throw new IllegalArgumentException("setting attributes is not allowed");
-        }
-
-        @Override
-        public boolean has(final String name) {
-            return read.hasAttribute(name);
-        }
-    }
 
     public ReadTagValueFilter() {
     }
@@ -102,44 +67,12 @@ public final class ReadTagValueFilter extends ReadFilter {
         this.readFilterTagOp = operator;
     }
 
-    // convenience constructor for using a single jexl expression
-    public ReadTagValueFilter(final String jexlExpr) {
-        this.filterExpressions = Collections.singletonList(jexlExpr);
-    }
-
-    // convenience constructor for using a multiple jexl expressions
-    public ReadTagValueFilter(final List<String> jexlExprs) {
-        this.filterExpressions = jexlExprs;
-    }
-
     @Override
     public boolean test(final GATKRead read) {
 
-        // must have either an expression or a name/value arg
-        if (  jexlExprs.get().size() == 0 && readFilterTagName == null ) {
-            throw new IllegalArgumentException("must have either an expression or a name/value arg");
-        }
-
-        // using jexl?
-        if ( jexlExprs.get().size() > 0 ) {
-
-            // loop over expressions. At this point expressions are ANDed
-            for ( Expression expr : jexlExprs.get() ) {
-                Object v = expr.evaluate(new GATKReadJexlContext(read));
-                if (!v.equals(Boolean.TRUE)) {
-                    return false;
-                }
-            }
-        }
-
-        // using name/value operator?
-        if ( readFilterTagName != null ) {
-            return read.hasAttribute(this.readFilterTagName) &&
-                    this.readFilterTagComp != null &&
-                    this.readFilterTagOp.comp.apply(read.getAttributeAsFloat(this.readFilterTagName),
-                            this.readFilterTagComp);
-        } else {
-            return true;
-        }
+        return read.hasAttribute(this.readFilterTagName) &&
+                this.readFilterTagComp != null &&
+                this.readFilterTagOp.comp.apply(read.getAttributeAsFloat(this.readFilterTagName),
+                        this.readFilterTagComp);
     }
 }
