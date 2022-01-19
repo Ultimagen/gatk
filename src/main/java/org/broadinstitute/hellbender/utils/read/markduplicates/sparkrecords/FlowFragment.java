@@ -39,8 +39,7 @@ public class FlowFragment extends Fragment {
         this.key = ReadsKey.getKeyForFragment(start,
                 isRead1ReverseStrand(),
                 (short)ReadUtils.getReferenceIndex(first, header),
-                headerLibraryMap.get(MarkDuplicatesSparkUtils.getLibraryForRead(first, header, LibraryIdGenerator.UNKNOWN_LIBRARY)),
-                mdArgs);
+                headerLibraryMap.get(MarkDuplicatesSparkUtils.getLibraryForRead(first, header, LibraryIdGenerator.UNKNOWN_LIBRARY)));
 
         this.flowScore = (this.end != ReadUtils.FLOW_BASED_INSIGNIFICANT_END)
                 ? ((mdArgs.FLOW_QUALITY_SUM_STRATEGY && isFlow(first)) ? computeFlowDuplicateScore(first, start, end) : scoringStrategy.score(first))

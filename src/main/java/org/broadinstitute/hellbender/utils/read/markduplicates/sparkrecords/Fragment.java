@@ -38,8 +38,7 @@ public class Fragment extends TransientFieldPhysicalLocation {
         this.key = ReadsKey.getKeyForFragment(start,
                 isRead1ReverseStrand(),
                 (short)ReadUtils.getReferenceIndex(first, header),
-                headerLibraryMap.get(MarkDuplicatesSparkUtils.getLibraryForRead(first, header, LibraryIdGenerator.UNKNOWN_LIBRARY)),
-                mdArgs);
+                headerLibraryMap.get(MarkDuplicatesSparkUtils.getLibraryForRead(first, header, LibraryIdGenerator.UNKNOWN_LIBRARY)));
         this.score = scoringStrategy.score(first);
     }
 
