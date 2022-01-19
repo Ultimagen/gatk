@@ -5,6 +5,7 @@ import htsjdk.samtools.SAMFileHeader;
 import org.apache.commons.lang3.tuple.Pair;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.utils.BaseUtils;
+import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
 public class FlowBasedTPAttributeSymetricReadFilter extends ReadFilter {
@@ -19,7 +20,7 @@ public class FlowBasedTPAttributeSymetricReadFilter extends ReadFilter {
     }
 
     protected byte[] getValuesOfInterest(final GATKRead read) {
-        return read.getAttributeAsByteArray("tp");
+        return read.getAttributeAsByteArray(FlowBasedRead.FLOW_MATRiX_TAG_NAME);
     }
 
     protected boolean checkHmer(final byte[] values, final int ofs, final int length) {
