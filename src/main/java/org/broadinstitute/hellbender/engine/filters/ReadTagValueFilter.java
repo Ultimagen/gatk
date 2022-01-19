@@ -43,7 +43,7 @@ public final class ReadTagValueFilter extends ReadFilter {
         EQUAL(Float::equals),
         NOT_EQUAL((Float x, Float y) -> !x.equals(y));
 
-        BiFunction<Float, Float, Boolean> comp;
+        final BiFunction<Float, Float, Boolean> comp;
 
         Operator(BiFunction<Float, Float, Boolean> comp) {
             this.comp = comp;
@@ -77,17 +77,17 @@ public final class ReadTagValueFilter extends ReadFilter {
         }
 
         @Override
-        public Object get(String name) {
+        public Object get(final String name) {
             return read.getAttributeAsString(name);
         }
 
         @Override
-        public void set(String name, Object value) {
+        public void set(final String name, final Object value) {
             throw new IllegalArgumentException("setting attributes is not allowed");
         }
 
         @Override
-        public boolean has(String name) {
+        public boolean has(final String name) {
             return read.hasAttribute(name);
         }
     }
@@ -116,8 +116,9 @@ public final class ReadTagValueFilter extends ReadFilter {
     public boolean test(final GATKRead read) {
 
         // must have either an expression or a name/value arg
-        if (  jexlExprs.get().size() == 0 && readFilterTagName == null )
+        if (  jexlExprs.get().size() == 0 && readFilterTagName == null ) {
             throw new IllegalArgumentException("must have either an expression or a name/value arg");
+        }
 
         // using jexl?
         if ( jexlExprs.get().size() > 0 ) {
@@ -125,8 +126,9 @@ public final class ReadTagValueFilter extends ReadFilter {
             // loop over expressions. At this point expressions are ANDed
             for ( Expression expr : jexlExprs.get() ) {
                 Object v = expr.evaluate(new GATKReadJexlContext(read));
-                if (!v.equals(Boolean.TRUE))
+                if (!v.equals(Boolean.TRUE)) {
                     return false;
+                }
             }
         }
 
