@@ -13,6 +13,7 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.apache.commons.jexl2.Expression;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.function.BiFunction;
@@ -92,6 +93,23 @@ public final class ReadTagValueFilter extends ReadFilter {
     }
 
     public ReadTagValueFilter() {
+    }
+
+    // convenience constructor for using <tag operator value> form
+    public ReadTagValueFilter(final String tagName, final float tagValue, final Operator operator) {
+        this.readFilterTagName = tagName;
+        this.readFilterTagComp = tagValue;
+        this.readFilterTagOp = operator;
+    }
+
+    // convenience constructor for using a single jexl expression
+    public ReadTagValueFilter(final String jexlExpr) {
+        this.filterExpressions = Collections.singletonList(jexlExpr);
+    }
+
+    // convenience constructor for using a multiple jexl expressions
+    public ReadTagValueFilter(final List<String> jexlExprs) {
+        this.filterExpressions = jexlExprs;
     }
 
     @Override

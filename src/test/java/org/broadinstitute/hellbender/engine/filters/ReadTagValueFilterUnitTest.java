@@ -37,11 +37,23 @@ public class ReadTagValueFilterUnitTest extends GATKBaseTest {
                                       final String[] jexlExpr,
                                       final boolean expectedResult) {
 
-        final ReadTagValueFilter filter = new ReadTagValueFilter();
-        filter.readFilterTagName = tagName;
-        filter.readFilterTagComp = tagValue;
-        filter.readFilterTagOp = tagOp;
-        filter.filterExpressions = Arrays.asList(jexlExpr);
+        final ReadTagValueFilter filter;
+
+        // test different constructors here as well
+        if ( tagName != null && jexlExpr.length == 0 ) {
+            filter = new ReadTagValueFilter(tagName, tagValue, tagOp);
+        } else if ( tagName == null && jexlExpr.length == 1 ) {
+            filter = new ReadTagValueFilter(jexlExpr[0]);
+        } else if ( tagName == null && jexlExpr.length > 1 ) {
+            filter = new ReadTagValueFilter(Arrays.asList(jexlExpr));
+        } else {
+            filter = new ReadTagValueFilter();
+            filter.readFilterTagName = tagName;
+            filter.readFilterTagComp = tagValue;
+            filter.readFilterTagOp = tagOp;
+            filter.filterExpressions = Arrays.asList(jexlExpr);
+        }
+
         final GATKRead read = buildSAMRead(cigarString, attrsNameAndValue);
         Assert.assertEquals(filter.test(read), expectedResult, cigarString);
     }
