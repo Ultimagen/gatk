@@ -43,7 +43,7 @@ public abstract class MarkDuplicatesSparkRecord {
 
     // An optimization for reducing the serialized data passed around when indicating that there was a mapped read at a location
     public static EmptyFragment newEmptyFragment(GATKRead read, SAMFileHeader header, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
-        return new EmptyFragment(read, header, headerLibraryMap, mdArgs);
+        return new EmptyFragment(read, header, headerLibraryMap);
     }
 
     // An object representing a pair of primary and secondary reads with a particular span for duplicate marking
