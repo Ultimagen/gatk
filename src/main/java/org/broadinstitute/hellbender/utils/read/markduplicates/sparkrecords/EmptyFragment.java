@@ -1,9 +1,6 @@
 package org.broadinstitute.hellbender.utils.read.markduplicates.sparkrecords;
 
 import htsjdk.samtools.SAMFileHeader;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.broadinstitute.hellbender.cmdline.argumentcollections.MarkDuplicatesSparkArgumentCollection;
 import org.broadinstitute.hellbender.tools.spark.transforms.markduplicates.MarkDuplicatesSparkUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
@@ -21,31 +18,22 @@ import java.util.Map;
  * during the processing step of MarkDuplicatesSpark
  */
 public final class EmptyFragment extends PairedEnds {
-    
     protected transient ReadsKey key;
 
     private final boolean R1R;
-
-    private final short score;
 
     /**
      * special constructor for creating empty fragments
      * this only includes the necessary data to locate the read, the rest is unnecessary because it will appear in the paired bucket
      *
      */
-    public EmptyFragment(GATKRead read, SAMFileHeader header, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
+    public EmptyFragment(GATKRead read, SAMFileHeader header, Map<String, Byte> headerLibraryMap) {
         super(0, null);
-
-        int        start = !mdArgs.isFlowEnabled()
-                            ? ReadUtils.getStrandedUnclippedStart(read)
-                            : ReadUtils.getStrandedUnclippedStartForFlow(read, header, mdArgs);
         this.R1R = read.isReverseStrand();
-        this.key = ReadsKey.getKeyForFragment(start,
+        this.key = ReadsKey.getKeyForFragment(ReadUtils.getStrandedUnclippedStart(read),
                 isRead1ReverseStrand(),
                 ReadUtils.getReferenceIndex(read, header),
                 headerLibraryMap.get(MarkDuplicatesSparkUtils.getLibraryForRead(read, header, LibraryIdGenerator.UNKNOWN_LIBRARY)));
-
-        score = 0;
     }
 
     @Override
@@ -54,7 +42,7 @@ public final class EmptyFragment extends PairedEnds {
     }
     @Override
     public short getScore() {
-        return score;
+        return 0;
     }
     @Override
     // NOTE: This is transient and thus may not exist if the object gets serialized
