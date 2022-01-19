@@ -18,10 +18,8 @@ public class ReadTagValueFilterUnitTest extends GATKBaseTest {
     private static final int CHR_SIZE = 1000;
     private static final int GROUP_COUNT = 5;
 
-    private final SAMFileHeader header= ArtificialReadUtils.createArtificialSamHeaderWithGroups(CHR_COUNT, CHR_START, CHR_SIZE, GROUP_COUNT);
-
-    private GATKRead buildSAMRead(final String cigarString, Object[] attrsNameAndValue) {
-        final Cigar cigar = TextCigarCodec.decode(cigarString);
+    static protected GATKRead buildSAMRead(final String cigarString, Object[] attrsNameAndValue) {
+        final SAMFileHeader header = ArtificialReadUtils.createArtificialSamHeaderWithGroups(CHR_COUNT, CHR_START, CHR_SIZE, GROUP_COUNT);    final Cigar cigar = TextCigarCodec.decode(cigarString);
         final SAMRecord samRecord = ArtificialReadUtils.createArtificialSAMRecord(header, cigar);
         for ( int i = 0 ; i < attrsNameAndValue.length ; i += 2 )
             samRecord.setAttribute(attrsNameAndValue[i].toString(), attrsNameAndValue[i+1]);
@@ -34,26 +32,10 @@ public class ReadTagValueFilterUnitTest extends GATKBaseTest {
                                       final String tagName,
                                       final Float tagValue,
                                       final ReadTagValueFilter.Operator tagOp,
-                                      final String[] jexlExpr,
                                       final boolean expectedResult,
                                        final Class<? extends Throwable> expectedException) {
 
-        final ReadTagValueFilter filter;
-
-        // test different constructors here as well
-        if ( tagName != null && jexlExpr.length == 0 ) {
-            filter = new ReadTagValueFilter(tagName, tagValue, tagOp);
-        } else if ( tagName == null && jexlExpr.length == 1 ) {
-            filter = new ReadTagValueFilter(jexlExpr[0]);
-        } else if ( tagName == null && jexlExpr.length > 1 ) {
-            filter = new ReadTagValueFilter(Arrays.asList(jexlExpr));
-        } else {
-            filter = new ReadTagValueFilter();
-            filter.readFilterTagName = tagName;
-            filter.readFilterTagComp = tagValue;
-            filter.readFilterTagOp = tagOp;
-            filter.filterExpressions = Arrays.asList(jexlExpr);
-        }
+        final ReadTagValueFilter filter = new ReadTagValueFilter(tagName, tagValue, tagOp);
 
         final GATKRead read = buildSAMRead(cigarString, attrsNameAndValue);
         try {
@@ -75,7 +57,6 @@ public class ReadTagValueFilterUnitTest extends GATKBaseTest {
                 "TM",                               // tagname
                 1.0f,                               // tagvalue
                 ReadTagValueFilter.Operator.EQUAL,  // tagop
-                new String[] {},                    // jexl expressions
                 Boolean.TRUE,                       // expected
                 null                                // expected exception
         });
@@ -86,40 +67,6 @@ public class ReadTagValueFilterUnitTest extends GATKBaseTest {
                 "TM",                               // tagname
                 1.0f,                               // tagvalue
                 ReadTagValueFilter.Operator.LESS,   // tagop
-                new String[] {},                    // jexl expressions
-                Boolean.FALSE,                      // expected
-                null                                // expected exception
-        });
-
-        result.add(new Object[] {
-                "100M",                             // cigar
-                new Object[] {"TM", 1.0f},          // attributes
-                null,                               // tagname
-                null,                               // tagvalue
-                null,                               // tagop
-                new String[] {"TM == 1.0"},         // jexl expressions
-                Boolean.TRUE,                       // expected
-                null                                // expected exception
-        });
-
-        result.add(new Object[] {
-                "100M",                             // cigar
-                new Object[] {"TM", 1.0f},          // attributes
-                null,                               // tagname
-                null,                               // tagvalue
-                null,                               // tagop
-                new String[] {"TM < 1.0"},          // jexl expressions
-                Boolean.FALSE,                      // expected
-                null                                // expected exception
-        });
-
-        result.add(new Object[] {
-                "100M",                             // cigar
-                new Object[] {"TM", 1.0f},          // attributes
-                "TM",                               // tagname
-                1.0f,                               // tagvalue
-                ReadTagValueFilter.Operator.LESS,   // tagop
-                new String[] {"TM == 1.0"},         // jexl expressions
                 Boolean.FALSE,                      // expected
                 null                                // expected exception
         });
@@ -130,43 +77,10 @@ public class ReadTagValueFilterUnitTest extends GATKBaseTest {
                 "NO_SUCH",                          // tagname
                 1.0f,                               // tagvalue
                 ReadTagValueFilter.Operator.EQUAL,  // tagop
-                new String[] {},                    // jexl expressions
                 Boolean.TRUE,                       // expected
                 IllegalArgumentException.class      // expected exception
         });
 
-        result.add(new Object[] {
-                "100M",                             // cigar
-                new Object[] {"TM", 1.0f},           // attributes
-                null,                               // tagname
-                null,                               // tagvalue
-                null,                               // tagop
-                new String[] {"NO_SUCH < 1.0"},     // jexl expressions
-                Boolean.FALSE,                      // expected
-                IllegalArgumentException.class      // expected exception
-        });
-
-        result.add(new Object[] {
-                "100M",                             // cigar
-                new Object[] {"TM", 1.0f, "TA", 2.0f},  // attributes
-                null,                               // tagname
-                null,                               // tagvalue
-                null,                               // tagop
-                new String[] {"TM >= 1.0", "TA <= 2.0"},  // jexl expressions
-                Boolean.TRUE,                      // expected
-                null                                // expected exception
-        });
-
-        result.add(new Object[] {
-                "100M",                             // cigar
-                new Object[] {"TM", 1.0f, "TA", 2.0f},  // attributes
-                null,                               // tagname
-                null,                               // tagvalue
-                null,                               // tagop
-                new String[] {"TM >= 1.0", "TA < 2.0"},  // jexl expressions
-                Boolean.FALSE,                      // expected
-                null                                // expected exception
-        });
         return result.iterator();
     }
 
