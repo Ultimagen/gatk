@@ -80,4 +80,8 @@ public class FlowBasedReadUtils {
             return sum;
         }
     }
+
+    public static boolean isFlow(GATKRead rec) {
+        return rec.hasAttribute(FlowBasedRead.CLIPPING_TAG_NAME);
+    }
 }

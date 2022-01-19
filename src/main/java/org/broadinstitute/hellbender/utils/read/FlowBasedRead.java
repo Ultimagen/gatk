@@ -44,11 +44,15 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     // constants for clippingTagContains.
     // The tag is present when the end of the read was clipped at base calling.
     // The value of the tag is a string consisting of any one or more of the following:
-
     // A - adaptor clipped
     // Q - quality clipped
     // Z - "three zeros" clipped
     public static String        CLIPPING_TAG_NAME = "tm";
+
+    public static String        FLOW_MATRiX_TAG_NAME = "tp";
+    public static String        FLOW_MATRiX_OLD_TAG_KR = "kr";
+    public static String        FLOW_MATRiX_OLD_TAG_TI = "ti";
+
 
     /**
      * The sam record from which this flow based read originated
@@ -193,13 +197,13 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         forwardSequence = getForwardSequence();
 
         //supports old format, where the matrix is stored in flow space in the record
-        if ( samRecord.hasAttribute("kr") )
+        if ( samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_KR) )
             readFlowMatrix(_flowOrder);
         // supports FASTQ-like format
         else {
-            if (samRecord.hasAttribute("ti")) {
+            if (samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_TI)) {
                 readBaseMatrixRecal(_flowOrder);
-            } else if (samRecord.hasAttribute("tp")) {
+            } else if (samRecord.hasAttribute(FLOW_MATRiX_TAG_NAME)) {
                 readBaseMatrixProb(_flowOrder);
             }
         }
@@ -270,7 +274,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         // access qual, convert to flow representation
         final byte[]      quals = samRecord.getBaseQualities();
-        final byte[]      ti = samRecord.getByteArrayAttribute("ti");
+        final byte[]      ti = samRecord.getByteArrayAttribute(FLOW_MATRiX_OLD_TAG_TI);
         final double[]    probs = new double[quals.length];
         for ( int i = 0 ; i < quals.length ; i++ ) {
             final double q = quals[i];
@@ -336,7 +340,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         // access qual, convert to flow representation
         final byte[]      quals = samRecord.getBaseQualities();
-        final byte[]      tp = samRecord.getSignedByteArrayAttribute("tp");
+        final byte[]      tp = samRecord.getSignedByteArrayAttribute(FLOW_MATRiX_TAG_NAME);
         final double[]    probs = new double[quals.length];
         for ( int i = 0 ; i < quals.length ; i++ ) {
             final double q = quals[i];
@@ -482,7 +486,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     }
 
     private boolean isBaseFormat() {
-       return samRecord.hasAttribute("ti") || samRecord.hasAttribute("tp");
+       return samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_TI) || samRecord.hasAttribute(FLOW_MATRiX_TAG_NAME);
     }
 
 
@@ -526,7 +530,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     // used for development of the new basecalling, but not in production code
     private void readFlowMatrix(final String _flowOrder) {
 
-        key = getAttributeAsIntArray("kr", true);
+        key = getAttributeAsIntArray(FLOW_MATRiX_OLD_TAG_KR, true);
 
         // creates a translation from flow # to base #
         flow2base = FlowBasedKeyCodec.getKey2Base(key);
@@ -813,7 +817,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         final byte[]      bases = samRecord.getReadBases();
         int         basesOfs = 0;
         final byte[]      quals = samRecord.getBaseQualities();
-        final byte[]      ti = samRecord.hasAttribute("ti") ? samRecord.getByteArrayAttribute("ti") : (new byte[key.length*3]);
+        final byte[]      ti = samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_TI) ? samRecord.getByteArrayAttribute(FLOW_MATRiX_OLD_TAG_TI) : (new byte[key.length*3]);
         if ( isReverseStrand() )
         {
             reverse(quals, quals.length);

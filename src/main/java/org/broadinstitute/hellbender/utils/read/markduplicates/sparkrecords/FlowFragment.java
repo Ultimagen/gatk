@@ -1,10 +1,9 @@
 package org.broadinstitute.hellbender.utils.read.markduplicates.sparkrecords;
 
 import htsjdk.samtools.SAMFileHeader;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.cmdline.argumentcollections.MarkDuplicatesSparkArgumentCollection;
 import org.broadinstitute.hellbender.tools.spark.transforms.markduplicates.MarkDuplicatesSparkUtils;
+import org.broadinstitute.hellbender.utils.read.FlowBasedReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.read.markduplicates.LibraryIdGenerator;
@@ -42,7 +41,7 @@ public class FlowFragment extends Fragment {
                 headerLibraryMap.get(MarkDuplicatesSparkUtils.getLibraryForRead(first, header, LibraryIdGenerator.UNKNOWN_LIBRARY)));
 
         this.flowScore = (this.end != ReadUtils.FLOW_BASED_INSIGNIFICANT_END)
-                ? ((mdArgs.FLOW_QUALITY_SUM_STRATEGY && isFlow(first)) ? computeFlowDuplicateScore(first, start, end) : scoringStrategy.score(first))
+                ? ((mdArgs.FLOW_QUALITY_SUM_STRATEGY && FlowBasedReadUtils.isFlow(first)) ? computeFlowDuplicateScore(first, start, end) : scoringStrategy.score(first))
                 : -1;
     }
 
@@ -101,10 +100,6 @@ public class FlowFragment extends Fragment {
         }
 
         return score;
-    }
-
-    private static boolean isFlow(GATKRead rec) {
-        return rec.hasAttribute("tp");
     }
 
     @Override
