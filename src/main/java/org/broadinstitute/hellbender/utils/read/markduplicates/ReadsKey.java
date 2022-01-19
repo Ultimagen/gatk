@@ -31,10 +31,7 @@ public abstract class ReadsKey {
         return new KeyForFragment(read.getName().hashCode()) ;
     }
 
-    public static ReadsKey getKeyForFragment(int start, int end, boolean reverseStrand, int referenceIndex, byte library) {
-        return new KeyForFragment(longKeyForFragment(start, reverseStrand, referenceIndex, library));
-    }
-    public static ReadsKey getKeyForFragment(int start, boolean reverseStrand, int referenceIndex, byte library, MarkDuplicatesSparkArgumentCollection mdArgs) {
+    public static ReadsKey getKeyForFragment(int start, boolean reverseStrand, int referenceIndex, byte library) {
         return new KeyForFragment(longKeyForFragment(start, reverseStrand, referenceIndex, library));
     }
 

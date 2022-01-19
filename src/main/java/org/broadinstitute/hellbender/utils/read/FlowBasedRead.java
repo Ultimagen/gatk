@@ -47,7 +47,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     // A - adaptor clipped
     // Q - quality clipped
-    // Z - otherwise clipped
+    // Z - "three zeros" clipped
     public static String        CLIPPING_TAG_NAME = "tm";
 
     /**

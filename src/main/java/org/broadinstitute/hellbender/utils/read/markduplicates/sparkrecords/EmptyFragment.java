@@ -45,8 +45,7 @@ public final class EmptyFragment extends PairedEnds {
         this.key = ReadsKey.getKeyForFragment(start,
                 isRead1ReverseStrand(),
                 ReadUtils.getReferenceIndex(read, header),
-                headerLibraryMap.get(MarkDuplicatesSparkUtils.getLibraryForRead(read, header, LibraryIdGenerator.UNKNOWN_LIBRARY)),
-                mdArgs);
+                headerLibraryMap.get(MarkDuplicatesSparkUtils.getLibraryForRead(read, header, LibraryIdGenerator.UNKNOWN_LIBRARY)));
 
         score = 0;
     }
