@@ -1,9 +1,6 @@
 package org.broadinstitute.hellbender.utils.read;
 
-import htsjdk.samtools.CigarElement;
-import htsjdk.samtools.CigarOperator;
-import htsjdk.samtools.SAMFileHeader;
-import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.*;
 import htsjdk.samtools.util.SequenceUtil;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
@@ -43,6 +40,15 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     static private final int MINIMAL_READ_LENGTH = 10; // check if this is the right number
     static private final int MAXIMAL_MAXHMER = 100;
     private final double MINIMAL_CALL_PROB = 0.1;
+
+    // constants for clippingTagContains.
+    // The tag is present when the end of the read was clipped at base calling.
+    // The value of the tag is a string consisting of any one or more of the following:
+    
+    // A - adaptor clipped
+    // Q - quality clipped
+    // Z - otherwise clipped
+    public static String        CLIPPING_TAG_NAME = "tm";
 
     /**
      * The sam record from which this flow based read originated
@@ -1143,6 +1149,48 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     public static void setMinimalReadLength(int minimalReadLength) {
         FlowBasedRead.minimalReadLength = minimalReadLength;
     }
+
+    public static boolean readEndMarkedUncertain(final GATKRead rec) {
+        final String        tm = rec.getAttributeAsString(FlowBasedRead.CLIPPING_TAG_NAME);
+        if ( tm == null ) {
+            return false;
+        } else {
+            return tm.indexOf('Q') >= 0 || tm.indexOf('Z') >= 0;
+        }
+    }
+
+    public static boolean readEndMarkedUnclipped(final GATKRead rec, boolean FLOW_Q_IS_KNOWN_END) {
+        final String        tm = rec.getAttributeAsString(FlowBasedRead.CLIPPING_TAG_NAME);
+        if ( tm == null ) {
+            return false;
+        } else {
+            return (tm.indexOf('A') >= 0) || (FLOW_Q_IS_KNOWN_END && (tm.indexOf('Q') >= 0));
+        }
+    }
+
+    // get flow order for a specific read
+    public static byte[] getReadFlowOrder(final SAMFileHeader header, GATKRead read) {
+
+        // are we looking for a specific read group, as specified by the read?
+        final String    readGroupName = (read != null) ? read.getReadGroup() : null;
+        if ( readGroupName != null ) {
+            final SAMReadGroupRecord rg = header.getReadGroup(readGroupName);
+            if ( rg != null && rg.getFlowOrder() != null )
+                return rg.getFlowOrder().getBytes();
+        }
+
+        // if here, either no read was specified, or the read has no group, or the group is not found, or it has no flow
+        // revert to old behavior of returning the first found
+        for ( SAMReadGroupRecord rg : header.getReadGroups() ) {
+            // must match read group name?
+            String      flowOrder = rg.getFlowOrder();
+            if ( flowOrder != null ) {
+                return flowOrder.getBytes();
+            }
+        }
+        return null;
+    }
+
 }
 
 

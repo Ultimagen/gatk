@@ -29,7 +29,6 @@ import org.broadinstitute.hellbender.tools.walkers.featuremapping.FlowFeatureMap
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.FlowBasedAlignmentEngine;
 import org.broadinstitute.hellbender.utils.haplotype.FlowBasedHaplotype;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
-import picard.cmdline.programgroups.BaseCallingProgramGroup;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -358,7 +357,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
             return fillSoftclippedReads;
 
         // extending timmed as well?
-        final String    tm = read.getAttributeAsString("tm");
+        final String    tm = read.getAttributeAsString(FlowBasedRead.CLIPPING_TAG_NAME);
         if ( tm == null ) {
             return true;
         } else {
@@ -830,7 +829,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         final Map<String,Object>        cols = new LinkedHashMap<>();
 
         // establish fill value
-        final String        tm = read.getAttributeAsString("tm");
+        final String        tm = read.getAttributeAsString(FlowBasedRead.CLIPPING_TAG_NAME);
         boolean             hasA = (tm != null) && tm.indexOf('A') >= 0;
         boolean             hasQ = (tm != null) && tm.indexOf('Q') >= 0;
         boolean             hasZ = (tm != null) && tm.indexOf('Z') >= 0;
@@ -898,7 +897,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         cols.put("MaternalHaplotypeInterval", maternal.ref.getInterval());
         cols.put("MaternalHaplotypeSequence", maternalHaplotypeSeq);
 
-        cols.put("tm", (read.hasAttribute("tm") ? read.getAttributeAsString("tm") : ""));
+        cols.put("tm", (read.hasAttribute(FlowBasedRead.CLIPPING_TAG_NAME) ? read.getAttributeAsString(FlowBasedRead.CLIPPING_TAG_NAME) : ""));
         cols.put("mapq", read.getMappingQuality());
         cols.put("flags", read.getFlags());
 

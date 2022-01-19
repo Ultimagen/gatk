@@ -314,7 +314,7 @@ public final class ReadUtils {
 
         if ( !endSemantics && mdArgs.FLOW_SKIP_START_HOMOPOLYMERS != 0 ) {
             final byte[]      bases = gatkRead.getBasesNoCopy();
-            final byte[]      flowOrder = getReadFlowOrder(header, gatkRead);
+            final byte[]      flowOrder = FlowBasedRead.getReadFlowOrder(header, gatkRead);
 
             byte        hmerBase = bases[0];
             int         flowOrderOfs = 0;
@@ -351,9 +351,9 @@ public final class ReadUtils {
             final int     start = gatkRead.getUnclippedStart() + hmerSize;
             return mdArgs.FLOW_USE_CLIPPED_LOCATIONS ? Math.max(start, gatkRead.getStart()) : start;
         }
-        else if ( tmTagIddicatesUnclipped(gatkRead, mdArgs.FLOW_Q_IS_KNOWN_END) ) {
+        else if ( FlowBasedRead.readEndMarkedUnclipped(gatkRead, mdArgs.FLOW_Q_IS_KNOWN_END) ) {
             return gatkRead.getUnclippedStart();
-        } else if ( endSemantics && tmTagIddicatesNoUncertianty(gatkRead) ) {
+        } else if ( endSemantics && FlowBasedRead.readEndMarkedUncertain(gatkRead) ) {
             return FLOW_BASED_INSIGNIFICANT_END;
         } else if ( mdArgs.FLOW_USE_CLIPPED_LOCATIONS ) {
             return gatkRead.getStart();
@@ -366,7 +366,7 @@ public final class ReadUtils {
 
         if ( !endSemantics && mdArgs.FLOW_SKIP_START_HOMOPOLYMERS != 0 ) {
             final byte[]      bases = gatkRead.getBasesNoCopy();
-            final byte[]      flowOrder = getReadFlowOrder(header, gatkRead);
+            final byte[]      flowOrder = FlowBasedRead.getReadFlowOrder(header, gatkRead);
 
             byte        hmerBase = bases[bases.length - 1];
             int         flowOrderOfs = 0;
@@ -403,55 +403,14 @@ public final class ReadUtils {
             final int     end = gatkRead.getUnclippedEnd() - hmerSize;
             return mdArgs.FLOW_USE_CLIPPED_LOCATIONS ? Math.min(end, gatkRead.getEnd()) : end;
         }
-        else if ( tmTagIddicatesUnclipped(gatkRead, mdArgs.FLOW_Q_IS_KNOWN_END) ) {
+        else if ( FlowBasedRead.readEndMarkedUnclipped(gatkRead, mdArgs.FLOW_Q_IS_KNOWN_END) ) {
             return gatkRead.getUnclippedEnd();
-        } else if ( endSemantics && tmTagIddicatesNoUncertianty(gatkRead) ) {
+        } else if ( endSemantics && FlowBasedRead.readEndMarkedUncertain(gatkRead) ) {
             return FLOW_BASED_INSIGNIFICANT_END;
         } else if ( mdArgs.FLOW_USE_CLIPPED_LOCATIONS ) {
             return gatkRead.getEnd();
         } else
             return gatkRead.getUnclippedEnd();
-    }
-
-    public static boolean tmTagIddicatesNoUncertianty(final GATKRead rec) {
-        final String        tm = rec.getAttributeAsString("tm");
-        if ( tm == null ) {
-            return false;
-        } else {
-            return tm.indexOf('Q') >= 0 || tm.indexOf('Z') >= 0;
-        }
-    }
-
-    public static boolean tmTagIddicatesUnclipped(final GATKRead rec, boolean FLOW_Q_IS_KNOWN_END) {
-        final String        tm = rec.getAttributeAsString("tm");
-        if ( tm == null ) {
-            return false;
-        } else {
-            return (tm.indexOf('A') >= 0) || (FLOW_Q_IS_KNOWN_END && (tm.indexOf('Q') >= 0));
-        }
-    }
-
-    // get flow order for a specific read
-    private static byte[] getReadFlowOrder(final SAMFileHeader header, GATKRead read) {
-
-        // are we looking for a specific read group, as specified by the read?
-        final String    readGroupName = (read != null) ? read.getReadGroup() : null;
-        if ( readGroupName != null ) {
-            final SAMReadGroupRecord rg = header.getReadGroup(readGroupName);
-            if ( rg != null && rg.getFlowOrder() != null )
-                return rg.getFlowOrder().getBytes();
-        }
-
-        // if here, either no read was specified, or the read has no group, or the group is not found, or it has no flow
-        // revert to old behavior of returning the first found
-        for ( SAMReadGroupRecord rg : header.getReadGroups() ) {
-            // must match read group name?
-            String      flowOrder = rg.getFlowOrder();
-            if ( flowOrder != null ) {
-                return flowOrder.getBytes();
-            }
-        }
-        return null;
     }
 
     public static boolean isEmpty(final SAMRecord read) {
