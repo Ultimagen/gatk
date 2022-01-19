@@ -35,7 +35,8 @@ public class ReadTagValueFilterUnitTest extends GATKBaseTest {
                                       final Float tagValue,
                                       final ReadTagValueFilter.Operator tagOp,
                                       final String[] jexlExpr,
-                                      final boolean expectedResult) {
+                                      final boolean expectedResult,
+                                       final Class<? extends Throwable> expectedException) {
 
         final ReadTagValueFilter filter;
 
@@ -55,7 +56,13 @@ public class ReadTagValueFilterUnitTest extends GATKBaseTest {
         }
 
         final GATKRead read = buildSAMRead(cigarString, attrsNameAndValue);
-        Assert.assertEquals(filter.test(read), expectedResult, cigarString);
+        try {
+            Assert.assertEquals(filter.test(read), expectedResult, cigarString);
+            Assert.assertNull(expectedException);
+        } catch (Throwable e) {
+            if ( expectedException == null || !expectedException.isInstance(e) )
+                throw e;
+        }
     }
 
     @DataProvider(name = "ReadTagValueFilterDataProvider")
@@ -63,53 +70,102 @@ public class ReadTagValueFilterUnitTest extends GATKBaseTest {
         final List<Object[]> result = new LinkedList<>();
 
         result.add(new Object[] {
-                "100M",                             // vigat
-                new Object[] {"TM", 1.0f},           // attributes
+                "100M",                             // cigar
+                new Object[] {"TM", 1.0f},          // attributes
                 "TM",                               // tagname
                 1.0f,                               // tagvalue
                 ReadTagValueFilter.Operator.EQUAL,  // tagop
                 new String[] {},                    // jexl expressions
-                Boolean.TRUE                        // expected
+                Boolean.TRUE,                       // expected
+                null                                // expected exception
         });
 
         result.add(new Object[] {
-                "100M",                             // vigat
-                new Object[] {"TM", 1.0f},           // attributes
+                "100M",                             // cigar
+                new Object[] {"TM", 1.0f},          // attributes
                 "TM",                               // tagname
                 1.0f,                               // tagvalue
-                ReadTagValueFilter.Operator.LESS,  // tagop
+                ReadTagValueFilter.Operator.LESS,   // tagop
                 new String[] {},                    // jexl expressions
-                Boolean.FALSE                       // expected
+                Boolean.FALSE,                      // expected
+                null                                // expected exception
         });
 
         result.add(new Object[] {
-                "100M",                             // vigat
-                new Object[] {"TM", 1.0f},           // attributes
+                "100M",                             // cigar
+                new Object[] {"TM", 1.0f},          // attributes
                 null,                               // tagname
                 null,                               // tagvalue
                 null,                               // tagop
                 new String[] {"TM == 1.0"},         // jexl expressions
-                Boolean.TRUE                       // expected
+                Boolean.TRUE,                       // expected
+                null                                // expected exception
         });
 
         result.add(new Object[] {
-                "100M",                             // vigat
-                new Object[] {"TM", 1.0f},           // attributes
+                "100M",                             // cigar
+                new Object[] {"TM", 1.0f},          // attributes
                 null,                               // tagname
                 null,                               // tagvalue
                 null,                               // tagop
-                new String[] {"TM < 1.0"},         // jexl expressions
-                Boolean.FALSE                       // expected
+                new String[] {"TM < 1.0"},          // jexl expressions
+                Boolean.FALSE,                      // expected
+                null                                // expected exception
         });
 
         result.add(new Object[] {
-                "100M",                             // vigat
-                new Object[] {"TM", 1.0f},           // attributes
+                "100M",                             // cigar
+                new Object[] {"TM", 1.0f},          // attributes
                 "TM",                               // tagname
                 1.0f,                               // tagvalue
-                ReadTagValueFilter.Operator.LESS,  // tagop
+                ReadTagValueFilter.Operator.LESS,   // tagop
                 new String[] {"TM == 1.0"},         // jexl expressions
-                Boolean.FALSE                       // expected
+                Boolean.FALSE,                      // expected
+                null                                // expected exception
+        });
+
+        result.add(new Object[] {
+                "100M",                             // cigar
+                new Object[] {"TM", 1.0f},           // attributes
+                "NO_SUCH",                          // tagname
+                1.0f,                               // tagvalue
+                ReadTagValueFilter.Operator.EQUAL,  // tagop
+                new String[] {},                    // jexl expressions
+                Boolean.TRUE,                       // expected
+                IllegalArgumentException.class      // expected exception
+        });
+
+        result.add(new Object[] {
+                "100M",                             // cigar
+                new Object[] {"TM", 1.0f},           // attributes
+                null,                               // tagname
+                null,                               // tagvalue
+                null,                               // tagop
+                new String[] {"NO_SUCH < 1.0"},     // jexl expressions
+                Boolean.FALSE,                      // expected
+                IllegalArgumentException.class      // expected exception
+        });
+
+        result.add(new Object[] {
+                "100M",                             // cigar
+                new Object[] {"TM", 1.0f, "TA", 2.0f},  // attributes
+                null,                               // tagname
+                null,                               // tagvalue
+                null,                               // tagop
+                new String[] {"TM >= 1.0", "TA <= 2.0"},  // jexl expressions
+                Boolean.TRUE,                      // expected
+                null                                // expected exception
+        });
+
+        result.add(new Object[] {
+                "100M",                             // cigar
+                new Object[] {"TM", 1.0f, "TA", 2.0f},  // attributes
+                null,                               // tagname
+                null,                               // tagvalue
+                null,                               // tagop
+                new String[] {"TM >= 1.0", "TA < 2.0"},  // jexl expressions
+                Boolean.FALSE,                      // expected
+                null                                // expected exception
         });
         return result.iterator();
     }
