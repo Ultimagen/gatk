@@ -4,9 +4,12 @@ import htsjdk.samtools.util.Lazy;
 import htsjdk.variant.variantcontext.VariantContextUtils;
 import org.apache.commons.jexl2.Expression;
 import org.apache.commons.jexl2.JexlContext;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.ReadFilterArgumentDefinitions;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerEngine;
 import org.broadinstitute.hellbender.utils.help.HelpConstants;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
@@ -24,14 +27,18 @@ import java.util.function.BiFunction;
         summary = "Keep only reads that meet all given jexl expressions (on their attributes)")
 public final class JexlExpressionReadTagValueFilter extends ReadFilter {
     private static final long serialVersionUID = 1L;
+    private static final Logger logger = LogManager.getLogger(JexlExpressionReadTagValueFilter.class);
 
     @Argument(fullName=ReadFilterArgumentDefinitions.READ_FILTER_EXPRESSION_LONG_NAME, shortName="filter", doc="One or more JEXL expressions used to filter", optional=false)
     public List<String> filterExpressions = new ArrayList<>();
 
     private Lazy<List<Expression>> jexlExprs = new Lazy<>(() -> {
         List<Expression>        l = new LinkedList<>();
-        for ( String expr : filterExpressions )
-            l.add(VariantContextUtils.engine.get().createExpression(expr));
+        for ( String expr : filterExpressions ) {
+            final Expression    jexl =  VariantContextUtils.engine.get().createExpression(expr);
+            logger.info("created jexl: " + jexl);
+            l.add(jexl);
+        }
         return l;
     });
 
