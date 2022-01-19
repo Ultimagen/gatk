@@ -314,7 +314,7 @@ public final class ReadUtils {
 
         if ( !endSemantics && mdArgs.FLOW_SKIP_START_HOMOPOLYMERS != 0 ) {
             final byte[]      bases = gatkRead.getBasesNoCopy();
-            final byte[]      flowOrder = FlowBasedRead.getReadFlowOrder(header, gatkRead);
+            final byte[]      flowOrder = FlowBasedReadUtils.getReadFlowOrder(header, gatkRead);
 
             byte        hmerBase = bases[0];
             int         flowOrderOfs = 0;
@@ -351,9 +351,9 @@ public final class ReadUtils {
             final int     start = gatkRead.getUnclippedStart() + hmerSize;
             return mdArgs.FLOW_USE_CLIPPED_LOCATIONS ? Math.max(start, gatkRead.getStart()) : start;
         }
-        else if ( FlowBasedRead.readEndMarkedUnclipped(gatkRead, mdArgs.FLOW_Q_IS_KNOWN_END) ) {
+        else if ( FlowBasedReadUtils.readEndMarkedUnclipped(gatkRead, mdArgs.FLOW_Q_IS_KNOWN_END) ) {
             return gatkRead.getUnclippedStart();
-        } else if ( endSemantics && FlowBasedRead.readEndMarkedUncertain(gatkRead) ) {
+        } else if ( endSemantics && FlowBasedReadUtils.readEndMarkedUncertain(gatkRead) ) {
             return FLOW_BASED_INSIGNIFICANT_END;
         } else if ( mdArgs.FLOW_USE_CLIPPED_LOCATIONS ) {
             return gatkRead.getStart();
@@ -366,7 +366,7 @@ public final class ReadUtils {
 
         if ( !endSemantics && mdArgs.FLOW_SKIP_START_HOMOPOLYMERS != 0 ) {
             final byte[]      bases = gatkRead.getBasesNoCopy();
-            final byte[]      flowOrder = FlowBasedRead.getReadFlowOrder(header, gatkRead);
+            final byte[]      flowOrder = FlowBasedReadUtils.getReadFlowOrder(header, gatkRead);
 
             byte        hmerBase = bases[bases.length - 1];
             int         flowOrderOfs = 0;
@@ -403,9 +403,9 @@ public final class ReadUtils {
             final int     end = gatkRead.getUnclippedEnd() - hmerSize;
             return mdArgs.FLOW_USE_CLIPPED_LOCATIONS ? Math.min(end, gatkRead.getEnd()) : end;
         }
-        else if ( FlowBasedRead.readEndMarkedUnclipped(gatkRead, mdArgs.FLOW_Q_IS_KNOWN_END) ) {
+        else if ( FlowBasedReadUtils.readEndMarkedUnclipped(gatkRead, mdArgs.FLOW_Q_IS_KNOWN_END) ) {
             return gatkRead.getUnclippedEnd();
-        } else if ( endSemantics && FlowBasedRead.readEndMarkedUncertain(gatkRead) ) {
+        } else if ( endSemantics && FlowBasedReadUtils.readEndMarkedUncertain(gatkRead) ) {
             return FLOW_BASED_INSIGNIFICANT_END;
         } else if ( mdArgs.FLOW_USE_CLIPPED_LOCATIONS ) {
             return gatkRead.getEnd();
