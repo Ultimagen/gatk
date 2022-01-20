@@ -189,7 +189,7 @@ public class GenotypeGVCFsEngine
             return new VariantContextBuilder(annotated).genotypes(cleanupGenotypeAnnotations(result, false, keepSB)).make();
         } else if (includeNonVariants) {
             // For monomorphic sites we need to make sure e.g. the hom ref genotypes are created and only then are passed to the annotation engine.
-            VariantContext preannotated = new VariantContextBuilder(result).genotypes(cleanupGenotypeAnnotations(result, true)).make();
+            VariantContext preannotated = new VariantContextBuilder(result).genotypes(cleanupGenotypeAnnotations(result, true, false)).make();
             return annotationEngine.annotateContext(preannotated, features, ref, null, GenotypeGVCFsEngine::annotationShouldBeSkippedForHomRefSites);
         } else {
             return null;
@@ -432,12 +432,9 @@ public class GenotypeGVCFsEngine
      *
      * @param vc            the VariantContext with the Genotypes to fix
      * @param createRefGTs  if true we will also create proper hom ref genotypes since we assume the site is monomorphic
+     * @param keepSB        keep value of SB attribute
      * @return a new set of Genotypes
      */
-    @VisibleForTesting
-    static List<Genotype> cleanupGenotypeAnnotations(final VariantContext vc, final boolean createRefGTs) {
-        return cleanupGenotypeAnnotations(vc, createRefGTs, false);
-    }
     @VisibleForTesting
     static List<Genotype> cleanupGenotypeAnnotations(final VariantContext vc, final boolean createRefGTs, final boolean keepSB) {
         final GenotypesContext oldGTs = vc.getGenotypes();
