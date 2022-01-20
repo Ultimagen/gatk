@@ -6,7 +6,6 @@ import htsjdk.samtools.SamReaderFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.GATKBaseTest;
-import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -40,11 +39,11 @@ public class FlowBasedReadIntegrationTest extends GATKBaseTest {
         // create argument block
         FlowBasedAlignmentArgumentCollection fbargs = new FlowBasedAlignmentArgumentCollection();
         if ( simulate ) {
-            fbargs.probability_ratio_threshold = 0.01;
+            fbargs.probabilityRatioThreshold = 0.01;
             //fbargs.remove_longer_than_one_indels = true;
-            fbargs.lump_probs = true;
-            fbargs.only_ins_or_del = true;
-            fbargs.remove_one_to_zero_probs = true;
+            fbargs.lumpProbs = true;
+            fbargs.onlyInsOrDel = true;
+            fbargs.removeOneToZeroProbs = true;
         }
 
         // initialize reader

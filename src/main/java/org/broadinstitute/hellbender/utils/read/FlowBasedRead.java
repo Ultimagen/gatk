@@ -886,27 +886,27 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     //this function was only applied when we tested what is the necessary information to be reported in the flow matrix
     private void applyFilteringFlowMatrix(){
 
-        if (fbargs.disallow_larger_probs) {
+        if (fbargs.disallowLargerProbs) {
             removeLargeProbs();
         }
 
-        if (fbargs.remove_longer_than_one_indels) {
+        if (fbargs.removeLongerThanOneIndels) {
             removeLongIndels( key );
         }
 
-        if (fbargs.remove_one_to_zero_probs) {
+        if (fbargs.removeOneToZeroProbs) {
             removeOneToZeroProbs(key);
         }
 
-        if ((fbargs.lump_probs)) {
+        if ((fbargs.lumpProbs)) {
             lumpProbs();
         }
         clipProbs();
 
-        if (fbargs.symmetric_indels) {
+        if (fbargs.symmetricIndels) {
             smoothIndels(key);
         }
-        if (fbargs.only_ins_or_del) {
+        if (fbargs.onlyInsOrDel) {
             reportInsOrDel(key);
         }
 
@@ -919,7 +919,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private void clipProbs() {
         for ( int i = 0 ; i < getMaxHmer(); i++ ) {
             for ( int j =0; j < getNFlows(); j++) {
-                if ((flowMatrix[i][j] < fbargs.probability_ratio_threshold) &&
+                if ((flowMatrix[i][j] < fbargs.probabilityRatioThreshold) &&
                         (key[j]!=i)) {
                     flowMatrix[i][j] = fbargs.fillingValue;
                 }
@@ -960,7 +960,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
 
     private void quantizeProbs(final int [] kd_probs ) {
-        final int nQuants = fbargs.probability_quantization;
+        final int nQuants = fbargs.probabilityQuantization;
         final double bin_size = 6*fbargs.probabilityScalingFactor/(float)nQuants;
         for ( int i = 0 ; i < kd_probs.length; i++) {
             if (kd_probs[i] <=0)
