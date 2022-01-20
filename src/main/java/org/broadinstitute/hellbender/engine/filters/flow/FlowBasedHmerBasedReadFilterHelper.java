@@ -11,26 +11,19 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
 /**
  * A common base class for flow based filters which test for conditions on an hmer basis
  */
-public class FlowBasedHmerBasedReadFilter extends ReadFilter {
+public class FlowBasedHmerBasedReadFilterHelper  {
 
-    private static final long serialVersionUID = 1l;
+    interface FilterImpl {
 
-    public FlowBasedHmerBasedReadFilter() {
+        // provide the area of values associated with read hmers
+        byte[] getValuesOfInterest(final GATKRead read);
 
-    }
-
-    // provide the area of values associated with read hmers
-    protected byte[] getValuesOfInterest(final GATKRead read) {
-        throw new GATKException("FlowBasedHmerBasedReadFilter: should not be used directly");
-    }
-
-    // check that the range of values associated with a single hmer are passing the filter
-    protected boolean testHmer(final byte[] values, final int hmerStartingOffset, final int hmerLength) {
-        throw new GATKException("FlowBasedHmerBasedReadFilter: should not be used directly");
+        // check that the range of values associated with a single hmer are passing the filter
+        boolean testHmer(final byte[] values, final int hmerStartingOffset, final int hmerLength);
     }
 
     // check if an area is a palindrome
-    protected boolean isPalindrome(final byte[] values, final int ofs, final int length) {
+    static boolean isPalindrome(final byte[] values, final int ofs, final int length) {
 
         // check that a range of bytes in the array forms an palindrome
         for (int i = 0; i < length / 2; i++) {
@@ -42,11 +35,10 @@ public class FlowBasedHmerBasedReadFilter extends ReadFilter {
         return true;
     }
 
-    @Override
-    public boolean test(final GATKRead read) {
+    static boolean test(final GATKRead read, FilterImpl impl) {
 
         // access qualities
-        final byte[]        values = getValuesOfInterest(read);
+        final byte[]        values = impl.getValuesOfInterest(read);
         if ( values == null )
             return false;
 
@@ -69,7 +61,7 @@ public class FlowBasedHmerBasedReadFilter extends ReadFilter {
 
             // skip edge hmers if hard clipped
             if ( !((first && startHardClipped) || (last && endHardClipped)) ) {
-                if (!testHmer(values, ofs, hmerLength)) {
+                if (!impl.testHmer(values, ofs, hmerLength)) {
                     return false;
                 }
             }

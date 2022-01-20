@@ -1,20 +1,14 @@
 package org.broadinstitute.hellbender.engine.filters.flow;
 
-import htsjdk.samtools.CigarOperator;
-import htsjdk.samtools.SAMFileHeader;
-import org.apache.commons.lang3.tuple.Pair;
 import org.broadinstitute.barclay.argparser.Argument;
-import org.broadinstitute.hellbender.cmdline.ReadFilterArgumentDefinitions;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
-import org.broadinstitute.hellbender.engine.filters.ReadTagValueFilter;
-import org.broadinstitute.hellbender.utils.BaseUtils;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
 /**
  * A read filter to test if the TP values for each hmer in a flow based read form
  * are wihin the allowed range (being the possible lengths of hmers - maxHmer)
- */public class FlowBasedTPAttributeValidReadFilter extends FlowBasedHmerBasedReadFilter {
+ */public class FlowBasedTPAttributeValidReadFilter extends ReadFilter implements FlowBasedHmerBasedReadFilterHelper.FilterImpl {
     private static final long serialVersionUID = 1l;
 
     @Argument(fullName = "read-filter-max-hmer",
@@ -26,12 +20,17 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
     }
 
     @Override
-    protected byte[] getValuesOfInterest(final GATKRead read) {
+    public boolean test(final GATKRead read) {
+        return FlowBasedHmerBasedReadFilterHelper.test(read, this);
+    }
+
+    @Override
+    public byte[] getValuesOfInterest(final GATKRead read) {
         return read.getAttributeAsByteArray(FlowBasedRead.FLOW_MATRIX_TAG_NAME);
     }
 
     @Override
-    protected boolean testHmer(final byte[] values, final int hmerStartingOffset, final int hmerLength) {
+    public boolean testHmer(final byte[] values, final int hmerStartingOffset, final int hmerLength) {
 
         // check matrix index resulting from tp value does not exceed limits
         // (note that tp value is a 1/0/-1 adjustment of the hmer length
