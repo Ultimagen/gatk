@@ -46,10 +46,6 @@ public final class WellformedFlowBasedReadFilter extends WellformedReadFilter {
 
     }
 
-    public WellformedFlowBasedReadFilter(final SAMFileHeader header) {
-        super(header);
-    }
-
     @Override
     protected ReadFilter createFilter() {
 
