@@ -587,7 +587,7 @@ public final class ClipReads extends ReadWalker {
         }
     }
 
-    public static final class ClippingData {
+    public final class ClippingData {
         public long nTotalReads = 0;
         public long nTotalBases = 0;
         public long nClippedReads = 0;
@@ -660,14 +660,16 @@ public final class ClipReads extends ReadWalker {
             for (Map.Entry<String, Long> elt : seqClipCounts.entrySet()) {
                 s.append(String.format("  %8d clip sites matching %s%n", elt.getValue(), elt.getKey()));
             }
-            s.append(String.format("Number of adapter clipped bases       %d%n", nAdapterClippedBases));
+            if ( clipAdapter ) {
+                s.append(String.format("Number of adapter clipped bases       %d%n", nAdapterClippedBases));
+            }
 
             s.append(StringUtils.repeat('-', 80) + "\n");
             return s.toString();
         }
     }
 
-    public static final class ReadClipperWithData extends ReadClipper {
+    public final class ReadClipperWithData extends ReadClipper {
         private ClippingData data;
 
         public ReadClipperWithData(GATKRead read, List<SeqToClip> clipSeqs) {
