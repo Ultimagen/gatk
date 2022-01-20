@@ -89,6 +89,9 @@ import java.util.regex.Pattern;
  * Number of quality-score clipped bases 126
  * Number of range clipped bases         0
  * Number of sequence clipped bases      0
+ *
+ * if --clip-adapte is provided, an additional line will be appended:
+ * Number of adapter clipped bases       18228
  * </pre>
  *
  * <h3>Example usage</h3>
