@@ -56,10 +56,12 @@ public final class WellformedFlowBasedReadFilter extends ReadFilter {
 
     private void createFilter() {
 
-        wellFormedFilter = (new ReadGroupHasFlowOrderReadFilter(samHeader))
+        wellFormedFilter = (new WellformedReadFilter(samHeader))
+                .and(new ReadGroupHasFlowOrderReadFilter(samHeader))
                 .and(ReadFilterLibrary.HMER_QUALITY_SYMETRIC_READ_FILTER)
                 .and(ReadFilterLibrary.FLOW_BASED_TP_ATTRIBUTE_VALID_READ_FILTER)
                 .and(ReadFilterLibrary.FLOW_BASED_TP_ATTRIBUTE_SYMETRIC_READ_FILTER);
+
     }
 
     @Override

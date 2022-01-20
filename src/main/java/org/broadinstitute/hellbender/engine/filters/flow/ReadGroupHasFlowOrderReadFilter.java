@@ -4,6 +4,9 @@ import htsjdk.samtools.SAMFileHeader;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
+/**
+ * A read filter to test if the read's readGroup has a flow order associated with it
+ */
 public class ReadGroupHasFlowOrderReadFilter extends ReadFilter {
     private static final long serialVersionUID = 1l;
 
