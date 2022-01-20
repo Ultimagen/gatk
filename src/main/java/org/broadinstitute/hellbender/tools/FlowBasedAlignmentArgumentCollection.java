@@ -44,19 +44,19 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
 
     @Advanced
     @Argument(fullName = PROBABILITY_RATIO_THRESHOLD_LONG_NAME, doc = "Lowest probability ratio to be used as an option", optional = true)
-    public double probability_ratio_threshold = DEFAULT_RATIO_THRESHOLD;
+    public double probabilityRatioThreshold = DEFAULT_RATIO_THRESHOLD;
 
     @Advanced
     @Argument(fullName = REMOVE_LONGER_THAN_ONE_INDELS, doc = "Should the probabilities of more then 1 indel be used", optional = true)
-    public boolean remove_longer_than_one_indels = DEFAULT_REMOVE_LONGER_INDELS;
+    public boolean removeLongerThanOneIndels = DEFAULT_REMOVE_LONGER_INDELS;
 
     @Advanced
     @Argument(fullName = REMOVE_ONE_TO_ZERO_PROBS, doc = "Remove probabilities of basecall of zero from non-zero genome", optional = true)
-    public boolean remove_one_to_zero_probs = DEFAULT_REMOVE_ONE_TO_ZERO;
+    public boolean removeOneToZeroProbs = DEFAULT_REMOVE_ONE_TO_ZERO;
 
     @Advanced
     @Argument(fullName = NUMBER_OF_POSSIBLE_PROBS, doc = "Probability quantization", optional = true)
-    public int probability_quantization = DEFAULT_QUANTIZATION;
+    public int probabilityQuantization = DEFAULT_QUANTIZATION;
 
     @Advanced
     @Argument(fullName = FILLING_VALUE, doc = "Value to fill the zeros of the matrix with", optional=true)
@@ -64,19 +64,19 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
 
     @Advanced
     @Argument(fullName = SYMMETRIC_INDELS, doc = "Should indel probabilities be symmetric in flow", optional=true)
-    public boolean symmetric_indels = DEFAULT_SYMMETRIC_INDELS;
+    public boolean symmetricIndels = DEFAULT_SYMMETRIC_INDELS;
 
     @Advanced
     @Argument(fullName = REPORT_INS_OR_DEL, doc = "Report either insertion or deletion, probability, not both", optional=true)
-    public boolean only_ins_or_del = DEFAULT_ONLY_INS_OR_DEL;
+    public boolean onlyInsOrDel = DEFAULT_ONLY_INS_OR_DEL;
 
     @Advanced
     @Argument(fullName = DISALLOW_LARGER_PROBS, doc = "Cap probabilities of error to 1 relative to base call", optional=true)
-    public boolean disallow_larger_probs = DEFAULT_DISALLOW_LARGER_PROBS;
+    public boolean disallowLargerProbs = DEFAULT_DISALLOW_LARGER_PROBS;
 
     @Advanced
     @Argument(fullName = LUMP_PROBS, doc = "Should all probabilities of insertion or deletion in the flow be combined together", optional=true)
-    public boolean lump_probs = DEFAULT_LUMP_PROBS;
+    public boolean lumpProbs = DEFAULT_LUMP_PROBS;
 
     @Advanced
     @Argument(fullName = RETAIN_MAX_N_PROBS_BASE, doc = "Keep only hmer/2 probabilities (like in base format)", optional=true)
