@@ -4,13 +4,14 @@ import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMFileHeader;
 import org.apache.commons.lang3.tuple.Pair;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
+import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.utils.BaseUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
 /**
  * A common base class for flow based filters which test for conditions on an hmer basis
  */
-public abstract class FlowBasedHmerBasedReadFilter extends ReadFilter {
+public class FlowBasedHmerBasedReadFilter extends ReadFilter {
 
     private static final long serialVersionUID = 1l;
 
@@ -19,10 +20,14 @@ public abstract class FlowBasedHmerBasedReadFilter extends ReadFilter {
     }
 
     // provide the area of values associated with read hmers
-    abstract protected byte[] getValuesOfInterest(final GATKRead read);
+    protected byte[] getValuesOfInterest(final GATKRead read) {
+        throw new GATKException("FlowBasedHmerBasedReadFilter: should not be used directly");
+    }
 
     // check that the range of values associated with a single hmer are passing the filter
-    abstract protected boolean testHmer(final byte[] values, final int hmerStartingOffset, final int hmerLength);
+    protected boolean testHmer(final byte[] values, final int hmerStartingOffset, final int hmerLength) {
+        throw new GATKException("FlowBasedHmerBasedReadFilter: should not be used directly");
+    }
 
     // check if an area is a palindrome
     protected boolean isPalindrome(final byte[] values, final int ofs, final int length) {

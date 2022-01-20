@@ -39,20 +39,31 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
                 FlowBasedTPAttributeValidReadFilter.class
         }
 )
-public final class WellformedFlowBasedReadFilter extends WellformedReadFilter {
+public final class WellformedFlowBasedReadFilter extends ReadFilter {
     private static final long serialVersionUID = 1l;
+
+    private ReadFilter wellFormedFilter = null;
 
     public WellformedFlowBasedReadFilter() {
 
     }
 
     @Override
-    protected ReadFilter createFilter() {
+    public void setHeader(SAMFileHeader header) {
+        super.setHeader(header);
+        createFilter();
+    }
 
-        return ReadFilterLibrary.READ_GROUP_HAS_FLOW_ORDER_READ_FILTER
+    private void createFilter() {
+
+        wellFormedFilter = (new ReadGroupHasFlowOrderReadFilter(samHeader))
                 .and(ReadFilterLibrary.HMER_QUALITY_SYMETRIC_READ_FILTER)
                 .and(ReadFilterLibrary.FLOW_BASED_TP_ATTRIBUTE_VALID_READ_FILTER)
                 .and(ReadFilterLibrary.FLOW_BASED_TP_ATTRIBUTE_SYMETRIC_READ_FILTER);
     }
 
+    @Override
+    public boolean test(final GATKRead read ) {
+        return wellFormedFilter.test(read);
+    }
 }

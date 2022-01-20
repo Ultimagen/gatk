@@ -52,18 +52,17 @@ public class WellformedReadFilter extends ReadFilter {
     @Override
     public void setHeader(SAMFileHeader header) {
         super.setHeader(header);
-        wellFormedFilter = createFilter();
-        wellFormedFilter.setHeader(header);
+        createFilter();
     }
 
     public WellformedReadFilter(final SAMFileHeader header) {
         setHeader(header);
     }
 
-    protected ReadFilter createFilter() {
+    private void createFilter() {
         final AlignmentAgreesWithHeaderReadFilter alignmentAgreesWithHeader = new AlignmentAgreesWithHeaderReadFilter(samHeader);
 
-        return ReadFilterLibrary.VALID_ALIGNMENT_START
+        wellFormedFilter = ReadFilterLibrary.VALID_ALIGNMENT_START
                 .and(ReadFilterLibrary.VALID_ALIGNMENT_END)
                 .and(alignmentAgreesWithHeader)
                 .and(ReadFilterLibrary.HAS_READ_GROUP)
