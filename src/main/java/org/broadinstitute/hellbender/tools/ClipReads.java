@@ -4,7 +4,6 @@ import htsjdk.samtools.reference.ReferenceSequence;
 import htsjdk.samtools.reference.ReferenceSequenceFile;
 import htsjdk.samtools.reference.ReferenceSequenceFileFactory;
 import htsjdk.samtools.util.StringUtil;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -20,7 +19,6 @@ import org.broadinstitute.hellbender.engine.FeatureContext;
 import org.broadinstitute.hellbender.engine.GATKPath;
 import org.broadinstitute.hellbender.engine.ReadWalker;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
-import org.broadinstitute.hellbender.tools.walkers.annotator.InbreedingCoeff;
 import org.broadinstitute.hellbender.utils.BaseUtils;
 import org.broadinstitute.hellbender.utils.clipping.ClippingOp;
 import org.broadinstitute.hellbender.utils.clipping.ClippingRepresentation;
@@ -147,7 +145,8 @@ import java.util.regex.Pattern;
 public final class ClipReads extends ReadWalker {
 
     private final Logger logger = LogManager.getLogger(ClipReads.class);
-    private static final OneShotLogger oneShotLogger = new OneShotLogger(ClipReads.class);
+    private static final OneShotLogger tooShortOneShotLogger = new OneShotLogger(ClipReads.class);
+    private static final OneShotLogger noAttrOneShotLogger = new OneShotLogger(ClipReads.class);
 
     public static final String OUTPUT_STATISTICS_LONG_NAME = "output-statistics";
     public static final String OUTPUT_STATISTICS_SHORT_NAME = "os";
@@ -527,7 +526,10 @@ public final class ClipReads extends ReadWalker {
                 clipper.addOp(xf_clip);
                 addAdapterTag(clipper, FIVE_PRIME_TRIMMING_TAG);
                 data.incNAdapterClippedBases(xf);
+            }
 
+            if ( (xf == null) && (xt == null)) {
+                noAttrOneShotLogger.warn("clipAdapter requested, yet neither XF not XT attributes found. first read: " + read);
             }
         }
 
@@ -550,7 +552,7 @@ public final class ClipReads extends ReadWalker {
         GATKRead clippedRead = clipper.clipRead(clippingRepresentation);
         if ( minReadLength > 0 ) {
             if (clippedRead.isPaired()){
-                oneShotLogger.warn("Limit on the read length is not implemented for PE reads. continuing anyway. first read:" + clippedRead);
+                tooShortOneShotLogger.warn("Limit on the read length is not implemented for PE reads. continuing anyway. first read:" + clippedRead);
             }
         }
         if (clippedRead.getLength() >= minReadLength) {
