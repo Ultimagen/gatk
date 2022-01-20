@@ -227,7 +227,7 @@ public final class ClipReads extends ReadWalker {
     @Argument(fullName=READ_LONG_NAME, shortName = READ_SHORT_NAME, doc="", optional = true)
     String onlyDoRead = null;
 
-    @Argument(fullName = CLIP_ADAPTER_LONG_NAME, shortName = CLIP_ADAPTER_SHORT_NAME, doc = "Clip locations according to XF, XT tags", optional = true)
+    @Argument(fullName = CLIP_ADAPTER_LONG_NAME, shortName = CLIP_ADAPTER_SHORT_NAME, doc = "Clip locations according to XF, XT tags. This will destroy reads which have none of these tags", optional = true)
     boolean clipAdapter = false;
 
     //Note: relevant only to the single ended reads
