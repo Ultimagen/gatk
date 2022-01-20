@@ -74,10 +74,10 @@ public class GenotypeGVCFsEngine
      * @param genotypeArgs command-line arguments for the GenotypeGVCFs caller
      * @param includeNonVariants true to save INFO header names that require alt alleles
      * @param inputVCFHeader header for the VCF
-     * @param keepSB
+     * @param keepSB keep SB attribute (STRAND_BIAS_BY_SAMPLE)
      */
     public GenotypeGVCFsEngine(final VariantAnnotatorEngine annotationEngine, final GenotypeCalculationArgumentCollection genotypeArgs,
-                               final boolean includeNonVariants, final VCFHeader inputVCFHeader, boolean keepSB)
+                               final boolean includeNonVariants, final VCFHeader inputVCFHeader, final boolean keepSB)
     {
         this.annotationEngine = annotationEngine;
         this.genotypeArgs = genotypeArgs;
