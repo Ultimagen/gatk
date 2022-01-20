@@ -33,7 +33,7 @@ public class SAMRecordToGATKReadAdapter implements GATKRead, Serializable {
     private transient Integer cachedCigarLength = null;
 
     // reads with of flow-based origin might contain these attributes which are sequence (length and content) dependent
-    private static final String[] ATTRIBUTES_TO_HARD_CLIP = new String[]{FlowBasedRead.FLOW_MATRiX_OLD_TAG_TI, FlowBasedRead.FLOW_MATRiX_TAG_NAME};
+    private static final String[] ATTRIBUTES_TO_HARD_CLIP = new String[]{FlowBasedRead.FLOW_MATRiX_OLD_TAG_TI, FlowBasedRead.FLOW_MATRIX_TAG_NAME};
 
     private void clearCachedValues() {
         cachedSoftStart = null;

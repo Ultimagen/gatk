@@ -49,9 +49,9 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     // Z - "three zeros" clipped
     public static String        CLIPPING_TAG_NAME = "tm";
 
-    public static String        FLOW_MATRiX_TAG_NAME = "tp";
-    public static String        FLOW_MATRiX_OLD_TAG_KR = "kr";
-    public static String        FLOW_MATRiX_OLD_TAG_TI = "ti";
+    public static String FLOW_MATRIX_TAG_NAME = "tp";
+    public static String FLOW_MATRiX_OLD_TAG_KR = "kr";
+    public static String FLOW_MATRiX_OLD_TAG_TI = "ti";
 
 
     /**
@@ -203,7 +203,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         else {
             if (samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_TI)) {
                 readBaseMatrixRecal(_flowOrder);
-            } else if (samRecord.hasAttribute(FLOW_MATRiX_TAG_NAME)) {
+            } else if (samRecord.hasAttribute(FLOW_MATRIX_TAG_NAME)) {
                 readBaseMatrixProb(_flowOrder);
             }
         }
@@ -340,7 +340,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         // access qual, convert to flow representation
         final byte[]      quals = samRecord.getBaseQualities();
-        final byte[]      tp = samRecord.getSignedByteArrayAttribute(FLOW_MATRiX_TAG_NAME);
+        final byte[]      tp = samRecord.getSignedByteArrayAttribute(FLOW_MATRIX_TAG_NAME);
         final double[]    probs = new double[quals.length];
         for ( int i = 0 ; i < quals.length ; i++ ) {
             final double q = quals[i];
@@ -486,7 +486,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     }
 
     private boolean isBaseFormat() {
-       return samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_TI) || samRecord.hasAttribute(FLOW_MATRiX_TAG_NAME);
+       return samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_TI) || samRecord.hasAttribute(FLOW_MATRIX_TAG_NAME);
     }
 
 
