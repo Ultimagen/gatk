@@ -184,7 +184,7 @@ public abstract class AssemblyBasedCallerArgumentCollection {
      */
     @Advanced
     @Argument(fullName = "reference-model-deletion-quality", doc = "The quality of deletion in the reference model", optional = true)
-    public byte refModelDelQual= 30;
+    public byte refModelDelQual= ReferenceConfidenceModel.REF_MODEL_DELETION_QUAL;
 
 
     @Advanced

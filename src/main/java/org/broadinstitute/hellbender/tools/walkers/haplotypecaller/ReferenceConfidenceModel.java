@@ -71,9 +71,7 @@ public class ReferenceConfidenceModel {
      * when assessing the confidence on the hom-ref call at that site.
      * </p>
      */
-
-
-    private static final byte MAX_QUAL_FOR_ACTIVE_REGION = 20;
+    public static final byte REF_MODEL_DELETION_QUAL = 30;
 
     /**
      * Base calls with quality threshold lower than this number won't be considered when assessing the
