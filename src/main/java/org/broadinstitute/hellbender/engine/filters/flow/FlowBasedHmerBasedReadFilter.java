@@ -12,12 +12,10 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
  */
 public abstract class FlowBasedHmerBasedReadFilter extends ReadFilter {
 
+    private static final long serialVersionUID = 1l;
+
     public FlowBasedHmerBasedReadFilter() {
 
-    }
-
-    public FlowBasedHmerBasedReadFilter(final SAMFileHeader header) {
-        setHeader(header);
     }
 
     // provide the area of values associated with read hmers

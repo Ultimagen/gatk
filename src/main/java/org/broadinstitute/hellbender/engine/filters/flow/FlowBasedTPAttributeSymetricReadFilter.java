@@ -19,10 +19,6 @@ public class FlowBasedTPAttributeSymetricReadFilter extends FlowBasedHmerBasedRe
         super();
     }
 
-    public FlowBasedTPAttributeSymetricReadFilter(final SAMFileHeader header) {
-        super(header);
-    }
-
     @Override
     protected byte[] getValuesOfInterest(final GATKRead read) {
         return read.getAttributeAsByteArray(FlowBasedRead.FLOW_MATRIX_TAG_NAME);

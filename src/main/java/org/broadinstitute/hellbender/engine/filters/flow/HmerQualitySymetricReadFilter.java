@@ -20,10 +20,6 @@ public class HmerQualitySymetricReadFilter extends FlowBasedHmerBasedReadFilter 
         super();
     }
 
-    public HmerQualitySymetricReadFilter(final SAMFileHeader header) {
-        super(header);
-    }
-
     @Override
     protected byte[] getValuesOfInterest(final GATKRead read) {
         return read.getBaseQualitiesNoCopy();
