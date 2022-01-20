@@ -20,10 +20,12 @@ import org.broadinstitute.hellbender.engine.FeatureContext;
 import org.broadinstitute.hellbender.engine.GATKPath;
 import org.broadinstitute.hellbender.engine.ReadWalker;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
+import org.broadinstitute.hellbender.tools.walkers.annotator.InbreedingCoeff;
 import org.broadinstitute.hellbender.utils.BaseUtils;
 import org.broadinstitute.hellbender.utils.clipping.ClippingOp;
 import org.broadinstitute.hellbender.utils.clipping.ClippingRepresentation;
 import org.broadinstitute.hellbender.utils.clipping.ReadClipper;
+import org.broadinstitute.hellbender.utils.logging.OneShotLogger;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.SAMFileGATKReadWriter;
 import picard.cmdline.programgroups.ReadDataManipulationProgramGroup;
@@ -145,6 +147,7 @@ import java.util.regex.Pattern;
 public final class ClipReads extends ReadWalker {
 
     private final Logger logger = LogManager.getLogger(ClipReads.class);
+    private static final OneShotLogger oneShotLogger = new OneShotLogger(ClipReads.class);
 
     public static final String OUTPUT_STATISTICS_LONG_NAME = "output-statistics";
     public static final String OUTPUT_STATISTICS_SHORT_NAME = "os";
@@ -229,7 +232,7 @@ public final class ClipReads extends ReadWalker {
     boolean clipAdapter = false;
 
     //Note: relevant only to the single ended reads
-    @Argument(fullName = MIN_READ_LENGTH_TO_REPORT_LONG_NAME, doc = "Shortest read to output", optional = true)
+    @Argument(fullName = MIN_READ_LENGTH_TO_REPORT_LONG_NAME, doc = "Shortest read to output. Note that this works correctly only on non-paired reads.", optional = true)
     private final Integer minReadLength = 0;
 
     /**
@@ -547,7 +550,7 @@ public final class ClipReads extends ReadWalker {
         GATKRead clippedRead = clipper.clipRead(clippingRepresentation);
         if ( minReadLength > 0 ) {
             if (clippedRead.isPaired()){
-                throw(new NotImplementedException("Limit on the read length is not implemented for PE reads"));
+                oneShotLogger.warn("Limit on the read length is not implemented for PE reads. continuing anyway. first read:" + clippedRead);
             }
         }
         if (clippedRead.getLength() >= minReadLength) {
