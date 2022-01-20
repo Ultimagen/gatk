@@ -8,69 +8,30 @@ import org.broadinstitute.hellbender.utils.BaseUtils;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
-public class FlowBasedTPAttributeSymetricReadFilter extends ReadFilter {
+/**
+ * A read filter to test if the TP values for each hmer in a flow based read form
+ * a polindrome (as they should)
+ */
+public class FlowBasedTPAttributeSymetricReadFilter extends FlowBasedHmerBasedReadFilter {
     private static final long serialVersionUID = 1l;
 
     public FlowBasedTPAttributeSymetricReadFilter() {
-
+        super();
     }
 
     public FlowBasedTPAttributeSymetricReadFilter(final SAMFileHeader header) {
-        setHeader(header);
-    }
-
-    protected byte[] getValuesOfInterest(final GATKRead read) {
-        return read.getAttributeAsByteArray(FlowBasedRead.FLOW_MATRiX_TAG_NAME);
-    }
-
-    protected boolean checkHmer(final byte[] values, final int ofs, final int length) {
-
-        for (int i = 0; i < length; i++) {
-            if (values[ofs + i] != values[ofs + length - 1 - i]) {
-                return false;
-            }
-        }
-
-        return true;
+        super(header);
     }
 
     @Override
-    public boolean test(final GATKRead read) {
+    protected byte[] getValuesOfInterest(final GATKRead read) {
+        return read.getAttributeAsByteArray(FlowBasedRead.FLOW_MATRIX_TAG_NAME);
+    }
 
-        // access qualities
-        final byte[]        values = getValuesOfInterest(read);
-        if ( values == null )
-            return false;
+    @Override
+    protected boolean testHmer(final byte[] values, final int hmerStartingOffset, final int hmerLength) {
 
-        // establish if edges are hard clipped
-        final boolean       startHardClipped = read.getCigar().getFirstCigarElement().getOperator() == CigarOperator.HARD_CLIP;
-        final boolean       endHardClipped = read.getCigar().getLastCigarElement().getOperator() == CigarOperator.HARD_CLIP;
-
-        // iterate over hmers
-        final BaseUtils.HmerIterator      iter = new BaseUtils.HmerIterator(read.getBasesNoCopy());
-        int     ofs = 0;
-        while ( iter.hasNext() ) {
-
-            // find hmer
-            final Pair<Byte,Integer>  hmer = iter.next();
-            final int                 hmerLength = hmer.getRight();
-
-            // establish first/last
-            final boolean             first = ofs == 0;
-            final boolean             last = !iter.hasNext();
-
-            // skip edge hmers if hard clipped
-            if ( !((first && startHardClipped) || (last && endHardClipped)) ) {
-                if (!checkHmer(values, ofs, hmerLength)) {
-                    return false;
-                }
-            }
-
-            // advance
-            ofs += hmerLength;
-        }
-
-        // if here, all symetric
-        return true;
+        // check for symmetry
+        return isPalindrome(values, hmerStartingOffset, hmerLength);
     }
 }
