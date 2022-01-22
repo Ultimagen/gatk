@@ -127,14 +127,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private final FlowBasedAlignmentArgumentCollection fbargs;
 
     /**
-     * This matrix contains logic for modifying the flow matrix as it is read in.
-     *
-     * If the value of [n] is not zero, then the hmer probability for hmer length n will be copied to the [n] position
-     * For the implementation logic, see fillFlowMatrix
-     */
-    static private int[] flowMatrixModsInstructions = new int[MAXIMAL_MAXHMER];
-
-    /**
      * This allows tools to reduce/enlarge the lower limit of read size for clipping operations.
      */
     static private int minimalReadLength = MINIMAL_READ_LENGTH;
@@ -207,6 +199,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
                 readBaseMatrixProb(_flowOrder);
             }
         }
+        implementMatrixMods(fbargs.getFlowMatrixModsInstructions());
 
 
         //Spread boundary flow probabilities when the read is unclipped
@@ -578,18 +571,28 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             } else {
                 flowMatrix[hmer][pos] = Math.max(flowMatrix[hmer][pos], kdProbs[i]);
             }
-
-            // mod instruction implementation
-            final int hmer2 = flowMatrixModsInstructions[hmer];
-            if ( hmer2 != 0 ) {
-                flowMatrix[hmer2][pos] = Math.max(flowMatrix[hmer2][pos], kdProbs[i]);
-
-                // if we are copying bacwards, zero out source
-                if ( hmer > hmer2 )
-                    flowMatrix[hmer][pos] = 0;
-            }
         }
 
+    }
+
+    // execute the matrix modifications
+    private void implementMatrixMods(final int[] flowMatrixModsInstructions) {
+
+        for ( int hmer = 0 ; hmer < flowMatrixModsInstructions.length ; hmer++ ) {
+            final int hmer2 = flowMatrixModsInstructions[hmer];
+            if (hmer2 != 0) {
+                for ( int pos = 0 ; pos < flowMatrix[0].length ; pos++ ) {
+
+                    if ( flowMatrix[hmer][pos] > flowMatrix[hmer2][pos] ) {
+                        flowMatrix[hmer2][pos] = flowMatrix[hmer][pos];
+                    }
+
+                    // if we are copying bacwards, zero out source
+                    if (hmer > hmer2)
+                        flowMatrix[hmer][pos] = 0;
+                }
+            }
+        }
     }
 
 
@@ -1046,16 +1049,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
 
         return q.peek();
-    }
-
-
-    public static void setFlowMatrixMods(final String list) {
-        if ( list != null )
-        {
-            final String[]    toks = list.split(",");
-            for ( int i = 0 ; i < toks.length - 1 ; i += 2 )
-                flowMatrixModsInstructions[Integer.parseInt(toks[i])] = Integer.parseInt(toks[i+1]);
-        }
     }
 
     private double[] phredToProb(final int [] kq) {
