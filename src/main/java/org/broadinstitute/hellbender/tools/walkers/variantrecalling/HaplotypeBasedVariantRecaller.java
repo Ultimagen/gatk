@@ -128,7 +128,7 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                                 hcArgs.flowAssemblyCollapsePartialMode, refBases, haplotypeSpan, logger, false,
                                 SmithWatermanAligner.getAligner(SmithWatermanAligner.Implementation.FASTEST_AVAILABLE),
                                 hcArgs.getHaplotypeToReferenceSWParameters());
-                        processedHaplotypes.addAll(haplotypeCollapsing.uncollapseHaplotypes(bestHaplotypes, true, refBases));
+                        processedHaplotypes.addAll(haplotypeCollapsing.uncollapseHmersInHaplotypes(bestHaplotypes, true, refBases));
                     }
                     else {
                         processedHaplotypes.addAll(bestHaplotypes);

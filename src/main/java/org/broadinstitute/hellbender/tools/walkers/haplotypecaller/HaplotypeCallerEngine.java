@@ -848,7 +848,7 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
             List<Haplotype>     haplotypes = readLikelihoods.alleles();
 
-            haplotypes = assemblyResultSet.getHaplotypeCollapsing().uncollapseHaplotypes(haplotypes, false, null);
+            haplotypes = assemblyResultSet.getHaplotypeCollapsing().uncollapseHmersInHaplotypes(haplotypes, false, null);
             if ( logger.isDebugEnabled() ) {
                 logger.debug(String.format("%d haplotypes before uncollapsing", haplotypes.size()));
             }

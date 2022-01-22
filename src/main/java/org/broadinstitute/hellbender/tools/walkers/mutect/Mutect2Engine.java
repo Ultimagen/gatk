@@ -282,7 +282,7 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
         final AlleleLikelihoods<GATKRead, Haplotype> uncollapsedReadLikelihoods;
         if ( haplotypeCollapsing != null ) {
 
-            haplotypes = haplotypeCollapsing.uncollapseHaplotypes(haplotypes, false, null);
+            haplotypes = haplotypeCollapsing.uncollapseHmersInHaplotypes(haplotypes, false, null);
             logger.debug(String.format("%d haplotypes before uncollapsing", haplotypes.size()));
             Map<Haplotype, List<Haplotype>> identicalHaplotypesMap = LongHomopolymerHaplotypeCollapsingEngine.identicalBySequence(haplotypes);
             readLikelihoods.changeAlleles(haplotypes);
