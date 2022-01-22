@@ -3,6 +3,8 @@ package org.broadinstitute.hellbender.tools;
 import org.broadinstitute.barclay.argparser.Advanced;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.Hidden;
+import org.broadinstitute.hellbender.utils.Utils;
+import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 
 import java.io.Serializable;
 
@@ -25,6 +27,8 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     private static final String FIRST_UNCERTAIN_FLOW = "flow-nucleotide-of-first-uncertain-flow";
     private static final String FLOW_LIKELIHOOD_PARALLEL_THREADS = "flow-likelihood-parallel-threads";
     public static final String FLOW_LIKELIHOOD_OPTIMIZED_COMP = "flow-likelihood-optimized-comp";
+    public static final String FLOW_MATRIX_MODS_LONG_NAME = "flow-matrix-mods";
+
 
 
     private static final double DEFAULT_RATIO_THRESHOLD = 0.003;
@@ -111,6 +115,33 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     @Argument(fullName = FLOW_LIKELIHOOD_OPTIMIZED_COMP, doc = "Use optimized likelihood computation version", optional=true)
     public boolean flowLikelihoodOptimizedComp = false;
 
+    @Advanced
+    @Argument(fullName=FLOW_MATRIX_MODS_LONG_NAME, doc="Modifications to perform on the read flow matrix. Format is a list of src,dst,src,dst.... Operation is triggered when src is written. Example: 8,12,11,12", optional = true)
+    public String flowMatrixMods = null;
+
     public FlowBasedAlignmentArgumentCollection() {}
 
+
+    /**
+     * This matrix contains logic for modifying the flow matrix as it is read in.
+     *
+     * If the value of [n] is not zero, then the hmer probability for hmer length n will be copied to the [n] position
+     * For the implementation logic, see fillFlowMatrix
+     */
+    private int[] flowMatrixModsInstructions = null;
+
+    public int[] getFlowMatrixModsInstructions() {
+
+        if ( flowMatrixMods != null && flowMatrixModsInstructions == null ) {
+            flowMatrixModsInstructions = new int[FlowBasedRead.MAX_CLASS + 1];
+
+            final String[]    toks = flowMatrixMods.split(",");
+            for ( int i = 0 ; i < toks.length - 1 ; i += 2 ) {
+                final int hmer = Utils.validIndex(Integer.parseInt(toks[i]), flowMatrixModsInstructions.length);
+                flowMatrixModsInstructions[hmer] = Integer.parseInt(toks[i + 1]);
+            }
+        }
+
+        return flowMatrixModsInstructions;
+    }
 }

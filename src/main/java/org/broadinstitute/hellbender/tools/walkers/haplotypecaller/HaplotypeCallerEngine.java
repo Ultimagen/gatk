@@ -151,18 +151,6 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
      */
     public static final int DEFAULT_READ_QUALITY_FILTER_THRESHOLD = 20;
 
-    /**
-     * If checking for strand bias in isActive(), pileups where min(reverse strand alt count / forward strand alt count, forward strand alt count / reverse strand alt count)
-     * exceeds this threshold are automatically considered to be not a strand artifact, skipping the Fisher Exact test
-     */
-    private static final double STRAND_RATIO_TO_AUTOMATICALLY_ACCEPT_ACTIVE_PILEUP = 0.3;
-
-    /**
-     * If checking for strand bias in isActive(), pileups where min(reverse strand alt count / forward strand alt count, forward strand alt count / reverse strand alt count)
-     * is less than this threshold are automatically rejected as strand artifacts, skipping the Fisher Exact test
-     */
-    private static final double STRAND_RATIO_TO_AUTOMATICALLY_REJECT_ACTIVE_PILEUP = 0.1;
-
     protected static final List<VariantContext> NO_CALLS = Collections.emptyList();
 
     private static final Allele FAKE_REF_ALLELE = Allele.create("N", true); // used in isActive function to call into UG Engine. Should never appear anywhere in a VCF file
@@ -184,7 +172,6 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                                  ReferenceSequenceFile referenceReader, VariantAnnotatorEngine annotationEngine) {
         this.dragstrParams = DragstrParamUtils.parse(hcArgs.likelihoodArgs.dragstrParams);
         this.hcArgs = Utils.nonNull(hcArgs);
-        FlowBasedRead.setFlowMatrixMods(hcArgs.flowMatrixMods);
         this.readsHeader = Utils.nonNull(readsHeader);
         this.referenceReader = Utils.nonNull(referenceReader);
         this.annotationEngine = Utils.nonNull(annotationEngine);
