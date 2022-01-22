@@ -20,8 +20,7 @@ import java.util.List;
 import java.util.function.BiFunction;
 
 /**
- * Keep only reads that contain a tag with a value that agrees with parameters as specified.
- *
+ * Keep only reads that the attributes of meet a given set of jexl expressions
  */
 @DocumentedFeature(groupName = HelpConstants.DOC_CAT_READFILTERS, groupSummary = HelpConstants.DOC_CAT_READFILTERS_SUMMARY,
         summary = "Keep only reads that meet all given jexl expressions (on their attributes)")
