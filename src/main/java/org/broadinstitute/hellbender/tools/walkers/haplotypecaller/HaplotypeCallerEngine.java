@@ -702,9 +702,9 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
 
         // Calculate the likelihoods: CPU intensive part.
-        // flow based alignment might add an extra step of uncollapsing - implemented by uncollapseReadLikelihoods
+        // flow based alignment might add an extra step of uncollapsing - implemented by possiblyUncollapseHaplotypesInReadLikelihoods
         // non-flow based alignment will not be affected.
-        readLikelihoods = uncollapseReadLikelihoods(untrimmedAssemblyResult,
+        readLikelihoods = possiblyUncollapseHaplotypesInReadLikelihoods(untrimmedAssemblyResult,
                 hcArgs.stepwiseFiltering
                         ? filterStepLikelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads, true)
                         : likelihoodCalculationEngine.computeReadLikelihoods(assemblyResult, samplesList, reads, true));
@@ -822,8 +822,15 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
     }
 
-    // possibly uncollapse the haplotypes inside a read likelihood matrix
-    private AlleleLikelihoods<GATKRead, Haplotype> uncollapseReadLikelihoods(final AssemblyResultSet assemblyResultSet, final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods) {
+    /*
+     * possibly uncollapse the haplotypes inside a read likelihood matrix
+     *
+     * At this stage, the Haplotypes in the likelihod matrix are derived from the reads. If the reads
+     * are flow reads, then they are essentially collapsed, i.e. their maximal hmer size is limited
+     * by the flow format's maxHmer. The method uncollapses the haplotypes to be consistant, as much
+     * as possible (or applicable) according to the reference.
+     */
+    private AlleleLikelihoods<GATKRead, Haplotype> possiblyUncollapseHaplotypesInReadLikelihoods(final AssemblyResultSet assemblyResultSet, final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods) {
 
         if ( assemblyResultSet.getHaplotypeCollapsing() != null ) {
 
