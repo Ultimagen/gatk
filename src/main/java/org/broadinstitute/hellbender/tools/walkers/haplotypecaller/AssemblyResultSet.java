@@ -577,10 +577,8 @@ public final class AssemblyResultSet {
         this.haplotypeCollapsing = haplotypeCollapsing;
     }
 
-    public void replaceAllHaplotypes(Set<Haplotype> list) {
+    public void clearHaplotypes() {
         haplotypes.clear();;
         refHaplotype = null;
-        for ( Haplotype h : list )
-            add(h);
     }
 }

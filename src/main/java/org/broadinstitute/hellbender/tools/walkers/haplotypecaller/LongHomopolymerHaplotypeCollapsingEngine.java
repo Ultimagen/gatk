@@ -426,4 +426,10 @@ public class LongHomopolymerHaplotypeCollapsingEngine {
 
         return result;
     }
+
+    public void replaceAllHaplotypes(final AssemblyResultSet assemblyResultSet, final Set<Haplotype> list) {
+        assemblyResultSet.clearHaplotypes();
+        for ( Haplotype h : list )
+            assemblyResultSet.add(h);
+    }
 }

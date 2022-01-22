@@ -417,9 +417,6 @@ public final class ReadThreadingAssembler {
                 }
 
                 returnHaplotypes.add(refHaplotype);
-                if (resultSet != null) {
-                    resultSet.replaceAllHaplotypes(returnHaplotypes);
-                }
             }
 
 
@@ -427,7 +424,7 @@ public final class ReadThreadingAssembler {
             if ( resultSet != null && resultSet.getHaplotypeCollapsing() != null ) {
                 returnHaplotypes = new LinkedHashSet<>(resultSet.getHaplotypeCollapsing().uncollapseHaplotypes(resultSet.getHaplotypeList(), true, null));
                 if (resultSet!=null) { //linkedDebruijnGraph does not  have a resultSet?
-                    resultSet.replaceAllHaplotypes(returnHaplotypes);
+                    resultSet.getHaplotypeCollapsing().replaceAllHaplotypes(resultSet, returnHaplotypes);
                 }
             }
 
