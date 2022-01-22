@@ -128,7 +128,6 @@ public class ModularHaplotypeCallerEngine extends RampedHaplotypeCallerEngine {
             return;
         }
 
-        //logger.info(region.toString());
         context.VCpriors = new ArrayList<>();
         if (hcArgs.standardArgs.genotypeArgs.supportVariants != null) {
             context.features.getValues(hcArgs.standardArgs.genotypeArgs.supportVariants).stream().forEach(context.VCpriors::add);
