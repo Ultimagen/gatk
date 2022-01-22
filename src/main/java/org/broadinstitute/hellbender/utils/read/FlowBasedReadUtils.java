@@ -82,6 +82,8 @@ public class FlowBasedReadUtils {
     }
 
     public static boolean isFlow(GATKRead rec) {
-        return rec.hasAttribute(FlowBasedRead.CLIPPING_TAG_NAME);
+        return rec.hasAttribute(FlowBasedRead.CLIPPING_TAG_NAME)
+                || rec.hasAttribute(FlowBasedRead.FLOW_MATRiX_OLD_TAG_KR)
+                || rec.hasAttribute(FlowBasedRead.FLOW_MATRiX_OLD_TAG_TI);
     }
 }
