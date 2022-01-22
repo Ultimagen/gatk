@@ -585,7 +585,6 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             HaplotypeCallerGenotypingDebugger.println("calling for region: " +region.getSpan());
         }
 
-        //logger.info(region.toString());
         final List<VariantContext> VCpriors = new ArrayList<>();
         if (hcArgs.standardArgs.genotypeArgs.supportVariants != null) {
             features.getValues(hcArgs.standardArgs.genotypeArgs.supportVariants).stream().forEach(VCpriors::add);
