@@ -140,7 +140,17 @@ public class LongHomopolymerHaplotypeCollapsingEngine {
         return result;
     }
 
-    public List<Haplotype> uncollapseHaplotypes(final Collection<Haplotype> haplotypes, final boolean limit, final byte[] refBasesArg) {
+    /**
+     * This method is the main functional part of the uncollapsing engine. It takes a list of haplotypes and
+     * generates a corrosponding list of new haplotypes which have their bases "uncollapse" according to the
+     * given reference. For a definition of uncollapsing, please see the class definition.
+     *
+     * @param haplotypes                       - input haplotypes
+     * @param limitToHmerSizeThreshold         - limit resulting long hmers to MmerSizeThreshold
+     * @param refBasesArg                      - related reference sequence
+     * @return                                 - list of uncollapsed haplotypes
+     */
+    public List<Haplotype> uncollapseHmersInHaplotypes(final Collection<Haplotype> haplotypes, final boolean limitToHmerSizeThreshold, final byte[] refBasesArg) {
 
         final List<Haplotype>       result = new LinkedList<>();
         final Map<Locatable, byte[]> refMap = new LinkedHashMap<>();
@@ -165,7 +175,7 @@ public class LongHomopolymerHaplotypeCollapsingEngine {
 
         // uncollapse haplotypes
         for ( Haplotype h : haplotypes ) {
-            final Haplotype alignedHaplotype = uncollapseSingleHaplotype(h, limit, refMap);
+            final Haplotype alignedHaplotype = uncollapseSingleHaplotype(h, limitToHmerSizeThreshold, refMap);
             alignedHaplotype.setUniquenessValue(result.size());
             result.add(alignedHaplotype);
         }
@@ -185,7 +195,7 @@ public class LongHomopolymerHaplotypeCollapsingEngine {
         return result;
     }
 
-    private Haplotype uncollapseSingleHaplotype(final Haplotype h, final boolean limit, final Map<Locatable, byte[]> refMap) {
+    private Haplotype uncollapseSingleHaplotype(final Haplotype h, final boolean limitToHmerSizeThreshold, final Map<Locatable, byte[]> refMap) {
 
         if ( !h.isReference() ) {
 
@@ -202,7 +212,7 @@ public class LongHomopolymerHaplotypeCollapsingEngine {
             final UncollapseResult      result = (resultRev.bases.length > resultFwd.bases.length) ? resultRev : resultFwd;
 
             // limit?
-            if ( limit ) {
+            if ( limitToHmerSizeThreshold ) {
                 result.bases = collapseBases(result.bases);
             }
 

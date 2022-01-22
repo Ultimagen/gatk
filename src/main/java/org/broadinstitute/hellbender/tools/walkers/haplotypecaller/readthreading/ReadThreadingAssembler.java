@@ -421,7 +421,7 @@ public final class ReadThreadingAssembler {
 
             // uncollapse haplotypes now?
             if ( resultSet != null && resultSet.getHaplotypeCollapsing() != null ) {
-                returnHaplotypes = new LinkedHashSet<>(resultSet.getHaplotypeCollapsing().uncollapseHaplotypes(resultSet.getHaplotypeList(), true, null));
+                returnHaplotypes = new LinkedHashSet<>(resultSet.getHaplotypeCollapsing().uncollapseHmersInHaplotypes(resultSet.getHaplotypeList(), true, null));
                 if (resultSet!=null) { //linkedDebruijnGraph does not  have a resultSet?
                     resultSet.getHaplotypeCollapsing().replaceAllHaplotypes(resultSet, returnHaplotypes);
                 }
