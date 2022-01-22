@@ -235,13 +235,12 @@ public class HaplotypeBAMWriter implements AutoCloseable {
 
         // add special
         record.setAttribute(AssemblyBasedCallerUtils.EXT_SPECIAL_TAG,
-                String.format("%d,%s,%d,%s",
-                                    haplotype.isReference() ? 1 : 0,
-                                    Double.toString(haplotype.getScore()),
-                                    haplotype.getAlignmentStartHapwrtRef(),
-                                    (callableRegion == null)
-                                            ? "" : String.format("%s:%d-%d", callableRegion.getContig(),
-                                                    callableRegion.getStart(), callableRegion.getEnd())));
+                        (haplotype.isReference() ? "1" : "0") + ","
+                                    + haplotype.getScore() + ","
+                                    + haplotype.getAlignmentStartHapwrtRef() + ","
+                                    + ((callableRegion == null)
+                                            ? "" : (callableRegion.getContig() + ":"
+                                                    + callableRegion.getStart() + "-" + callableRegion.getEnd())));
 
         output.add(new SAMRecordToGATKReadAdapter(record));
     }
