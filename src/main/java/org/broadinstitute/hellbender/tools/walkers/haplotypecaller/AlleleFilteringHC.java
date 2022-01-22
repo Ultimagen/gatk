@@ -43,7 +43,8 @@ public class AlleleFilteringHC extends AlleleFiltering {
      * @param allele
      * @return
      */
-    int getAlleleLikelihood(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele) {
+    @Override
+    int getAlleleLikelihoodVsInverse(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele) {
         final Allele notAllele = InverseAllele.of(allele, true);
 
         // iterate over contigs and see what their qual is.

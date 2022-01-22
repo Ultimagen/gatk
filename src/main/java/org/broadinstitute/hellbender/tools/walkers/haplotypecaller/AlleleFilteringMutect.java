@@ -44,7 +44,8 @@ public class AlleleFilteringMutect extends AlleleFiltering {
      * @return
      */
 
-    int getAlleleLikelihood(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele) {
+    @Override
+    int getAlleleLikelihoodVsInverse(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele) {
 
         final List<LikelihoodMatrix<GATKRead, Allele>> allMatrices = IntStream.range(0, alleleLikelihoods.numberOfSamples())
                 .mapToObj(alleleLikelihoods::sampleMatrix)
