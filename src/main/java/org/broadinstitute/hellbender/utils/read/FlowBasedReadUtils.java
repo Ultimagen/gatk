@@ -2,6 +2,7 @@ package org.broadinstitute.hellbender.utils.read;
 
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMReadGroupRecord;
+import htsjdk.samtools.SAMRecord;
 
 /**
  * utility class for flow based read
@@ -86,4 +87,12 @@ public class FlowBasedReadUtils {
                 || rec.hasAttribute(FlowBasedRead.FLOW_MATRiX_OLD_TAG_KR)
                 || rec.hasAttribute(FlowBasedRead.FLOW_MATRiX_OLD_TAG_TI);
     }
+
+    public static boolean isFlow(SAMRecord rec) {
+        return (rec.hasAttribute(FlowBasedRead.CLIPPING_TAG_NAME)
+                || rec.hasAttribute(FlowBasedRead.FLOW_MATRiX_OLD_TAG_KR)
+                || rec.hasAttribute(FlowBasedRead.FLOW_MATRiX_OLD_TAG_TI))
+                && (rec.getReadGroup().getFlowOrder() != null);
+    }
+
 }
