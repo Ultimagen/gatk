@@ -129,6 +129,7 @@ public final class ReadThreadingAssembler {
      * @param refLoc                    GenomeLoc object corresponding to the reference sequence with padding
      * @param readErrorCorrector        a ReadErrorCorrector object, if read are to be corrected before assembly. Can be null if no error corrector is to be used.
      * @param aligner                   {@link SmithWatermanAligner} used to align dangling ends and haplotypes to the reference sequence
+     * @param haplotypeCollapsing       an optional engine for handling long hmer collapsing (used only inflow mode)
      * @param danglingEndSWParameters   {@link SWParameters} used to align dangling ends to the reference sequence
      * @param haplotypeToReferenceSWParameters  {@link SWParameters} used to align haplotypes to the reference sequence
      * @return                          the resulting assembly-result-set
@@ -142,8 +143,7 @@ public final class ReadThreadingAssembler {
                                               final SmithWatermanAligner aligner,
                                               final LongHomopolymerHaplotypeCollapsingEngine haplotypeCollapsing,
                                               final SWParameters danglingEndSWParameters,
-                                              final SWParameters haplotypeToReferenceSWParameters,
-                                              final boolean bypassAssembly) {
+                                              final SWParameters haplotypeToReferenceSWParameters) {
         Utils.nonNull(assemblyRegion, "Assembly engine cannot be used with a null AssemblyRegion.");
         Utils.nonNull(assemblyRegion.getPaddedSpan(), "Active region must have an extended location.");
         Utils.nonNull(refHaplotype, "Reference haplotype cannot be null.");
@@ -172,15 +172,13 @@ public final class ReadThreadingAssembler {
         resultSet.add(refHaplotype);
         resultSet.setHaplotypeCollapsing(haplotypeCollapsing);
 
-        if ( !bypassAssembly ) {
-            // either follow the old method for building graphs and then assembling or assemble and haplotype call before expanding kmers
-            if (generateSeqGraph) {
-                assembleKmerGraphsAndHaplotypeCall(refHaplotype, refLoc, header, aligner, danglingEndSWParameters,
-                        haplotypeToReferenceSWParameters, correctedReads, nonRefSeqGraphs, resultSet, activeRegionExtendedLocation);
-            } else {
-                assembleGraphsAndExpandKmersGivenHaplotypes(refHaplotype, refLoc, header, aligner,
-                        danglingEndSWParameters, haplotypeToReferenceSWParameters, correctedReads, nonRefRTGraphs, resultSet, activeRegionExtendedLocation);
-            }
+        // either follow the old method for building graphs and then assembling or assemble and haplotype call before expanding kmers
+        if (generateSeqGraph) {
+            assembleKmerGraphsAndHaplotypeCall(refHaplotype, refLoc, header, aligner, danglingEndSWParameters,
+                    haplotypeToReferenceSWParameters, correctedReads, nonRefSeqGraphs, resultSet, activeRegionExtendedLocation);
+        } else {
+            assembleGraphsAndExpandKmersGivenHaplotypes(refHaplotype, refLoc, header, aligner,
+                    danglingEndSWParameters, haplotypeToReferenceSWParameters, correctedReads, nonRefRTGraphs, resultSet, activeRegionExtendedLocation);
         }
 
         // If we get to this point then no graph worked... thats bad and indicates something horrible happened, in this case we just return a reference haplotype
@@ -923,5 +921,25 @@ public final class ReadThreadingAssembler {
                         queue.stream().limit(200).forEachOrdered(vc -> assembledEventMapVcfOutputWriter.get().add(vc));
                     }
                     queue.add(event);}));
+    }
+
+    public AssemblyResultSet generateEmptyLLocalAssemblyResult(final AssemblyRegion assemblyRegion,
+                                              final Haplotype refHaplotype,
+                                              final byte[] fullReferenceWithPadding,
+                                              final SimpleInterval refLoc,
+                                              final LongHomopolymerHaplotypeCollapsingEngine haplotypeCollapsing
+                                              ) {
+
+        final AssemblyResultSet resultSet = new AssemblyResultSet();
+        resultSet.setRegionForGenotyping(assemblyRegion);
+        resultSet.setFullReferenceWithPadding(fullReferenceWithPadding);
+        resultSet.setPaddedReferenceLoc(refLoc);
+
+        final SimpleInterval activeRegionExtendedLocation = assemblyRegion.getPaddedSpan();
+        refHaplotype.setGenomeLocation(activeRegionExtendedLocation);
+        resultSet.add(refHaplotype);
+        resultSet.setHaplotypeCollapsing(haplotypeCollapsing);
+
+        return resultSet;
     }
 }
