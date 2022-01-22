@@ -123,7 +123,7 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                     LongHomopolymerHaplotypeCollapsingEngine haplotypeCollapsing = null;
                     final List<Haplotype> processedHaplotypes = new LinkedList<>();
                     if ( (hcArgs.flowAssemblyCollapseHKerSize > 0)
-                                    && LongHomopolymerHaplotypeCollapsingEngine.needsCollapsing(refBases, hcArgs.flowAssemblyCollapseHKerSize, logger, false) ) {
+                                    && LongHomopolymerHaplotypeCollapsingEngine.needsCollapsing(refBases, hcArgs.flowAssemblyCollapseHKerSize, logger) ) {
                         haplotypeCollapsing = new LongHomopolymerHaplotypeCollapsingEngine(hcArgs.flowAssemblyCollapseHKerSize,
                                 hcArgs.flowAssemblyCollapsePartialMode, refBases, haplotypeSpan, logger, false,
                                 SmithWatermanAligner.getAligner(SmithWatermanAligner.Implementation.FASTEST_AVAILABLE),

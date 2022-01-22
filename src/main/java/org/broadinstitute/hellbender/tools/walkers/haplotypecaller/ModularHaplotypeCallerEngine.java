@@ -500,7 +500,7 @@ public class ModularHaplotypeCallerEngine extends RampedHaplotypeCallerEngine {
 
         final LongHomopolymerHaplotypeCollapsingEngine haplotypeCollapsing =
                 (hcArgs.flowAssemblyCollapseHKerSize > 0
-                        && LongHomopolymerHaplotypeCollapsingEngine.needsCollapsing(refHaplotype.getBases(), hcArgs.flowAssemblyCollapseHKerSize, logger, hcArgs.assemblerArgs.debugAssembly))
+                        && LongHomopolymerHaplotypeCollapsingEngine.needsCollapsing(refHaplotype.getBases(), hcArgs.flowAssemblyCollapseHKerSize, logger))
                         ? new LongHomopolymerHaplotypeCollapsingEngine(hcArgs.flowAssemblyCollapseHKerSize, hcArgs.flowAssemblyCollapsePartialMode, fullReferenceWithPadding,
                         paddedReferenceLoc, logger, hcArgs.assemblerArgs.debugAssembly, aligner, hcArgs.getHaplotypeToReferenceSWParameters())
                         : null;

@@ -105,7 +105,7 @@ public class PostAssemblerOnRamp extends OnRampBase {
         assemblyResult.setFullReferenceWithPadding(refSeq.getBases());
 
         // refView
-        final LongHomopolymerHaplotypeCollapsingEngine haplotypeCollapsing = (hcArgs.flowAssemblyCollapseHKerSize > 0 && LongHomopolymerHaplotypeCollapsingEngine.needsCollapsing(assemblyResult.getReferenceHaplotype().getBases(), hcArgs.flowAssemblyCollapseHKerSize, logger, hcArgs.assemblerArgs.debugAssembly))
+        final LongHomopolymerHaplotypeCollapsingEngine haplotypeCollapsing = (hcArgs.flowAssemblyCollapseHKerSize > 0 && LongHomopolymerHaplotypeCollapsingEngine.needsCollapsing(assemblyResult.getReferenceHaplotype().getBases(), hcArgs.flowAssemblyCollapseHKerSize, logger))
                 ? new LongHomopolymerHaplotypeCollapsingEngine(hcArgs.flowAssemblyCollapseHKerSize, hcArgs.flowAssemblyCollapsePartialMode, assemblyResult.getFullReferenceWithPadding(),
                 paddedReferenceLoc, logger, hcArgs.assemblerArgs.debugAssembly, aligner, hcArgs.getHaplotypeToReferenceSWParameters())
                 : null;

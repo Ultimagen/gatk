@@ -77,7 +77,21 @@ public class LongHomopolymerHaplotypeCollapsingEngine {
         }
     }
 
-    public static boolean needsCollapsing(final byte[] bases, final int hmerSizeThreshold, final Logger logger, final boolean debug) {
+    /**
+     * Determine if given bases (normally a reference region) will require collapsing support for haplotypes created over it.
+     *
+     * Collapsing is applied when the reference contains hmers longer than a given threshold. Given flow representation,
+     * such hmer will not be correctly represented in haplotypes.
+     *
+     * This method is called by tools, such as HaplotypeCaller, to determine if this collapsing/uncollapsing engine
+     * should be deployed for a specific region.
+     *
+     * @param bases - bases, of a reference region, to be examined
+     * @param hmerSizeThreshold - the hmer length threshold, above which, the existance of such an hmer will mark the region as needing collapsing
+     * @param logger - logger to use for debug message
+     * @return - boolean indicating of region related to set of the bases will benefit from collapsing
+     */
+    public static boolean needsCollapsing(final byte[] bases, final int hmerSizeThreshold, final Logger logger) {
 
         byte    lastBase = 0;
         int     baseSameCount = 0;
@@ -108,6 +122,15 @@ public class LongHomopolymerHaplotypeCollapsingEngine {
         return false;
     }
 
+    /**
+     * Given that collapsing and uncollapsing of a set of different (by sequence) haplotypes may result in
+     * duplicate haplotype, this method is a helper designed to re-index a result set of haplotypes and
+     * arrange them into group of distinct haplotypes.
+     *
+     * @param haplotypes - input haplotypes
+     * @return - a map consisting of entries in which the keys are again distinct (different from each other). The
+     * Associated values are all the haplotypes of the same sequence as the key (include itself).
+     */
     public static Map<Haplotype, List<Haplotype>> identicalBySequence(final List<Haplotype> haplotypes) {
 
         // create a map where each node's value contains a list of haplotypes with an identical sequence
@@ -336,8 +359,8 @@ public class LongHomopolymerHaplotypeCollapsingEngine {
                 // check if the incoming bases contain a homopolymer
                 final byte[] fwdSlice = Arrays.copyOfRange(bases, basesOfs, Math.min(basesOfs + hmerSizeThreshold, bases.length));
                 final byte[] bckSlice = Arrays.copyOfRange(bases, Math.max(0, basesOfs - hmerSizeThreshold), basesOfs);
-                if ( needsCollapsing(fwdSlice, hmerSizeThreshold - 1, logger, debug) ||
-                        needsCollapsing(bckSlice, hmerSizeThreshold - 1, logger, debug) ) {
+                if ( needsCollapsing(fwdSlice, hmerSizeThreshold - 1, logger) ||
+                        needsCollapsing(bckSlice, hmerSizeThreshold - 1, logger) ) {
 
 
                     // check for a delete at the end of an hmer or at the beginning

@@ -27,7 +27,7 @@ public class LongHomopolymerHaplotypeCollapsingEngineUnitTest extends GATKBaseTe
     @Test(dataProvider = "needsCollapsingDataProvider")
     public void testNeedsCollapsing(final String bases, final int threshold, final boolean expected) {
 
-        final boolean result = LongHomopolymerHaplotypeCollapsingEngine.needsCollapsing(bases.getBytes(), threshold, logger, false);
+        final boolean result = LongHomopolymerHaplotypeCollapsingEngine.needsCollapsing(bases.getBytes(), threshold, logger);
 
         Assert.assertEquals(result, expected);
     }
