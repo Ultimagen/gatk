@@ -34,7 +34,7 @@ public class AlleleFilteringHC extends AlleleFiltering {
     }
 
     /**
-     * Calculate calculate genotype likelihood of requirement of an allele. Specifically, calculates the likelihood
+     * Calculate genotype likelihood of requirement of an allele. Specifically, calculates the likelihood
      * of the data given that allele versus the likelihood of the data when all haplotypes containing the allele are removed
      * This is very similar to what is done in the genotyping engine, but here the haplotypes that do not support the allele
      * are all haplotypes that do not contain the allele.
