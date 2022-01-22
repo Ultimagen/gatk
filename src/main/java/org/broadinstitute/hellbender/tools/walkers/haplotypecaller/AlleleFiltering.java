@@ -198,7 +198,7 @@ public abstract class AlleleFiltering {
                                 haplotypeAlleleMap, activeHaplotypes)).collect(Collectors.toList());
                 //    c. Calculate SOR and RPL
                 // Note that the QUAL is calculated as a PL, that is -10*log likelihood. This means that high PL is low quality allele
-                final List<Integer> collectedRPLs = IntStream.range(0, activeAlleles.size()).mapToObj(i -> getAlleleLikelihood(alleleLikelihoods.get(i), activeAlleles.get(i))).collect(Collectors.toList());
+                final List<Integer> collectedRPLs = IntStream.range(0, activeAlleles.size()).mapToObj(i -> getAlleleLikelihoodVsInverse(alleleLikelihoods.get(i), activeAlleles.get(i))).collect(Collectors.toList());
                 final List<Double> collectedSORs = IntStream.range(0, activeAlleles.size()).mapToObj(i -> getAlleleSOR(alleleLikelihoods.get(i), activeAlleles.get(i))).collect(Collectors.toList());
 
                 //    d. Generate variants that are below SOR threshold and below RPL threshold
@@ -287,7 +287,7 @@ public abstract class AlleleFiltering {
     /**
      * Finds a list of alleles that are candidate for removal in the order of precedence (first - the best candidate to be removed)
      *
-     * @param collectedRPLs list of each allele qualities (collected by {@link AlleleFiltering#getAlleleLikelihood}
+     * @param collectedRPLs list of each allele qualities (collected by {@link AlleleFiltering#getAlleleLikelihoodVsInverse}
      * @param collectedSORs list of each allele SORs (collected by {@link AlleleFiltering#getAlleleSOR(AlleleLikelihoods, Allele)}
      * @param alleles list of alleles in the same order as in collectedRPLs/collectedSORs
      * @param qualThreshold only variants with quality below qualThreshold will be considered
@@ -361,7 +361,7 @@ public abstract class AlleleFiltering {
     }
 
     //functions to get allele likelihoods and SOR. Differ between the mutect and the HC implementations
-    abstract int getAlleleLikelihood(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele);
+    abstract int getAlleleLikelihoodVsInverse(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele);
 
     private double getAlleleSOR(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele) {
         final Allele notAllele = InverseAllele.of(allele, true);
@@ -508,7 +508,7 @@ public abstract class AlleleFiltering {
         final List<AlleleLikelihoods<GATKRead, Allele>> initialAlleleLikelihoods =
                 allAlleles.stream().map(c -> getAlleleLikelihoodMatrix(readLikelihoods, c, haplotypeAlleleMap, haplotypes)).collect(Collectors.toList());
 
-        final List<Integer> initialRPLs = IntStream.range(0, allAlleles.size()).mapToObj(i -> getAlleleLikelihood(initialAlleleLikelihoods.get(i),
+        final List<Integer> initialRPLs = IntStream.range(0, allAlleles.size()).mapToObj(i -> getAlleleLikelihoodVsInverse(initialAlleleLikelihoods.get(i),
                 allAlleles.get(i))).collect(Collectors.toList());
 
         for (int i = 0 ; i < allAlleles.size(); i++) {
@@ -541,7 +541,7 @@ public abstract class AlleleFiltering {
         final List<AlleleLikelihoods<GATKRead, Allele>> disabledAlleleLikelihood =
                 allelesWithoutDisabledAllele.stream().map(c -> getAlleleLikelihoodMatrix(readLikelihoods, c, haplotypeAlleleMap, haplotypesWithoutDisabledAllele)).collect(Collectors.toList());
 
-        final List<Integer> rplsWithoutAllele = IntStream.range(0, allelesWithoutDisabledAllele.size()).mapToObj(i -> getAlleleLikelihood(disabledAlleleLikelihood.get(i),
+        final List<Integer> rplsWithoutAllele = IntStream.range(0, allelesWithoutDisabledAllele.size()).mapToObj(i -> getAlleleLikelihoodVsInverse(disabledAlleleLikelihood.get(i),
                 allelesWithoutDisabledAllele.get(i))).collect(Collectors.toList());
 
         Map<AlleleAndContext, Integer> rplsWithoutAlleleMap = new HashMap<>();
