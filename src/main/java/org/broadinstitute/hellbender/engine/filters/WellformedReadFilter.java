@@ -40,7 +40,7 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
                 ReadFilterLibrary.CigarContainsNoNOperator.class
         }
 )
-public class WellformedReadFilter extends ReadFilter {
+public final class WellformedReadFilter extends ReadFilter {
     private static final long serialVersionUID = 1l;
 
     private ReadFilter wellFormedFilter = null;
