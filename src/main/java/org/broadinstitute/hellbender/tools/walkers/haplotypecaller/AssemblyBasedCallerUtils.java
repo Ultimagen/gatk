@@ -349,16 +349,24 @@ public final class AssemblyBasedCallerUtils {
         }
 
         try {
-            final AssemblyResultSet assemblyResultSet = assemblyEngine.runLocalAssembly(
-                    region,
-                    refHaplotype,
-                    fullReferenceWithPadding,
-                    paddedReferenceLoc,
-                    readErrorCorrector,
-                    header, aligner,
-                    haplotypeCollapsing,
-                    danglingEndSWParameters, haplotypeToReferenceSWParameters,
-                    bypassAssembly);
+            final AssemblyResultSet assemblyResultSet =
+                    !bypassAssembly
+                            ? assemblyEngine.runLocalAssembly(
+                                region,
+                                refHaplotype,
+                                fullReferenceWithPadding,
+                                paddedReferenceLoc,
+                                readErrorCorrector,
+                                header, aligner,
+                                haplotypeCollapsing,
+                                danglingEndSWParameters, haplotypeToReferenceSWParameters)
+                            : assemblyEngine.generateEmptyLLocalAssemblyResult(
+                               region,
+                               refHaplotype,
+                               fullReferenceWithPadding,
+                               paddedReferenceLoc,
+                               haplotypeCollapsing);
+
             assemblyResultSet.setHaplotypeCollapsing(haplotypeCollapsing);
 
             if (!givenAlleles.isEmpty()) {
