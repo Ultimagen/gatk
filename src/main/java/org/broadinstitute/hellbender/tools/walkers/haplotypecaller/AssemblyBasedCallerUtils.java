@@ -134,7 +134,7 @@ public final class AssemblyBasedCallerUtils {
         for (GATKRead originalRead : region.getReads()) {
             // TODO unclipping soft clips may introduce bases that aren't in the extended region if the unclipped bases
             // TODO include a deletion w.r.t. the reference.  We must remove kmers that occur before the reference haplotype start
-            GATKRead read = FlowBasedRead.isFlowBasedData(readsHeader, originalRead) ? FlowBasedRead.hardClipUncertainBases(originalRead, readsHeader, fbargs):originalRead;
+            GATKRead read = FlowBasedReadUtils.isFlow(originalRead) ? FlowBasedRead.hardClipUncertainBases(originalRead, readsHeader, fbargs):originalRead;
             read =  dontUseSoftClippedBases || ! ( overrideSoftclipFragmentCheck || ReadUtils.hasWellDefinedFragmentSize(read)) ?
                     ReadClipper.hardClipSoftClippedBases(read) : ReadClipper.revertSoftClippedBases(read);
             read = (softClipLowQualityEnds ? ReadClipper.softClipLowQualEnds(read, minTailQualityToUse) :

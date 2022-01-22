@@ -183,6 +183,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
      */
     public FlowBasedRead(final SAMRecord samRecord, final String _flowOrder, final int _maxHmer, final FlowBasedAlignmentArgumentCollection fbargs) {
         super(samRecord);
+        Utils.nonNull(fbargs);
         this.fbargs = fbargs;
         maxHmer = _maxHmer;
         this.samRecord = samRecord;
@@ -1069,6 +1070,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
      */
     public static GATKRead hardClipUncertainBases(final GATKRead inputRead, final String flowOrder,
                                                   final FlowBasedAlignmentArgumentCollection fbargs ){
+        Utils.nonNull(fbargs);
         Utils.validateArg(fbargs.flowFirstUncertainFlowBase.length()==1, "First uncertain flow base should be of length 1");
         ReadClipper clipper = new ReadClipper(inputRead);
         final String adjustedFlowOrder = adjustFlowOrderToUncertainFlow(flowOrder, fbargs.flowFirstUncertainFlowBase.charAt(0), fbargs.flowOrderCycleLength);
@@ -1094,26 +1096,13 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
      */
     public static GATKRead hardClipUncertainBases(final GATKRead inputRead, final SAMFileHeader samHeader,
                                                   final FlowBasedAlignmentArgumentCollection fbargs ){
+        Utils.nonNull(fbargs);
         String flowOrder = samHeader.getReadGroup(inputRead.getReadGroup()).getFlowOrder();
         if (flowOrder==null){
             throw new GATKException("Unable to trim uncertain bases without flow order information");
         }
         flowOrder = flowOrder.substring(0,fbargs.flowOrderCycleLength);
         return hardClipUncertainBases(inputRead, flowOrder, fbargs);
-    }
-
-    /**
-     * Checks if the read has FO tag and thus is flow based
-     * @param samHeader header
-     * @param inputRead read
-     * @return boolean
-     */
-    public static boolean isFlowBasedData(final SAMFileHeader samHeader, final GATKRead inputRead) {
-        String flowOrder = samHeader.getReadGroup(inputRead.getReadGroup()).getFlowOrder();
-        if (flowOrder == null) {
-            return false;
-        }
-        return true;
     }
 
     private static String adjustFlowOrderToUncertainFlow(final String flowOrder,
