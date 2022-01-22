@@ -9,11 +9,11 @@ import org.broadinstitute.hellbender.engine.AssemblyRegion;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyBasedCallerUtils;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyResultSet;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerArgumentCollection;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.LongHomopolymerHaplotypeCollapsingEngine;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.json.JSONObject;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCollapsing;
 
 import java.io.File;
 import java.io.IOException;
@@ -105,8 +105,8 @@ public class PostAssemblerOnRamp extends OnRampBase {
         assemblyResult.setFullReferenceWithPadding(refSeq.getBases());
 
         // refView
-        final HaplotypeCollapsing haplotypeCollapsing = (hcArgs.flowAssemblyCollapseHKerSize > 0 && HaplotypeCollapsing.needsCollapsing(assemblyResult.getReferenceHaplotype().getBases(), hcArgs.flowAssemblyCollapseHKerSize, logger, hcArgs.assemblerArgs.debugAssembly))
-                ? new HaplotypeCollapsing(hcArgs.flowAssemblyCollapseHKerSize, hcArgs.flowAssemblyCollapsePartialMode, assemblyResult.getFullReferenceWithPadding(),
+        final LongHomopolymerHaplotypeCollapsingEngine haplotypeCollapsing = (hcArgs.flowAssemblyCollapseHKerSize > 0 && LongHomopolymerHaplotypeCollapsingEngine.needsCollapsing(assemblyResult.getReferenceHaplotype().getBases(), hcArgs.flowAssemblyCollapseHKerSize, logger, hcArgs.assemblerArgs.debugAssembly))
+                ? new LongHomopolymerHaplotypeCollapsingEngine(hcArgs.flowAssemblyCollapseHKerSize, hcArgs.flowAssemblyCollapsePartialMode, assemblyResult.getFullReferenceWithPadding(),
                 paddedReferenceLoc, logger, hcArgs.assemblerArgs.debugAssembly, aligner, hcArgs.getHaplotypeToReferenceSWParameters())
                 : null;
         assemblyResult.setHaplotypeCollapsing(haplotypeCollapsing);
