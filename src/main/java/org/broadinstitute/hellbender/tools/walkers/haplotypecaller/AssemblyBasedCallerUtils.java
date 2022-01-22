@@ -319,7 +319,7 @@ public final class AssemblyBasedCallerUtils {
                 fbargs);
 
 
-            if( argumentCollection.assemblerArgs.debugAssembly) {
+        if( argumentCollection.assemblerArgs.debugAssembly) {
             logger.info("Assembling " + region.getSpan() + " with " + region.size() + " reads:    (with overlap region = " + region.getPaddedSpan() + ")");
         }
 
@@ -339,14 +339,14 @@ public final class AssemblyBasedCallerUtils {
         final SWParameters danglingEndSWParameters = argumentCollection.getDanglingEndSWParameters();
         final SWParameters haplotypeToReferenceSWParameters = argumentCollection.getHaplotypeToReferenceSWParameters();
 
-        // estblish reference mapper, if needed
-
+        // establish reference mapper, if needed
         final HaplotypeCollapsing haplotypeCollapsing = (argumentCollection.flowAssemblyCollapseHKerSize > 0 && HaplotypeCollapsing.needsCollapsing(refHaplotype.getBases(), argumentCollection.flowAssemblyCollapseHKerSize, logger, argumentCollection.assemblerArgs.debugAssembly))
                                             ? new HaplotypeCollapsing(argumentCollection.flowAssemblyCollapseHKerSize, argumentCollection.flowAssemblyCollapsePartialMode, fullReferenceWithPadding,
                 paddedReferenceLoc, logger, argumentCollection.assemblerArgs.debugAssembly, aligner, argumentCollection.getHaplotypeToReferenceSWParameters())
                                             : null;
-        if ( haplotypeCollapsing != null )
+        if ( haplotypeCollapsing != null ) {
             logger.debug("deploying haplotypeCollapsing on " + paddedReferenceLoc + ", region: " + region);
+        }
 
         try {
             final AssemblyResultSet assemblyResultSet = assemblyEngine.runLocalAssembly(
