@@ -405,6 +405,7 @@ public abstract class AssemblyBasedCallerArgumentCollection {
      * quality of an allele is affected by removing other allele */
 
     @Advanced
+    @Hidden
     @Argument(fullName = FILTER_ALLELES_DEBUG_GRAPH, doc = "Write an interaction graph in allele filtering", optional=true)
     public boolean writeFilteringGraphs = false;
 
