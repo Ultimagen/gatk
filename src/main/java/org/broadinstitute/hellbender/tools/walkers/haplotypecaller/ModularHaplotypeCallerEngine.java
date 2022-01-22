@@ -342,7 +342,7 @@ public class ModularHaplotypeCallerEngine extends RampedHaplotypeCallerEngine {
 
             haplotypes = haplotypeCollapsing.uncollapseHmersInHaplotypes(haplotypes, false, null);
             logger.debug(String.format("%d haplotypes before uncollapsing", haplotypes.size()));
-            Map<Haplotype, List<Haplotype>> identicalHaplotypesMap = LongHomopolymerHaplotypeCollapsingEngine.identicalByUncollapsingHaplotypeMap(haplotypes);
+            Map<Haplotype, List<Haplotype>> identicalHaplotypesMap = LongHomopolymerHaplotypeCollapsingEngine.identicalBySequence(haplotypes);
             context.readLikelihoods.changeAlleles(haplotypes);
             context.readLikelihoods = context.readLikelihoods.marginalize(identicalHaplotypesMap);
             logger.debug(String.format("%d haplotypes after uncollapsing",  context.readLikelihoods.numberOfAlleles()));
