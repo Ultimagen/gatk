@@ -935,7 +935,8 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             if( AlignmentUtils.unclippedReadLength(rec) < READ_LENGTH_FILTER_THRESHOLD ||
                     rec.getMappingQuality() < hcArgs.mappingQualityThreshold ||
                     !ReadFilterLibrary.MATE_ON_SAME_CONTIG_OR_NO_MAPPED_MATE.test(rec) ||
-                    (hcArgs.keepRG != null && !rec.getReadGroup().equals(hcArgs.keepRG)) ) {if (HaplotypeCallerGenotypingDebugger.isEnabled()) {
+                    (hcArgs.keepRG != null && !rec.getReadGroup().equals(hcArgs.keepRG)) ) {
+                if (HaplotypeCallerGenotypingDebugger.isEnabled()) {
                     HaplotypeCallerGenotypingDebugger.println("Filtered before assembly the read: " + rec.toString());
                 }
                 readsToRemove.add(rec);
