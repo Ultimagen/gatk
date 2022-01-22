@@ -47,11 +47,11 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     // A - adaptor clipped
     // Q - quality clipped
     // Z - "three zeros" clipped
-    public static String        CLIPPING_TAG_NAME = "tm";
+    final  public static String  CLIPPING_TAG_NAME = "tm";
 
-    public static String FLOW_MATRIX_TAG_NAME = "tp";
-    public static String FLOW_MATRiX_OLD_TAG_KR = "kr";
-    public static String FLOW_MATRiX_OLD_TAG_TI = "ti";
+    final public static String FLOW_MATRIX_TAG_NAME = "tp";
+    final public static String FLOW_MATRiX_OLD_TAG_KR = "kr";
+    final public static String FLOW_MATRiX_OLD_TAG_TI = "ti";
 
 
     /**

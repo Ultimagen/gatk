@@ -55,7 +55,7 @@ public abstract class RampedHaplotypeCallerEngine extends HaplotypeCallerEngine 
     public void buildRamps() {
         try {
 
-            if ( hcArgs.offRampType != null && hcArgs.offRampType != AssemblyBasedCallerArgumentCollection.OffRampTypeEnum.NONE) {
+            if ( hcArgs.offRampType != null && hcArgs.offRampType != HaplotypeCallerArgumentCollection.OffRampTypeEnum.NONE) {
                 if ( hcArgs.offRampFile == null )
                     throw new RuntimeException("rampFile must be specified");
 
@@ -75,7 +75,7 @@ public abstract class RampedHaplotypeCallerEngine extends HaplotypeCallerEngine 
                 }
             }
 
-            if ( hcArgs.onRampType != null && hcArgs.onRampType != AssemblyBasedCallerArgumentCollection.OnRampTypeEnum.NONE ) {
+            if ( hcArgs.onRampType != null && hcArgs.onRampType != HaplotypeCallerArgumentCollection.OnRampTypeEnum.NONE ) {
                 if ( hcArgs.onRampFile == null )
                     throw new RuntimeException("rampFile must be specified");
 
