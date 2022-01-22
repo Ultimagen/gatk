@@ -46,7 +46,7 @@ public final class AssemblyResultSet {
     private OptionalInt lastMaxMnpDistanceUsed = OptionalInt.empty();
     private boolean debug;
     private static final Logger logger = LogManager.getLogger(AssemblyResultSet.class);
-    private HaplotypeCollapsing haplotypeCollapsing;
+    private LongHomopolymerHaplotypeCollapsingEngine haplotypeCollapsing;
 
     /**
      * Constructs a new empty assembly result set.
@@ -569,11 +569,11 @@ public final class AssemblyResultSet {
         this.debug = debug;
     }
 
-    public HaplotypeCollapsing getHaplotypeCollapsing() {
+    public LongHomopolymerHaplotypeCollapsingEngine getHaplotypeCollapsing() {
         return haplotypeCollapsing;
     }
 
-    public void setHaplotypeCollapsing(HaplotypeCollapsing haplotypeCollapsing) {
+    public void setHaplotypeCollapsing(LongHomopolymerHaplotypeCollapsingEngine haplotypeCollapsing) {
         this.haplotypeCollapsing = haplotypeCollapsing;
     }
 

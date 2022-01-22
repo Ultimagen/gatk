@@ -30,7 +30,7 @@ import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCollapsing;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.LongHomopolymerHaplotypeCollapsingEngine;
 
 import java.util.*;
 
@@ -120,11 +120,11 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                     final SimpleInterval  haplotypeSpan = new SimpleInterval(bestHaplotypes.get(0).getGenomeLocation());
                     final byte[]          refBases = reference.queryAndPrefetch(haplotypeSpan).getBases();
 
-                    HaplotypeCollapsing haplotypeCollapsing = null;
+                    LongHomopolymerHaplotypeCollapsingEngine haplotypeCollapsing = null;
                     final List<Haplotype> processedHaplotypes = new LinkedList<>();
                     if ( (hcArgs.flowAssemblyCollapseHKerSize > 0)
-                                    && HaplotypeCollapsing.needsCollapsing(refBases, hcArgs.flowAssemblyCollapseHKerSize, logger, false) ) {
-                        haplotypeCollapsing = new HaplotypeCollapsing(hcArgs.flowAssemblyCollapseHKerSize,
+                                    && LongHomopolymerHaplotypeCollapsingEngine.needsCollapsing(refBases, hcArgs.flowAssemblyCollapseHKerSize, logger, false) ) {
+                        haplotypeCollapsing = new LongHomopolymerHaplotypeCollapsingEngine(hcArgs.flowAssemblyCollapseHKerSize,
                                 hcArgs.flowAssemblyCollapsePartialMode, refBases, haplotypeSpan, logger, false,
                                 SmithWatermanAligner.getAligner(SmithWatermanAligner.Implementation.FASTEST_AVAILABLE),
                                 hcArgs.getHaplotypeToReferenceSWParameters());

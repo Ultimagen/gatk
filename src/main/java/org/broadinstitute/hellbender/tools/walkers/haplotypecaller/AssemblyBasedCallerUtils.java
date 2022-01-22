@@ -340,8 +340,8 @@ public final class AssemblyBasedCallerUtils {
         final SWParameters haplotypeToReferenceSWParameters = argumentCollection.getHaplotypeToReferenceSWParameters();
 
         // establish reference mapper, if needed
-        final HaplotypeCollapsing haplotypeCollapsing = (argumentCollection.flowAssemblyCollapseHKerSize > 0 && HaplotypeCollapsing.needsCollapsing(refHaplotype.getBases(), argumentCollection.flowAssemblyCollapseHKerSize, logger, argumentCollection.assemblerArgs.debugAssembly))
-                                            ? new HaplotypeCollapsing(argumentCollection.flowAssemblyCollapseHKerSize, argumentCollection.flowAssemblyCollapsePartialMode, fullReferenceWithPadding,
+        final LongHomopolymerHaplotypeCollapsingEngine haplotypeCollapsing = (argumentCollection.flowAssemblyCollapseHKerSize > 0 && LongHomopolymerHaplotypeCollapsingEngine.needsCollapsing(refHaplotype.getBases(), argumentCollection.flowAssemblyCollapseHKerSize, logger, argumentCollection.assemblerArgs.debugAssembly))
+                                            ? new LongHomopolymerHaplotypeCollapsingEngine(argumentCollection.flowAssemblyCollapseHKerSize, argumentCollection.flowAssemblyCollapsePartialMode, fullReferenceWithPadding,
                 paddedReferenceLoc, logger, argumentCollection.assemblerArgs.debugAssembly, aligner, argumentCollection.getHaplotypeToReferenceSWParameters())
                                             : null;
         if ( haplotypeCollapsing != null ) {

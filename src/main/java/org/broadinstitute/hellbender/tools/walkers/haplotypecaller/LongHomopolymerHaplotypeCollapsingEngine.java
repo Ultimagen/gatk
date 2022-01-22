@@ -18,7 +18,7 @@ import java.util.*;
 /**
  * Utility class, useful for flow based applications, implementing a workaround for long homopolymers handling.
  *
- * <h3>Why is HaplotypeCollapsing useful</h3>
+ * <h3>Why is LongHomopolymerHaplotypeCollapsingEngine useful</h3>
  *
  * Flow based applications represent sequences of bases as a series of homopolymers encoded as a flow key.
  * The flow key  consists of the lengths for each homopolymers, with spacers (0 length) according to a running flow order.
@@ -42,7 +42,7 @@ import java.util.*;
  * To perform this 'uncollapsing' the class employs several heuristics.
  *
  */
-public class HaplotypeCollapsing {
+public class LongHomopolymerHaplotypeCollapsingEngine {
 
     final private int             hmerSizeThreshold;
     final private boolean         partialMode;
@@ -53,14 +53,15 @@ public class HaplotypeCollapsing {
     final private boolean         debug;
     final private SmithWatermanAligner aligner;
     final private SWParameters alignmentParameters;
+
     // uncollapseByRef result tuple
     private static class UncollapseResult {
         byte[]      bases;
         int         offset;
         boolean     collapsed;
     }
-    public HaplotypeCollapsing(final int hmerSizeThreshold, final boolean partialMode, final byte[] fullRef, final Locatable refLoc, final Logger logger,
-                               final boolean debug, final SmithWatermanAligner aligner, final SWParameters swParameters) {
+    public LongHomopolymerHaplotypeCollapsingEngine(final int hmerSizeThreshold, final boolean partialMode, final byte[] fullRef, final Locatable refLoc, final Logger logger,
+                                                    final boolean debug, final SmithWatermanAligner aligner, final SWParameters swParameters) {
 
         this.hmerSizeThreshold = hmerSizeThreshold;
         this.partialMode = partialMode;
@@ -71,7 +72,7 @@ public class HaplotypeCollapsing {
         this.aligner = aligner;
         this.alignmentParameters = swParameters;
         if ( debug ) {
-            logger.info("HaplotypeCollapsing: >" + hmerSizeThreshold + "hmer, refLoc: " + refLoc + " fullRef:");
+            logger.info("LongHomopolymerHaplotypeCollapsingEngine: >" + hmerSizeThreshold + "hmer, refLoc: " + refLoc + " fullRef:");
             logger.info(new String(fullRef));
         }
     }

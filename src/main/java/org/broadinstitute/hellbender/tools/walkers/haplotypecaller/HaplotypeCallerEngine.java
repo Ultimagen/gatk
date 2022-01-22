@@ -852,7 +852,7 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             if ( logger.isDebugEnabled() ) {
                 logger.debug(String.format("%d haplotypes before uncollapsing", haplotypes.size()));
             }
-            Map<Haplotype, List<Haplotype>> identicalHaplotypesMap = HaplotypeCollapsing.identicalBySequence(haplotypes);
+            Map<Haplotype, List<Haplotype>> identicalHaplotypesMap = LongHomopolymerHaplotypeCollapsingEngine.identicalBySequence(haplotypes);
             readLikelihoods.changeAlleles(haplotypes);
             final AlleleLikelihoods<GATKRead, Haplotype>  uncollapsedReadLikelihoods = readLikelihoods.marginalize(identicalHaplotypesMap);
 

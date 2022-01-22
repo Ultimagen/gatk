@@ -26,7 +26,7 @@ import org.broadinstitute.hellbender.utils.param.ParamUtils;
 import org.broadinstitute.hellbender.utils.read.CigarUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCollapsing;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.LongHomopolymerHaplotypeCollapsingEngine;
 
 import java.io.File;
 import java.io.IOException;
@@ -140,7 +140,7 @@ public final class ReadThreadingAssembler {
                                               final ReadErrorCorrector readErrorCorrector,
                                               final SAMFileHeader header,
                                               final SmithWatermanAligner aligner,
-                                              final HaplotypeCollapsing haplotypeCollapsing,
+                                              final LongHomopolymerHaplotypeCollapsingEngine haplotypeCollapsing,
                                               final SWParameters danglingEndSWParameters,
                                               final SWParameters haplotypeToReferenceSWParameters,
                                               final boolean bypassAssembly) {

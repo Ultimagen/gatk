@@ -37,7 +37,7 @@ public class ModularHaplotypeCallerEngine extends RampedHaplotypeCallerEngine {
         // prepared fields or fields we're able to regenerate
         List<VariantContext> VCpriors;
         List<VariantContext> givenAlleles;
-        HaplotypeCollapsing haplotypeCollapsing;
+        LongHomopolymerHaplotypeCollapsingEngine haplotypeCollapsing;
 
         // assembly results
         AssemblyResultSet assemblyResult;
@@ -336,13 +336,13 @@ public class ModularHaplotypeCallerEngine extends RampedHaplotypeCallerEngine {
         List<Haplotype> haplotypes = context.readLikelihoods.alleles();
 
         // regenerate refview? use it to uncollapse haplotypes if needed
-        final HaplotypeCollapsing    haplotypeCollapsing = (context.haplotypeCollapsing != null) ? context.haplotypeCollapsing : buildHaplotypeCollapsing(context);
+        final LongHomopolymerHaplotypeCollapsingEngine haplotypeCollapsing = (context.haplotypeCollapsing != null) ? context.haplotypeCollapsing : buildHaplotypeCollapsing(context);
 
         if ( haplotypeCollapsing != null ) {
 
             haplotypes = haplotypeCollapsing.uncollapseHaplotypes(haplotypes, false, null);
             logger.debug(String.format("%d haplotypes before uncollapsing", haplotypes.size()));
-            Map<Haplotype, List<Haplotype>> identicalHaplotypesMap = HaplotypeCollapsing.identicalByUncollapsingHaplotypeMap(haplotypes);
+            Map<Haplotype, List<Haplotype>> identicalHaplotypesMap = LongHomopolymerHaplotypeCollapsingEngine.identicalByUncollapsingHaplotypeMap(haplotypes);
             context.readLikelihoods.changeAlleles(haplotypes);
             context.readLikelihoods = context.readLikelihoods.marginalize(identicalHaplotypesMap);
             logger.debug(String.format("%d haplotypes after uncollapsing",  context.readLikelihoods.numberOfAlleles()));
@@ -491,17 +491,17 @@ public class ModularHaplotypeCallerEngine extends RampedHaplotypeCallerEngine {
         return context.region.getReads();
     }
 
-    private HaplotypeCollapsing buildHaplotypeCollapsing(final CallRegionContext context) {
+    private LongHomopolymerHaplotypeCollapsingEngine buildHaplotypeCollapsing(final CallRegionContext context) {
 
         // estblish reference mapper, if needed
         final byte[] fullReferenceWithPadding = context.region.getAssemblyRegionReference(referenceReader, AssemblyBasedCallerUtils.REFERENCE_PADDING_FOR_ASSEMBLY);
         final SimpleInterval paddedReferenceLoc = AssemblyBasedCallerUtils.getPaddedReferenceLoc(context.region, AssemblyBasedCallerUtils.REFERENCE_PADDING_FOR_ASSEMBLY, referenceReader);
         final Haplotype refHaplotype = AssemblyBasedCallerUtils.createReferenceHaplotype(context.region, paddedReferenceLoc, referenceReader);
 
-        final HaplotypeCollapsing haplotypeCollapsing =
+        final LongHomopolymerHaplotypeCollapsingEngine haplotypeCollapsing =
                 (hcArgs.flowAssemblyCollapseHKerSize > 0
-                        && HaplotypeCollapsing.needsCollapsing(refHaplotype.getBases(), hcArgs.flowAssemblyCollapseHKerSize, logger, hcArgs.assemblerArgs.debugAssembly))
-                        ? new HaplotypeCollapsing(hcArgs.flowAssemblyCollapseHKerSize, hcArgs.flowAssemblyCollapsePartialMode, fullReferenceWithPadding,
+                        && LongHomopolymerHaplotypeCollapsingEngine.needsCollapsing(refHaplotype.getBases(), hcArgs.flowAssemblyCollapseHKerSize, logger, hcArgs.assemblerArgs.debugAssembly))
+                        ? new LongHomopolymerHaplotypeCollapsingEngine(hcArgs.flowAssemblyCollapseHKerSize, hcArgs.flowAssemblyCollapsePartialMode, fullReferenceWithPadding,
                         paddedReferenceLoc, logger, hcArgs.assemblerArgs.debugAssembly, aligner, hcArgs.getHaplotypeToReferenceSWParameters())
                         : null;
         if ( haplotypeCollapsing != null ) {
