@@ -49,7 +49,6 @@ import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.broadinstitute.hellbender.utils.variant.HomoSapiensConstants;
 import org.broadinstitute.hellbender.utils.variant.writers.GVCFWriter;
 import org.broadinstitute.hellbender.utils.genotyper.SampleList;
-import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -522,10 +521,6 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
      */
     @Override
     public ActivityProfileState isActive(final AlignmentContext context, final ReferenceContext ref, final FeatureContext features) {
-        return isActive_(context, ref, features, AlignmentContext.ReadOrientation.COMPLETE);
-    }
-
-    private ActivityProfileState isActive_(final AlignmentContext context, final ReferenceContext ref, final FeatureContext features, final AlignmentContext.ReadOrientation stratification ) {
         if (forceCallingAllelesPresent && features.getValues(hcArgs.alleles, ref).stream().anyMatch(vc -> hcArgs.forceCallFiltered || vc.isNotFiltered())) {
             return new ActivityProfileState(ref.getInterval(), 1.0);
         }
@@ -553,7 +548,7 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             final int activeRegionDetectionHackishSamplePloidy = activeRegionEvaluationGenotyperEngine.getConfiguration().genotypeArgs.samplePloidy;
             final double[] genotypeLikelihoods = ((RefVsAnyResult) referenceConfidenceModel.calcGenotypeLikelihoodsOfRefVsAny(
                     activeRegionDetectionHackishSamplePloidy,
-                    sample.getValue().stratify(stratification).getBasePileup(), ref.getBase(),
+                    sample.getValue().stratify(AlignmentContext.ReadOrientation.COMPLETE).getBasePileup(), ref.getBase(),
                     hcArgs.minBaseQualityScore,
                     averageHQSoftClips, false)).genotypeLikelihoods;
             genotypes.add(new GenotypeBuilder(sample.getKey()).alleles(noCall).PL(genotypeLikelihoods).make());
