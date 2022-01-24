@@ -215,29 +215,29 @@ public class FlowBasedHMMEngine implements ReadLikelihoodCalculationEngine {
 
             // create a flow based read
             trimmedFlowOrder = rgInfo.flowOrder.substring(0,fbargs.flowOrderCycleLength);
-            final FlowBasedRead tmp = new FlowBasedRead(rd, rgInfo.flowOrder, rgInfo.maxClass, fbargs);
-            tmp.applyAlignment();
+            final FlowBasedRead fbRead = new FlowBasedRead(rd, rgInfo.flowOrder, rgInfo.maxClass, fbargs);
+            fbRead.applyAlignment();
 
             // extract flow order if not know already. FlowBasedRead.getFlowOrder() already caps the result
             // to fbargs.flowOrderCycleLength in length
             if ( flowOrder == null)  {
-                flowOrder = tmp.getFlowOrder();
+                flowOrder = fbRead.getFlowOrder();
             }
 
             //TODO This imputation code will eventually need to be turned into something real based on dragstr:
-            final PairHMMInputScoreImputation inputScoreImputation = inputScoreImputator.impute(tmp);
+            final PairHMMInputScoreImputation inputScoreImputation = inputScoreImputator.impute(fbRead);
             final byte[] readInsQuals = inputScoreImputation.insOpenPenalties();
             final byte[] readDelQuals = inputScoreImputation.delOpenPenalties();
             final byte[] overallGCP = inputScoreImputation.gapContinuationPenalties();
 
-            applyPCRErrorModel(tmp.getBases(), readInsQuals, readDelQuals);
+            applyPCRErrorModel(fbRead.getBases(), readInsQuals, readDelQuals);
             capMinimumReadIndelQualities(readInsQuals, readDelQuals, minUsableIndelScoreToUse);
 
-            tmp.setReadInsQuals(readInsQuals);
-            tmp.setReadDelQuals(readDelQuals);
-            tmp.setOverallGCP(overallGCP);
+            fbRead.setReadInsQuals(readInsQuals);
+            fbRead.setReadDelQuals(readDelQuals);
+            fbRead.setOverallGCP(overallGCP);
 
-            processedReads.add(tmp);
+            processedReads.add(fbRead);
         }
 
         //same for the haplotypes - each haplotype is converted to FlowBasedHaplotype

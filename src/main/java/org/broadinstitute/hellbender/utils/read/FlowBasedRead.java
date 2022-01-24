@@ -419,20 +419,20 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         if (attributeValue == null) {
             return null;
         } else if (attributeValue instanceof byte[]) {
-            final byte[] tmp = (byte[]) attributeValue;
-            final int[] ret = new int[tmp.length];
+            final byte[] byteArrayAttributeValue = (byte[]) attributeValue;
+            final int[] ret = new int[byteArrayAttributeValue.length];
             for (int i = 0; i < ret.length; i++)
-                if (!isSigned) ret[i] = tmp[i]&0xff;
-                else ret[i]=tmp[i]; //converting signed byte to unsigned
+                if (!isSigned) ret[i] = byteArrayAttributeValue[i]&0xff;
+                else ret[i]=byteArrayAttributeValue[i]; //converting signed byte to unsigned
             return Arrays.copyOf(ret, ret.length);
         } else if ((attributeValue instanceof int[])) {
             final int[] ret = (int[]) attributeValue;
             return Arrays.copyOf(ret, ret.length);
         } else if  (attributeValue instanceof short[]) {
-            final short [] tmp = (short[]) attributeValue;
-            final int[] ret = new int[tmp.length];
-            for (int i = 0 ; i < tmp.length; i++ )
-                ret[i] = tmp[i];
+            final short [] shortArrayAttributeValue = (short[]) attributeValue;
+            final int[] ret = new int[shortArrayAttributeValue.length];
+            for (int i = 0 ; i < shortArrayAttributeValue.length; i++ )
+                ret[i] = shortArrayAttributeValue[i];
             return Arrays.copyOf(ret, ret.length);
         }else {
             throw new GATKException.ReadAttributeTypeMismatch(attributeName, "integer array");
@@ -985,9 +985,9 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         for ( int i = 0 ; i < kr.length; i++ ){
             final int idx = kr[i];
             if (( idx > 1 ) && ( idx < maxHmer) ) {
-                final double tmp = (flowMatrix[idx - 1][i] + flowMatrix[idx + 1][i]) / 2;
-                flowMatrix[idx - 1][i] = tmp;
-                flowMatrix[idx + 1][i] = tmp;
+                final double prob = (flowMatrix[idx - 1][i] + flowMatrix[idx + 1][i]) / 2;
+                flowMatrix[idx - 1][i] = prob;
+                flowMatrix[idx + 1][i] = prob;
             }
         }
     }

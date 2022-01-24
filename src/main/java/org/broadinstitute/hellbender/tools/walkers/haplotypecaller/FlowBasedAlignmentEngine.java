@@ -135,13 +135,13 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             final FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(hdr, rd);
 
             trimmedFlowOrder = rgInfo.flowOrder.substring(0,fbargs.flowOrderCycleLength);
-            final FlowBasedRead tmp = new FlowBasedRead(rd, rgInfo.flowOrder, rgInfo.maxClass, fbargs);
-            tmp.applyAlignment();
+            final FlowBasedRead fbRead = new FlowBasedRead(rd, rgInfo.flowOrder, rgInfo.maxClass, fbargs);
+            fbRead.applyAlignment();
 
             if ( flowOrder == null)  {
-                flowOrder = tmp.getFlowOrder();
+                flowOrder = fbRead.getFlowOrder();
             }
-            processedReads.add(tmp);
+            processedReads.add(fbRead);
         }
 
         if ( flowOrder == null ) {
@@ -261,13 +261,13 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
             return 1;
         }
 
-        int [] tmp = haplotype.findLeftClipping(leftClip);
-        int clipLeft = tmp[0];
-        final int leftHmerClip = tmp[1];
+        int [] leftClipping = haplotype.findLeftClipping(leftClip);
+        int clipLeft = leftClipping[0];
+        final int leftHmerClip = leftClipping[1];
 
-        tmp = haplotype.findRightClipping(rightClip);
-        int clipRight = tmp[0];
-        final int rightHmerClip = tmp[1];
+        leftClipping = haplotype.findRightClipping(rightClip);
+        int clipRight = leftClipping[0];
+        final int rightHmerClip = leftClipping[1];
 
 
         if ((clipLeft >= haplotype.getKeyLength()) || (clipRight >= haplotype.getKeyLength())){
