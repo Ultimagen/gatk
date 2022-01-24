@@ -95,7 +95,9 @@ public class FlowBasedHMMEngine implements ReadLikelihoodCalculationEngine {
         }
 
         result.normalizeLikelihoods(log10globalReadMismappingRate, true);
-        filterPoorlyModeledEvidence(result, dynamicReadDisqualification, expectedErrorRatePerBase, readDisqualificationScale);
+        if ( filterPoorly ) {
+            filterPoorlyModeledEvidence(result, dynamicReadDisqualification, expectedErrorRatePerBase, readDisqualificationScale);
+        }
 
         return result;
     }

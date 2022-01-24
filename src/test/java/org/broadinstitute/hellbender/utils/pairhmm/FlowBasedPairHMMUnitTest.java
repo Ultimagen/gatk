@@ -4,6 +4,7 @@ import com.google.common.base.Strings;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMReadGroupRecord;
 import htsjdk.samtools.TextCigarCodec;
+import org.broadinstitute.hellbender.GATKBaseTest;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.LikelihoodEngineArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.PairHMMLikelihoodCalculationEngine;
 import org.broadinstitute.hellbender.utils.QualityUtils;
@@ -22,7 +23,7 @@ import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
 
 import java.util.*;
 
-public class FlowBasedPairHMMUnitTest {
+public class FlowBasedPairHMMUnitTest extends GATKBaseTest {
 
     // TODO NOTE this test is disabled. That is because currently it is difficult to generate ArtificialFlowBasedReads from scratch...
     @Test (enabled = false)
