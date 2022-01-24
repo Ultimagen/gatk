@@ -25,6 +25,13 @@ import java.util.*;
 
 public class FlowBasedPairHMMUnitTest extends GATKBaseTest {
 
+    // at this point, this constant MUST be 4, unless otherwise tested
+    @Test
+    public void testFlowSize4() {
+        Assert.assertEquals(FlowBasedPairHMM.FLOW_SIZE, 4);
+    }
+
+
     // TODO NOTE this test is disabled. That is because currently it is difficult to generate ArtificialFlowBasedReads from scratch...
     @Test (enabled = false)
     public void testComputeLikelihoods(){
