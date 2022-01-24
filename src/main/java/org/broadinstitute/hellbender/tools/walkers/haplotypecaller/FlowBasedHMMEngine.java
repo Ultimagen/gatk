@@ -222,7 +222,7 @@ public class FlowBasedHMMEngine implements ReadLikelihoodCalculationEngine {
             final FlowBasedRead fbRead = new FlowBasedRead(rd, flowOrder, rgInfo.maxClass, fbargs);
             fbRead.applyAlignment();
 
-            //TODO This imputation code is based on dragstr or NonSymmetricalPairHMMInputScoreImputator:
+            //TODO This currently supports any ScoreImputator in GATK but will probably need a custom one to handle flow based data in the future:
             final PairHMMInputScoreImputation inputScoreImputation = inputScoreImputator.impute(fbRead);
             final byte[] readInsQuals = inputScoreImputation.insOpenPenalties();
             final byte[] readDelQuals = inputScoreImputation.delOpenPenalties();
