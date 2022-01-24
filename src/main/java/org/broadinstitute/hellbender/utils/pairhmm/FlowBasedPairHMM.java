@@ -43,7 +43,7 @@ public class FlowBasedPairHMM extends PairHMM {
     //NOTE: if you ever find yourself wanting to change this parameter I would seriously reconsider if it will be possible to adapt this
     //      model to work in that case. The alignment and model math is rooted in the assumption that frame-shifts necessarily happen in
     //      discrete units of 4 and if that assumption is broken then this HMM is unlikely to be representative without rewriting.
-    final private int FLOW_SIZE = 4;
+    final static public int FLOW_SIZE = 4;
 
     /**
      * Initializes the matrix that holds all the constants related to the editing
@@ -74,25 +74,19 @@ public class FlowBasedPairHMM extends PairHMM {
     }
 
     static int findMaxReadLengthFlow(final List<FlowBasedRead> reads) {
-        int listMaxReadLength = 0;
-        for(final FlowBasedRead read : reads){
-            final int readLength = read.getKeyLength();
-            if( readLength > listMaxReadLength ) {
-                listMaxReadLength = readLength;
-            }
-        }
-        return listMaxReadLength;
+
+        return reads.stream()
+                .map(read -> read.getKey().length)
+                .mapToInt(value -> value)
+                .max().orElse(0);
     }
 
     private static int findMaxAlleleLengthFlow(final List<FlowBasedHaplotype> alleles) {
-        int max = 0;
-        for (final FlowBasedHaplotype allele : alleles) {
-            final int alleleLength = allele.getKeyLength();
-            if (max < alleleLength) {
-                max = alleleLength;
-            }
-        }
-        return max;
+
+        return alleles.stream()
+                .map(allele -> allele.getKeyLength())
+                .mapToInt(value -> value)
+                .max().orElse(0);
     }
 
     /**
