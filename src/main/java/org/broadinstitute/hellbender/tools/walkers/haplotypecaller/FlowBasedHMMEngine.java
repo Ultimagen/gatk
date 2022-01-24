@@ -11,6 +11,7 @@ import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.pairhmm.FlowBasedPairHMM;
 import org.broadinstitute.hellbender.utils.pairhmm.PairHMMInputScoreImputation;
 import org.broadinstitute.hellbender.utils.pairhmm.PairHMMInputScoreImputator;
+import org.broadinstitute.hellbender.utils.read.FlowBasedReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.haplotype.FlowBasedHaplotype;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
@@ -73,6 +74,10 @@ public class FlowBasedHMMEngine implements ReadLikelihoodCalculationEngine {
         this.flatInsertionPenalty = flatInsertionPenalty;
         this.minUsableIndelScoreToUse = (byte)minUsableIndelScoreToUse;
 
+        // validity checks
+        if (fbargs.flowOrderCycleLength != 4) {
+            throw new GATKException("FlowBasedHMMEngine requires flow order of 4 elements but cycle length is specified as " + fbargs.flowOrderCycleLength);
+        }
 
         initializePCRErrorModel();
     }
@@ -163,15 +168,10 @@ public class FlowBasedHMMEngine implements ReadLikelihoodCalculationEngine {
 
     private static void capMinimumReadIndelQualities(final byte[] readInsQuals, final byte[] readDelQuals, final byte minUsableQualScore) {
         for( int i = 0; i < readInsQuals.length; i++ ) {
-            readInsQuals[i] = setToFixedValueIfTooLow( readInsQuals[i], minUsableQualScore,       minUsableQualScore );
-            readDelQuals[i] = setToFixedValueIfTooLow( readDelQuals[i], minUsableQualScore,       minUsableQualScore );
+            readInsQuals[i] = (byte)Math.max(readInsQuals[i], minUsableQualScore);
+            readDelQuals[i] = (byte)Math.max(readDelQuals[i], minUsableQualScore);
         }
     }
-
-    private static byte setToFixedValueIfTooLow(final byte currentVal, final byte minQual, final byte fixedQual){
-        return currentVal < minQual ? fixedQual : currentVal;
-    }
-
 
     static byte getErrorModelAdjustedQual(final int repeatLength, final double rateFactor, final byte minUsableIndelScoreToUse) {
         return (byte) Math.max(minUsableIndelScoreToUse, MathUtils.fastRound(INITIAL_QSCORE - Math.exp(repeatLength / (rateFactor * Math.PI)) + 1.0));
@@ -206,38 +206,22 @@ public class FlowBasedHMMEngine implements ReadLikelihoodCalculationEngine {
         final List<FlowBasedRead> processedReads = new ArrayList<>(likelihoods.evidenceCount());
         final List<FlowBasedHaplotype> processedHaplotypes = new ArrayList<>(likelihoods.numberOfAlleles());
         String flowOrder = null;
-        String originalFlowOrder = null;
+        String trimmedFlowOrder = null;
 
-        String fo;
-        int max_class ;
         //convert all reads to FlowBasedReads (i.e. parse the matrix of P(call | haplotype) for each read from the BAM)
         for (int i = 0 ; i < likelihoods.evidenceCount(); i++) {
             final GATKRead rd = likelihoods.evidence().get(i);
-            final String mc_string = hdr.getReadGroup(rd.getReadGroup()).getAttribute("mc");
-            if (mc_string==null) {
-                max_class = FlowBasedRead.MAX_CLASS;
-            } else {
-                max_class = Integer.parseInt(mc_string);
-            }
+            final FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(hdr, rd);
 
-            //get flow order for conversion.
-            fo = hdr.getReadGroup(rd.getReadGroup()).getFlowOrder();
-            if ( fo == null ) {
-                throw new GATKException("Unable to perform flow based alignment without the flow order information");
-            }
-            if (fbargs.flowOrderCycleLength != 4) {
-                throw new GATKException("FlowBasedHMMEngine requires flow order of 4 elements but cycle length is specified as " + fbargs.flowOrderCycleLength);
-            }
-
-            originalFlowOrder = fo.substring(0,fbargs.flowOrderCycleLength);
-            final FlowBasedRead tmp = new FlowBasedRead(rd, fo, max_class, fbargs);
+            // create a flow based read
+            trimmedFlowOrder = rgInfo.flowOrder.substring(0,fbargs.flowOrderCycleLength);
+            final FlowBasedRead tmp = new FlowBasedRead(rd, rgInfo.flowOrder, rgInfo.maxClass, fbargs);
             tmp.applyAlignment();
 
+            // extract flow order if not know already. FlowBasedRead.getFlowOrder() already caps the result
+            // to fbargs.flowOrderCycleLength in length
             if ( flowOrder == null)  {
-                fo = tmp.getFlowOrder();
-                if (fo.length()>=fbargs.flowOrderCycleLength) {
-                    flowOrder = fo.substring(0,fbargs.flowOrderCycleLength);
-                }
+                flowOrder = tmp.getFlowOrder();
             }
 
             //TODO This imputation code will eventually need to be turned into something real based on dragstr:
@@ -258,15 +242,16 @@ public class FlowBasedHMMEngine implements ReadLikelihoodCalculationEngine {
 
         //same for the haplotypes - each haplotype is converted to FlowBasedHaplotype
         FlowBasedHaplotype fbh;
-
-        flowOrder = FlowBasedAlignmentEngine.findFlowOrderForReadGroups(hdr, flowOrder, fbargs);
+        if ( flowOrder == null ) {
+            flowOrder = FlowBasedReadUtils.findFirstUsableFlowOrder(hdr, fbargs);
+        }
 
         if ( flowOrder == null ) {
             throw new GATKException("Unable to perform flow based alignment without the flow order");
         }
         for (int i = 0; i < likelihoods.numberOfAlleles(); i++){
             fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i),
-                    originalFlowOrder != null ? originalFlowOrder : flowOrder);
+                    trimmedFlowOrder != null ? trimmedFlowOrder : flowOrder);
             processedHaplotypes.add(fbh);
         }
 

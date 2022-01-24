@@ -21,6 +21,7 @@ import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.*;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
+import org.broadinstitute.hellbender.utils.read.FlowBasedReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
@@ -103,16 +104,6 @@ public final class FlowFeatureMapper extends ReadWalker {
     @ArgumentCollection
     private final HaplotypeCallerArgumentCollection hcArgs = new HaplotypeCallerArgumentCollection();
 
-    static private class ReadGroupInfo {
-        final String  flowOrder;
-        final int     maxClass;
-
-        ReadGroupInfo(final String flowOrder, final int maxClass) {
-            this.flowOrder = flowOrder;
-            this.maxClass = maxClass;
-        }
-    }
-
     static private class ReadContext implements Comparable<ReadContext> {
         final GATKRead         read;
         final ReferenceContext referenceContext;
@@ -138,7 +129,6 @@ public final class FlowFeatureMapper extends ReadWalker {
     final private PriorityQueue<Feature>        featureQueue = new PriorityQueue<>();
     final private PriorityQueue<ReadContext>    readQueue = new PriorityQueue<>();
     private FeatureMapper                       mapper;
-    private final Map<String, ReadGroupInfo>    readGroupInfo = new LinkedHashMap<>();
 
     @Override
     public void onTraversalStart() {
@@ -315,7 +305,7 @@ public final class FlowFeatureMapper extends ReadWalker {
     private double scoreFeature(final Feature fr) {
 
         // build haplotypes
-        final ReadGroupInfo           rgInfo = getReadGroupInfo(fr.read);
+        final FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), fr.read);
         final FlowBasedHaplotype[]    haplotypes = buildHaplotypes(fr, rgInfo.flowOrder);
 
         // create flow read
@@ -471,21 +461,6 @@ public final class FlowFeatureMapper extends ReadWalker {
 
         // return
         return result;
-    }
-
-    private synchronized ReadGroupInfo getReadGroupInfo(final GATKRead read) {
-
-        final String              rg = read.getReadGroup();
-        if ( readGroupInfo.containsKey(rg) ) {
-            return readGroupInfo.get(rg);
-        } else {
-            final String mc = getHeaderForReads().getReadGroup(rg).getAttribute("mc");
-            final ReadGroupInfo info = new ReadGroupInfo(getHeaderForReads().getReadGroup(rg).getFlowOrder(),
-                                            (mc == null) ? FlowBasedRead.MAX_CLASS : Integer.parseInt(mc));
-            readGroupInfo.put(rg, info);
-
-            return info;
-        }
     }
 
     private boolean filterFeature(final Feature fr) {

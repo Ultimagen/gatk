@@ -2,7 +2,6 @@ package org.broadinstitute.hellbender.tools.walkers.groundtruth;
 
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
-import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.util.Locatable;
 import htsjdk.samtools.util.SequenceUtil;
 import htsjdk.samtools.util.Tuple;
@@ -24,6 +23,7 @@ import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.ReadLikelihoo
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.CigarBuilder;
+import org.broadinstitute.hellbender.utils.read.FlowBasedReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.tools.walkers.featuremapping.FlowFeatureMapper;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.FlowBasedAlignmentEngine;
@@ -176,7 +176,6 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
     AncestralContigLocationTranslator   locationTranslator;
     FlowBasedAlignmentEngine            likelihoodCalculationEngine;
     PrintWriter                         outputCsv;
-    private final Map<String, ReadGroupInfo> readGroupInfo = new LinkedHashMap<>();
     private int                         locationTranslationErrors;
 
     // static/const
@@ -197,12 +196,6 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         int                     softclipFrontFillCount;
         Haplotype               haplotype;
         double                  score;
-    }
-
-    static private class ReadGroupInfo {
-        public String  flowOrder;
-        public String  reversedFlowOrder;
-        public int     maxClass;
     }
 
     @Override
@@ -460,7 +453,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
     private FlowBasedRead buildFlowRead(final GATKRead read) {
 
-        ReadGroupInfo rgInfo = getReadGroupInfo(getHeaderForReads(), read);
+        FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read);
 
         return new FlowBasedRead(read, rgInfo.flowOrder, rgInfo.maxClass, hcArgs.fbargs);
     }
@@ -643,7 +636,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
     private double scoreReadAgainstHaplotype(final GATKRead read, final ScoredHaplotype sh) {
 
         // build haplotypes
-        final ReadGroupInfo rgInfo = getReadGroupInfo(getHeaderForReads(), read);
+        final FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read);
         final FlowBasedHaplotype flowHaplotype = new FlowBasedHaplotype(sh.haplotype, rgInfo.flowOrder);
 
         // create flow read
@@ -667,7 +660,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
     private double scoreReadAgainstReference(final GATKRead read, final ReferenceContext ref) {
 
         // build haplotypes
-        final ReadGroupInfo           rgInfo = getReadGroupInfo(getHeaderForReads(), read);
+        final FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read);
         final FlowBasedHaplotype      flowHaplotype = new FlowBasedHaplotype(buildReferenceHaplotype(ref, read), rgInfo.flowOrder);
 
         // create flow read
@@ -697,12 +690,12 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         return score;
     }
 
-    private int[] buildHaplotypeKey(final String haplotypeSeq, final ReadGroupInfo rgInfo, final boolean isReversed) {
+    private int[] buildHaplotypeKey(final String haplotypeSeq, final FlowBasedReadUtils.ReadGroupInfo rgInfo, final boolean isReversed) {
 
         // create a haplotype to contain the sequence
         final byte[]              seq = reverseComplement(haplotypeSeq.getBytes(), isReversed);
         final Haplotype           h = new Haplotype(seq);
-        final FlowBasedHaplotype  flowHaplotype = new FlowBasedHaplotype(h, !isReversed ? rgInfo.flowOrder : rgInfo.reversedFlowOrder);
+        final FlowBasedHaplotype  flowHaplotype = new FlowBasedHaplotype(h, !isReversed ? rgInfo.flowOrder : rgInfo.getReversedFlowOrder());
 
         // need to start on a T - find out T offset on the flow order
         int[]                     hapKey = flowHaplotype.getKey();
@@ -731,7 +724,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
     }
 
-    private int[] buildHaplotypeKeyForOutput(ScoredHaplotype scoredHaplotype, final ReadGroupInfo rgInfo, final int fillValue, final GATKRead read) {
+    private int[] buildHaplotypeKeyForOutput(ScoredHaplotype scoredHaplotype, final FlowBasedReadUtils.ReadGroupInfo rgInfo, final int fillValue, final GATKRead read) {
 
         boolean                   isReversed = read.isReverseStrand();
 
@@ -851,7 +844,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         cols.put("RefHaplotypeScore", refScore);
 
         // build haplotype keys
-        final ReadGroupInfo rgInfo = getReadGroupInfo(getHeaderForReads(), read);
+        final FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read);
         final int[]           paternalHaplotypeKey = buildHaplotypeKeyForOutput(paternal, rgInfo,fillValue, read);
         final int[]           maternalHaplotypeKey = buildHaplotypeKeyForOutput(maternal, rgInfo,fillValue, read);
 
@@ -889,7 +882,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
         final String    readSeq = reverseComplement(read.getBasesString(), read.isReverseStrand());
         final int[]     readKey = reverse(flowRead.getKey(), read.isReverseStrand());
-        final String    readFlowOrder = reverseComplement(getReadGroupInfo(getHeaderForReads(), read).flowOrder, read.isReverseStrand());
+        final String    readFlowOrder = reverseComplement(FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read).flowOrder, read.isReverseStrand());
         cols.put("ReadSequence", readSeq);
         cols.put("ReadKey", flowKeyAsCsvString(readKey, readSeq, readFlowOrder));
         cols.put("PaternalHaplotypeInterval", paternal.ref.getInterval());
@@ -941,25 +934,6 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
             }
         }
         return count;
-    }
-
-    private synchronized ReadGroupInfo getReadGroupInfo(SAMFileHeader headerForReads, GATKRead read) {
-
-        String              rg = read.getReadGroup();
-        ReadGroupInfo       info = readGroupInfo.get(rg);
-        if ( info == null ) {
-            info = new ReadGroupInfo();
-            info.flowOrder = headerForReads.getReadGroup(rg).getFlowOrder();
-            info.reversedFlowOrder = reverseComplement(info.flowOrder);
-            String mc_string = headerForReads.getReadGroup(rg).getAttribute("mc");
-            if ( mc_string == null ) {
-                info.maxClass = FlowBasedRead.MAX_CLASS;
-            } else {
-                info.maxClass = Integer.parseInt(mc_string);
-            }
-            readGroupInfo.put(rg, info);
-        }
-        return info;
     }
 
     private byte[] reverseComplement(final byte[] bases) {

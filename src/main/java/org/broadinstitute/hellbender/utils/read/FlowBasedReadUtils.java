@@ -3,6 +3,19 @@ package org.broadinstitute.hellbender.utils.read;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMReadGroupRecord;
 import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.util.Lazy;
+import htsjdk.samtools.util.SequenceUtil;
+import htsjdk.variant.variantcontext.VariantContextUtils;
+import org.apache.commons.jexl2.Expression;
+import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
+import org.broadinstitute.hellbender.tools.walkers.groundtruth.GroundTruthReadsBuilder;
+import org.broadinstitute.hellbender.utils.BaseUtils;
+import org.broadinstitute.hellbender.utils.Utils;
+
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * utility class for flow based read
@@ -10,6 +23,32 @@ import htsjdk.samtools.SAMRecord;
 public class FlowBasedReadUtils {
 
     public static final int FLOW_SUM_OF_BASE_QUALITY_THRESHOLD = 15;
+
+    private static final Map<String, ReadGroupInfo> readGroupInfo = new LinkedHashMap<>();
+
+    static public class ReadGroupInfo {
+        final public String  flowOrder;
+        final public int     maxClass;
+
+        private String  reversedFlowOrder = null;
+
+        ReadGroupInfo(final SAMReadGroupRecord readGroup) {
+
+            Utils.nonNull(readGroup);
+            this.flowOrder = readGroup.getFlowOrder();
+            Utils.nonNull(this.flowOrder);
+
+            String mc = readGroup.getAttribute(FlowBasedRead.MAX_CLASS_READ_GROUP_TAG);
+            this.maxClass = (mc == null) ? FlowBasedRead.MAX_CLASS : Integer.parseInt(mc);
+        }
+
+        public synchronized String getReversedFlowOrder() {
+            if ( reversedFlowOrder == null ) {
+                reversedFlowOrder = SequenceUtil.reverseComplement(flowOrder);
+            }
+            return reversedFlowOrder;
+        }
+    }
 
     public static boolean readEndMarkedUncertain(final GATKRead rec) {
         final String        tm = rec.getAttributeAsString(FlowBasedRead.CLIPPING_TAG_NAME);
@@ -82,17 +121,41 @@ public class FlowBasedReadUtils {
         }
     }
 
-    public static boolean isFlow(GATKRead rec) {
+    public static boolean isFlow(final GATKRead rec) {
         return rec.hasAttribute(FlowBasedRead.FLOW_MATRIX_TAG_NAME)
                 || rec.hasAttribute(FlowBasedRead.FLOW_MATRiX_OLD_TAG_KR)
                 || rec.hasAttribute(FlowBasedRead.FLOW_MATRiX_OLD_TAG_TI);
     }
 
-    public static boolean isFlow(SAMRecord rec) {
+    public static boolean isFlow(final SAMRecord rec) {
         return rec.hasAttribute(FlowBasedRead.FLOW_MATRIX_TAG_NAME)
                 || rec.hasAttribute(FlowBasedRead.FLOW_MATRiX_OLD_TAG_KR)
                 || rec.hasAttribute(FlowBasedRead.FLOW_MATRiX_OLD_TAG_TI);
 
+    }
+
+    public static synchronized ReadGroupInfo getReadGroupInfo(final SAMFileHeader hdr, final GATKRead read) {
+
+        String              name = read.getReadGroup();
+        Utils.nonNull(name);
+        ReadGroupInfo info = readGroupInfo.get(name);
+        if ( info == null ) {
+            readGroupInfo.put(name, info = new ReadGroupInfo(hdr.getReadGroup(name)));
+        }
+        return info;
+    }
+
+    /**
+     * Finds  a usable FlowOrder to be used for engine calculation (when no specufic flow order already established for a specific read)
+     */
+    public static String findFirstUsableFlowOrder(final SAMFileHeader hdr, final FlowBasedAlignmentArgumentCollection fbargs) {
+        for ( final SAMReadGroupRecord rg : hdr.getReadGroups() ) {
+            final String flowOrder = rg.getFlowOrder();
+            if ( flowOrder != null && flowOrder.length() >= fbargs.flowOrderCycleLength ) {
+                return flowOrder.substring(0, fbargs.flowOrderCycleLength);
+            }
+        }
+        return null;
     }
 
 }
