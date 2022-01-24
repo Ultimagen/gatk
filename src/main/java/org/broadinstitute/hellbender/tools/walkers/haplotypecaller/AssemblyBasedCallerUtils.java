@@ -235,7 +235,7 @@ public final class AssemblyBasedCallerUtils {
     }
 
     public static ReadLikelihoodCalculationEngine createLikelihoodCalculationEngine(final LikelihoodEngineArgumentCollection likelihoodArgs,
-                                                                                    final FlowBasedAlignmentArgumentCollection flowBasedArgs,
+                                                                                    final FlowBasedAlignmentArgumentCollection fbargs,
                                                                                     final boolean handleSoftclips,
                                                                                     final ReadLikelihoodCalculationEngine.Implementation implementation) {
         //AlleleLikelihoods::normalizeLikelihoods uses Double.NEGATIVE_INFINITY as a flag to disable capping
@@ -250,9 +250,9 @@ public final class AssemblyBasedCallerUtils {
                 likelihoodArgs.BASE_QUALITY_SCORE_THRESHOLD, likelihoodArgs.enableDynamicReadDisqualification, likelihoodArgs.readDisqualificationThresholdConstant,
                 likelihoodArgs.expectedErrorRatePerBase, !likelihoodArgs.disableSymmetricallyNormalizeAllelesToReference, likelihoodArgs.disableCapReadQualitiesToMapQ, handleSoftclips);
             case FlowBased:
-                return new FlowBasedAlignmentEngine(flowBasedArgs, log10GlobalReadMismappingRate, likelihoodArgs.expectedErrorRatePerBase, likelihoodArgs.enableDynamicReadDisqualification, likelihoodArgs.readDisqualificationThresholdConstant);
+                return new FlowBasedAlignmentEngine(fbargs, log10GlobalReadMismappingRate, likelihoodArgs.expectedErrorRatePerBase, likelihoodArgs.enableDynamicReadDisqualification, likelihoodArgs.readDisqualificationThresholdConstant);
             case FlowBasedHMM:
-                return new FlowBasedHMMEngine(flowBasedArgs, (byte) likelihoodArgs.gcpHMM, log10GlobalReadMismappingRate, likelihoodArgs.expectedErrorRatePerBase, likelihoodArgs.pcrErrorModel,
+                return new FlowBasedHMMEngine(fbargs, (byte) likelihoodArgs.gcpHMM, log10GlobalReadMismappingRate, likelihoodArgs.expectedErrorRatePerBase, likelihoodArgs.pcrErrorModel,
                         likelihoodArgs.dontUseDragstrPairHMMScores ? null : DragstrParamUtils.parse(likelihoodArgs.dragstrParams), likelihoodArgs.enableDynamicReadDisqualification, likelihoodArgs.readDisqualificationThresholdConstant,
                         likelihoodArgs.minUsableIndelScoreToUse, (byte) likelihoodArgs.flatDeletionPenalty, (byte) likelihoodArgs.flatInsertionPenatly);
             default:

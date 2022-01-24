@@ -52,15 +52,15 @@ public class FlowBasedHMMEngine implements ReadLikelihoodCalculationEngine {
 
     /**
      * Default constructor
-     * @param flowBasedArgs - arguments
+     * @param fbargs - arguments
      * @param log10globalReadMismappingRate - probability for wrong mapping (maximal contribution of the read to data likelihood)
      * @param expectedErrorRatePerBase - the expected rate of random sequencing errors for a read originating from its true haplotype.
      * @param pcrErrorModel
      */
-    public FlowBasedHMMEngine(final FlowBasedAlignmentArgumentCollection flowBasedArgs, final byte constantGCP,  final double log10globalReadMismappingRate, final double expectedErrorRatePerBase,
+    public FlowBasedHMMEngine(final FlowBasedAlignmentArgumentCollection fbargs, final byte constantGCP,  final double log10globalReadMismappingRate, final double expectedErrorRatePerBase,
                               final PairHMMLikelihoodCalculationEngine.PCRErrorModel pcrErrorModel, final DragstrParams dragstrParams, final boolean dynamicReadDisqualification, final double readDisqualificationScale,
                               final int minUsableIndelScoreToUse, final byte flatDeletionPenalty, final byte flatInsertionPenalty) {
-        this.fbargs = flowBasedArgs;
+        this.fbargs = fbargs;
         this.log10globalReadMismappingRate = log10globalReadMismappingRate;
         this.expectedErrorRatePerBase = expectedErrorRatePerBase;
         this.readDisqualificationScale = readDisqualificationScale;
