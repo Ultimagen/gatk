@@ -24,6 +24,8 @@ public class FlowBasedPairHMM extends PairHMM {
     static final double INITIAL_CONDITION = Math.pow(2, 1020);
     static final double INITIAL_CONDITION_LOG10 = Math.log10(INITIAL_CONDITION);
     protected static final Logger logger = LogManager.getLogger(PairHMM.class);
+    private static final int DEFAULT_INDEL_NO_DATA_FILL = 40;
+    private static final int DEFAULT_MATCH_NO_DATA_FILL = 10;
 
     protected boolean constantsAreInitialized = false;
 
@@ -31,7 +33,7 @@ public class FlowBasedPairHMM extends PairHMM {
 
     @Override
     protected double subComputeReadLikelihoodGivenHaplotypeLog10(byte[] haplotypeBases, byte[] readBases, byte[] readQuals, byte[] insertionGOP, byte[] deletionGOP, byte[] overallGCP, int hapStartIndex, boolean recacheReadValues, int nextHapStartIndex) {
-        throw new RuntimeException("this should not be called?");
+        throw new UnsupportedOperationException("this should not be called");
     }
 
     protected double[][] transition = null; // The transition probabilities cache
@@ -133,9 +135,9 @@ public class FlowBasedPairHMM extends PairHMM {
             final byte[] readDelQuals = read.getReadDelQuals();
             final byte[] overallGCP = read.getOverallGCP();
 
-            final byte[] flowReadInsQuals = FlowBasedKeyCodec.baseArray2KeySpace(read.getBases(), read.getKeyLength(), readInsQuals, (byte) 40, read.getFlowOrder());
-            final byte[] flowReadDelQuals = FlowBasedKeyCodec.baseArray2KeySpace(read.getBases(), read.getKeyLength(), readDelQuals, (byte) 40, read.getFlowOrder());
-            final byte[] flowReadGCPQuals = FlowBasedKeyCodec.baseArray2KeySpace(read.getBases(), read.getKeyLength(), overallGCP, (byte) 10, read.getFlowOrder());
+            final byte[] flowReadInsQuals = FlowBasedKeyCodec.baseArray2KeySpace(read.getBases(), read.getKeyLength(), readInsQuals, (byte) DEFAULT_INDEL_NO_DATA_FILL, read.getFlowOrder());
+            final byte[] flowReadDelQuals = FlowBasedKeyCodec.baseArray2KeySpace(read.getBases(), read.getKeyLength(), readDelQuals, (byte) DEFAULT_INDEL_NO_DATA_FILL, read.getFlowOrder());
+            final byte[] flowReadGCPQuals = FlowBasedKeyCodec.baseArray2KeySpace(read.getBases(), read.getKeyLength(), overallGCP, (byte) DEFAULT_MATCH_NO_DATA_FILL, read.getFlowOrder());
 
             // peek at the next haplotype in the list (necessary to get nextHaplotypeBases, which is required for caching in the array implementation)
             final boolean isFirstHaplotype = true;
@@ -143,8 +145,7 @@ public class FlowBasedPairHMM extends PairHMM {
                 final FlowBasedHaplotype allele = processedHaplotypes.get(a);
                 final int[] alleleKey = allele.getKey();
 
-                final byte[] flowOrder;
-                flowOrder = allele.getFlowOrderArray();
+                final byte[] flowOrder = allele.getFlowOrderArray();
                 int startingPoint = 0;
                 for (int i = 0; i < flowOrder.length; i++) {
                     if (flowOrder[i] == read.getFlowOrderArray()[0]) {
@@ -227,7 +228,7 @@ public class FlowBasedPairHMM extends PairHMM {
             // +1 here is because hapStartIndex is 0-based, but our matrices are 1 based
             // Only loop over array elements that correspond to valid flow-flow base comparisons
             for (int j = ((hapStartIndex + i)%FLOW_SIZE) + FLOW_SIZE; j < thisHaplotypePaddedLenth; j+=FLOW_SIZE) {
-                //Inlined the code from updateCell - helps JIT to detect hotspots and produce good native code
+                //Inlined the code from updateCell - helps JIT to detect hotspots and produce good native code -- this reflects the LoglessPairHMM optimizations (which this code is based off of).
                 matchMatrix[i][j] =  prior[i][j] * ( matchMatrix[i - 1][j - 1] * transition[i - FLOW_SIZE][matchToMatch] +
                         insertionMatrix[i - 1][j - 1] * transition[i - FLOW_SIZE][indelToMatch] +
                         deletionMatrix[i - 1][j - 1] * transition[i - FLOW_SIZE][indelToMatch] );

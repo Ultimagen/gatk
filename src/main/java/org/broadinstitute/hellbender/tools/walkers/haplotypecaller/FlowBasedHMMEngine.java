@@ -215,33 +215,32 @@ public class FlowBasedHMMEngine implements ReadLikelihoodCalculationEngine {
 
             // create a flow based read
             trimmedFlowOrder = rgInfo.flowOrder.substring(0,fbargs.flowOrderCycleLength);
-            final FlowBasedRead fbRead = new FlowBasedRead(rd, rgInfo.flowOrder, rgInfo.maxClass, fbargs);
-            fbRead.applyAlignment();
+            final FlowBasedRead flowReadCopy = new FlowBasedRead(rd, rgInfo.flowOrder, rgInfo.maxClass, fbargs);
+            flowReadCopy.applyAlignment();
 
             // extract flow order if not know already. FlowBasedRead.getFlowOrder() already caps the result
             // to fbargs.flowOrderCycleLength in length
             if ( flowOrder == null)  {
-                flowOrder = fbRead.getFlowOrder();
+                flowOrder = flowReadCopy.getFlowOrder();
             }
 
-            //TODO This imputation code will eventually need to be turned into something real based on dragstr:
-            final PairHMMInputScoreImputation inputScoreImputation = inputScoreImputator.impute(fbRead);
+            //TODO This currently supports any ScoreImputator in GATK but will probably need a custom one to handle flow based data in the future:
+            final PairHMMInputScoreImputation inputScoreImputation = inputScoreImputator.impute(flowReadCopy);
             final byte[] readInsQuals = inputScoreImputation.insOpenPenalties();
             final byte[] readDelQuals = inputScoreImputation.delOpenPenalties();
             final byte[] overallGCP = inputScoreImputation.gapContinuationPenalties();
 
-            applyPCRErrorModel(fbRead.getBases(), readInsQuals, readDelQuals);
+            applyPCRErrorModel(flowReadCopy.getBases(), readInsQuals, readDelQuals);
             capMinimumReadIndelQualities(readInsQuals, readDelQuals, minUsableIndelScoreToUse);
 
-            fbRead.setReadInsQuals(readInsQuals);
-            fbRead.setReadDelQuals(readDelQuals);
-            fbRead.setOverallGCP(overallGCP);
+            flowReadCopy.setReadInsQuals(readInsQuals);
+            flowReadCopy.setReadDelQuals(readDelQuals);
+            flowReadCopy.setOverallGCP(overallGCP);
 
-            processedReads.add(fbRead);
+            processedReads.add(flowReadCopy);
         }
 
         //same for the haplotypes - each haplotype is converted to FlowBasedHaplotype
-        FlowBasedHaplotype fbh;
         if ( flowOrder == null ) {
             flowOrder = FlowBasedReadUtils.findFirstUsableFlowOrder(hdr, fbargs);
         }
@@ -250,7 +249,7 @@ public class FlowBasedHMMEngine implements ReadLikelihoodCalculationEngine {
             throw new GATKException("Unable to perform flow based alignment without the flow order");
         }
         for (int i = 0; i < likelihoods.numberOfAlleles(); i++){
-            fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i),
+            FlowBasedHaplotype fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i),
                     trimmedFlowOrder != null ? trimmedFlowOrder : flowOrder);
             processedHaplotypes.add(fbh);
         }
