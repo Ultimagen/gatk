@@ -48,20 +48,20 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
 
     /**
      * Default constructor
-     * @param flowBasedArgs - arguments
+     * @param fbargs - arguments
      * @param log10globalReadMismappingRate - probability for wrong mapping (maximal contribution of the read to data likelihood)
      * @param expectedErrorRatePerBase - the expected rate of random sequencing errors for a read originating from its true haplotype.
      */
-    public FlowBasedAlignmentEngine(final FlowBasedAlignmentArgumentCollection flowBasedArgs, final double log10globalReadMismappingRate, final double expectedErrorRatePerBase, final boolean dynamicReadDisqualification, final double readDisqualificationScale) {
-        this.fbargs = flowBasedArgs;
+    public FlowBasedAlignmentEngine(final FlowBasedAlignmentArgumentCollection fbargs, final double log10globalReadMismappingRate, final double expectedErrorRatePerBase, final boolean dynamicReadDisqualification, final double readDisqualificationScale) {
+        this.fbargs = fbargs;
         this.log10globalReadMismappingRate = log10globalReadMismappingRate;
         this.expectedErrorRatePerBase = expectedErrorRatePerBase;
         this.readDisqualificationScale = readDisqualificationScale;
         this.dynamicReadDisqualification = dynamicReadDisqualification;
         this.symmetricallyNormalizeAllelesToReference = true;
 
-        if ( fbargs.flowLikelihoodParallelThreads > 0 ) {
-            threadPool = new ForkJoinPool(fbargs.flowLikelihoodParallelThreads);
+        if ( this.fbargs.flowLikelihoodParallelThreads > 0 ) {
+            threadPool = new ForkJoinPool(this.fbargs.flowLikelihoodParallelThreads);
         }
     }
 
