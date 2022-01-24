@@ -2,18 +2,14 @@ package org.broadinstitute.hellbender.tools.walkers.haplotypecaller;
 
 import com.google.common.annotations.VisibleForTesting;
 import htsjdk.samtools.SAMFileHeader;
-import htsjdk.samtools.SAMReadGroupRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.*;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
-import org.broadinstitute.hellbender.utils.read.GATKRead;
-import org.broadinstitute.hellbender.utils.read.ReadUtils;
+import org.broadinstitute.hellbender.utils.read.*;
 import org.broadinstitute.hellbender.utils.haplotype.FlowBasedHaplotype;
-import org.broadinstitute.hellbender.utils.read.FlowBasedKeyCodec;
-import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
 
 import java.util.*;
@@ -27,6 +23,9 @@ import java.util.stream.IntStream;
 
  */
 public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine {
+    public static final double MAX_ERRORS_FOR_READ_CAP = 3.0;
+    public static final double MAX_CATASTROPHIC_ERRORS_FOR_READ_CAP = 2.0;
+
     private double log10globalReadMismappingRate;
     private final double expectedErrorRatePerBase;
     private final boolean symmetricallyNormalizeAllelesToReference;
@@ -63,24 +62,6 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         if ( this.fbargs.flowLikelihoodParallelThreads > 0 ) {
             threadPool = new ForkJoinPool(this.fbargs.flowLikelihoodParallelThreads);
         }
-    }
-
-    /**
-     * Finds the correct FlowOrder to be used for engine calculation
-     */
-    static String findFlowOrderForReadGroups(final SAMFileHeader hdr, final String flowOrder, final FlowBasedAlignmentArgumentCollection fbargs) {
-        String resultFlowOrder = flowOrder;
-        if ( resultFlowOrder == null && hdr.getReadGroups().size() > 0 ) {
-            //find the right flow order for the haplotypes (should fit to that of the reads)
-            for ( final SAMReadGroupRecord rg : hdr.getReadGroups() ) {
-                resultFlowOrder = rg.getAttribute("FO");
-                if ( resultFlowOrder != null && resultFlowOrder.length() >= fbargs.flowOrderCycleLength ) {
-                    resultFlowOrder = resultFlowOrder.substring(0, fbargs.flowOrderCycleLength);
-                    break;
-                }
-            }
-        }
-        return resultFlowOrder;
     }
 
     /**
@@ -129,9 +110,9 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         final double catastrophicErrorRate = Math.log10(fbargs.fillingValue);
 
         return read -> {
-            final double maxErrorsForRead = capLikelihoods ? Math.max(3.0, Math.ceil(read.getLength() * expectedErrorRate)) : Math.ceil(read.getLength() * expectedErrorRate);
-            final double maxCatastrophicErrorsForRead = Math.max(2.0, Math.ceil(read.getLength() * catastrophicErrorRate));
-            return maxErrorsForRead * log10ErrorRate + maxCatastrophicErrorsForRead*catastrophicErrorRate;
+            final double maxErrorsForRead = capLikelihoods ? Math.max(MAX_ERRORS_FOR_READ_CAP, Math.ceil(read.getLength() * expectedErrorRate)) : Math.ceil(read.getLength() * expectedErrorRate);
+            final double maxCatastrophicErrorsForRead = capLikelihoods ? Math.max(MAX_CATASTROPHIC_ERRORS_FOR_READ_CAP, Math.ceil(read.getLength() * catastrophicErrorRate)) : Math.ceil(read.getLength() * catastrophicErrorRate);
+            return maxErrorsForRead * log10ErrorRate + maxCatastrophicErrorsForRead * catastrophicErrorRate;
         };
     }
 
@@ -147,46 +128,32 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
         final List<FlowBasedRead> processedReads = new ArrayList<>(likelihoods.evidenceCount());
         final List<FlowBasedHaplotype> processedHaplotypes = new ArrayList<>(likelihoods.numberOfAlleles());
         String flowOrder = null;
-        String originalFlowOrder = null;
-        String fo;
-        int max_class ;
+        String trimmedFlowOrder = null;
         //convert all reads to FlowBasedReads (i.e. parse the matrix of P(call | haplotype) for each read from the BAM)
         for (int i = 0 ; i < likelihoods.evidenceCount(); i++) {
             final GATKRead rd = likelihoods.evidence().get(i);
-            final String mc_string = hdr.getReadGroup(rd.getReadGroup()).getAttribute("mc");
-            if (mc_string==null) {
-                max_class = FlowBasedRead.MAX_CLASS;
-            } else {
-                max_class = Integer.parseInt(mc_string);
-            }
+            final FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(hdr, rd);
 
-            //get flow order for conversion.
-            fo = hdr.getReadGroup(rd.getReadGroup()).getFlowOrder();
-            if ( fo == null ) {
-               throw new GATKException("Unable to perform flow based alignment without the flow order information");
-            }
-
-            originalFlowOrder = fo.substring(0,fbargs.flowOrderCycleLength);
-            final FlowBasedRead tmp = new FlowBasedRead(rd, fo, max_class, fbargs);
+            trimmedFlowOrder = rgInfo.flowOrder.substring(0,fbargs.flowOrderCycleLength);
+            final FlowBasedRead tmp = new FlowBasedRead(rd, rgInfo.flowOrder, rgInfo.maxClass, fbargs);
             tmp.applyAlignment();
 
             if ( flowOrder == null)  {
-                fo = tmp.getFlowOrder();
-                if (fo.length()>=fbargs.flowOrderCycleLength) {
-                    flowOrder = fo.substring(0,fbargs.flowOrderCycleLength);
-               }
+                flowOrder = tmp.getFlowOrder();
             }
             processedReads.add(tmp);
         }
 
-        flowOrder = findFlowOrderForReadGroups(hdr, flowOrder, fbargs);
+        if ( flowOrder == null ) {
+            flowOrder = FlowBasedReadUtils.findFirstUsableFlowOrder(hdr, fbargs);
+        }
         if ( flowOrder == null ) {
             throw new GATKException("Unable to perform flow based alignment without the flow order");
         }
 
         for (int i = 0; i < likelihoods.numberOfAlleles(); i++){
             final FlowBasedHaplotype fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i),
-                        originalFlowOrder != null ? originalFlowOrder : flowOrder);
+                        trimmedFlowOrder != null ? trimmedFlowOrder : flowOrder);
             processedHaplotypes.add(fbh);
         }
 

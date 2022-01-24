@@ -5,6 +5,7 @@ import htsjdk.samtools.util.Locatable;
 import org.broadinstitute.hellbender.engine.filters.CountingReadFilter;
 import org.broadinstitute.hellbender.utils.clipping.ReadClipper;
 import org.broadinstitute.hellbender.utils.gcs.BucketUtils;
+import org.broadinstitute.hellbender.utils.read.FlowBasedReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
@@ -73,9 +74,8 @@ public class TrimmedReadsReader {
                     continue;
 
                 // convert to a flow based read
-                final int maxClass = getMaxClass(readGroup, samReader.getFileHeader());
-                final String flowOrder = getFlowOrder(readGroup);
-                final FlowBasedRead fbr = new FlowBasedRead(gatkRead, flowOrder, maxClass, fbArgs);
+                FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(samReader.getFileHeader(), gatkRead);
+                final FlowBasedRead fbr = new FlowBasedRead(gatkRead, rgInfo.flowOrder, rgInfo.maxClass, fbArgs);
                 fbr.applyAlignment();
 
                 // clip to given span
@@ -99,28 +99,6 @@ public class TrimmedReadsReader {
         }
 
         return readsByReader;
-    }
-
-    private synchronized int getMaxClass(final String rg, final SAMFileHeader hdr) {
-
-        Integer     v = readGroupMaxClass.get(rg);
-
-        if ( v == null ) {
-            String mc = hdr.getReadGroup(rg).getAttribute("mc");
-            if ( mc == null ) {
-                v = FlowBasedRead.MAX_CLASS;
-            } else {
-                v = Integer.parseInt(mc);
-            }
-            readGroupMaxClass.put(rg, v);
-            readGroupFlowOrder.put(rg, hdr.getReadGroup(rg).getFlowOrder());
-        }
-
-        return v;
-    }
-
-    private String getFlowOrder(final String rg) {
-        return readGroupFlowOrder.get(rg);
     }
 
     public SAMFileHeader getHeader(final SamReader samReader) {

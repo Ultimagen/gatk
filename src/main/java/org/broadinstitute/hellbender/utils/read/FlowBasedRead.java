@@ -53,6 +53,9 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     final public static String FLOW_MATRiX_OLD_TAG_KR = "kr";
     final public static String FLOW_MATRiX_OLD_TAG_TI = "ti";
 
+    final public static String MAX_CLASS_READ_GROUP_TAG = "mc";
+
+
 
     /**
      * The sam record from which this flow based read originated
@@ -580,18 +583,20 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     // execute the matrix modifications
     private void implementMatrixMods(final int[] flowMatrixModsInstructions) {
 
-        for ( int hmer = 0 ; hmer < flowMatrixModsInstructions.length ; hmer++ ) {
-            final int hmer2 = flowMatrixModsInstructions[hmer];
-            if (hmer2 != 0) {
-                for ( int pos = 0 ; pos < flowMatrix[0].length ; pos++ ) {
+        if ( flowMatrixModsInstructions != null ) {
+            for (int hmer = 0; hmer < flowMatrixModsInstructions.length; hmer++) {
+                final int hmer2 = flowMatrixModsInstructions[hmer];
+                if (hmer2 != 0) {
+                    for (int pos = 0; pos < flowMatrix[0].length; pos++) {
 
-                    if ( flowMatrix[hmer][pos] > flowMatrix[hmer2][pos] ) {
-                        flowMatrix[hmer2][pos] = flowMatrix[hmer][pos];
+                        if (flowMatrix[hmer][pos] > flowMatrix[hmer2][pos]) {
+                            flowMatrix[hmer2][pos] = flowMatrix[hmer][pos];
+                        }
+
+                        // if we are copying bacwards, zero out source
+                        if (hmer > hmer2)
+                            flowMatrix[hmer][pos] = 0;
                     }
-
-                    // if we are copying bacwards, zero out source
-                    if (hmer > hmer2)
-                        flowMatrix[hmer][pos] = 0;
                 }
             }
         }
