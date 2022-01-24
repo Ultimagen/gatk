@@ -127,33 +127,31 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
 
         final List<FlowBasedRead> processedReads = new ArrayList<>(likelihoods.evidenceCount());
         final List<FlowBasedHaplotype> processedHaplotypes = new ArrayList<>(likelihoods.numberOfAlleles());
-        String flowOrder = null;
-        String trimmedFlowOrder = null;
+
+        // establish flow order based on the first evidence. Note that all reads belong to the same sample (group)
+        final FlowBasedReadUtils.ReadGroupInfo rgInfo = (likelihoods.evidenceCount() != 0)
+                ? FlowBasedReadUtils.getReadGroupInfo(hdr, likelihoods.evidence().get(0))
+                : null;
+        final String flowOrder = (rgInfo != null)
+                ? rgInfo.flowOrder.substring(0, fbargs.flowOrderCycleLength)
+                : FlowBasedReadUtils.findFirstUsableFlowOrder(hdr, fbargs);
+
         //convert all reads to FlowBasedReads (i.e. parse the matrix of P(call | haplotype) for each read from the BAM)
         for (int i = 0 ; i < likelihoods.evidenceCount(); i++) {
             final GATKRead rd = likelihoods.evidence().get(i);
-            final FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(hdr, rd);
 
-            trimmedFlowOrder = rgInfo.flowOrder.substring(0,fbargs.flowOrderCycleLength);
-            final FlowBasedRead fbRead = new FlowBasedRead(rd, rgInfo.flowOrder, rgInfo.maxClass, fbargs);
+            final FlowBasedRead fbRead = new FlowBasedRead(rd, flowOrder, rgInfo.maxClass, fbargs);
             fbRead.applyAlignment();
 
-            if ( flowOrder == null)  {
-                flowOrder = fbRead.getFlowOrder();
-            }
             processedReads.add(fbRead);
         }
 
-        if ( flowOrder == null ) {
-            flowOrder = FlowBasedReadUtils.findFirstUsableFlowOrder(hdr, fbargs);
-        }
         if ( flowOrder == null ) {
             throw new GATKException("Unable to perform flow based alignment without the flow order");
         }
 
         for (int i = 0; i < likelihoods.numberOfAlleles(); i++){
-            final FlowBasedHaplotype fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i),
-                        trimmedFlowOrder != null ? trimmedFlowOrder : flowOrder);
+            final FlowBasedHaplotype fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i), flowOrder);
             processedHaplotypes.add(fbh);
         }
 

@@ -21,9 +21,7 @@ import static org.broadinstitute.hellbender.utils.pairhmm.PairHMMModel.matchToDe
  * Class for performing the pair HMM for global alignment in FlowSpace. See {@link FlowBasedAlignmentEngine} and {@link LoglessPairHMM}.
  */
 public class FlowBasedPairHMM extends PairHMM {
-    static final double INITIAL_CONDITION = Math.pow(2, 1020);
-    static final double INITIAL_CONDITION_LOG10 = Math.log10(INITIAL_CONDITION);
-    protected static final Logger logger = LogManager.getLogger(PairHMM.class);
+    protected static final Logger logger = LogManager.getLogger(FlowBasedPairHMM.class);
 
     protected boolean constantsAreInitialized = false;
 
@@ -202,7 +200,7 @@ public class FlowBasedPairHMM extends PairHMM {
 
         // TODO maybe handle previous haplotype computation...
         if (previousHaplotypeBases == null || previousHaplotypeBases.length != haplotypeKey.length) {
-            final double initialValue = INITIAL_CONDITION / haplotypeKey.length;
+            final double initialValue = LoglessPairHMM.INITIAL_CONDITION / haplotypeKey.length;
             // set the initial value (free deletions in the beginning) for the first row in the deletion matrix
             for( int j = 0; j < thisHaplotypePaddedLenth; j++ ) {
                 deletionMatrix[0][j] = initialValue;
@@ -244,7 +242,7 @@ public class FlowBasedPairHMM extends PairHMM {
             finalSumProbabilities += matchMatrix[endI][j] + insertionMatrix[endI][j];
         }
 
-        return Math.log10(finalSumProbabilities) - INITIAL_CONDITION_LOG10;
+        return Math.log10(finalSumProbabilities) - LoglessPairHMM.INITIAL_CONDITION_LOG10;
     }
 
 
