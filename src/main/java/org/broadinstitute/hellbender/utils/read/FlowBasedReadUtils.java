@@ -136,6 +136,10 @@ public class FlowBasedReadUtils {
 
     public static synchronized ReadGroupInfo getReadGroupInfo(final SAMFileHeader hdr, final GATKRead read) {
 
+        if ( !isFlow(read) ) {
+            throw new IllegalArgumentException("read must be flow based: " + read);
+        }
+
         String              name = read.getReadGroup();
         Utils.nonNull(name);
         ReadGroupInfo info = readGroupInfo.get(name);
