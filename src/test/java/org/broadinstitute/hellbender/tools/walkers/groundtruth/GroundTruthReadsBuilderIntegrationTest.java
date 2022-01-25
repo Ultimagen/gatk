@@ -45,7 +45,8 @@ public class GroundTruthReadsBuilderIntegrationTest extends CommandLineProgramTe
                 "--haplotype-output-padding-size", "0",
                 "--fill-trimmed-reads", "false",
                 "--fill-softclipped-reads", "false",
-                "--max-output-reads", "0"
+                "--max-output-reads", "0",
+                "--false-snp-compensation", "true"
         };
 
         runCommandLine(args);  // no assert, just make sure we don't throw
