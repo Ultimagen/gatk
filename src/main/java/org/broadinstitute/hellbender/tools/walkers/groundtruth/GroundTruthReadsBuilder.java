@@ -158,6 +158,8 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
     public boolean fillTrimmedReads;
     @Argument(fullName = "fill-softclipped-reads", doc = "Softclipped reads should be filled from haplotype, otherwise (default) filled with -83", optional = true)
     public boolean fillSoftclippedReads;
+    @Argument(fullName = "false-snp-compensation", doc = "skip haplotype bases until same base as read starts (false SNP compensation)", optional = true)
+    public boolean falseSnpCompensation;
 
     @Argument(fullName = "output-csv", doc="main output file")
     public GATKPath outputCsvPath = null;
@@ -546,7 +548,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         final byte[]    readBases = reverseComplement(getSoftclippedBases(read), read.isReverseStrand());
 
         // skip haplotype bases until same base as read starts (false SNP compensation)
-        if ( haplotypeBases[0] != readBases[0] ) {
+        if ( falseSnpCompensation && (haplotypeBases[0] != readBases[0]) ) {
             final int       skip = detectFalseSNP(haplotypeBases, readBases);
             if ( skip != 0 ) {
                 haplotypeBases = Arrays.copyOfRange(haplotypeBases, skip, haplotypeBases.length);
