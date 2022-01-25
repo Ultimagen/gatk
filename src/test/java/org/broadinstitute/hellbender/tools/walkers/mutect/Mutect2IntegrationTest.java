@@ -88,6 +88,8 @@ public class Mutect2IntegrationTest extends CommandLineProgramTest {
 
     private static final File FILTERING_DIR = new File(toolsTestDir, "mutect/filtering");
 
+    private static final File FLOW_BASED_INPUT_BAM = new File(publicTestDir + "/large", "input_jukebox_for_test.bam");
+
     private static final File GNOMAD_WITHOUT_AF_SNIPPET = new File(toolsTestDir, "mutect/gnomad-without-af.vcf");
     private static final File UNPARSIMONIOUS_GNOMAD_SNIPPET = new File(toolsTestDir, "mutect/unparsimonious_germline.vcf");
 
@@ -944,6 +946,23 @@ public class Mutect2IntegrationTest extends CommandLineProgramTest {
                 args -> args.add(AssemblyBasedCallerArgumentCollection.BAM_OUTPUT_LONG_NAME, bamout));
         Assert.assertTrue(bamout.exists());
     }
+
+    // this test is here for basic sanity of flow mode
+    @Test
+    public void testBamoutFlowMode() {
+        final File outputVcf = createTempFile("output", ".vcf");
+        final File bamout = createTempFile("bamout", ".bam");
+
+        runMutect2(FLOW_BASED_INPUT_BAM, outputVcf, "chr9:81149486-81177047", hg38Reference, Optional.empty(),
+                args -> {
+                    args.add(M2ArgumentCollection.FLOW_M2_MODE_LONG_NAME, "ADVANCED");
+                    return args.add(AssemblyBasedCallerArgumentCollection.BAM_OUTPUT_LONG_NAME, bamout);
+
+                });
+        Assert.assertTrue(bamout.exists());
+    }
+
+
 
     @Test
     public void testFilteringHeaders() {
