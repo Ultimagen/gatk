@@ -12,6 +12,14 @@ import java.util.List;
 
 public class FlowModeArgumentUtils {
 
+
+    /**
+     * the different flow modes, in terms of their parameters and their values
+     *
+     * NOTE: a parameter value ending with /o is optional - meaning it will not fail the process if it
+     * is not existent on the target parameters collection. This allows setting parameters which are
+     * specific to only a subset of the tools supporting flow-mode
+     */
     public enum FlowModeHC {
         NONE(new String[]{}, null),
 
@@ -28,13 +36,13 @@ public class FlowModeArgumentUtils {
         }, null),
 
         ADVANCED(new String[]{
-                "adaptive-pruning", "true",
+                "adaptive-pruning/o", "true",
                 "pruning-lod-threshold", "3.0",
                 "enable-dynamic-read-disqualification-for-genotyping", "true",
                 "dynamic-read-disqualification-threshold", "10",
-                "apply-frd", "true",
+                "apply-frd/o", "true",
                 "minimum-mapping-quality", "1",
-                "mapping-quality-threshold-for-genotyping", "1"
+                "mapping-quality-threshold-for-genotyping/o", "1"
         }, STANDARD);
 
         final String[] nameValuePairs;
@@ -78,7 +86,7 @@ public class FlowModeArgumentUtils {
     private static void setArgValues(CommandLineParser parser, String[] nameValuePairs) {
 
         for ( int i = 0 ; i < nameValuePairs.length ; i += 2 ) {
-            if ( !hasBeenSet(parser, nameValuePairs[i]) ) {
+            if ( !hasBeenSet(parser, cleanParamName(nameValuePairs[i])) ) {
                 setValue(parser, nameValuePairs[i], nameValuePairs[i+1]);
             }
         }
@@ -97,9 +105,14 @@ public class FlowModeArgumentUtils {
 
     private static void setValue(CommandLineParser parser, String alias, String value) {
         if ( parser instanceof CommandLineArgumentParser ) {
-            NamedArgumentDefinition namedArg = ((CommandLineArgumentParser)parser).getNamedArgumentDefinitionByAlias(alias);
+            NamedArgumentDefinition namedArg = ((CommandLineArgumentParser)parser).getNamedArgumentDefinitionByAlias(cleanParamName(alias));
             if ( namedArg == null ) {
-                throw new IllegalArgumentException("alias not found: " + alias);
+                if ( isParamOptional(alias) ) {
+                    // exit silenently, as it is optional
+                    return;
+                } else {
+                    throw new IllegalArgumentException("alias not found: " + alias);
+                }
             }
 
             PrintStream         ps = new PrintStream(new ByteArrayOutputStream());
@@ -109,6 +122,14 @@ public class FlowModeArgumentUtils {
             throw new IllegalArgumentException("command line parser is not CommandLineArgumentParser");
         }
 
+    }
+
+    private static boolean isParamOptional(final String name) {
+        return name.endsWith("/o");
+    }
+
+    private static String cleanParamName(final String name) {
+        return name.replace("/o", "");
     }
 
 }
