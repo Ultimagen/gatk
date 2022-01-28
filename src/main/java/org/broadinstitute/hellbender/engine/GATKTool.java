@@ -11,6 +11,10 @@ import htsjdk.variant.variantcontext.writer.VariantContextWriter;
 import htsjdk.variant.vcf.VCFHeaderLine;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.time.ZonedDateTime;
 import java.util.*;
@@ -717,6 +721,8 @@ public abstract class GATKTool extends CommandLineProgram {
     protected void onStartup() {
         super.onStartup();
 
+        initializeS3Support();
+
         loadMasterSequenceDictionary();
 
         initializeReference();
@@ -1115,5 +1121,19 @@ public abstract class GATKTool extends CommandLineProgram {
      * Subclasses should override this method to close any resources that must be closed regardless of the success of traversal.
      */
     public void closeTool(){
+    }
+
+    public List<SimpleInterval> getUserIntervals() {
+
+        return Collections.unmodifiableList(userIntervals);
+    }
+
+    private void initializeS3Support() {
+        try {
+            FileSystem  fileSystem = FileSystems.newFileSystem(new URI("s3:///"), new HashMap<String, Object>(), Thread.currentThread().getContextClassLoader());
+            logger.info("s3 fileSystem created: " + fileSystem);
+        } catch (Throwable e) {
+            throw new GATKException("failed to add s3 file system", e);
+        }
     }
 }
