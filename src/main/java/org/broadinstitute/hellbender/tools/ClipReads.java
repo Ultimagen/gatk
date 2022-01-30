@@ -505,6 +505,13 @@ public final class ClipReads extends ReadWalker {
         clipper.setData(data);
     }
 
+    /**
+     * Clip bases on the reads that have a trimming mark. Some programs use tags to indicate
+     * the number of bases that should be trimmed from the read to trim the adapter and do not
+     * trim the adapter itself. This function uses these tags (XF and XT) to make the trimming
+     *
+     * @param clipper
+     */
     private void clipAdapter(ReadClipperWithData clipper) {
         if (clipAdapter) {
             GATKRead read = clipper.getRead();
@@ -532,7 +539,8 @@ public final class ClipReads extends ReadWalker {
             }
 
             if ( (xf == null) && (xt == null)) {
-                noAttrOneShotLogger.warn("clipAdapter requested, yet neither XF not XT attributes found. first read: " + read);
+                noAttrOneShotLogger.warn("clipAdapter requested, yet neither " + FIVE_PRIME_ADAPTER_LOCATION_TAG + " nor " +
+                        THREE_PRIME_ADAPTER_LOCATION_TAG + " attributes found. first read: " + read);
             }
         }
 
