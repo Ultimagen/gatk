@@ -11,17 +11,13 @@ import java.io.File;
 
 public class VariantAnnotatorS3IntegrationTest extends S3CommandLineProgramTest {
 
+    public VariantAnnotatorS3IntegrationTest() {
+        super();
+    }
+
     @BeforeTest
-    public void setup() throws Exception  {
-
-        // NOTE: this has 'aws' command line dependency!
-
-        // make sure bucket exists
-        execAWS("s3 mb " + S3_BUCKET);
-
-        // sync input files
-        final String localFolder = getToolTestDataDir();
-        execAWS("s3 sync " + localFolder + " " + getS3TestDir());
+    public void setup() {
+        syncToolTestData();
     }
 
     @Test
