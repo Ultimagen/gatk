@@ -29,7 +29,7 @@ public class CycleSkipStatus extends FlowAnnotatorBase implements StandardFlowBa
                                         VariantContext vc,
                                         AlleleLikelihoods<GATKRead, Allele> likelihoods) {
 
-        final LocalContext        localContext = new LocalContext(ref, vc, likelihoods);
+        final LocalContext        localContext = new LocalContext(ref, vc, likelihoods, true);
 
         if ( localContext.generateAnnotation ) {
             indelClassify(vc, localContext);

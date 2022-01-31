@@ -23,7 +23,7 @@ public class IndelClassify extends FlowAnnotatorBase implements StandardFlowBase
                                         VariantContext vc,
                                         AlleleLikelihoods<GATKRead, Allele> likelihoods) {
 
-       final LocalContext        localContext = new LocalContext(ref, vc, likelihoods);
+       final LocalContext        localContext = new LocalContext(ref, vc, likelihoods, false);
 
         if ( localContext.generateAnnotation ) {
             indelClassify(vc, localContext);
