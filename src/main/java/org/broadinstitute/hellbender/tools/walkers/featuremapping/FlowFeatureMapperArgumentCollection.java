@@ -1,6 +1,7 @@
 package org.broadinstitute.hellbender.tools.walkers.featuremapping;
 
 import org.broadinstitute.barclay.argparser.Argument;
+import org.broadinstitute.barclay.argparser.Hidden;
 
 import java.io.Serializable;
 import java.util.LinkedList;
@@ -91,12 +92,14 @@ public class FlowFeatureMapperArgumentCollection implements Serializable{
     /**
      *  debug negatives?
      **/
-    @Argument(fullName = "debug-negatives", doc = "debug nevative scores?", optional = true)
+    @Hidden
+    @Argument(fullName = "debug-negatives", doc = "debug negative scores?", optional = true)
     public boolean debugNegatives = false;
 
     /**
      *  debug read names?
      **/
+    @Hidden
     @Argument(fullName = "debug-read-name", doc = "debug specific reads?", optional = true)
     public List<String> debugReadName = null;
 }
