@@ -141,7 +141,7 @@ public class Mutect2IntegrationTest extends CommandLineProgramTest {
         final List<File> normals = normal.isPresent() ? Collections.singletonList(normal.get()) : Collections.emptyList();
         runMutect2(Collections.singletonList(tumor), normals, unfilteredVcf, CHROMOSOME_20, b37Reference, Optional.of(GNOMAD),
                 args -> args.addMask(mask).add(M2ArgumentCollection.F1R2_TAR_GZ_NAME, f1r2Counts),
-                args -> errorCorrectReads ? args.add(ReadThreadingAssemblerArgumentCollection.PILEUP_ERROR_CORRECTION_LOG_ODDS_NAME, 3.0) : args
+                args -> errorCorrectReads ? args.add(ReadThreadingAssemblerArgumentCollection.PILEUP_ERROR_CORRECTION_LOG_ODDS_LONG_NAME, 3.0) : args
         );
 
         // verify that alleles contained in likelihoods matrix but dropped from somatic calls do not show up in annotations

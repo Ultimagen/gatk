@@ -60,6 +60,9 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     /** See documentation at {@link SmithWatermanAlignmentConstants#ALIGNMENT_TO_BEST_HAPLOTYPE_SW_PARAMETERS}. */
     private static final SWParameters DEFAULT_READ_TO_HAPLOTYPE_SMITH_WATERMAN_PARAMETERS = SmithWatermanAlignmentConstants.ALIGNMENT_TO_BEST_HAPLOTYPE_SW_PARAMETERS;
 
+    public static final String MIN_BASE_QUALITY_SCORE_SHORT_NAME = "mbq";
+    public static final String OVERRIDE_FRAGMENT_SOFTCLIP_CHECK_LONG_NAME = "override-fragment-softclip-check";
+
     public ReadThreadingAssembler createReadThreadingAssembler() {
         final ReadThreadingAssembler assemblyEngine = assemblerArgs.makeReadThreadingAssembler();
         assemblyEngine.setDebug(assemblerArgs.debugAssembly);
@@ -139,7 +142,7 @@ public abstract class AssemblyBasedCallerArgumentCollection {
 
     @Advanced
     @Hidden
-    @Argument(fullName = "override-fragment-softclip-check", doc = "Use softclipped bases for assembly even when fragment size is ambiguous", optional = true)
+    @Argument(fullName = OVERRIDE_FRAGMENT_SOFTCLIP_CHECK_LONG_NAME, doc = "Use softclipped bases for assembly even when fragment size is ambiguous", optional = true)
     public boolean overrideSoftclipFragmentCheck = false;
 
     // Parameters to control read error correction
@@ -147,7 +150,7 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     /**
      * Bases with a quality below this threshold will not be used for calling.
      */
-    @Argument(fullName = MIN_BASE_QUALITY_SCORE_LONG_NAME, shortName = "mbq", doc = "Minimum base quality required to consider a base for calling", optional = true)
+    @Argument(fullName = MIN_BASE_QUALITY_SCORE_LONG_NAME, shortName = MIN_BASE_QUALITY_SCORE_SHORT_NAME, doc = "Minimum base quality required to consider a base for calling", optional = true)
     public byte minBaseQualityScore = 10;
 
     //Annotations
