@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class AncestralContigLocationTranslator {
+ class AncestralContigLocationTranslator {
 
     // locals
     final private GATKPath                                    basePath;
@@ -19,12 +19,12 @@ public class AncestralContigLocationTranslator {
         this.basePath = basePath;
     }
 
-    Tuple<SimpleInterval, SimpleInterval> translate(final Locatable loc) throws IOException {
-        return new Tuple<>(translate(GroundTruthConstants.C_MATERNAL, loc),
-                translate(GroundTruthConstants.C_PATERNAL, loc));
+    protected Tuple<SimpleInterval, SimpleInterval> translate(final Locatable loc) throws IOException {
+        return new Tuple<>(translate(GroundTruthReadsBuilder.C_MATERNAL, loc),
+                translate(GroundTruthReadsBuilder.C_PATERNAL, loc));
     }
 
-    SimpleInterval translate(final String ancestor, final Locatable loc) throws IOException {
+    private SimpleInterval translate(final String ancestor, final Locatable loc) throws IOException {
 
         int         start = translate(ancestor, loc.getContig(), loc.getStart());
         int         end = translate(ancestor, loc.getContig(), loc.getEnd());
@@ -36,7 +36,7 @@ public class AncestralContigLocationTranslator {
         }
     }
 
-    int translate(final String ancestor, final String contig, final int from) throws IOException {
+    private int translate(final String ancestor, final String contig, final int from) throws IOException {
 
         // check-for/create translator
         final String                          key = ancestor + "." + contig + ".csv";

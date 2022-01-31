@@ -14,16 +14,14 @@ import org.broadinstitute.hellbender.cmdline.programgroups.FlowBasedProgramGroup
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.ToolSuccessfulPrematureExit;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyBasedCallerUtils;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerArgumentCollection;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.ReadLikelihoodCalculationEngine;
+import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.*;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.CigarBuilder;
 import org.broadinstitute.hellbender.utils.read.FlowBasedReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.tools.walkers.featuremapping.FlowFeatureMapper;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.FlowBasedAlignmentEngine;
 import org.broadinstitute.hellbender.utils.haplotype.FlowBasedHaplotype;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 
@@ -117,15 +115,15 @@ import java.util.zip.GZIPOutputStream;
 @ExperimentalFeature
 public final class GroundTruthReadsBuilder extends ReadWalker {
 
+    // constants
     private static final Logger logger = LogManager.getLogger(GroundTruthReadsBuilder.class);
     public static final int DEFAULT_FILL_VALUE = -65;
     public static final int NONREF_FILL_VALUE = -80;
     public static final int UNKNOWN_FILL_VALUE = -85;
     public static final int SOFTCLIP_FILL_VALUE = -83;
     private static final int EXTRA_FILL_FROM_HAPLOTYPE = 50;
-
-    @ArgumentCollection
-    private final HaplotypeCallerArgumentCollection hcArgs = new HaplotypeCallerArgumentCollection();
+    static final String C_MATERNAL = "maternal";
+    static final String C_PATERNAL = "paternal";
 
     @Argument(fullName = "maternal-ref", doc="maternal reference file")
     public GATKPath maternalRefPath = null;
@@ -183,15 +181,21 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
     @Argument(fullName = "gt-no-output", doc = "do not generate output records", optional = true)
     public boolean      noOutput = false;
 
+    @ArgumentCollection
+    public LikelihoodEngineArgumentCollection likelihoodArgs = new LikelihoodEngineArgumentCollection();
+
+    @ArgumentCollection
+    public FlowBasedAlignmentArgumentCollection fbargs = new FlowBasedAlignmentArgumentCollection();
+
     // locals
-    final Random                        random = new Random();
-    int                                 outputReadsCount = 0;
-    ReferenceDataSource                 maternalReference;
-    ReferenceDataSource                 paternalReference;
-    AncestralContigLocationTranslator   locationTranslator;
-    FlowBasedAlignmentEngine            likelihoodCalculationEngine;
-    PrintWriter                         outputCsv;
-    private int                         locationTranslationErrors;
+    private final Random                        random = new Random();
+    private int                                 outputReadsCount = 0;
+    private ReferenceDataSource                 maternalReference;
+    private ReferenceDataSource                 paternalReference;
+    private AncestralContigLocationTranslator   locationTranslator;
+    private FlowBasedAlignmentEngine            likelihoodCalculationEngine;
+    private PrintWriter                         outputCsv;
+    private int                                 locationTranslationErrors;
 
     // static/const
     static final private String[]       CSV_FIELD_ORDER = {
@@ -223,7 +227,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         locationTranslator = new AncestralContigLocationTranslator(ancestralTranslatorsBasePath);
 
         // create likelihood engine
-        ReadLikelihoodCalculationEngine engine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(hcArgs.likelihoodArgs, false);
+        ReadLikelihoodCalculationEngine engine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(likelihoodArgs, false);
         if ( engine instanceof FlowBasedAlignmentEngine) {
             likelihoodCalculationEngine = (FlowBasedAlignmentEngine)engine;
         } else {
@@ -470,7 +474,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
         FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read);
 
-        return new FlowBasedRead(read, rgInfo.flowOrder, rgInfo.maxClass, hcArgs.fbargs);
+        return new FlowBasedRead(read, rgInfo.flowOrder, rgInfo.maxClass, fbargs);
     }
 
     private boolean isEndSoftclipped(final GATKRead read) {
@@ -655,7 +659,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         final FlowBasedHaplotype flowHaplotype = new FlowBasedHaplotype(sh.haplotype, rgInfo.flowOrder);
 
         // create flow read
-        final FlowBasedRead   flowRead = new FlowBasedRead(read, rgInfo.flowOrder, rgInfo.maxClass, hcArgs.fbargs);
+        final FlowBasedRead   flowRead = new FlowBasedRead(read, rgInfo.flowOrder, rgInfo.maxClass, fbargs);
         if ( read.isReverseStrand() ) {
             flowRead.setDirection(FlowBasedRead.Direction.SYNTHESIS);
             flowRead.applyAlignment();
@@ -679,7 +683,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         final FlowBasedHaplotype      flowHaplotype = new FlowBasedHaplotype(buildReferenceHaplotype(ref, read), rgInfo.flowOrder);
 
         // create flow read
-        final FlowBasedRead           flowRead = new FlowBasedRead(read, rgInfo.flowOrder, rgInfo.maxClass, hcArgs.fbargs);
+        final FlowBasedRead           flowRead = new FlowBasedRead(read, rgInfo.flowOrder, rgInfo.maxClass, fbargs);
         if ( read.isReverseStrand() ) {
             flowRead.setDirection(FlowBasedRead.Direction.SYNTHESIS);
             flowRead.applyAlignment();

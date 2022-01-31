@@ -11,6 +11,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Consumer;
 
+/**
+ * An implementation of a feature mapper that finds SNPs (SVN)
+ *
+ * This class only finds SNP that are surrounded by a specific number of bases identical to the reference.
+ */
+
 public class SNVMapper implements FeatureMapper {
 
     final int         identBefore;
@@ -48,7 +54,7 @@ public class SNVMapper implements FeatureMapper {
         }
         int               refEditDistance = levDistance.apply(basesString, new String(ref));
 
-        // count bases delta on M cigat elements
+        // count bases delta on M cigar elements
         int         nonIdentMBases = 0;
         int         readOfs = 0;
         int         refOfs = 0;
