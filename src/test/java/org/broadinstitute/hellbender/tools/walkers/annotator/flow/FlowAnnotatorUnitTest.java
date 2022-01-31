@@ -9,6 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.engine.ReferenceDataSource;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
+import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 import org.broadinstitute.hellbender.utils.reference.ReferenceBases;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -29,7 +30,6 @@ public class FlowAnnotatorUnitTest {
             new CycleSkipStatus()
     };
 
-    final static String         FLOW_ORDER = "TGCA";
     final static int            RANDOM_TEST_DATA_ENTRY_COUNT = 1000;
     final static int            RANDOM_TEST_DATA_MIN_REF_LENGTH = 5;
     final static int            RANDOM_TEST_DATA_MAX_REF_LENGTH = 10;
@@ -93,14 +93,14 @@ public class FlowAnnotatorUnitTest {
             // [1] allele
             // [2] index of annotation to call
             testData[i] = new Object[3];
-            final String    alleleOnRef = generateRandomSequence(rand, FLOW_ORDER, RANDOM_TEST_DATA_MIN_ALLELE_LENGTH, RANDOM_TEST_DATA_MAX_ALLELE_LENGTH, null);
-            final String    allele = generateRandomSequence(rand, FLOW_ORDER, RANDOM_TEST_DATA_MIN_ALLELE_LENGTH, RANDOM_TEST_DATA_MAX_ALLELE_LENGTH, alleleOnRef);
+            final String    alleleOnRef = generateRandomSequence(rand, FlowBasedRead.DEFAULT_FLOW_ORDER, RANDOM_TEST_DATA_MIN_ALLELE_LENGTH, RANDOM_TEST_DATA_MAX_ALLELE_LENGTH, null);
+            final String    allele = generateRandomSequence(rand, FlowBasedRead.DEFAULT_FLOW_ORDER, RANDOM_TEST_DATA_MIN_ALLELE_LENGTH, RANDOM_TEST_DATA_MAX_ALLELE_LENGTH, alleleOnRef);
             testData[i][0] =
-                    generateRandomSequence(rand, FLOW_ORDER, RANDOM_TEST_DATA_MIN_REF_LENGTH, RANDOM_TEST_DATA_MAX_REF_LENGTH, null)
+                    generateRandomSequence(rand, FlowBasedRead.DEFAULT_FLOW_ORDER, RANDOM_TEST_DATA_MIN_REF_LENGTH, RANDOM_TEST_DATA_MAX_REF_LENGTH, null)
                     + " "
                     + alleleOnRef
                     + " "
-                    + generateRandomSequence(rand, FLOW_ORDER, RANDOM_TEST_DATA_MIN_REF_LENGTH, RANDOM_TEST_DATA_MAX_REF_LENGTH, null);
+                    + generateRandomSequence(rand, FlowBasedRead.DEFAULT_FLOW_ORDER, RANDOM_TEST_DATA_MIN_REF_LENGTH, RANDOM_TEST_DATA_MAX_REF_LENGTH, null);
             testData[i][1] = allele;
             testData[i][2] = rand.nextInt(allAnnotators.length);
         }
@@ -197,7 +197,7 @@ public class FlowAnnotatorUnitTest {
 
         for ( FlowAnnotatorBase a : allAnnotators ) {
             keys.addAll(a.getKeyNames());
-            a.setFlowOrder(Collections.singletonList(FLOW_ORDER));
+            a.setFlowOrder(Collections.singletonList(FlowBasedRead.DEFAULT_FLOW_ORDER));
         }
 
         return keys;
