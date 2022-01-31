@@ -27,7 +27,7 @@ public class RightMotif extends FlowAnnotatorBase implements StandardFlowBasedAn
 
         final LocalContext        localContext = new LocalContext(ref, vc, likelihoods);
 
-        if ( !localContext.notCalculated ) {
+        if ( localContext.generateAnnotation ) {
             indelClassify(vc, localContext);
             isHmerIndel(vc, localContext);
             getRightMotif(vc, localContext);

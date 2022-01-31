@@ -56,7 +56,7 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
 
         Map<String, Object> attributes = new LinkedHashMap<>();
 
-        boolean     notCalculated;
+        boolean     generateAnnotation;
 
         protected LocalContext(final ReferenceContext ref,
                                final VariantContext vc,
@@ -71,13 +71,12 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
             this.likelihoods = likelihoods;
 
             // we do need the reference
-            if ( ref == null )
-                notCalculated = true;
+            this.generateAnnotation = (ref != null);
         }
 
         protected Map<String, Object> asAttributes() {
 
-            if ( notCalculated ) {
+            if ( !generateAnnotation ) {
                 return Collections.emptyMap();
             } else {
                 return attributes.entrySet().stream()
@@ -137,7 +136,7 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
             if ( getNoFlowOrderLogger() != null ) {
                 getNoFlowOrderLogger().warn(this.getClass().getSimpleName() + " annotation will not be calculated, no '" + StandardArgumentDefinitions.FLOW_ORDER_FOR_ANNOTATIONS + "' argument provided");
             }
-            localContext.notCalculated = true;
+            localContext.generateAnnotation = false;
         }
 
         return DEFAULT_FLOW_ORDER;
