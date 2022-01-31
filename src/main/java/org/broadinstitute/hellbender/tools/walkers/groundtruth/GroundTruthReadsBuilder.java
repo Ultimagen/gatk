@@ -8,10 +8,7 @@ import htsjdk.samtools.util.Tuple;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.broadinstitute.barclay.argparser.Argument;
-import org.broadinstitute.barclay.argparser.ArgumentCollection;
-import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
-import org.broadinstitute.barclay.argparser.ExperimentalFeature;
+import org.broadinstitute.barclay.argparser.*;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.programgroups.FlowBasedProgramGroup;
 import org.broadinstitute.hellbender.engine.*;
@@ -51,8 +48,22 @@ import java.util.zip.GZIPOutputStream;
  *
  * <h3> Output </h3>
  * <ul>
- *     <li> CSV file containing maternal/parental haplotype scores and many more columns </li>
+ *     <li> CSV file containing maternal/parental haplotype scores and many more columns (.csv or .csv.gz supported) </li>
  * </ul>
+ *
+ * At present, the output will contain the following columns (not nessarily in this order) for each processed read:
+ * <ul>
+ *     <li>ReadName, ReadChrom, ReadStart, ReadEnd, tm, mapq, flags, ReadCigar, ReadSequence, ReadUnclippedStart,
+ *     ReadUnclippedEnd - information directly extracted from the input read</li>
+ *     <li>PaternalHaplotypeInterval, BestHaplotypeSequence, PaternalHaplotypeScore - parental haplotype information.
+ *     First the read interval is translated into parental space, the haplotype sequence extracted and then scored</li>
+ *     <li>Maternal* - same for maternal</li>
+ *     <li>RefHaplotypeScore - score computed from the reference haplotype</li>
+ *     <li>BestHaplotypeKey - flow based key for the 'best' (score wise) haplotype (out of the maternal/paternal) pair)</li>
+ *     <li>ConsensusHaplotypeKey - a flow based key constructed from the flow keys of the maternal and paternal
+ *     haplotypes, containing only keys that agree (other keys filled with fixed/special value)</li>
+ * </ul>
+ *
  *
  * <h3>Usage examples</h3>
  * <pre>
@@ -98,7 +109,7 @@ import java.util.zip.GZIPOutputStream;
  */
 @CommandLineProgramProperties(
         summary = "Ground Truth Reads Builder",
-        oneLineSummary = "Pproduces a flexible and robust ground truth set for base calling training",
+        oneLineSummary = "Produces a flexible and robust ground truth set for base calling training",
         programGroup = FlowBasedProgramGroup.class
 )
 
@@ -161,9 +172,11 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
     @Argument(fullName = "false-snp-compensation", doc = "skip haplotype bases until same base as read starts (false SNP compensation)", optional = true)
     public boolean falseSnpCompensation;
 
-    @Argument(fullName = "output-csv", doc="main output file")
+    @Argument(fullName = "output-csv", doc="main CSV output file. the file containing maternal/parental "
+            + "maternal and paternal haplotype sequences and scores (and many more columns). supported file extensions: .csv, .csv.gz.")
     public GATKPath outputCsvPath = null;
 
+    @Hidden
     @Argument(fullName = "gt-debug", doc = "Turn additional internal logging on", optional = true)
     public boolean      debugMode = false;
 
