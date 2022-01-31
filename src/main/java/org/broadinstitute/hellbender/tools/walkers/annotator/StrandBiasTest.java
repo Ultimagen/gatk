@@ -207,7 +207,7 @@ public abstract class StrandBiasTest implements InfoFieldAnnotation {
 
     /**
      * Helper method to copy the per-sample table to the main table
-     *fi
+     *
      * @param perSampleTable   per-sample table (single dimension)
      * @param mainTable        main table (two dimensions)
      */
