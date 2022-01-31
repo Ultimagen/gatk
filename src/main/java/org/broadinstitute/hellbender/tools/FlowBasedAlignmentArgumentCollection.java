@@ -11,22 +11,22 @@ import java.io.Serializable;
 public class FlowBasedAlignmentArgumentCollection implements Serializable {
     private static final long serialVersionUID = 0;
 
-    private static final String PROBABILITY_RATIO_THRESHOLD_LONG_NAME = "flow-probability-threshold";
-    private static final String REMOVE_LONGER_THAN_ONE_INDELS = "flow-remove-non-single-base-pair-indels";
-    private static final String REMOVE_ONE_TO_ZERO_PROBS = "flow-remove-one-zero-probs";
-    private static final String NUMBER_OF_POSSIBLE_PROBS = "flow-quantization-bins";
-    private static final String FILLING_VALUE = "flow-fill-empty-bins-value";
-    private static final String SYMMETRIC_INDELS = "flow-symmetric-indel-probs";
-    private static final String REPORT_INS_OR_DEL = "flow-report-insertion-or-deletion";
-    private static final String DISALLOW_LARGER_PROBS = "flow-disallow-probs-larger-than-call";
-    private static final String LUMP_PROBS = "flow-lump-probs";
-    private static final String PROB_SF = "flow-probability-scaling-factor";
-    private static final String RETAIN_MAX_N_PROBS_BASE = "flow-retain-max-n-probs-base-format";
-    private static final String FLOW_ORDER_CYCLE_LENGTH = "flow-order-cycle-length";
-    private static final String NUM_UNCERTAIN_FLOWS = "flow-number-of-uncertain-flows-to-clip";
-    private static final String FIRST_UNCERTAIN_FLOW = "flow-nucleotide-of-first-uncertain-flow";
-    private static final String FLOW_LIKELIHOOD_PARALLEL_THREADS = "flow-likelihood-parallel-threads";
-    public static final String FLOW_LIKELIHOOD_OPTIMIZED_COMP = "flow-likelihood-optimized-comp";
+    public static final String PROBABILITY_RATIO_THRESHOLD_LONG_NAME = "flow-probability-threshold";
+    public static final String REMOVE_LONGER_THAN_ONE_INDELS_LONG_NAME = "flow-remove-non-single-base-pair-indels";
+    public static final String REMOVE_ONE_TO_ZERO_PROBS_LONG_NAME = "flow-remove-one-zero-probs";
+    public static final String NUMBER_OF_POSSIBLE_PROBS_LONG_NAME = "flow-quantization-bins";
+    public static final String FILLING_VALUE_LONG_NAME = "flow-fill-empty-bins-value";
+    public static final String SYMMETRIC_INDELS_LONG_NAME = "flow-symmetric-indel-probs";
+    public static final String REPORT_INS_OR_DEL_LONG_NAME = "flow-report-insertion-or-deletion";
+    public static final String DISALLOW_LARGER_PROBS_LONG_NAME = "flow-disallow-probs-larger-than-call";
+    public static final String LUMP_PROBS_LONG_NAME = "flow-lump-probs";
+    public static final String PROB_SF_LONG_NAME = "flow-probability-scaling-factor";
+    public static final String RETAIN_MAX_N_PROBS_BASE_LONG_NAME = "flow-retain-max-n-probs-base-format";
+    public static final String FLOW_ORDER_CYCLE_LENGTH_LONG_NAME = "flow-order-cycle-length";
+    public static final String NUM_UNCERTAIN_FLOWS_LONG_NAME = "flow-number-of-uncertain-flows-to-clip";
+    public static final String FIRST_UNCERTAIN_FLOW_LONG_NAME = "flow-nucleotide-of-first-uncertain-flow";
+    public static final String FLOW_LIKELIHOOD_PARALLEL_THREADS_LONG_NAME = "flow-likelihood-parallel-threads";
+    public static final String FLOW_LIKELIHOOD_OPTIMIZED_COMP_LONG_NAME = "flow-likelihood-optimized-comp";
     public static final String FLOW_MATRIX_MODS_LONG_NAME = "flow-matrix-mods";
 
 
@@ -51,68 +51,68 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     public double probabilityRatioThreshold = DEFAULT_RATIO_THRESHOLD;
 
     @Advanced
-    @Argument(fullName = REMOVE_LONGER_THAN_ONE_INDELS, doc = "Should the probabilities of more then 1 indel be used", optional = true)
+    @Argument(fullName = REMOVE_LONGER_THAN_ONE_INDELS_LONG_NAME, doc = "Should the probabilities of more then 1 indel be used", optional = true)
     public boolean removeLongerThanOneIndels = DEFAULT_REMOVE_LONGER_INDELS;
 
     @Advanced
-    @Argument(fullName = REMOVE_ONE_TO_ZERO_PROBS, doc = "Remove probabilities of basecall of zero from non-zero genome", optional = true)
+    @Argument(fullName = REMOVE_ONE_TO_ZERO_PROBS_LONG_NAME, doc = "Remove probabilities of basecall of zero from non-zero genome", optional = true)
     public boolean removeOneToZeroProbs = DEFAULT_REMOVE_ONE_TO_ZERO;
 
     @Advanced
-    @Argument(fullName = NUMBER_OF_POSSIBLE_PROBS, doc = "Probability quantization", optional = true)
+    @Argument(fullName = NUMBER_OF_POSSIBLE_PROBS_LONG_NAME, doc = "Probability quantization", optional = true)
     public int probabilityQuantization = DEFAULT_QUANTIZATION;
 
     @Advanced
-    @Argument(fullName = FILLING_VALUE, doc = "Value to fill the zeros of the matrix with", optional=true)
+    @Argument(fullName = FILLING_VALUE_LONG_NAME, doc = "Value to fill the zeros of the matrix with", optional=true)
     public double fillingValue = DEFAULT_FILLING_VALUE;
 
     @Advanced
-    @Argument(fullName = SYMMETRIC_INDELS, doc = "Should indel probabilities be symmetric in flow", optional=true)
+    @Argument(fullName = SYMMETRIC_INDELS_LONG_NAME, doc = "Should indel probabilities be symmetric in flow", optional=true)
     public boolean symmetricIndels = DEFAULT_SYMMETRIC_INDELS;
 
     @Advanced
-    @Argument(fullName = REPORT_INS_OR_DEL, doc = "Report either insertion or deletion, probability, not both", optional=true)
+    @Argument(fullName = REPORT_INS_OR_DEL_LONG_NAME, doc = "Report either insertion or deletion, probability, not both", optional=true)
     public boolean onlyInsOrDel = DEFAULT_ONLY_INS_OR_DEL;
 
     @Advanced
-    @Argument(fullName = DISALLOW_LARGER_PROBS, doc = "Cap probabilities of error to 1 relative to base call", optional=true)
+    @Argument(fullName = DISALLOW_LARGER_PROBS_LONG_NAME, doc = "Cap probabilities of error to 1 relative to base call", optional=true)
     public boolean disallowLargerProbs = DEFAULT_DISALLOW_LARGER_PROBS;
 
     @Advanced
-    @Argument(fullName = LUMP_PROBS, doc = "Should all probabilities of insertion or deletion in the flow be combined together", optional=true)
+    @Argument(fullName = LUMP_PROBS_LONG_NAME, doc = "Should all probabilities of insertion or deletion in the flow be combined together", optional=true)
     public boolean lumpProbs = DEFAULT_LUMP_PROBS;
 
     @Advanced
-    @Argument(fullName = RETAIN_MAX_N_PROBS_BASE, doc = "Keep only hmer/2 probabilities (like in base format)", optional=true)
+    @Argument(fullName = RETAIN_MAX_N_PROBS_BASE_LONG_NAME, doc = "Keep only hmer/2 probabilities (like in base format)", optional=true)
     public boolean retainMaxNProbs = DEFAULT_RETAIN_MAX_N_PROBS;
 
     @Advanced
-    @Argument(fullName = PROB_SF, doc = "probability scaling factor for (phred=10)", optional=true)
+    @Argument(fullName = PROB_SF_LONG_NAME, doc = "probability scaling factor for (phred=10)", optional=true)
     public int probabilityScalingFactor = DEFAULT_PROB_SCALING_FACTOR;
 
     @Advanced
     @Hidden
-    @Argument(fullName = FLOW_ORDER_CYCLE_LENGTH, doc = "Length of flow order cycle", optional=true)
+    @Argument(fullName = FLOW_ORDER_CYCLE_LENGTH_LONG_NAME, doc = "Length of flow order cycle", optional=true)
     public int flowOrderCycleLength = DEFAULT_FLOW_ORDER_CYCLE_LENGTH;
 
     @Advanced
     @Hidden
-    @Argument(fullName = NUM_UNCERTAIN_FLOWS, doc = "Number of uncertain flows to trim on the 5' end of the read", optional=true)
+    @Argument(fullName = NUM_UNCERTAIN_FLOWS_LONG_NAME, doc = "Number of uncertain flows to trim on the 5' end of the read", optional=true)
     public int flowNumUncertainFlows = DEFAULT_NUM_UNCERTAIN_FLOWS;
 
     @Advanced
     @Hidden
-    @Argument(fullName = FIRST_UNCERTAIN_FLOW, doc = "Nucleotide that is being read in the first uncertain (5') flow", optional=true)
+    @Argument(fullName = FIRST_UNCERTAIN_FLOW_LONG_NAME, doc = "Nucleotide that is being read in the first uncertain (5') flow", optional=true)
     public String flowFirstUncertainFlowBase = DEFAULT_FIRST_UNCERTAIN_FLOW;
 
     @Advanced
     @Hidden
-    @Argument(fullName = FLOW_LIKELIHOOD_PARALLEL_THREADS, doc = "Number of threads to parallelize likelihood computation inner (read) loop with", optional=true)
+    @Argument(fullName = FLOW_LIKELIHOOD_PARALLEL_THREADS_LONG_NAME, doc = "Number of threads to parallelize likelihood computation inner (read) loop with", optional=true)
     public int flowLikelihoodParallelThreads = 0;
 
     @Advanced
     @Hidden
-    @Argument(fullName = FLOW_LIKELIHOOD_OPTIMIZED_COMP, doc = "Use optimized likelihood computation version", optional=true)
+    @Argument(fullName = FLOW_LIKELIHOOD_OPTIMIZED_COMP_LONG_NAME, doc = "Use optimized likelihood computation version", optional=true)
     public boolean flowLikelihoodOptimizedComp = false;
 
     @Advanced
