@@ -32,6 +32,7 @@ development and testing
 public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRead, FlowBasedReadInterface, Serializable {
 
     final static public int     MAX_CLASS = 12;
+    public static final String     DEFAULT_FLOW_ORDER = "TGCA";
     private static final long serialVersionUID = 42L;
     private final Logger logger = LogManager.getLogger(this.getClass());
 

@@ -38,7 +38,6 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
     protected static final int      MOTIF_SIZE = 5;
     protected static final int      GC_CONTENT_SIZE = 10;
     protected static final int      BASE_TYPE_COUNT = 4;
-    private static final String     DEFAULT_FLOW_ORDER = "TGCA";
 
     private List<String>            flowOrder;
 
@@ -139,7 +138,7 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
             localContext.generateAnnotation = false;
         }
 
-        return DEFAULT_FLOW_ORDER;
+        return FlowBasedRead.DEFAULT_FLOW_ORDER;
     }
 
     protected OneShotLogger getNoFlowOrderLogger() {
