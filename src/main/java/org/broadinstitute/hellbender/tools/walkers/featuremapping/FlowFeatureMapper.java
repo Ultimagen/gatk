@@ -205,12 +205,11 @@ public final class FlowFeatureMapper extends ReadWalker {
         public int compareTo(MappedFeature o) {
 
             int     delta = this.read.getContig().compareTo(o.read.getContig());
-            if ( delta != 0 )
+            if ( delta != 0 ) {
                 return delta;
-
-            delta = this.start - o.start;
-
-            return delta;
+            } else {
+                return this.start - o.start;
+            }
         }
     }
 
