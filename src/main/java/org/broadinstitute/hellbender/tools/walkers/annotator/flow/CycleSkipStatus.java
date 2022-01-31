@@ -22,7 +22,6 @@ import java.util.Map;
 @DocumentedFeature(groupName=HelpConstants.DOC_CAT_FLOW_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_FLOW_ANNOTATORS_SUMMARY, summary="Cycle Skip Status Flow Annotation")
 public class CycleSkipStatus extends FlowAnnotatorBase implements StandardFlowBasedAnnotation {
     private final Logger logger = LogManager.getLogger(CycleSkipStatus.class);
-    private final OneShotLogger noFlowOrderLogger = new OneShotLogger(logger);
 
     @Override
     public Map<String, Object> annotate(ReferenceContext ref,
@@ -51,12 +50,6 @@ public class CycleSkipStatus extends FlowAnnotatorBase implements StandardFlowBa
     protected boolean isActualFlowOrderRequired() {
         return true;
     }
-
-    @Override
-    protected OneShotLogger getNoFlowOrderLogger() {
-        return noFlowOrderLogger;
-    }
-
 
 
 }

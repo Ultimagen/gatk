@@ -35,6 +35,8 @@ import java.util.stream.Collectors;
  */
 public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
     private final static Logger logger = LogManager.getLogger(FlowAnnotatorBase.class);
+    protected final OneShotLogger flowMissingOneShotLogger = new OneShotLogger(FlowAnnotatorBase.class);
+
 
     // additional constants
     protected static final String   C_INSERT = "ins";
@@ -147,17 +149,11 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
 
         // if here, no flow order was found. may we use a default?
         if ( isActualFlowOrderRequired() ) {
-            if ( getNoFlowOrderLogger() != null ) {
-                getNoFlowOrderLogger().warn(this.getClass().getSimpleName() + " annotation will not be calculated, no '" + StandardArgumentDefinitions.FLOW_ORDER_FOR_ANNOTATIONS + "' argument provided");
-            }
             localContext.generateAnnotation = false;
+            flowMissingOneShotLogger.warn("this.getClass().getSimpleName() + \" annotation will not be calculated, no '\" + StandardArgumentDefinitions.FLOW_ORDER_FOR_ANNOTATIONS + \"' argument provided\"");
         }
 
         return FlowBasedRead.DEFAULT_FLOW_ORDER;
-    }
-
-    protected OneShotLogger getNoFlowOrderLogger() {
-        return null;
     }
 
     protected boolean isActualFlowOrderRequired() {
