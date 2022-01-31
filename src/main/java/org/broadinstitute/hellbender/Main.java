@@ -10,7 +10,6 @@ import org.broadinstitute.hellbender.utils.ClassUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.config.ConfigFactory;
 import org.broadinstitute.hellbender.utils.runtime.RuntimeUtils;
-import org.broadinstitute.hellbender.exceptions.ToolSuccessfulPrematureExit;
 
 import java.io.PrintStream;
 import java.io.Serializable;
@@ -214,8 +213,6 @@ public class Main {
             // a Picard tool returned a non-zero exit code
             handleResult(e.getToolReturnCode());
             System.exit(PICARD_TOOL_EXCEPTION);
-        } catch (ToolSuccessfulPrematureExit e) {
-            // nothing to do. simply ignore
         } catch (final UserException e){
             handleUserException(e);
             System.exit(USER_EXCEPTION_EXIT_VALUE);
