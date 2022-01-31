@@ -14,9 +14,9 @@ import org.broadinstitute.barclay.argparser.*;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.programgroups.FlowBasedProgramGroup;
-import org.broadinstitute.hellbender.cmdline.programgroups.ShortVariantDiscoveryProgramGroup;
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.exceptions.GATKException;
+import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.*;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
@@ -34,9 +34,14 @@ import java.util.*;
 
 
 /**
- * Finds specific features in reads: SNP/indel,
- * scores the confidence of each feature relative to the reference in each read
- * and writes them into a VCF file
+ * Finds specific features in reads, scores the confidence of each feature relative to the
+ * reference in each read and writes them into a VCF file.
+ *
+ * The sense of what a 'feature' is left somewhat open. In the most general sense, it is a haplotype
+ * located in a specific location on the read. It does not necessarily defined as a deviation from the reference.
+ * A feature is indeed scored against the reference (in terms of its deviation).
+ *
+ * The current version implements a single type of feature: a SNP (aka SNV).
  *
  * <p>
  * At this point, this tool finds SNVs
@@ -101,8 +106,27 @@ public final class FlowFeatureMapper extends ReadWalker {
     @ArgumentCollection
     private FlowFeatureMapperArgumentCollection fmArgs = new FlowFeatureMapperArgumentCollection();
 
+    @Advanced
+    @Argument(fullName= AssemblyBasedCallerArgumentCollection.EMIT_REF_CONFIDENCE_LONG_NAME, shortName= AssemblyBasedCallerArgumentCollection.EMIT_REF_CONFIDENCE_SHORT_NAME, doc="Mode for emitting reference confidence scores (For Mutect2, this is a BETA feature)", optional = true)
+    public ReferenceConfidenceMode emitReferenceConfidence = ReferenceConfidenceMode.NONE;
+
+    @Advanced
+    @Argument(fullName = HaplotypeCallerArgumentCollection.GQ_BAND_LONG_NAME, shortName = HaplotypeCallerArgumentCollection.GQ_BAND_SHORT_NAME, doc= "Exclusive upper bounds for reference confidence GQ bands " +
+            "(must be in [1, 100] and specified in increasing order)", optional = true)
+    public List<Integer> GVCFGQBands = new ArrayList<>(70);
+    {
+        for (int i=1; i<=60; ++i) {
+            GVCFGQBands.add(i);
+        }
+        GVCFGQBands.add(70); GVCFGQBands.add(80); GVCFGQBands.add(90); GVCFGQBands.add(99);
+    };
+
+    @Advanced
+    @Argument(fullName=HaplotypeCallerArgumentCollection.OUTPUT_BLOCK_LOWER_BOUNDS, doc = "Output the band lower bound for each GQ block regardless of the data it represents", optional = true)
+    public boolean floorBlocks = false;
+
     @ArgumentCollection
-    private final HaplotypeCallerArgumentCollection hcArgs = new HaplotypeCallerArgumentCollection();
+    public FlowBasedAlignmentArgumentCollection fbargs = new FlowBasedAlignmentArgumentCollection();
 
     static private class ReadContext implements Comparable<ReadContext> {
         final GATKRead         read;
@@ -166,9 +190,9 @@ public final class FlowFeatureMapper extends ReadWalker {
                 options.toArray(new Options[options.size()])
         );
 
-        if ( hcArgs.emitReferenceConfidence == ReferenceConfidenceMode.GVCF ) {
+        if ( emitReferenceConfidence == ReferenceConfidenceMode.GVCF ) {
             try {
-                writer = new GVCFWriter(writer, new ArrayList<Number>(hcArgs.GVCFGQBands), hcArgs.floorBlocks);
+                writer = new GVCFWriter(writer, new ArrayList<Number>(GVCFGQBands), floorBlocks);
             } catch ( IllegalArgumentException e ) {
                 throw new CommandLineException.BadArgumentValue("GQBands", "are malformed: " + e.getMessage());
             }
@@ -310,7 +334,7 @@ public final class FlowFeatureMapper extends ReadWalker {
 
         // create flow read
         final FlowBasedRead   flowRead = new FlowBasedRead(fr.read, rgInfo.flowOrder,
-                                                                        rgInfo.maxClass, hcArgs.fbargs);
+                                                                        rgInfo.maxClass, fbargs);
         final int diffLeft = haplotypes[0].getStart() - flowRead.getStart() + fr.offsetDelta;
         final int diffRight = flowRead.getEnd() - haplotypes[0].getEnd();
         flowRead.applyBaseClipping(Math.max(0, diffLeft), Math.max(diffRight, 0), false);
@@ -345,7 +369,7 @@ public final class FlowFeatureMapper extends ReadWalker {
             logger.info("score: " + score);
 
             // analyze read
-            final FlowBasedRead flowRead2 = new FlowBasedRead(fr.read, rgInfo.flowOrder, rgInfo.maxClass, hcArgs.fbargs);
+            final FlowBasedRead flowRead2 = new FlowBasedRead(fr.read, rgInfo.flowOrder, rgInfo.maxClass, fbargs);
             final int[]        key2 = flowRead2.getKey();
             for ( int i = 0 ; i < key2.length ; i++ ) {
                 final double      p1 = flowRead2.getProb(i, key2[i]);
