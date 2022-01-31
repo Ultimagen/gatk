@@ -26,7 +26,7 @@ public class VariantType extends FlowAnnotatorBase implements StandardFlowBasedA
 
             final LocalContext        localContext = new LocalContext(ref, vc, likelihoods);
 
-            if ( !localContext.notCalculated ) {
+            if ( localContext.generateAnnotation ) {
                 indelClassify(vc, localContext);
                 isHmerIndel(vc, localContext);
                 variantType(vc, localContext);

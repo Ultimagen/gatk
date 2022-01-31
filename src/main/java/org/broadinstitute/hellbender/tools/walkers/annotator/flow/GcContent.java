@@ -27,7 +27,7 @@ public class GcContent extends FlowAnnotatorBase implements StandardFlowBasedAnn
 
         final LocalContext        localContext = new LocalContext(ref, vc, likelihoods);
 
-        if ( !localContext.notCalculated ) {
+        if ( localContext.generateAnnotation ) {
             gcContent(vc, localContext);
         }
 

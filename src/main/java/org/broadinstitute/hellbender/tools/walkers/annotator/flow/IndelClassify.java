@@ -25,7 +25,7 @@ public class IndelClassify extends FlowAnnotatorBase implements StandardFlowBase
 
        final LocalContext        localContext = new LocalContext(ref, vc, likelihoods);
 
-        if ( !localContext.notCalculated ) {
+        if ( localContext.generateAnnotation ) {
             indelClassify(vc, localContext);
         }
         return localContext.asAttributes();
