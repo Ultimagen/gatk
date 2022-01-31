@@ -14,7 +14,6 @@ import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.programgroups.FlowBasedProgramGroup;
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.exceptions.GATKException;
-import org.broadinstitute.hellbender.exceptions.ToolSuccessfulPrematureExit;
 import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.*;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
@@ -114,7 +113,7 @@ import java.util.zip.GZIPOutputStream;
 
 @DocumentedFeature
 @ExperimentalFeature
-public final class GroundTruthReadsBuilder extends ReadWalker {
+public final class GroundTruthReadsBuilder extends PartialReadWalker {
 
     // constants
     private static final Logger logger = LogManager.getLogger(GroundTruthReadsBuilder.class);
@@ -208,7 +207,6 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
             "ReadUnclippedStart", "ReadUnclippedEnd", "PaternalHaplotypeInterval", "MaternalHaplotypeInterval"
     };
 
-
     private static class ScoredHaplotype {
         ReferenceContext        ref;
         ReferenceContext        clippedRef;
@@ -257,6 +255,13 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
 
         outputCsv.close();
         super.closeTool();
+    }
+
+    @Override
+    protected boolean shouldExitEarly(GATKRead read) {
+
+        // limit number of output reads
+        return ( maxOutputReads != 0) && (outputReadsCount >= maxOutputReads);
     }
 
     @Override
@@ -348,12 +353,6 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
             // if here, emit this read
             outputReadsCount++;
             emit(read, flowRead, refScore, maternal, paternal);
-
-            // limit number of output reads
-            if ( maxOutputReads != 0 && outputReadsCount >= maxOutputReads ) {
-                // terminate tool
-                throw new ToolSuccessfulPrematureExit("stopping tool, output reads max reached: \" + maxOutputReads");
-            }
 
         } catch (LocationTranslationException e) {
             logger.warn("location translation exception: " + e.getMessage());
