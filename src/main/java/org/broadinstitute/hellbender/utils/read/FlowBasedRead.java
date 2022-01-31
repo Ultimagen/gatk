@@ -463,7 +463,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     public void applyAlignment(){
         if ((getDirection() == Direction.SYNTHESIS) && ( isReverseStrand() )) {
             flipMatrix();
-            reverse(key, key.length);
+            ArrayUtils.reverse(key);
             flow2base = FlowBasedKeyCodec.getKey2Base(key);
             SequenceUtil.reverseComplement(flowOrder);
 
@@ -487,43 +487,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private boolean isBaseFormat() {
        return samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_TI) || samRecord.hasAttribute(FLOW_MATRIX_TAG_NAME);
     }
-
-
-    public static void reverse(final int []a, final int n)
-    {
-        int i, t;
-        for (i = 0; i < n / 2; i++) {
-            t = a[i];
-            a[i] = a[n - i - 1];
-            a[n - i - 1] = t;
-        }
-
-    }
-
-    public static void reverse(final byte []a, final int n)
-    {
-        int i;
-        byte t;
-        for (i = 0; i < n / 2; i++) {
-            t = a[i];
-            a[i] = a[n - i - 1];
-            a[n - i - 1] = t;
-        }
-
-    }
-
-    private static void reverse(final double []a, final int n)
-    {
-        int i;
-        double t;
-        for (i = 0; i < n / 2; i++) {
-            t = a[i];
-            a[i] = a[n - i - 1];
-            a[n - i - 1] = t;
-        }
-
-    }
-
 
     // code for reading BAM format where the flow matrix is stored in sparse representation in kr,kf,kh and kd tags
     // used for development of the new basecalling, but not in production code
@@ -606,7 +569,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     private void flipMatrix() {
         for ( int i = 0 ; i < flowMatrix.length; i++) {
-            reverse(flowMatrix[i], flowMatrix[i].length);
+            ArrayUtils.reverse(flowMatrix[i]);
         }
     }
 
@@ -831,8 +794,8 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         final byte[]      ti = samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_TI) ? samRecord.getByteArrayAttribute(FLOW_MATRiX_OLD_TAG_TI) : (new byte[key.length*3]);
         if ( isReverseStrand() )
         {
-            reverse(quals, quals.length);
-            reverse(ti, ti.length);
+            ArrayUtils.reverse(quals);
+            ArrayUtils.reverse(ti);
         }
 
         for ( int col = 0 ; col < key.length ; col++ ) {

@@ -5,6 +5,7 @@ import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.util.Locatable;
 import htsjdk.samtools.util.SequenceUtil;
 import htsjdk.samtools.util.Tuple;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -900,7 +901,7 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         cols.put("ReadCigar", read.getCigar());
 
         final String    readSeq = reverseComplement(read.getBasesString(), read.isReverseStrand());
-        final int[]     readKey = reverse(flowRead.getKey(), read.isReverseStrand());
+        final int[]     readKey = !read.isReverseStrand() ? flowRead.getKey() : reversedCopy(flowRead.getKey());
         final String    readFlowOrder = reverseComplement(FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read).flowOrder, read.isReverseStrand());
         cols.put("ReadSequence", readSeq);
         cols.put("ReadKey", flowKeyAsCsvString(readKey, readSeq, readFlowOrder));
@@ -976,16 +977,10 @@ public final class GroundTruthReadsBuilder extends ReadWalker {
         return !isReversed ? bases : reverseComplement(bases);
     }
 
-    private int[] reverse(final int[] bytes) {
-        final int[] result = new int[bytes.length];
-        System.arraycopy(bytes, 0, result, 0, result.length);
-        FlowBasedRead.reverse(result, result.length);
-
-        return result;
-    }
-
-    private int[] reverse(final int[] bytes, final boolean isReversed) {
-        return !isReversed ? bytes : reverse(bytes);
+    private int[] reversedCopy(final int[] bytes) {
+        int[] copy = ArrayUtils.clone(bytes);
+        ArrayUtils.reverse(copy);
+        return copy;
     }
 
 }
