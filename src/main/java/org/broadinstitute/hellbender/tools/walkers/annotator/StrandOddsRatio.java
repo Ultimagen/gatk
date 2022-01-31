@@ -160,22 +160,7 @@ public final class StrandOddsRatio extends StrandBiasTest implements StandardAnn
 
         return Math.log(ratio) + Math.log(refRatio) - Math.log(altRatio);
     }
-
-    public static double calculateSOR(final double[][] table) {
-        final double t00 = table[0][0] + PSEUDOCOUNT;
-        final double t01 = table[0][1] + PSEUDOCOUNT;
-        final double t11 = table[1][1] + PSEUDOCOUNT;
-        final double t10 = table[1][0] + PSEUDOCOUNT;
-
-        final double ratio = (t00 / t01) * (t11 / t10) + (t01 / t00) * (t10 / t11);
-
-        final double refRatio = min(t00, t01) / max(t00, t01);
-        final double altRatio = min(t10, t11) / max(t10, t11);
-
-        return Math.log(ratio) + Math.log(refRatio) - Math.log(altRatio);
-    }
-
-
+    
     /**
      * Returns an annotation result given a sor
      *
