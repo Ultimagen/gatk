@@ -32,8 +32,27 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
     public static final String FLOW_GATK_MODE_LONG_NAME = "flow-mode";
     public static final String STEPWISE_FITLERING_ARGUMENT = "use-flow-aligner-for-stepwise-hc-filtering";
 
+    /**
+     * The following definition related to an haplotype caller feature under development (experimental),
+     * colloquially called 'ramps'. See additional information below, before the related parameters.
+     */
+    public final String OFF_RAMP_TYPE = "off-ramp-type";
+    public final String OFF_RAMP_FILE = "off-ramp-file";
+    public final String ON_RAMP_TYPE = "on-ramp-type";
+    public final String ON_RAMP_FILE = "on-ramp-file";
 
+    public enum OffRampTypeEnum {
+        NONE,                           // no off ramp
+        PRE_FILTER_OFF,                 // off ramp before the filtering step
+        PRE_ASSEMBLER_OFF,              // off ramp before the assemnbler
+        POST_ASSEMBLER_OFF,             // off ramp after the assembler
+    };
 
+    public enum OnRampTypeEnum {
+        NONE,                           // no on ramp
+        POST_FILTER_ON,                 // on ramp after the filter
+        POST_ASSEMBLER_ON               // on tamp after the aseembler
+    };
 
     @ArgumentCollection
     public StandardCallerArgumentCollection standardArgs = new StandardCallerArgumentCollection();
@@ -241,24 +260,6 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
      * Ramp points (steps) are defined by the enums OnRampTypeEnum and OffRampTypeEnum.
      *
      */
-
-    public final String OFF_RAMP_TYPE = "off-ramp-type";
-    public final String OFF_RAMP_FILE = "off-ramp-file";
-    public final String ON_RAMP_TYPE = "on-ramp-type";
-    public final String ON_RAMP_FILE = "on-ramp-file";
-
-    public enum OffRampTypeEnum {
-        NONE,                           // no off ramp
-        PRE_FILTER_OFF,                 // off ramp before the filtering step
-        PRE_ASSEMBLER_OFF,              // off ramp before the assemnbler
-        POST_ASSEMBLER_OFF,             // off ramp after the assembler
-    };
-
-    public enum OnRampTypeEnum {
-        NONE,                           // no on ramp
-        POST_FILTER_ON,                 // on ramp after the filter
-        POST_ASSEMBLER_ON               // on tamp after the aseembler
-    };
 
     @Advanced
     @Hidden

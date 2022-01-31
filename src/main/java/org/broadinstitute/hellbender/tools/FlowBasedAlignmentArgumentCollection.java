@@ -116,7 +116,8 @@ public class FlowBasedAlignmentArgumentCollection implements Serializable {
     public boolean flowLikelihoodOptimizedComp = false;
 
     @Advanced
-    @Argument(fullName=FLOW_MATRIX_MODS_LONG_NAME, doc="Modifications to perform on the read flow matrix. Format is a list of src,dst,src,dst.... Operation is triggered when src is written. Example: 8,12,11,12", optional = true)
+    @Argument(fullName=FLOW_MATRIX_MODS_LONG_NAME, doc="Modifications instructions to the read flow matrix. " +
+            "Format is src,dst{,src,dst}+. Example: 10,12,11,12 - these instructions will copy element 10 into 11 and 12", optional = true)
     public String flowMatrixMods = null;
 
     public FlowBasedAlignmentArgumentCollection() {}
