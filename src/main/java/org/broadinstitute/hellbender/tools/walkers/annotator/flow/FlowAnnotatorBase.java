@@ -19,6 +19,20 @@ import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Base class for flow based annotations
+ *
+ * Some flow based annotations depend on the results from other annotations, regardless
+ * if they were called for by user arguments. To overcome this, this class contains all shared
+ * code to compute flow based annotations.
+ *
+ * Each (specific) annotation is implemented as a subclass of this class. It then invokes the
+ * annotation calculation methods contained here (the shared code) to compute its prerequisite
+ * and itself.
+ *
+ * State between such calls is kept in a LocalContext, a local class. Its is there were annotations
+ * are accumulated as well.
+ */
 public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
     private final static Logger logger = LogManager.getLogger(FlowAnnotatorBase.class);
 
