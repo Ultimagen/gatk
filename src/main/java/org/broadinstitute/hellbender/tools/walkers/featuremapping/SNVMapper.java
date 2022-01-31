@@ -28,10 +28,10 @@ public class SNVMapper implements FeatureMapper {
     }
 
     @Override
-    public void forEachOnRead(GATKRead read, ReferenceContext referenceContext, Consumer<? super Feature> action) {
+    public void forEachOnRead(GATKRead read, ReferenceContext referenceContext, Consumer<? super FlowFeatureMapper.MappedFeature> action) {
 
         // prepare list
-        List<Feature>     features = new LinkedList<>();
+        List<FlowFeatureMapper.MappedFeature>     features = new LinkedList<>();
 
         // access bases
         final byte[]      bases = read.getBasesNoCopy();
@@ -104,7 +104,7 @@ public class SNVMapper implements FeatureMapper {
                         }
 
                         // add this feature
-                        Feature     feature = Feature.makeSNV(read, readOfs, ref[refOfs], referenceContext.getStart() + refOfs, readOfs - refOfs);
+                        FlowFeatureMapper.MappedFeature feature = FlowFeatureMapper.MappedFeature.makeSNV(read, readOfs, ref[refOfs], referenceContext.getStart() + refOfs, readOfs - refOfs);
                         feature.nonIdentMBasesOnRead = nonIdentMBases;
                         feature.refEditDistance = refEditDistance;
                         if ( !read.isReverseStrand() )
@@ -130,7 +130,7 @@ public class SNVMapper implements FeatureMapper {
         };
 
         // report features
-        for ( Feature feature : features ) {
+        for ( FlowFeatureMapper.MappedFeature feature : features ) {
             feature.featuresOnRead = features.size();
             action.accept(feature);
         }

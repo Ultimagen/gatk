@@ -7,6 +7,6 @@ import java.util.function.Consumer;
 
 public interface FeatureMapper {
 
-    void        forEachOnRead(GATKRead read, ReferenceContext referenceContext, Consumer<? super Feature> action);
+    void        forEachOnRead(GATKRead read, ReferenceContext referenceContext, Consumer<? super FlowFeatureMapper.MappedFeature> action);
     boolean     noFeatureButFilterAt(GATKRead read, ReferenceContext referenceContext, int start);
 }
