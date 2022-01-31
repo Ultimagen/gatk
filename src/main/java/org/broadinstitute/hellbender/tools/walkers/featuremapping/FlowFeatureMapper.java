@@ -159,6 +159,11 @@ public final class FlowFeatureMapper extends ReadWalker {
         super.onTraversalStart();
         mapper = buildMapper();
 
+        // enforce requirement for sorted input
+        if ( getHeaderForReads().getSortOrder() != SAMFileHeader.SortOrder.coordinate ) {
+            throw new IllegalArgumentException("input file must be coordinated sorted");
+        }
+
         // open output vcf
         // The HC engine will make the right kind (VCF or GVCF) of writer for us
         final SAMSequenceDictionary sequenceDictionary = getHeaderForReads().getSequenceDictionary();
