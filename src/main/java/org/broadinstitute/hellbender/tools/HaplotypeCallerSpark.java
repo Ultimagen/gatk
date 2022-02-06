@@ -143,7 +143,7 @@ public final class HaplotypeCallerSpark extends AssemblyRegionWalkerSpark {
 
         final Path referencePath = IOUtils.getPath(reference);
         final ReferenceSequenceFile driverReferenceSequenceFile = new CachingIndexedFastaSequenceFile(referencePath);
-        final HaplotypeCallerEngine hcEngine = HaplotypeCallerEngineFactory.newInstance(hcArgs, assemblyRegionArgs, false, false, header, driverReferenceSequenceFile, variantannotatorEngine);
+        final HaplotypeCallerEngine hcEngine = new HaplotypeCallerEngine(hcArgs, assemblyRegionArgs, false, false, header, driverReferenceSequenceFile, variantannotatorEngine);
         final String referenceFileName = referencePath.getFileName().toString();
         final Broadcast<HaplotypeCallerArgumentCollection> hcArgsBroadcast = ctx.broadcast(hcArgs);
         final Broadcast<AssemblyRegionArgumentCollection> assemblyRegionArgsBroadcast = ctx.broadcast(assemblyRegionArgs);
@@ -168,7 +168,7 @@ public final class HaplotypeCallerSpark extends AssemblyRegionWalkerSpark {
         return (FlatMapFunction<Iterator<AssemblyRegionWalkerContext>, VariantContext>) contexts -> {
             // HaplotypeCallerEngine isn't serializable but is expensive to instantiate, so construct and reuse one for every partition
             final ReferenceSequenceFile taskReferenceSequenceFile = taskReferenceSequenceFile(referenceFileName);
-            final HaplotypeCallerEngine hcEngine = HaplotypeCallerEngineFactory.newInstance(hcArgsBroadcast.value(), assemblyRegionArgsBroadcast.value(), false, false, header, taskReferenceSequenceFile, annotatorEngineBroadcast.getValue());
+            final HaplotypeCallerEngine hcEngine = new HaplotypeCallerEngine(hcArgsBroadcast.value(), assemblyRegionArgsBroadcast.value(), false, false, header, taskReferenceSequenceFile, annotatorEngineBroadcast.getValue());
             Iterator<Iterator<VariantContext>> iterators = Utils.stream(contexts).map(context -> {
                 AssemblyRegion region = context.getAssemblyRegion();
                 FeatureContext featureContext = context.getFeatureContext();
@@ -227,7 +227,7 @@ public final class HaplotypeCallerSpark extends AssemblyRegionWalkerSpark {
         Supplier<AssemblyRegionEvaluator> supplier = new Supplier<AssemblyRegionEvaluator>() {
             @Override
             public AssemblyRegionEvaluator get() {
-                return HaplotypeCallerEngineFactory.newInstance(hcArgs, assemblyRegionArgs, false, false, header, taskReferenceSequenceFile, annotatorEngine);
+                return new HaplotypeCallerEngine(hcArgs, assemblyRegionArgs, false, false, header, taskReferenceSequenceFile, annotatorEngine);
             }
         };
         return ctx.broadcast(supplier);
