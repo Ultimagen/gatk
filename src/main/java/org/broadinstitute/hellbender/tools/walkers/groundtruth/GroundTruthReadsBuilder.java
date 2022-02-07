@@ -226,7 +226,7 @@ public final class GroundTruthReadsBuilder extends PartialReadWalker {
         locationTranslator = new AncestralContigLocationTranslator(ancestralTranslatorsBasePath);
 
         // create likelihood engine
-        ReadLikelihoodCalculationEngine engine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(likelihoodArgs, false);
+        final ReadLikelihoodCalculationEngine engine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(likelihoodArgs, false);
         if ( engine instanceof FlowBasedAlignmentLikelihoodEngine) {
             likelihoodCalculationEngine = (FlowBasedAlignmentLikelihoodEngine)engine;
         } else {

@@ -21,6 +21,7 @@ import org.broadinstitute.hellbender.utils.Nucleotide;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.codecs.*;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
+import org.broadinstitute.hellbender.utils.read.ReadUtils;
 
 import java.util.*;
 import java.util.function.Predicate;
@@ -192,7 +193,7 @@ public class CollectSVEvidence extends ReadWalker {
         if ( !(read.isPaired() && read.mateIsUnmapped()) &&
                 !read.isSupplementaryAlignment() &&
                 !read.isSecondaryAlignment() ) {
-            if ( srWriter != null && isSoftClipped(read) ) {
+            if ( srWriter != null && ReadUtils.isSoftClipped(read) ) {
                 countSplitRead(read, splitPosBuffer, srWriter);
             }
 

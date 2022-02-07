@@ -1197,4 +1197,18 @@ public final class ReadUtils {
         return read.getMappingQuality() != 0 && read.getMappingQuality() != QualityUtils.MAPPING_QUALITY_UNAVAILABLE;
     }
 
+    public static int getStrandedUnclippedStartForFlow(final GATKRead read, final SAMFileHeader header, final MarkDuplicatesSparkArgumentCollection mdArgs) {
+        return read.isReverseStrand() ? FlowBasedReadUtils.getMarkDupReadEnd(read, false, header, mdArgs) : FlowBasedReadUtils.getMarkDupReadStart(read, false, header, mdArgs);
+    }
+
+    public static int getStrandedUnclippedEndForFlow(GATKRead read, SAMFileHeader header, MarkDuplicatesSparkArgumentCollection mdArgs) {
+        return !read.isReverseStrand() ? FlowBasedReadUtils.getMarkDupReadEnd(read, true, header, mdArgs) : FlowBasedReadUtils.getMarkDupReadStart(read, true, header, mdArgs);
+    }
+
+    public static boolean isSoftClipped(final GATKRead read) {
+        final CigarOperator firstOperator = read.getCigar().getFirstCigarElement().getOperator();
+        final CigarOperator lastOperator = read.getCigar().getLastCigarElement().getOperator();
+        return (firstOperator == CigarOperator.SOFT_CLIP && lastOperator != CigarOperator.SOFT_CLIP) ||
+                (firstOperator != CigarOperator.SOFT_CLIP && lastOperator == CigarOperator.SOFT_CLIP);
+    }
 }

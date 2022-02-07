@@ -21,6 +21,4 @@ public class FlowBasedAlignmentArgumentCollection extends FlowBasedArgumentColle
     @Argument(fullName = FLOW_LIKELIHOOD_OPTIMIZED_COMP_LONG_NAME, doc = "Use optimized likelihood computation version. The code is otimized in that it performs fewer log10 calls - which are expensive - by using precomputed values " +
             "for common probability values", optional=true)
     public boolean flowLikelihoodOptimizedComp = false;
-
-
 }

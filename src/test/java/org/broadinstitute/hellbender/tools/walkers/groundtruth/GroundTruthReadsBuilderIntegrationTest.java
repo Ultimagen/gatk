@@ -15,6 +15,7 @@ import java.util.List;
 public class GroundTruthReadsBuilderIntegrationTest extends CommandLineProgramTest {
 
     public static final boolean UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS = false;
+    public static final String OUTPUT_FILENAME = "ground_truth_output.csv";
 
     private static String testDir = publicTestDir + FlowTestConstants.GROUND_TRUTH_DATA_DIR;
 
@@ -27,10 +28,10 @@ public class GroundTruthReadsBuilderIntegrationTest extends CommandLineProgramTe
     public void testBasic() throws IOException {
 
         final File outputDir = createTempDir("testGroundTruthTest");
-        final File expectedFile = new File(testDir + "/ground_truth_output.csv");
-        final File outputFile = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expectedFile : new File(outputDir + "/ground_truth_output.csv");
+        final File expectedFile = new File(testDir + "/" + OUTPUT_FILENAME);
+        final File outputFile = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expectedFile : new File(outputDir + "/" + OUTPUT_FILENAME);
 
-        final String[] args =buildCommonArgs(outputFile);
+        final String[] args = buildCommonArgs(outputFile);
 
         runCommandLine(args);  // no assert, just make sure we don't throw
 
@@ -47,8 +48,8 @@ public class GroundTruthReadsBuilderIntegrationTest extends CommandLineProgramTe
     public void testBasicLimitOutputSize() throws IOException {
 
         final File outputDir = createTempDir("testGroundTruthTest");
-        final File expectedFile = new File(testDir + "/ground_truth_output_limited.csv");
-        final File outputFile = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expectedFile : new File(outputDir + "/ground_truth_output_limited.csv");
+        final File expectedFile = new File(testDir + "/" + OUTPUT_FILENAME + "_limited.csv");
+        final File outputFile = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expectedFile : new File(outputDir + "/" + OUTPUT_FILENAME + "_limited.csv");
 
         final List<String> args = new LinkedList<>(Arrays.asList(buildCommonArgs(outputFile)));
         args.add("--max-output-reads");
