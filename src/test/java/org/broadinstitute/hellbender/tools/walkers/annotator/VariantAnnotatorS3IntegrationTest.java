@@ -8,7 +8,7 @@ import org.testng.annotations.Test;
 
 import java.io.File;
 
-
+@Test(groups = {"s3"})
 public class VariantAnnotatorS3IntegrationTest extends S3CommandLineProgramTest {
 
     public VariantAnnotatorS3IntegrationTest() {

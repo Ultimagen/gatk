@@ -6,7 +6,11 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.testng.Assert;
+
+import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 
 public class S3CommandLineProgramTest extends CommandLineProgramTest {
 
@@ -26,13 +30,19 @@ public class S3CommandLineProgramTest extends CommandLineProgramTest {
         // estabish bucket name
         if ( System.getenv(S3_BUCKET_ENV_NAME) != null ) {
             bucketName = System.getenv(S3_BUCKET_ENV_NAME);
+            logger.info("using bucket (env): " + bucketName);
         } else {
             bucketName = S3_BUCKET_PREFIX + s3.getS3AccountOwner().getDisplayName().replaceAll("\\W", "");
-        }
-        logger.info("using bucket: " + bucketName);
+            logger.info("using bucket (auto): " + bucketName);
 
-        // make sure bucket exists
-        execAws("s3 mb " + getBucketName());
+            // make sure bucket exists
+            execAws(Arrays.asList("aws", "s3", "mb", getBucketName()));
+        }
+
+    }
+
+    public String getS3ToolTestDataDir(){
+        return "src/test/resources/large/s3/" + getTestedClassName() + "/";
     }
 
     @Override
@@ -53,17 +63,17 @@ public class S3CommandLineProgramTest extends CommandLineProgramTest {
     }
 
     public void syncToolTestData() {
-        execAws("s3 sync " + getToolTestDataDir() + " " + getS3TestDir());
+        execAws(Arrays.asList("aws", "s3", "sync", getToolTestDataDir(), getS3TestDir()));
     }
 
-    public void execAws(final String awsCmd)  {
-        final String        cmd = "aws " + awsCmd;
+    public void execAws(final List<String> awsCmd)  {
+        logger.info("execAws: " + awsCmd);
         try {
-            final Process       process = Runtime.getRuntime().exec(cmd);
+            final Process       process = Runtime.getRuntime().exec(awsCmd.toArray(new String[0]));
             final int           exitCode = process.waitFor();
-            Assert.assertTrue(exitCode == 0, "failed to execute: " + cmd);
+            Assert.assertTrue(exitCode == 0, "failed to execute: " + awsCmd);
         } catch (InterruptedException | IOException e ) {
-            Assert.fail("interrupted when executing: " + cmd);
+            Assert.fail("interrupted when executing: " + awsCmd);
         }
     }
 

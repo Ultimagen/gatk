@@ -11,11 +11,8 @@ import htsjdk.variant.variantcontext.writer.VariantContextWriter;
 import htsjdk.variant.vcf.VCFHeaderLine;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URI;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
+import java.nio.file.*;
 import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Stream;
@@ -1130,8 +1127,13 @@ public abstract class GATKTool extends CommandLineProgram {
 
     private void initializeS3Support() {
         try {
-            FileSystem  fileSystem = FileSystems.newFileSystem(new URI("s3:///"), new HashMap<String, Object>(), Thread.currentThread().getContextClassLoader());
-            logger.info("s3 fileSystem created: " + fileSystem);
+            final URI uri = new URI("s3:///");
+            try {
+                FileSystems.getFileSystem(uri);
+            } catch (FileSystemNotFoundException e) {
+                FileSystem fileSystem = FileSystems.newFileSystem(uri, new HashMap<String, Object>(), Thread.currentThread().getContextClassLoader());
+                logger.info("s3 fileSystem created: " + fileSystem);
+            }
         } catch (Throwable e) {
             throw new GATKException("failed to add s3 file system", e);
         }
