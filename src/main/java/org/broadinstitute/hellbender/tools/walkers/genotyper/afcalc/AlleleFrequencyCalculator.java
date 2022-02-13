@@ -140,7 +140,10 @@ public final class AlleleFrequencyCalculator {
     }
 
     /**
-     * Identical to AlleleFrequencyCalculator but does not require VariantContext, and assumes only a single alternative allele
+     * Identical to AlleleFrequencyCalculator but does not require VariantContext, and assumes
+     * only a single alternative allele. This is useful in the context of AlleleFiltering where
+     * we are basically genotyping the allele (all haplotypes that contain the allele) versus ~allele
+     * (all haplotypes that do not contain the allele).
      *
      * @param gls the GenotyplingLikelihoods holding the alleles and sample information.
      * @return result (for programming convenience)
