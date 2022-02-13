@@ -203,6 +203,8 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
                 readBaseMatrixRecal(_flowOrder);
             } else if (samRecord.hasAttribute(FLOW_MATRIX_TAG_NAME)) {
                 readBaseMatrixProb(_flowOrder);
+            } else {
+                throw new GATKException("read missing flow matrix attribute: " + FLOW_MATRIX_TAG_NAME);
             }
         }
         implementMatrixMods(fbargs.getFlowMatrixModsInstructions());

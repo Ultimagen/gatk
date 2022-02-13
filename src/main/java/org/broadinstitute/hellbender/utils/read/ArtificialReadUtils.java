@@ -1,7 +1,6 @@
 package org.broadinstitute.hellbender.utils.read;
 
 import htsjdk.samtools.*;
-import htsjdk.samtools.util.SequenceUtil;
 import htsjdk.variant.variantcontext.Allele;
 import org.apache.commons.lang3.ArrayUtils;
 import org.broadinstitute.hellbender.exceptions.GATKException;
@@ -765,5 +764,15 @@ public final class ArtificialReadUtils {
         }
         gatkRead.setBases(newBases);
         return PileupElement.createPileupForReadAndOffset(gatkRead, offsetIntoRead);
+    }
+
+    public static GATKRead makeIntoFlowBased(GATKRead read) {
+
+        // create synthetic matrix attribute (tp) - length should be same as number of bases
+        byte[]      tp = new byte[read.getBasesNoCopy().length];
+        Arrays.fill(tp, (byte)1);
+        read.setAttribute(FlowBasedRead.FLOW_MATRIX_TAG_NAME, tp);
+
+        return read;
     }
 }

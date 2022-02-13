@@ -98,5 +98,34 @@ public class FlowBasedReadUnitTest extends GATKBaseTest {
         return tests.toArray(new Object[][]{});
     }
 
+    @Test
+    public void testFlowBasedReadConstructorEforcesMatrix() {
 
+        // make a non-flow read
+        final GATKRead        read = makeRead("AAAAA".getBytes(), false);
+
+        // try to make it into a flow base read object, should fail
+        try {
+            new FlowBasedRead(read, FlowBasedRead.DEFAULT_FLOW_ORDER, FlowBasedRead.MAX_CLASS, new FlowBasedAlignmentArgumentCollection());
+        } catch (IllegalStateException e) {
+            // this is the positive path, should be getting an exception
+            return;
+        }
+
+        // if here, failed to get an exception
+        Assert.fail("read should have generated an exception");
+    }
+
+    @Test
+    public void testArtificialFlowBasedReadConstruction() {
+
+        // make a non-flow read
+        final GATKRead        read = makeRead("AAAAA".getBytes(), false);
+
+        // convert to a flow based read
+        final GATKRead       flowRead = ArtificialReadUtils.makeIntoFlowBased(read);
+
+        // try to make it into a flow base read object, should not fail
+        new FlowBasedRead(flowRead, FlowBasedRead.DEFAULT_FLOW_ORDER, FlowBasedRead.MAX_CLASS, new FlowBasedAlignmentArgumentCollection());
+    }
 }
