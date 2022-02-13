@@ -766,7 +766,7 @@ public final class ArtificialReadUtils {
         return PileupElement.createPileupForReadAndOffset(gatkRead, offsetIntoRead);
     }
 
-    public static GATKRead makeIntoFlowBased(GATKRead read) {
+    public static GATKRead makeIntoFlowBased(final GATKRead read) {
 
         // create synthetic matrix attribute (tp) - length should be same as number of bases
         byte[]      tp = new byte[read.getBasesNoCopy().length];
@@ -774,5 +774,10 @@ public final class ArtificialReadUtils {
         read.setAttribute(FlowBasedRead.FLOW_MATRIX_TAG_NAME, tp);
 
         return read;
+    }
+
+    public static SAMReadGroupRecord makeInotFlowBased(final SAMReadGroupRecord readGroupRecord, String flowOrder) {
+        readGroupRecord.setFlowOrder(flowOrder != null ? flowOrder : FlowBasedRead.DEFAULT_FLOW_ORDER);
+        return readGroupRecord;
     }
 }
