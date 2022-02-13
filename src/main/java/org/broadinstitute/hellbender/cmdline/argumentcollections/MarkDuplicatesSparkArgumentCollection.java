@@ -24,7 +24,7 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
     public static final String FLOW_MD_MODE_LONG_NAME = "flowbased";
 
     public static final String FLOW_QUALITY_SUM_STRATEGY_LONG_NAME = "flow-quality-sum-strategy";
-    public static final String SINGLE_END_READS_END_POSITION_SIGNIFICANT = "sinle-end-reads-end-position-significant";
+    public static final String SINGLE_END_READS_END_POSITION_SIGNIFICANT = "single-end-reads-end-position-significant";
     public static final String FLOW_END_POS_UNCERTAINTY_LONG_NAME = "flow-end-pos-uncertainty";
     public static final String SINGLE_END_READS_CLIPPING_IS_END_LONG_NAME = "single-end-reads-clipping-is-end";
     public static final String FLOW_SKIP_START_HOMOPOLYMERS_LONG_NAME = "flow-skip-start-homopolymers";
