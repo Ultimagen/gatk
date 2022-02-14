@@ -23,7 +23,7 @@ import java.util.stream.IntStream;
 /* Flow based replacement for PairHMM likelihood calculation. Likelihood calculation all-vs-all flow based reads and haplotypes
 
  */
-public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine {
+public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalculationEngine {
     public static final double MAX_ERRORS_FOR_READ_CAP = 3.0;
     public static final double MAX_CATASTROPHIC_ERRORS_FOR_READ_CAP = 2.0;
 
@@ -52,7 +52,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
      * @param log10globalReadMismappingRate - probability for wrong mapping (maximal contribution of the read to data likelihood)
      * @param expectedErrorRatePerBase - the expected rate of random sequencing errors for a read originating from its true haplotype.
      */
-    public FlowBasedAlignmentEngine(final FlowBasedAlignmentArgumentCollection fbargs, final double log10globalReadMismappingRate, final double expectedErrorRatePerBase, final boolean dynamicReadDisqualification, final double readDisqualificationScale) {
+    public FlowBasedAlignmentLikelihoodEngine(final FlowBasedAlignmentArgumentCollection fbargs, final double log10globalReadMismappingRate, final double expectedErrorRatePerBase, final boolean dynamicReadDisqualification, final double readDisqualificationScale) {
         this.fbargs = fbargs;
         this.log10globalReadMismappingRate = log10globalReadMismappingRate;
         this.expectedErrorRatePerBase = expectedErrorRatePerBase;

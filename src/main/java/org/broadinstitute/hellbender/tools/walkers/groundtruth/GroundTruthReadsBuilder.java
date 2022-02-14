@@ -193,7 +193,7 @@ public final class GroundTruthReadsBuilder extends PartialReadWalker {
     private ReferenceDataSource                 maternalReference;
     private ReferenceDataSource                 paternalReference;
     private AncestralContigLocationTranslator   locationTranslator;
-    private FlowBasedAlignmentEngine            likelihoodCalculationEngine;
+    private FlowBasedAlignmentLikelihoodEngine likelihoodCalculationEngine;
     private PrintWriter                         outputCsv;
     private int                                 locationTranslationErrors;
 
@@ -227,8 +227,8 @@ public final class GroundTruthReadsBuilder extends PartialReadWalker {
 
         // create likelihood engine
         ReadLikelihoodCalculationEngine engine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(likelihoodArgs, false);
-        if ( engine instanceof FlowBasedAlignmentEngine) {
-            likelihoodCalculationEngine = (FlowBasedAlignmentEngine)engine;
+        if ( engine instanceof FlowBasedAlignmentLikelihoodEngine) {
+            likelihoodCalculationEngine = (FlowBasedAlignmentLikelihoodEngine)engine;
         } else {
             throw new GATKException("must use a flow based likelihood calculation engine");
         }

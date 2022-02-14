@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.function.ToDoubleFunction;
 
 /**
- *  Flow Based HMM, intended to incorporate the scoring model of the {@link FlowBasedAlignmentEngine} while allowing for frame-shift insertions
+ *  Flow Based HMM, intended to incorporate the scoring model of the {@link FlowBasedAlignmentLikelihoodEngine} while allowing for frame-shift insertions
  *  and deletions for better genotyping.
  */
 public class FlowBasedHMMEngine implements ReadLikelihoodCalculationEngine {

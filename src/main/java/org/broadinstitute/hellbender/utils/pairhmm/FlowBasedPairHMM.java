@@ -2,7 +2,7 @@ package org.broadinstitute.hellbender.utils.pairhmm;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.FlowBasedAlignmentEngine;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.FlowBasedAlignmentLikelihoodEngine;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.LikelihoodMatrix;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
@@ -18,7 +18,7 @@ import static org.broadinstitute.hellbender.utils.pairhmm.PairHMMModel.deletionT
 import static org.broadinstitute.hellbender.utils.pairhmm.PairHMMModel.matchToDeletion;
 
 /**
- * Class for performing the pair HMM for global alignment in FlowSpace. See {@link FlowBasedAlignmentEngine} and {@link LoglessPairHMM}.
+ * Class for performing the pair HMM for global alignment in FlowSpace. See {@link FlowBasedAlignmentLikelihoodEngine} and {@link LoglessPairHMM}.
  */
 public class FlowBasedPairHMM extends PairHMM {
     protected static final Logger logger = LogManager.getLogger(FlowBasedPairHMM.class);
