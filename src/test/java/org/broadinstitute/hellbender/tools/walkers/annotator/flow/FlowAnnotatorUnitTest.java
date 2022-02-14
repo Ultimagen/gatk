@@ -24,8 +24,7 @@ public class FlowAnnotatorUnitTest {
             new IndelLength(),
             new HmerIndelLength(),
             new HmerIndelNuc(),
-            new LeftMotif(),
-            new RightMotif(),
+            new HmerMotifs(),
             new GcContent(),
             new CycleSkipStatus()
     };
