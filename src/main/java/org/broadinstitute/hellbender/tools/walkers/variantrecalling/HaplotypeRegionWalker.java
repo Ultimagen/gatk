@@ -22,9 +22,9 @@ import java.util.function.Function;
 
 /**
  * a service class for HaplotypeBasedVariableRecaller that reads a SAM/BAM file, interprets the reads as haplotypes
- * and called a provided consumer with the 'best' haplotypes found for a given quary location.
+ * and called a provided consumer with the 'best' haplotypes found for a given query location.
  *
- * The notion of best is controlled by a fittnessScore - which is related to the distance between the query location
+ * The notion of best is controlled by a fitnessScore - which is related to the distance between the query location
  * and the haplotype boundaries (less is better)
  */
 public class HaplotypeRegionWalker {
@@ -44,7 +44,7 @@ public class HaplotypeRegionWalker {
     }
 
     // iterate over a haplotypes behind the variant context. If there are multiple sets, select the best set
-    // see fittnessScore for the scoring function
+    // see fitnessScore for the scoring function
     void forBest(final Locatable queryLoc, final Consumer<List<Haplotype>> action) {
         Objects.requireNonNull(action);
 
@@ -52,7 +52,7 @@ public class HaplotypeRegionWalker {
 
         forEach(queryLoc, haplotypes -> {
             if ( best.size() == 0 ||
-                    (fittnessScore(queryLoc, haplotypes) > fittnessScore(queryLoc, best)) ) {
+                    (fitnessScore(queryLoc, haplotypes) > fitnessScore(queryLoc, best)) ) {
                 best.clear();
                 best.addAll(haplotypes);
             }
@@ -63,7 +63,7 @@ public class HaplotypeRegionWalker {
         }
     }
 
-    private double fittnessScore(final Locatable loc, final List<Haplotype> haplotypes) {
+    private double fitnessScore(final Locatable loc, final List<Haplotype> haplotypes) {
         Objects.requireNonNull(haplotypes);
         if ( haplotypes.size() == 0 ) {
             return 0;
