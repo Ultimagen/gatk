@@ -13,7 +13,7 @@ import java.util.Map;
 
     // locals
     final private GATKPath                                    basePath;
-    final private Map<String, SingleFileLocatonTranslator>    translators = new LinkedHashMap<>();
+    final private Map<String, SingleFileLocationTranslator>    translators = new LinkedHashMap<>();
 
     AncestralContigLocationTranslator(GATKPath basePath) {
         this.basePath = basePath;
@@ -42,7 +42,7 @@ import java.util.Map;
         final String                          key = ancestor + "." + contig + ".csv";
         if ( !translators.containsKey(key) ) {
             final GATKPath        path = new GATKPath(basePath.getURIString() + key);
-            translators.put(key, new SingleFileLocatonTranslator(path));
+            translators.put(key, new SingleFileLocationTranslator(path));
         }
 
         // translate

@@ -10,12 +10,12 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
-public class SingleFileLocatonTranslator {
+public class SingleFileLocationTranslator {
 
     final private int[]           pos;
     final private int[]           offset;
 
-    SingleFileLocatonTranslator(final GATKPath path) throws IOException {
+    SingleFileLocationTranslator(final GATKPath path) throws IOException {
 
         // read the file in. we assume it is sorted and starts with pos=1
         final List<Tuple<Integer, Integer>>       data = new LinkedList<>();
