@@ -86,7 +86,7 @@ public class FlowBasedHaplotypeIntegrationTest extends GATKBaseTest {
             fbhs.add(new FlowBasedHaplotype(hap, "TACG"));
         }
 
-        final FlowBasedAlignmentEngine fbe = new FlowBasedAlignmentEngine(new FlowBasedAlignmentArgumentCollection(), -5, 0.02, false, PairHMMLikelihoodCalculationEngine.DEFAULT_DYNAMIC_DISQUALIFICATION_SCALE_FACTOR);
+        final FlowBasedAlignmentLikelihoodEngine fbe = new FlowBasedAlignmentLikelihoodEngine(new FlowBasedAlignmentArgumentCollection(), -5, 0.02, false, PairHMMLikelihoodCalculationEngine.DEFAULT_DYNAMIC_DISQUALIFICATION_SCALE_FACTOR);
 
         final AlleleLikelihoods<GATKRead, Haplotype> haplotypeReadLikelihoods =
                 fbe.computeReadLikelihoods(haplotypes, reads, true, reader.getFileHeader());
