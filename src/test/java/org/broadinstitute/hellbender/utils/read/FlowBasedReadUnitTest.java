@@ -123,9 +123,9 @@ public class FlowBasedReadUnitTest extends GATKBaseTest {
         final GATKRead        read = makeRead("AAAAA".getBytes(), false);
 
         // convert to a flow based read
-        final GATKRead       flowRead = ArtificialReadUtils.makeIntoFlowBased(read);
+        ArtificialReadUtils.makeIntoFlowBased(read);
 
         // try to make it into a flow base read object, should not fail
-        new FlowBasedRead(flowRead, FlowBasedRead.DEFAULT_FLOW_ORDER, FlowBasedRead.MAX_CLASS, new FlowBasedAlignmentArgumentCollection());
+        new FlowBasedRead(read, FlowBasedRead.DEFAULT_FLOW_ORDER, FlowBasedRead.MAX_CLASS, new FlowBasedAlignmentArgumentCollection());
     }
 }
