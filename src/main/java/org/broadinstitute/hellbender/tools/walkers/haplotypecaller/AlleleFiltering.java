@@ -109,14 +109,14 @@ public abstract class AlleleFiltering {
     /**
      * Main function that filters haplotypes that contribute weak alleles
      * @param readLikelihoods read x haplotype matrix
-     * @param hcargs HaplotypeCaller/Mutect2 parameters
+     * @param assemblyArgs HaplotypeCaller/Mutect2 parameters
      * @param activeWindowStart Genomic location of the start
      * @param suspiciousLocations set of positions where the alleles are being filtered (modified)
      * @return read x haplotype matrix where the filtered haplotypes are removed
      * @throws IOException if output file can't be written
      */
     private AlleleLikelihoods<GATKRead, Haplotype> subsetHaplotypesByAlleles(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods,
-                                                                         final AssemblyBasedCallerArgumentCollection hcargs,
+                                                                         final AssemblyBasedCallerArgumentCollection assemblyArgs,
                                                                          final int activeWindowStart, Set<Integer> suspiciousLocations) {
         // 1. Collect all alleles in the active region
         Set<Haplotype> disabledHaplotypes = new HashSet<>();
@@ -145,7 +145,7 @@ public abstract class AlleleFiltering {
             // where we only attempted to filter alleles that strongly affect an another allele's quality. This approach
             // failed to deliver a significant improvement and thus is not used.
             // interaction map is the graph of how much quality of each allele is improved when another allele is removed
-            if (hcargs.writeFilteringGraphs) {
+            if (assemblyArgs.writeFilteringGraphs) {
                 if (alleleSet.size() > 1 ) {
                     List<AlleleAndContext> alleleSetAsList = new ArrayList<>(alleleSet);
                     Map<AlleleAndContext, Integer> initialRPLsMap = new HashMap<>();
@@ -205,8 +205,8 @@ public abstract class AlleleFiltering {
                 List<AlleleAndContext> filteringCandidates = identifyBadAlleles(collectedRPLs,
                                                                                 collectedSORs,
                                                                                 activeAlleles,
-                                                                                hcargs.prefilterQualThreshold,
-                                                                                hcargs.prefilterSorThreshold);
+                                                                                assemblyArgs.prefilterQualThreshold,
+                                                                                assemblyArgs.prefilterSorThreshold);
 
 
                 //very weak candidates are filtered out in any case, even if they are alone (they will be filtered anyway even in the GVCF mode)
