@@ -176,8 +176,8 @@ public class HaplotypeCaller extends AssemblyRegionWalker {
             Optional<ReadFilter> filterOptional = readFilterPlugin.getResolvedInstances().stream().filter(rf -> rf instanceof MappingQualityReadFilter).findFirst();
             filterOptional.ifPresent(readFilter -> ((MappingQualityReadFilter) readFilter).minMappingQualityScore = 1);
         }
-        if (hcArgs.flowMode != FlowModeArgumentUtils.FlowModeHC.NONE) {
-            FlowModeArgumentUtils.setFlowModeHC(getCommandLineParser(), hcArgs.flowMode);
+        if (hcArgs.flowMode != FlowModeArgumentUtils.FlowMode.NONE) {
+            FlowModeArgumentUtils.setFlowMode(getCommandLineParser(), hcArgs.flowMode);
         }
         return null;
     }

@@ -284,5 +284,5 @@ public class M2ArgumentCollection extends AssemblyBasedCallerArgumentCollection 
 
     @Advanced
     @Argument(fullName = FLOW_M2_MODE_LONG_NAME, optional = true, doc="Single argument for enabling the bulk of Flow Based features. NOTE: THIS WILL OVERWRITE PROVIDED ARGUMENT CHECK TOOL INFO TO SEE WHICH ARGUMENTS ARE SET).")
-    public FlowModeArgumentUtils.FlowModeHC flowMode = FlowModeArgumentUtils.FlowModeHC.NONE;
+    public FlowModeArgumentUtils.FlowMode flowMode = FlowModeArgumentUtils.FlowMode.NONE;
 }

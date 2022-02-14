@@ -152,7 +152,7 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
     public Boolean dragenMode = false;
     @Advanced
     @Argument(fullName = FLOW_GATK_MODE_LONG_NAME, optional = true, doc="Single argument for enabling the bulk of Flow Based features. NOTE: THIS WILL OVERWRITE PROVIDED ARGUMENT CHECK TOOL INFO TO SEE WHICH ARGUMENTS ARE SET).")
-    public FlowModeArgumentUtils.FlowModeHC flowMode = FlowModeArgumentUtils.FlowModeHC.NONE;
+    public FlowModeArgumentUtils.FlowMode flowMode = FlowModeArgumentUtils.FlowMode.NONE;
     @Advanced
     @Argument(fullName = APPLY_BQD_LONG_NAME, doc = "If enabled this argument will apply the DRAGEN-GATK BaseQualityDropout model to the genotyping model for filtering sites due to Linked Error mode.", optional = true)
     public boolean applyBQD = false;
