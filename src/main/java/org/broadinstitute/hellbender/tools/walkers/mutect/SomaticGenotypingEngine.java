@@ -36,7 +36,7 @@ import java.util.stream.IntStream;
 public class SomaticGenotypingEngine {
 
     private final M2ArgumentCollection MTAC;
-    public final Set<String> normalSamples;
+    private final Set<String> normalSamples;
     final boolean hasNormal;
     protected VariantAnnotatorEngine annotationEngine;
 
