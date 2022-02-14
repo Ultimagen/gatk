@@ -88,6 +88,7 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
     public static final int MIN_PALINDROME_SIZE = 5;
 
     public static final int HUGE_FRAGMENT_LENGTH = 1_000_000;
+    public static final int MIN_TAIL_QUALITY = 9;
 
     private M2ArgumentCollection MTAC;
     private SAMFileHeader header;
@@ -541,7 +542,7 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
         AssemblyBasedCallerUtils.finalizeRegion(region,
                 false,
                 true,
-                (byte)9,
+                (byte) MIN_TAIL_QUALITY,
                 header,
                 samplesList,
                 false,
