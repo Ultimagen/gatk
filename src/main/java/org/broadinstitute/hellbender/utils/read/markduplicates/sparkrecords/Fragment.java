@@ -1,7 +1,6 @@
 package org.broadinstitute.hellbender.utils.read.markduplicates.sparkrecords;
 
 import htsjdk.samtools.SAMFileHeader;
-import org.broadinstitute.hellbender.cmdline.argumentcollections.MarkDuplicatesSparkArgumentCollection;
 import org.broadinstitute.hellbender.tools.spark.transforms.markduplicates.MarkDuplicatesSparkUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
@@ -27,19 +26,15 @@ public class Fragment extends TransientFieldPhysicalLocation {
 
     protected final short score;
 
-    public Fragment(final GATKRead first, final SAMFileHeader header, int partitionIndex, MarkDuplicatesScoringStrategy scoringStrategy, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
+    public Fragment(final GATKRead first, final SAMFileHeader header, int partitionIndex, MarkDuplicatesScoringStrategy scoringStrategy, Map<String, Byte> headerLibraryMap) {
         super(partitionIndex, first.getName());
 
-        int        start = !mdArgs.isFlowEnabled()
-                                    ? ReadUtils.getStrandedUnclippedStart(first)
-                                    : ReadUtils.getStrandedUnclippedStartForFlow(first, header, mdArgs);
-
+        this.score = scoringStrategy.score(first);
         this.R1R = first.isReverseStrand();
-        this.key = ReadsKey.getKeyForFragment(start,
+        this.key = ReadsKey.getKeyForFragment(ReadUtils.getStrandedUnclippedStart(first),
                 isRead1ReverseStrand(),
                 (short)ReadUtils.getReferenceIndex(first, header),
                 headerLibraryMap.get(MarkDuplicatesSparkUtils.getLibraryForRead(first, header, LibraryIdGenerator.UNKNOWN_LIBRARY)));
-        this.score = scoringStrategy.score(first);
     }
 
     @Override
