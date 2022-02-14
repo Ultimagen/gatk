@@ -161,12 +161,10 @@ public abstract class AlleleFiltering {
                 removedAlleles = false;
                 // b. Marginalize: calculate quality of each allele relative to all other alleles
                 logger.debug("GAL::start of iteration");
-                final List<AlleleAndContext> activeAlleles = new ArrayList<>();
-                activeHaplotypes.forEach(hap ->
-                    getAlleles(hap).stream()
-                            .filter(alleleSet::contains)
-                            .filter(al -> !activeAlleles.contains(al))
-                            .forEach(activeAlleles::add));
+                final List<AlleleAndContext> activeAlleles = activeHaplotypes.stream()
+                        .flatMap(h -> getAlleles(h).stream().filter(alleleSet::contains))
+                        .distinct()
+                        .collect(Collectors.toList());;
 
                 final Map<AlleleAndContext, List<Haplotype>> alleleHaplotypeMap = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
                 readLikelihoods.alleles().stream().filter(activeHaplotypes::contains)
