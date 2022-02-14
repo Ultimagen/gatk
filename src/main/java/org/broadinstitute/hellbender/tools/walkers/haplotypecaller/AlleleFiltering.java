@@ -99,11 +99,11 @@ public abstract class AlleleFiltering {
      */
     static private Set<AlleleAndContext> getAlleles(final Haplotype haplotype){
         Collection<VariantContext> vcs = haplotype.getEventMap().getVariantContexts();
-        Set<AlleleAndContext> allEvents = new HashSet<>();
-        for (VariantContext vc: vcs) {
-            allEvents.addAll(vc.getAlleles().stream().map( al -> new AlleleAndContext(vc.getContig(), vc.getStart(), al, vc.getReference())).collect(Collectors.toList()));
-        }
-        return allEvents;
+
+        return vcs.stream().flatMap(
+                vc -> vc.getAlleles().stream().map(
+                        al ->  new AlleleAndContext(vc.getContig(), vc.getStart(), al, vc.getReference()))
+        ).collect(Collectors.toSet());
     }
 
     /**
