@@ -766,18 +766,22 @@ public final class ArtificialReadUtils {
         return PileupElement.createPileupForReadAndOffset(gatkRead, offsetIntoRead);
     }
 
-    public static GATKRead makeIntoFlowBased(final GATKRead read) {
+    public static void makeIntoFlowBased(final GATKRead read) {
 
         // create synthetic matrix attribute (tp) - length should be same as number of bases
         byte[]      tp = new byte[read.getBasesNoCopy().length];
         Arrays.fill(tp, (byte)1);
         read.setAttribute(FlowBasedRead.FLOW_MATRIX_TAG_NAME, tp);
 
-        return read;
+        // ensure that read group has a flow order
+        if ( read instanceof SAMRecordToGATKReadAdapter ) {
+            makeIntoFlowBased(((SAMRecordToGATKReadAdapter)read).getEncapsulatedSamRecord().getReadGroup());
+        }
     }
 
-    public static SAMReadGroupRecord makeInotFlowBased(final SAMReadGroupRecord readGroupRecord, String flowOrder) {
-        readGroupRecord.setFlowOrder(flowOrder != null ? flowOrder : FlowBasedRead.DEFAULT_FLOW_ORDER);
-        return readGroupRecord;
+    public static void makeIntoFlowBased(final SAMReadGroupRecord readGroup) {
+        if ( readGroup != null && readGroup.getFlowOrder() == null ) {
+            readGroup.setFlowOrder(FlowBasedRead.DEFAULT_FLOW_ORDER);
+        }
     }
 }
