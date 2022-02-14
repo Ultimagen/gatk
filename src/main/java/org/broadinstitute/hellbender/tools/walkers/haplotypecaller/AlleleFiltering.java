@@ -15,6 +15,7 @@ import org.broadinstitute.hellbender.utils.BaseUtils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
+import org.checkerframework.framework.qual.Unused;
 import org.jgrapht.graph.DefaultDirectedWeightedGraph;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.io.ComponentNameProvider;
@@ -416,6 +417,7 @@ public abstract class AlleleFiltering {
     }
 
 
+    // find (the) reference haplotype within a list of haplotypes
     static Haplotype findReferenceHaplotype(final List<Haplotype> haplotypeList) {
         for (final Haplotype h: haplotypeList ) {
             if (h.isReference()) {
@@ -425,6 +427,7 @@ public abstract class AlleleFiltering {
         return null;
     }
 
+    // if alleles are different in length, return their the length of their (potentially) common prefix, otherwise return 0
     private int getCommonPrefixLength(final Allele al1, final Allele al2){
         if (al1.length()!=al2.length()){
             return Math.min(al1.length(), al2.length());
@@ -433,6 +436,7 @@ public abstract class AlleleFiltering {
         }
     }
 
+    // sort an integer list
     int[] argsortInt( final List<Integer> values) {
         return IntStream.range(0, values.size()).
                 mapToObj(i -> new ImmutablePair<>(i, values.get(i)))
@@ -441,9 +445,10 @@ public abstract class AlleleFiltering {
 
     }
 
-    // the functions below are currently unused but I want to keep them for potential future uses.
+    // the functions below are currently unused but kept for potential future uses.
     // The goal of these functions is to look at how one allele affects the other and make decisions
     // only for the alleles that really affect others. The approach did not currently work that well
+    @SuppressWarnings("unused")
     private AlleleAndContext identifyStrongInteractingAllele(final List<AlleleAndContext> candidateList,
                                                              final float prefilterThreshold,
                                                              final List<AlleleAndContext> allAlleles,
