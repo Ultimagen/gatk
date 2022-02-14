@@ -130,10 +130,10 @@ public abstract class AlleleFiltering {
         // the connected components of the graph are genotyped together
         final OccurrenceMatrix<Haplotype, AlleleAndContext> occm = new OccurrenceMatrix<>(haplotypeAlleleMap);
         List<Pair<AlleleAndContext, AlleleAndContext>> nonCoOcurringAlleles = occm.nonCoOcurringColumns();
-        final List<Pair<AlleleAndContext, AlleleAndContext>> restrictiveNonCoOcurring = filterByDistance(nonCoOcurringAlleles, 0, 3);
+        final List<Pair<AlleleAndContext, AlleleAndContext>> closeNonCoOccurringAlleles = filterByDistance(nonCoOcurringAlleles, 0, 3);
         nonCoOcurringAlleles = filterByDistance(nonCoOcurringAlleles, 0, 20);
         nonCoOcurringAlleles = filterSameUpToHmerPairs(nonCoOcurringAlleles, findReferenceHaplotype(readLikelihoods.alleles()), activeWindowStart);
-        nonCoOcurringAlleles.addAll(restrictiveNonCoOcurring);
+        nonCoOcurringAlleles.addAll(closeNonCoOccurringAlleles);
         final List<Set<AlleleAndContext>> independentAlleles = occm.getIndependentSets(nonCoOcurringAlleles);
 
         // 3. For each cluster - remove weak alleles
