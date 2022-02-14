@@ -27,7 +27,7 @@ public class FlowFragment extends Fragment {
     protected final short flowScore;
 
     public FlowFragment(final GATKRead first, final SAMFileHeader header, int partitionIndex, MarkDuplicatesScoringStrategy scoringStrategy, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
-        super(first, header, partitionIndex, scoringStrategy, headerLibraryMap, mdArgs);
+        super(first, header, partitionIndex, scoringStrategy, headerLibraryMap);
 
         int        start = !mdArgs.isFlowEnabled()
                                     ? ReadUtils.getStrandedUnclippedStart(first)
