@@ -583,8 +583,7 @@ public abstract class AlleleFiltering {
             dotExporter.exportGraph(intm, outfile);
         }
         catch (IOException e) {
-            logger.error("Unable to write a DOT file" + String.format("allele.interaction.%s.%d-%d.dot", contig, rangeStart, rangeEnd));
-            throw new RuntimeException();
+            throw new RuntimeException("Unable to write a DOT file" + String.format("allele.interaction.%s.%d-%d.dot", contig, rangeStart, rangeEnd));
         }
     }
 
