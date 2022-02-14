@@ -2,6 +2,7 @@ package org.broadinstitute.hellbender.tools.walkers.haplotypecaller;
 
 import htsjdk.samtools.*;
 import org.broadinstitute.hellbender.GATKBaseTest;
+import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.genotyper.LikelihoodMatrix;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
@@ -10,7 +11,7 @@ import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
+import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 
 import java.io.File;
 import java.nio.file.FileSystems;
@@ -79,7 +80,7 @@ public class FlowBasedAlignmentEngineUnitTest extends GATKBaseTest {
     private FlowBasedAlignmentEngine getTestAlignmentEngine() {
 
         // create (and possibly initialise) arguments
-        FlowBasedAlignmentArgumentCollection        args = new FlowBasedAlignmentArgumentCollection();
+        FlowBasedAlignmentArgumentCollection args = new FlowBasedAlignmentArgumentCollection();
 
         // create engine
         return new FlowBasedAlignmentEngine(args,-5, 0.02, false, PairHMMLikelihoodCalculationEngine.DEFAULT_DYNAMIC_DISQUALIFICATION_SCALE_FACTOR);

@@ -13,7 +13,7 @@ import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.clipping.ClippingOp;
 import org.broadinstitute.hellbender.utils.clipping.ClippingRepresentation;
 import org.broadinstitute.hellbender.utils.clipping.ReadClipper;
-import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
+import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 
 import java.io.*;
 import java.text.DecimalFormat;
@@ -128,7 +128,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     /**
      * The flow based argument collection under which this read was created
      */
-    private final FlowBasedAlignmentArgumentCollection fbargs;
+    private final FlowBasedArgumentCollection fbargs;
 
     /**
      * This allows tools to reduce/enlarge the lower limit of read size for clipping operations.
@@ -173,7 +173,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
      * @param _maxHmer maximal hmer to keep in the flow matrix
      * @param fbargs arguments that control resolution etc. of the flow matrix
      */
-    public FlowBasedRead(final GATKRead read, final String flowOrder, final int _maxHmer, final FlowBasedAlignmentArgumentCollection fbargs) {
+    public FlowBasedRead(final GATKRead read, final String flowOrder, final int _maxHmer, final FlowBasedArgumentCollection fbargs) {
         this(read.convertToSAMRecord(null), flowOrder, _maxHmer, fbargs);
 
     }
@@ -185,7 +185,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
      * @param _maxHmer maximal hmer to keep in the flow matrix
      * @param fbargs arguments that control resoltion of the flow matrix
      */
-    public FlowBasedRead(final SAMRecord samRecord, final String _flowOrder, final int _maxHmer, final FlowBasedAlignmentArgumentCollection fbargs) {
+    public FlowBasedRead(final SAMRecord samRecord, final String _flowOrder, final int _maxHmer, final FlowBasedArgumentCollection fbargs) {
         super(samRecord);
         Utils.nonNull(fbargs);
         Utils.validate(FlowBasedReadUtils.isFlow(samRecord), "FlowBasedRead can only be used on flow reads. failing read: " + samRecord);
@@ -1041,7 +1041,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
      * @return read with flowNumUncertainFlows trimmed
      */
     public static GATKRead hardClipUncertainBases(final GATKRead inputRead, final String flowOrder,
-                                                  final FlowBasedAlignmentArgumentCollection fbargs ){
+                                                  final FlowBasedArgumentCollection fbargs ){
         Utils.nonNull(fbargs);
         Utils.validateArg(fbargs.flowFirstUncertainFlowBase.length()==1, "First uncertain flow base should be of length 1");
         ReadClipper clipper = new ReadClipper(inputRead);
@@ -1067,7 +1067,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
      * @return read with flowNumUncertainFlows trimmed
      */
     public static GATKRead hardClipUncertainBases(final GATKRead inputRead, final SAMFileHeader samHeader,
-                                                  final FlowBasedAlignmentArgumentCollection fbargs ){
+                                                  final FlowBasedArgumentCollection fbargs ){
         Utils.nonNull(fbargs);
         String flowOrder = samHeader.getReadGroup(inputRead.getReadGroup()).getFlowOrder();
         if (flowOrder==null){

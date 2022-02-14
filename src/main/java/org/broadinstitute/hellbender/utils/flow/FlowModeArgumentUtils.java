@@ -8,6 +8,7 @@ import org.broadinstitute.barclay.argparser.NamedArgumentDefinition;
 import org.broadinstitute.hellbender.cmdline.ReadFilterArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.argumentcollections.MarkDuplicatesSparkArgumentCollection;
 import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
+import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.*;
 
 import java.io.ByteArrayOutputStream;
@@ -35,7 +36,7 @@ public class FlowModeArgumentUtils {
                 AssemblyBasedCallerArgumentCollection.FILTER_ALLELES, "true",
                 AssemblyBasedCallerArgumentCollection.FILTER_ALLELES_SOR_THRESHOLD, "3",
                 AssemblyBasedCallerArgumentCollection.FLOW_ASSEMBLY_COLLAPSE_HMER_SIZE_LONG_NAME, "12",
-                FlowBasedAlignmentArgumentCollection.FLOW_MATRIX_MODS_LONG_NAME, "10,12,11,12",
+                FlowBasedArgumentCollection.FLOW_MATRIX_MODS_LONG_NAME, "10,12,11,12",
                 AssemblyBasedCallerArgumentCollection.OVERRIDE_FRAGMENT_SOFTCLIP_CHECK_LONG_NAME, "true",
                 FlowBasedAlignmentArgumentCollection.FLOW_LIKELIHOOD_PARALLEL_THREADS_LONG_NAME, "2",
                 FlowBasedAlignmentArgumentCollection.FLOW_LIKELIHOOD_OPTIMIZED_COMP_LONG_NAME, "true",

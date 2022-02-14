@@ -19,7 +19,7 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.FlowBasedHMMEngine;
-import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
+import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 
 import java.util.*;
 
@@ -37,7 +37,7 @@ public class FlowBasedPairHMMUnitTest extends GATKBaseTest {
     public void testComputeLikelihoods(){
         final LikelihoodEngineArgumentCollection LEAC = new LikelihoodEngineArgumentCollection();
 
-        final FlowBasedAlignmentArgumentCollection defaultArgs = new FlowBasedAlignmentArgumentCollection();
+        final FlowBasedArgumentCollection defaultArgs = new FlowBasedArgumentCollection();
         final FlowBasedHMMEngine lce = new FlowBasedHMMEngine(defaultArgs, (byte) LEAC.gcpHMM, QualityUtils.qualToErrorProbLog10(LEAC.phredScaledGlobalReadMismappingRate), LEAC.expectedErrorRatePerBase, PairHMMLikelihoodCalculationEngine.PCRErrorModel.CONSERVATIVE,
                 LEAC.dontUseDragstrPairHMMScores ? null : DragstrParamUtils.parse(LEAC.dragstrParams), LEAC.enableDynamicReadDisqualification, LEAC.readDisqualificationThresholdConstant,
                 LEAC.minUsableIndelScoreToUse, (byte) LEAC.flatDeletionPenalty, (byte) LEAC.flatInsertionPenatly);

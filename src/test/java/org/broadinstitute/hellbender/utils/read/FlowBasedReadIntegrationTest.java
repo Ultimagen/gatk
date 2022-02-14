@@ -10,7 +10,7 @@ import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.broadinstitute.hellbender.tools.walkers.variantrecalling.FlowTestConstants;
-import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
+import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -37,7 +37,7 @@ public class FlowBasedReadIntegrationTest extends GATKBaseTest {
                           final int limitCount, final boolean simulate) throws IOException {
 
         // create argument block
-        FlowBasedAlignmentArgumentCollection fbargs = new FlowBasedAlignmentArgumentCollection();
+        FlowBasedArgumentCollection fbargs = new FlowBasedArgumentCollection();
         if ( simulate ) {
             fbargs.probabilityRatioThreshold = 0.01;
             //fbargs.remove_longer_than_one_indels = true;
