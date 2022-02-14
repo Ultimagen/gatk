@@ -9,7 +9,7 @@ import org.broadinstitute.hellbender.utils.read.FlowBasedReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
-import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
+import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Path;
@@ -28,7 +28,7 @@ public class TrimmedReadsReader {
     private CountingReadFilter            readFilter;
     private final Map<String, Integer>    readGroupMaxClass = new LinkedHashMap<>();
     private final Map<String, String>     readGroupFlowOrder = new LinkedHashMap<>();
-    private final FlowBasedAlignmentArgumentCollection fbArgs = new FlowBasedAlignmentArgumentCollection();
+    private final FlowBasedArgumentCollection fbArgs = new FlowBasedArgumentCollection();
 
     public TrimmedReadsReader(final List<Path> readsFiles, final Path referencePath, final int cloudPrefetchBuffer) {
 

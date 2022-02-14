@@ -3,18 +3,11 @@ package org.broadinstitute.hellbender.utils.read;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMReadGroupRecord;
 import htsjdk.samtools.SAMRecord;
-import htsjdk.samtools.util.Lazy;
 import htsjdk.samtools.util.SequenceUtil;
-import htsjdk.variant.variantcontext.VariantContextUtils;
-import org.apache.commons.jexl2.Expression;
-import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
-import org.broadinstitute.hellbender.tools.walkers.groundtruth.GroundTruthReadsBuilder;
-import org.broadinstitute.hellbender.utils.BaseUtils;
+import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 import org.broadinstitute.hellbender.utils.Utils;
 
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -152,7 +145,7 @@ public class FlowBasedReadUtils {
     /**
      * Finds  a usable FlowOrder to be used for engine calculation (when no specufic flow order already established for a specific read)
      */
-    public static String findFirstUsableFlowOrder(final SAMFileHeader hdr, final FlowBasedAlignmentArgumentCollection fbargs) {
+    public static String findFirstUsableFlowOrder(final SAMFileHeader hdr, final FlowBasedArgumentCollection fbargs) {
         for ( final SAMReadGroupRecord rg : hdr.getReadGroups() ) {
             final String flowOrder = rg.getFlowOrder();
             if ( flowOrder != null && flowOrder.length() >= fbargs.flowOrderCycleLength ) {

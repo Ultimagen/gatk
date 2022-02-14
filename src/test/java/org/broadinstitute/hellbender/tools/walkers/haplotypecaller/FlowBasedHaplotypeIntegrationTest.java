@@ -6,6 +6,7 @@ import htsjdk.samtools.SamReaderFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.GATKBaseTest;
+import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
@@ -15,7 +16,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.broadinstitute.hellbender.utils.haplotype.FlowBasedHaplotype;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
-import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
+import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -72,7 +73,7 @@ public class FlowBasedHaplotypeIntegrationTest extends GATKBaseTest {
 
         logger.debug(String.format("%d reads %d haplotypes", count_reads, count_haplotypes));
         final ArrayList<FlowBasedRead> fbrs = new ArrayList<>();
-        final FlowBasedAlignmentArgumentCollection fbargs = new FlowBasedAlignmentArgumentCollection();
+        final FlowBasedArgumentCollection fbargs = new FlowBasedArgumentCollection();
         for (final GATKRead r : reads) {
             fbrs.add(new FlowBasedRead(r, "TACG", 8, fbargs));
         }

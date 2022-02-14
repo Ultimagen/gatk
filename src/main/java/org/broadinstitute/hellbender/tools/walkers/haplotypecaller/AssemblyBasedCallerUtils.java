@@ -16,6 +16,7 @@ import org.broadinstitute.gatk.nativebindings.smithwaterman.SWParameters;
 import org.broadinstitute.hellbender.engine.AlignmentContext;
 import org.broadinstitute.hellbender.engine.AssemblyRegion;
 import org.broadinstitute.hellbender.exceptions.UserException;
+import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.ReferenceConfidenceVariantContextMerger;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.readthreading.ReadThreadingAssembler;
 import org.broadinstitute.hellbender.utils.QualityUtils;
@@ -38,7 +39,7 @@ import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
-import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
+import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 
 import java.io.File;
 import java.util.*;
@@ -123,7 +124,7 @@ public final class AssemblyBasedCallerUtils {
                                       final boolean correctOverlappingBaseQualities,
                                       final boolean softClipLowQualityEnds,
                                       final boolean overrideSoftclipFragmentCheck,
-                                      final FlowBasedAlignmentArgumentCollection fbargs) {
+                                      final FlowBasedArgumentCollection fbargs) {
         if ( region.isFinalized() ) {
             return;
         }
@@ -305,7 +306,7 @@ public final class AssemblyBasedCallerUtils {
                                                   final ReadThreadingAssembler assemblyEngine,
                                                   final SmithWatermanAligner aligner,
                                                   final boolean correctOverlappingBaseQualities,
-                                                  final FlowBasedAlignmentArgumentCollection fbargs,
+                                                  final FlowBasedArgumentCollection fbargs,
                                                   final boolean bypassAssembly){
         finalizeRegion(region,
                 argumentCollection.assemblerArgs.errorCorrectReads,

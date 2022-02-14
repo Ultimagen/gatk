@@ -16,7 +16,7 @@ import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.programgroups.FlowBasedProgramGroup;
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.exceptions.GATKException;
-import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
+import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.*;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
@@ -126,7 +126,7 @@ public final class FlowFeatureMapper extends ReadWalker {
     public boolean floorBlocks = false;
 
     @ArgumentCollection
-    public FlowBasedAlignmentArgumentCollection fbargs = new FlowBasedAlignmentArgumentCollection();
+    public FlowBasedArgumentCollection fbargs = new FlowBasedArgumentCollection();
 
     protected static class ReadContext implements Comparable<ReadContext> {
         final GATKRead         read;
