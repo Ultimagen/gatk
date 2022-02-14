@@ -270,9 +270,9 @@ public final class AssemblyBasedCallerUtils {
                 Optional.empty();
     }
 
-    public static Optional<AlleleLikelihoodWriter<GATKRead, Haplotype>> createAlleleLikelihoodWriter(final AssemblyBasedCallerArgumentCollection args) {
+    public static Optional<AlleleLikelihoodWriter> createAlleleLikelihoodWriter(final AssemblyBasedCallerArgumentCollection args) {
         return args.alleleLikelihoodMatrixPath != null ?
-                Optional.of(new AlleleLikelihoodWriter<>(IOUtils.getPath(args.alleleLikelihoodMatrixPath),
+                Optional.of(new AlleleLikelihoodWriter(IOUtils.getPath(args.alleleLikelihoodMatrixPath),
                         new SimpleInterval(args.alleleLikelihoodMatrixInterval) ) ):Optional.empty();
     }
 
