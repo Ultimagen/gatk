@@ -102,7 +102,7 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
     private Optional<VariantContextWriter> assembledEventMapVcfOutputWriter;
     private Optional<PriorityQueue<VariantContext>> assembledEventMapVariants;
 
-    protected Optional<AlleleLikelihoodWriter<GATKRead, Haplotype>> alleleLikelihoodWriter;
+    protected Optional<AlleleLikelihoodWriter> alleleLikelihoodWriter;
 
     private Set<String> sampleSet;
     protected SampleList samplesList;
