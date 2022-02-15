@@ -15,7 +15,7 @@ import org.broadinstitute.hellbender.utils.read.FlowBasedReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.haplotype.FlowBasedHaplotype;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
-import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
+import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.function.ToDoubleFunction;
 
 /**
- *  Flow Based HMM, intended to incorporate the scoring model of the {@link FlowBasedAlignmentEngine} while allowing for frame-shift insertions
+ *  Flow Based HMM, intended to incorporate the scoring model of the {@link FlowBasedAlignmentLikelihoodEngine} while allowing for frame-shift insertions
  *  and deletions for better genotyping.
  */
 public class FlowBasedHMMEngine implements ReadLikelihoodCalculationEngine {
@@ -32,7 +32,7 @@ public class FlowBasedHMMEngine implements ReadLikelihoodCalculationEngine {
     private double log10globalReadMismappingRate;
     private final double expectedErrorRatePerBase;
     private PairHMMLikelihoodCalculationEngine.PCRErrorModel pcrErrorModel;
-    final FlowBasedAlignmentArgumentCollection fbargs;
+    final FlowBasedArgumentCollection fbargs;
 
     @VisibleForTesting
     public static final double INITIAL_QSCORE = 40.0;
@@ -58,7 +58,7 @@ public class FlowBasedHMMEngine implements ReadLikelihoodCalculationEngine {
      * @param expectedErrorRatePerBase - the expected rate of random sequencing errors for a read originating from its true haplotype.
      * @param pcrErrorModel
      */
-    public FlowBasedHMMEngine(final FlowBasedAlignmentArgumentCollection fbargs, final byte constantGCP,  final double log10globalReadMismappingRate, final double expectedErrorRatePerBase,
+    public FlowBasedHMMEngine(final FlowBasedArgumentCollection fbargs, final byte constantGCP, final double log10globalReadMismappingRate, final double expectedErrorRatePerBase,
                               final PairHMMLikelihoodCalculationEngine.PCRErrorModel pcrErrorModel, final DragstrParams dragstrParams, final boolean dynamicReadDisqualification, final double readDisqualificationScale,
                               final int minUsableIndelScoreToUse, final byte flatDeletionPenalty, final byte flatInsertionPenalty) {
         this.fbargs = fbargs;

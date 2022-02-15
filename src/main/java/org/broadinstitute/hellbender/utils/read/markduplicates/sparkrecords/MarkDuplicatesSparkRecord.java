@@ -35,7 +35,7 @@ public abstract class MarkDuplicatesSparkRecord {
     // A fragment containing only one read without a mapped mate
     public static Fragment newFragment(final GATKRead first, final SAMFileHeader header, int partitionIndex, MarkDuplicatesScoringStrategy scoringStrategy, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
         if ( !mdArgs.FLOW_END_LOCATION_SIGNIFICANT && !mdArgs.FLOW_QUALITY_SUM_STRATEGY ) {
-            return new Fragment(first, header, partitionIndex, scoringStrategy, headerLibraryMap, mdArgs);
+            return new Fragment(first, header, partitionIndex, scoringStrategy, headerLibraryMap);
         } else {
             return new FlowFragment(first, header, partitionIndex, scoringStrategy, headerLibraryMap, mdArgs);
         }

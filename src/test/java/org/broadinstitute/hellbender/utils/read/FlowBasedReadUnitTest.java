@@ -8,7 +8,7 @@ import org.broadinstitute.hellbender.testutils.IntegrationTestSpec;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
+import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -29,7 +29,7 @@ public class FlowBasedReadUnitTest extends GATKBaseTest {
         final Path inputFile = FileSystems.getDefault().getPath(inputDir, "sample.bam");
         final SamReader reader = SamReaderFactory.makeDefault().open(new File(inputFile.toString()));
         final String flowOrder = "GTAC";
-        final FlowBasedAlignmentArgumentCollection fbargs = new FlowBasedAlignmentArgumentCollection();
+        final FlowBasedArgumentCollection fbargs = new FlowBasedArgumentCollection();
 
         final String tempOutputDir = createTempDir("expected_outputs").toString();
 
@@ -57,7 +57,7 @@ public class FlowBasedReadUnitTest extends GATKBaseTest {
 
     @Test (dataProvider = "makeReads")
     public void testUncertainFlowTrimming(final GATKRead read, int nTrim, String uncertainFlowBase, final byte[] output, final int start, final int end) {
-        FlowBasedAlignmentArgumentCollection fbargs = new FlowBasedAlignmentArgumentCollection();
+        FlowBasedArgumentCollection fbargs = new FlowBasedArgumentCollection();
         fbargs.flowNumUncertainFlows = nTrim;
         fbargs.flowFirstUncertainFlowBase = uncertainFlowBase;
         GATKRead trimmedRead = FlowBasedRead.hardClipUncertainBases(read, "TAGC", fbargs);
@@ -98,5 +98,34 @@ public class FlowBasedReadUnitTest extends GATKBaseTest {
         return tests.toArray(new Object[][]{});
     }
 
+    @Test
+    public void testFlowBasedReadConstructorEforcesMatrix() {
 
+        // make a non-flow read
+        final GATKRead        read = makeRead("AAAAA".getBytes(), false);
+
+        // try to make it into a flow base read object, should fail
+        try {
+            new FlowBasedRead(read, FlowBasedRead.DEFAULT_FLOW_ORDER, FlowBasedRead.MAX_CLASS, new FlowBasedArgumentCollection());
+        } catch (IllegalStateException e) {
+            // this is the positive path, should be getting an exception
+            return;
+        }
+
+        // if here, failed to get an exception
+        Assert.fail("read should have generated an exception");
+    }
+
+    @Test
+    public void testArtificialFlowBasedReadConstruction() {
+
+        // make a non-flow read
+        final GATKRead        read = makeRead("AAAAA".getBytes(), false);
+
+        // convert to a flow based read
+        ArtificialReadUtils.makeIntoFlowBased(read);
+
+        // try to make it into a flow base read object, should not fail
+        new FlowBasedRead(read, FlowBasedRead.DEFAULT_FLOW_ORDER, FlowBasedRead.MAX_CLASS, new FlowBasedArgumentCollection());
+    }
 }

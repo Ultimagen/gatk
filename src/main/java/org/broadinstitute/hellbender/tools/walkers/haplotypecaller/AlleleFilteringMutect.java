@@ -62,6 +62,8 @@ public class AlleleFilteringMutect extends AlleleFiltering {
      * Calculate the log likelihoods of the ref/alt het genotype for each alt allele, then subtracts
      * these from the hom ref log likelihood to get the log-odds.
      *
+     * This method will throw an exception if Allele is an InverseAllele
+     *
      * @param matrix a matrix of log likelihoods
      */
     private double somaticAltLogOdds(final LikelihoodMatrix<GATKRead, Allele> matrix) {

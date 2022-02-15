@@ -7,11 +7,9 @@ import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.utils.Utils;
 
 import java.io.Serializable;
+import java.lang.reflect.Array;
 import java.nio.charset.Charset;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * Implementation of the {@link GATKRead} interface for the {@link SAMRecord} class.
@@ -32,8 +30,9 @@ public class SAMRecordToGATKReadAdapter implements GATKRead, Serializable {
     private transient Integer cachedAdaptorBoundary = null;
     private transient Integer cachedCigarLength = null;
 
-    // reads with of flow-based origin might contain these attributes which are sequence (length and content) dependent
-    private static final String[] ATTRIBUTES_TO_HARD_CLIP = new String[]{FlowBasedRead.FLOW_MATRiX_OLD_TAG_TI, FlowBasedRead.FLOW_MATRIX_TAG_NAME};
+    // black list for attribute names/tags not to hard clip even if they are arrays and on the same length as sequence
+    // at this time, the list is empty. Add as needed: new HashSet<>(Arrays.asList("t1", "t2"))
+    static final Set<String> hardClipAttributesBlackListTags = new HashSet<>();
 
     private void clearCachedValues() {
         cachedSoftStart = null;
@@ -760,20 +759,39 @@ public class SAMRecordToGATKReadAdapter implements GATKRead, Serializable {
     }
 
     /**
-     * Clip spefific attributes that change after a hard clipping operation
+     * Clip  attributes that change after a hard clipping operation
      *
-     * This is specific for flow-based reads but harmless for non-flow-based ones.
+     * The method clips array attributes that are at the same length as the sequence
+     * A blacklist is available to specifically exclude attributes.
      */
     @Override
-    public void hardClipAttributes(final int newStart, final int newLength)
+    public void hardClipAttributes(final int newStart, final int newLength, final int originalLength)
     {
-        // reads with of flow-based origin might contain these attributes which are sequence (length and content) dependent
-        for (String attributeName : ATTRIBUTES_TO_HARD_CLIP) {
-            if (samRecord.hasAttribute(attributeName)) {
-                final byte[] attribute = samRecord.getByteArrayAttribute(attributeName);
-                final byte[] trimmedAttribute = Arrays.copyOfRange(attribute, newStart, newStart + newLength);
+        for ( final SAMRecord.SAMTagAndValue attr : samRecord.getAttributes()) {
 
-                samRecord.setAttribute(attributeName, trimmedAttribute);
+            // ignore if on black list
+            if ( hardClipAttributesBlackListTags.contains(attr.tag) )
+                continue;
+
+            // ignore if not array
+            if ( !attr.value.getClass().isArray() )
+                continue;
+
+            // check if length is same as original sequence
+            if ( Array.getLength(attr.value) != originalLength )
+                continue;
+
+            // clip
+            if ( attr.value instanceof byte[] ) {
+                samRecord.setAttribute(attr.tag, Arrays.copyOfRange((byte[]) attr.value, newStart, newStart + newLength));
+            } else if ( attr.value instanceof short[] ) {
+                samRecord.setAttribute(attr.tag, Arrays.copyOfRange((short[])attr.value, newStart, newStart + newLength));
+            } else if ( attr.value instanceof int[] ) {
+                samRecord.setAttribute(attr.tag, Arrays.copyOfRange((int[])attr.value, newStart, newStart + newLength));
+            } else if ( attr.value instanceof float[] ) {
+                samRecord.setAttribute(attr.tag, Arrays.copyOfRange((float[])attr.value, newStart, newStart + newLength));
+            } else {
+                throw new GATKException("unknown array type on attribute value: " + attr.value.getClass().getName());
             }
         }
     }

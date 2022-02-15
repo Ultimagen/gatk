@@ -16,6 +16,7 @@ import org.broadinstitute.gatk.nativebindings.smithwaterman.SWParameters;
 import org.broadinstitute.hellbender.engine.AlignmentContext;
 import org.broadinstitute.hellbender.engine.AssemblyRegion;
 import org.broadinstitute.hellbender.exceptions.UserException;
+import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.ReferenceConfidenceVariantContextMerger;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.readthreading.ReadThreadingAssembler;
 import org.broadinstitute.hellbender.utils.QualityUtils;
@@ -38,7 +39,7 @@ import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
-import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
+import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 
 import java.io.File;
 import java.util.*;
@@ -123,7 +124,7 @@ public final class AssemblyBasedCallerUtils {
                                       final boolean correctOverlappingBaseQualities,
                                       final boolean softClipLowQualityEnds,
                                       final boolean overrideSoftclipFragmentCheck,
-                                      final FlowBasedAlignmentArgumentCollection fbargs) {
+                                      final FlowBasedArgumentCollection fbargs) {
         if ( region.isFinalized() ) {
             return;
         }
@@ -250,7 +251,7 @@ public final class AssemblyBasedCallerUtils {
                 likelihoodArgs.BASE_QUALITY_SCORE_THRESHOLD, likelihoodArgs.enableDynamicReadDisqualification, likelihoodArgs.readDisqualificationThresholdConstant,
                 likelihoodArgs.expectedErrorRatePerBase, !likelihoodArgs.disableSymmetricallyNormalizeAllelesToReference, likelihoodArgs.disableCapReadQualitiesToMapQ, handleSoftclips);
             case FlowBased:
-                return new FlowBasedAlignmentEngine(fbargs, log10GlobalReadMismappingRate, likelihoodArgs.expectedErrorRatePerBase, likelihoodArgs.enableDynamicReadDisqualification, likelihoodArgs.readDisqualificationThresholdConstant);
+                return new FlowBasedAlignmentLikelihoodEngine(fbargs, log10GlobalReadMismappingRate, likelihoodArgs.expectedErrorRatePerBase, likelihoodArgs.enableDynamicReadDisqualification, likelihoodArgs.readDisqualificationThresholdConstant);
             case FlowBasedHMM:
                 return new FlowBasedHMMEngine(fbargs, (byte) likelihoodArgs.gcpHMM, log10GlobalReadMismappingRate, likelihoodArgs.expectedErrorRatePerBase, likelihoodArgs.pcrErrorModel,
                         likelihoodArgs.dontUseDragstrPairHMMScores ? null : DragstrParamUtils.parse(likelihoodArgs.dragstrParams), likelihoodArgs.enableDynamicReadDisqualification, likelihoodArgs.readDisqualificationThresholdConstant,
@@ -269,9 +270,9 @@ public final class AssemblyBasedCallerUtils {
                 Optional.empty();
     }
 
-    public static Optional<AlleleLikelihoodWriter<GATKRead, Haplotype>> createAlleleLikelihoodWriter(final AssemblyBasedCallerArgumentCollection args) {
+    public static Optional<AlleleLikelihoodWriter> createAlleleLikelihoodWriter(final AssemblyBasedCallerArgumentCollection args) {
         return args.alleleLikelihoodMatrixPath != null ?
-                Optional.of(new AlleleLikelihoodWriter<>(IOUtils.getPath(args.alleleLikelihoodMatrixPath),
+                Optional.of(new AlleleLikelihoodWriter(IOUtils.getPath(args.alleleLikelihoodMatrixPath),
                         new SimpleInterval(args.alleleLikelihoodMatrixInterval) ) ):Optional.empty();
     }
 
@@ -305,7 +306,7 @@ public final class AssemblyBasedCallerUtils {
                                                   final ReadThreadingAssembler assemblyEngine,
                                                   final SmithWatermanAligner aligner,
                                                   final boolean correctOverlappingBaseQualities,
-                                                  final FlowBasedAlignmentArgumentCollection fbargs,
+                                                  final FlowBasedArgumentCollection fbargs,
                                                   final boolean bypassAssembly){
         finalizeRegion(region,
                 argumentCollection.assemblerArgs.errorCorrectReads,

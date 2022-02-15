@@ -14,7 +14,7 @@ import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.programgroups.FlowBasedProgramGroup;
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.exceptions.GATKException;
-import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
+import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.*;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
@@ -185,7 +185,7 @@ public final class GroundTruthReadsBuilder extends PartialReadWalker {
     public LikelihoodEngineArgumentCollection likelihoodArgs = new LikelihoodEngineArgumentCollection();
 
     @ArgumentCollection
-    public FlowBasedAlignmentArgumentCollection fbargs = new FlowBasedAlignmentArgumentCollection();
+    public FlowBasedArgumentCollection fbargs = new FlowBasedArgumentCollection();
 
     // locals
     private final Random                        random = new Random();
@@ -193,7 +193,7 @@ public final class GroundTruthReadsBuilder extends PartialReadWalker {
     private ReferenceDataSource                 maternalReference;
     private ReferenceDataSource                 paternalReference;
     private AncestralContigLocationTranslator   locationTranslator;
-    private FlowBasedAlignmentEngine            likelihoodCalculationEngine;
+    private FlowBasedAlignmentLikelihoodEngine likelihoodCalculationEngine;
     private PrintWriter                         outputCsv;
     private int                                 locationTranslationErrors;
 
@@ -227,8 +227,8 @@ public final class GroundTruthReadsBuilder extends PartialReadWalker {
 
         // create likelihood engine
         ReadLikelihoodCalculationEngine engine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(likelihoodArgs, false);
-        if ( engine instanceof FlowBasedAlignmentEngine) {
-            likelihoodCalculationEngine = (FlowBasedAlignmentEngine)engine;
+        if ( engine instanceof FlowBasedAlignmentLikelihoodEngine) {
+            likelihoodCalculationEngine = (FlowBasedAlignmentLikelihoodEngine)engine;
         } else {
             throw new GATKException("must use a flow based likelihood calculation engine");
         }

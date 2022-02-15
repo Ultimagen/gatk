@@ -5,12 +5,13 @@ import htsjdk.samtools.SAMFileHeader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.exceptions.GATKException;
+import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.*;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.*;
 import org.broadinstitute.hellbender.utils.haplotype.FlowBasedHaplotype;
-import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
+import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 
 import java.util.*;
 import java.util.concurrent.Callable;
@@ -22,7 +23,7 @@ import java.util.stream.IntStream;
 /* Flow based replacement for PairHMM likelihood calculation. Likelihood calculation all-vs-all flow based reads and haplotypes
 
  */
-public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine {
+public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalculationEngine {
     public static final double MAX_ERRORS_FOR_READ_CAP = 3.0;
     public static final double MAX_CATASTROPHIC_ERRORS_FOR_READ_CAP = 2.0;
 
@@ -51,7 +52,7 @@ public class FlowBasedAlignmentEngine implements ReadLikelihoodCalculationEngine
      * @param log10globalReadMismappingRate - probability for wrong mapping (maximal contribution of the read to data likelihood)
      * @param expectedErrorRatePerBase - the expected rate of random sequencing errors for a read originating from its true haplotype.
      */
-    public FlowBasedAlignmentEngine(final FlowBasedAlignmentArgumentCollection fbargs, final double log10globalReadMismappingRate, final double expectedErrorRatePerBase, final boolean dynamicReadDisqualification, final double readDisqualificationScale) {
+    public FlowBasedAlignmentLikelihoodEngine(final FlowBasedAlignmentArgumentCollection fbargs, final double log10globalReadMismappingRate, final double expectedErrorRatePerBase, final boolean dynamicReadDisqualification, final double readDisqualificationScale) {
         this.fbargs = fbargs;
         this.log10globalReadMismappingRate = log10globalReadMismappingRate;
         this.expectedErrorRatePerBase = expectedErrorRatePerBase;

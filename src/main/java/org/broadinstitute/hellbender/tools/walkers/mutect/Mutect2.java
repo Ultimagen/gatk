@@ -6,11 +6,9 @@ import org.broadinstitute.barclay.argparser.ArgumentCollection;
 import org.broadinstitute.barclay.argparser.CommandLineException;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
 import org.broadinstitute.barclay.help.DocumentedFeature;
-import org.broadinstitute.hellbender.cmdline.GATKPlugin.GATKReadFilterPluginDescriptor;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.programgroups.ShortVariantDiscoveryProgramGroup;
 import org.broadinstitute.hellbender.engine.*;
-import org.broadinstitute.hellbender.engine.filters.MappingQualityReadFilter;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.walkers.annotator.*;
@@ -322,8 +320,8 @@ public final class Mutect2 extends AssemblyRegionWalker {
      */
     @Override
     protected String[] customCommandLineValidation() {
-        if (MTAC.flowMode != FlowModeArgumentUtils.FlowModeHC.NONE) {
-            FlowModeArgumentUtils.setFlowModeHC(getCommandLineParser(), MTAC.flowMode);
+        if (MTAC.flowMode != FlowModeArgumentUtils.FlowMode.NONE) {
+            FlowModeArgumentUtils.setFlowMode(getCommandLineParser(), MTAC.flowMode);
         }
         return null;
     }

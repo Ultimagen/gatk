@@ -15,6 +15,7 @@ import org.broadinstitute.hellbender.utils.BaseUtils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
+import org.checkerframework.framework.qual.Unused;
 import org.jgrapht.graph.DefaultDirectedWeightedGraph;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.io.ComponentNameProvider;
@@ -36,12 +37,12 @@ import java.util.stream.IntStream;
 
 public abstract class AlleleFiltering {
 
-    protected static final Logger logger = LogManager.getLogger(AlleleFiltering.class);
-    protected AssemblyBasedCallerArgumentCollection hcArgs;
-    private OutputStreamWriter assemblyDebugOutStream;
-    AlleleFiltering(AssemblyBasedCallerArgumentCollection _hcargs, OutputStreamWriter _assemblyDebugOutStream){
-        hcArgs = _hcargs;
-        assemblyDebugOutStream = _assemblyDebugOutStream;
+    final protected static Logger logger = LogManager.getLogger(AlleleFiltering.class);
+    final protected AssemblyBasedCallerArgumentCollection assemblyArgs;
+    final private OutputStreamWriter assemblyDebugOutStream;
+    AlleleFiltering(final AssemblyBasedCallerArgumentCollection assemblyArgs, final OutputStreamWriter assemblyDebugOutStream){
+        this.assemblyArgs = assemblyArgs;
+        this.assemblyDebugOutStream = assemblyDebugOutStream;
     }
 
     /**
@@ -66,9 +67,8 @@ public abstract class AlleleFiltering {
     public AlleleLikelihoods<GATKRead, Haplotype> filterAlleles(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods,
                                                                 final int activeWindowStart, Set<Integer> suspiciousLocations){
 
-        AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
         logger.debug("SHA:: filter alleles - start");
-        subsettedReadLikelihoodsFinal = subsetHaplotypesByAlleles(readLikelihoods, hcArgs, activeWindowStart, suspiciousLocations);
+        final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal = subsetHaplotypesByAlleles(readLikelihoods, assemblyArgs, activeWindowStart, suspiciousLocations);
         logger.debug("SHA:: filter alleles - end");
 
         readLikelihoods.setFilteredHaplotypeCount(readLikelihoods.numberOfAlleles() - subsettedReadLikelihoodsFinal.numberOfAlleles());
@@ -76,9 +76,9 @@ public abstract class AlleleFiltering {
         if (assemblyDebugOutStream != null) {
             try {
                 assemblyDebugOutStream.write("\nThere were " + subsettedReadLikelihoodsFinal.alleles().size() + " haplotypes found after subsetting by alleles. Here they are:\n");
-                subsettedReadLikelihoodsFinal.alleles().stream().map(Haplotype::toString).sorted().forEach( h -> {
+                subsettedReadLikelihoodsFinal.alleles().forEach(h -> {
                     try {
-                        assemblyDebugOutStream.write(h);
+                        assemblyDebugOutStream.write(h.toString());
                         assemblyDebugOutStream.append("\n");
                     } catch (IOException e) {
                         throw new UserException("Error writing to debug output stream", e);
@@ -98,29 +98,28 @@ public abstract class AlleleFiltering {
      * @return set of AlleleAndContext
      */
     static private Set<AlleleAndContext> getAlleles(final Haplotype haplotype){
-        Collection<VariantContext> vcs = haplotype.getEventMap().getVariantContexts();
-        Set<AlleleAndContext> allEvents = new HashSet<>();
-        for (VariantContext vc: vcs) {
-            allEvents.addAll(vc.getAlleles().stream().map( al -> new AlleleAndContext(vc.getContig(), vc.getStart(), al, vc.getReference())).collect(Collectors.toList()));
-        }
-        return allEvents;
+        final Collection<VariantContext> vcs = haplotype.getEventMap().getVariantContexts();
+
+        return vcs.stream().flatMap(
+                vc -> vc.getAlleles().stream().map(
+                        al ->  new AlleleAndContext(vc.getContig(), vc.getStart(), al, vc.getReference()))
+        ).collect(Collectors.toSet());
     }
 
     /**
      * Main function that filters haplotypes that contribute weak alleles
      * @param readLikelihoods read x haplotype matrix
-     * @param hcargs HaplotypeCaller/Mutect2 parameters
+     * @param assemblyArgs HaplotypeCaller/Mutect2 parameters
      * @param activeWindowStart Genomic location of the start
      * @param suspiciousLocations set of positions where the alleles are being filtered (modified)
      * @return read x haplotype matrix where the filtered haplotypes are removed
      * @throws IOException if output file can't be written
      */
     private AlleleLikelihoods<GATKRead, Haplotype> subsetHaplotypesByAlleles(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods,
-                                                                         final AssemblyBasedCallerArgumentCollection hcargs,
+                                                                         final AssemblyBasedCallerArgumentCollection assemblyArgs,
                                                                          final int activeWindowStart, Set<Integer> suspiciousLocations) {
         // 1. Collect all alleles in the active region
-        Set<Haplotype> disabledHaplotypes = new HashSet<>();
-        AlleleLikelihoods<GATKRead, Haplotype> currentReadLikelihoods;
+        final Set<Haplotype> disabledHaplotypes = new HashSet<>();
         final Map<Haplotype, Collection<AlleleAndContext>> haplotypeAlleleMap  = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
         readLikelihoods.alleles().forEach(h -> getAlleles(h).stream().filter(al -> !al.isReference()).forEach(jh -> haplotypeAlleleMap.get(h).add(jh)));
 
@@ -130,26 +129,26 @@ public abstract class AlleleFiltering {
         // First we generate a graph with edge for each pair of alleles that do not occur in the same haplotype
         // Then we only keep the edges where the alleles are close or up to hmer indel from each other
         // the connected components of the graph are genotyped together
-        OccurrenceMatrix<Haplotype, AlleleAndContext> occm = new OccurrenceMatrix<>(haplotypeAlleleMap);
+        final OccurrenceMatrix<Haplotype, AlleleAndContext> occm = new OccurrenceMatrix<>(haplotypeAlleleMap);
         List<Pair<AlleleAndContext, AlleleAndContext>> nonCoOcurringAlleles = occm.nonCoOcurringColumns();
-        List<Pair<AlleleAndContext, AlleleAndContext>> restrictiveNonCoOcurring = filterByDistance(nonCoOcurringAlleles, 0, 3);
+        final List<Pair<AlleleAndContext, AlleleAndContext>> closeNonCoOccurringAlleles = filterByDistance(nonCoOcurringAlleles, 0, 3);
         nonCoOcurringAlleles = filterByDistance(nonCoOcurringAlleles, 0, 20);
         nonCoOcurringAlleles = filterSameUpToHmerPairs(nonCoOcurringAlleles, findReferenceHaplotype(readLikelihoods.alleles()), activeWindowStart);
-        nonCoOcurringAlleles.addAll(restrictiveNonCoOcurring);
-        List<Set<AlleleAndContext>> independentAlleles = occm.getIndependentSets(nonCoOcurringAlleles);
+        nonCoOcurringAlleles.addAll(closeNonCoOccurringAlleles);
+        final List<Set<AlleleAndContext>> independentAlleles = occm.getIndependentSets(nonCoOcurringAlleles);
 
         // 3. For each cluster - remove weak alleles
-        for (Set<AlleleAndContext> alleleSet : independentAlleles) {
+        for (final Set<AlleleAndContext> alleleSet : independentAlleles) {
 
             // debugging - write the interaction map of the location (we will keep this function from the unused approach
             // where we only attempted to filter alleles that strongly affect an another allele's quality. This approach
             // failed to deliver a significant improvement and thus is not used.
             // interaction map is the graph of how much quality of each allele is improved when another allele is removed
-            if (hcargs.writeFilteringGraphs) {
+            if (assemblyArgs.writeFilteringGraphs) {
                 if (alleleSet.size() > 1 ) {
-                    List<AlleleAndContext> alleleSetAsList = new ArrayList<>(alleleSet);
-                    Map<AlleleAndContext, Integer> initialRPLsMap = new HashMap<>();
-                    DefaultDirectedWeightedGraph<AlleleAndContext, DefaultWeightedEdge> intm =
+                    final List<AlleleAndContext> alleleSetAsList = new ArrayList<>(alleleSet);
+                    final Map<AlleleAndContext, Integer> initialRPLsMap = new HashMap<>();
+                    final DefaultDirectedWeightedGraph<AlleleAndContext, DefaultWeightedEdge> intm =
                             interactionMatrixToGraph(getInteractionMatrix(alleleSetAsList, haplotypeAlleleMap,
                                     readLikelihoods, initialRPLsMap), initialRPLsMap);
                     printInteractionGraph(intm, initialRPLsMap, alleleSet);
@@ -157,18 +156,16 @@ public abstract class AlleleFiltering {
             }
 
             boolean removedAlleles = true;
-            Set<Haplotype> activeHaplotypes = new HashSet<>(readLikelihoods.alleles());
+            final Set<Haplotype> activeHaplotypes = new HashSet<>(readLikelihoods.alleles());
 
             while (removedAlleles) {
                 removedAlleles = false;
                 // b. Marginalize: calculate quality of each allele relative to all other alleles
                 logger.debug("GAL::start of iteration");
-                List<AlleleAndContext> activeAlleles = new ArrayList<>();
-                activeHaplotypes.forEach(hap ->
-                    getAlleles(hap).stream()
-                            .filter(alleleSet::contains)
-                            .filter(al -> !activeAlleles.contains(al))
-                            .forEach(activeAlleles::add));
+                final List<AlleleAndContext> activeAlleles = activeHaplotypes.stream()
+                        .flatMap(h -> getAlleles(h).stream().filter(alleleSet::contains))
+                        .distinct()
+                        .collect(Collectors.toList());;
 
                 final Map<AlleleAndContext, List<Haplotype>> alleleHaplotypeMap = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
                 readLikelihoods.alleles().stream().filter(activeHaplotypes::contains)
@@ -181,9 +178,9 @@ public abstract class AlleleFiltering {
                         );
 
                 logger.debug("AHM::printout start");
-                for (AlleleAndContext al : alleleHaplotypeMap.keySet()) {
+                for (final AlleleAndContext al : alleleHaplotypeMap.keySet()) {
                     logger.debug("AHM::allele block ---> ");
-                    for (Allele h : alleleHaplotypeMap.get(al)) {
+                    for (final Allele h : alleleHaplotypeMap.get(al)) {
                         logger.debug(() -> String.format("AHM:: (%d) %s/%s: %s", al.getLoc(), al.getAllele().getBaseString(), al.getRefAllele().getBaseString(), h.getBaseString()));
                     }
                     logger.debug("AHM::allele block ---< ");
@@ -202,16 +199,16 @@ public abstract class AlleleFiltering {
                 final List<Double> collectedSORs = IntStream.range(0, activeAlleles.size()).mapToObj(i -> getAlleleSOR(alleleLikelihoods.get(i), activeAlleles.get(i))).collect(Collectors.toList());
 
                 //    d. Generate variants that are below SOR threshold and below RPL threshold
-                List<AlleleAndContext> filteringCandidates = identifyBadAlleles(collectedRPLs,
+                final List<AlleleAndContext> filteringCandidates = identifyBadAlleles(collectedRPLs,
                                                                                 collectedSORs,
                                                                                 activeAlleles,
-                                                                                hcargs.prefilterQualThreshold,
-                                                                                hcargs.prefilterSorThreshold);
+                                                                                assemblyArgs.prefilterQualThreshold,
+                                                                                assemblyArgs.prefilterSorThreshold);
 
 
                 //very weak candidates are filtered out in any case, even if they are alone (they will be filtered anyway even in the GVCF mode)
                 // the very weak quality is hardcoded
-                List<AlleleAndContext> filteringCandidatesStringent = identifyBadAlleles(collectedRPLs,
+                final List<AlleleAndContext> filteringCandidatesStringent = identifyBadAlleles(collectedRPLs,
                         collectedSORs,
                         activeAlleles,
                         1,
@@ -235,17 +232,17 @@ public abstract class AlleleFiltering {
                 // current cluster and genotype again.
                 if ((filteringCandidates.size()>0 && activeAlleles.size()>1) ||
                 (activeAlleles.size()==1 && filteringCandidatesStringent.size()>0) ||
-                        (filteringCandidates.size()>0 && hcArgs.filterLoneAlleles)) {
+                        (filteringCandidates.size()>0 && this.assemblyArgs.filterLoneAlleles)) {
 
                     if ((filteringCandidatesStringent.size()>0) && (filteringCandidates.size() == 0 )) {
                         throw new GATKException.ShouldNeverReachHereException("The thresholds for stringent allele " +
                                 "filtering should always be higher than for the relaxed one");
                     }
 
-                    AlleleAndContext candidateToDisable = filteringCandidates.get(0);
+                    final AlleleAndContext candidateToDisable = filteringCandidates.get(0);
                     logger.debug(() -> String.format("GAL:: Remove %s", candidateToDisable.toString()));
                     removedAlleles = true;
-                    List<Haplotype> haplotypesToRemove = alleleHaplotypeMap.get(candidateToDisable);
+                    final List<Haplotype> haplotypesToRemove = alleleHaplotypeMap.get(candidateToDisable);
                     disabledHaplotypes.addAll(haplotypesToRemove);
                     activeHaplotypes.removeAll(haplotypesToRemove);
                 }
@@ -261,7 +258,7 @@ public abstract class AlleleFiltering {
         }
         logger.debug("----- SHA list of removed haplotypes end ----");
 
-        Set<Haplotype> eventualAlleles = new HashSet<>();
+        final Set<Haplotype> eventualAlleles = new HashSet<>();
         readLikelihoods.alleles().stream().filter(al -> !disabledHaplotypes.contains(al)).forEach(eventualAlleles::add);
         logger.debug("----- SHA list of remaining haplotypes start ----");
         for (Haplotype hap : eventualAlleles) {
@@ -271,11 +268,11 @@ public abstract class AlleleFiltering {
 
 
 
-        currentReadLikelihoods = readLikelihoods.subsetToAlleles(eventualAlleles);
+        final AlleleLikelihoods<GATKRead, Haplotype> currentReadLikelihoods = readLikelihoods.subsetToAlleles(eventualAlleles);
         logger.debug("----- SHA list of remaining alleles start ----");
-        Set<AlleleAndContext> locAllele = new HashSet<>();
+        final Set<AlleleAndContext> locAllele = new HashSet<>();
         currentReadLikelihoods.alleles().forEach(h -> getAlleles(h).stream().filter(al -> !al.isReference()).forEach(locAllele::add));
-        for (AlleleAndContext al: locAllele) {
+        for (final AlleleAndContext al: locAllele) {
             logger.debug(() -> String.format("---- SHA :: %s ", al.toString()));
         }
         logger.debug("----- SHA list of remaining alleles end ----");
@@ -301,12 +298,12 @@ public abstract class AlleleFiltering {
 
         //collected RPLs are the -10*QUAL of the alleles. high RPL means low quality.
         // SORs are regular: high SOR - strongly biased
-        int[] rplsIndices = argsortInt(collectedRPLs);
-        int[] sorIndices = rplsIndices; // the variants that have high sor are ordered according to their quality
+        final int[] rplsIndices = argsortInt(collectedRPLs);
+        final int[] sorIndices = rplsIndices; // the variants that have high sor are ordered according to their quality
 
 
         //this list will contain all alleles that should be filtered in the order of priority
-        List<AlleleAndContext> result = new ArrayList<>();
+        final List<AlleleAndContext> result = new ArrayList<>();
         final double THRESHOLD = -1 * qualThreshold; // quality threshold is like in GATK (GL) and we collected PL, so QUAL 30 will appear as -30.
         final double SOR_THRESHOLD = sorThreshold;
 
@@ -343,9 +340,9 @@ public abstract class AlleleFiltering {
     private AlleleLikelihoods<GATKRead, Allele> getAlleleLikelihoodMatrix(final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods,
                                                                                      final AlleleAndContext allele,
                                                                                      final Map<Haplotype, Collection<AlleleAndContext>> haplotypeAlleleMap,
-                                                                                     Set<Haplotype> enabledHaplotypes
+                                                                                     final Set<Haplotype> enabledHaplotypes
                                                                                      ){
-        Map<Allele,List<Haplotype>> alleleHaplotypeMap = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
+        final Map<Allele,List<Haplotype>> alleleHaplotypeMap = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
 
         final Allele notAllele= InverseAllele.of(allele.getAllele(), true);
         readLikelihoods.alleles().stream().filter(enabledHaplotypes::contains)
@@ -361,12 +358,12 @@ public abstract class AlleleFiltering {
     }
 
     //functions to get allele likelihoods and SOR. Differ between the mutect and the HC implementations
-    abstract int getAlleleLikelihoodVsInverse(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele);
+    abstract int getAlleleLikelihoodVsInverse(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, final Allele allele);
 
-    private double getAlleleSOR(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele) {
+    private double getAlleleSOR(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, final Allele allele) {
         final Allele notAllele = InverseAllele.of(allele, true);
-        int [][] contingency_table = StrandOddsRatio.getContingencyTableWrtAll(alleleLikelihoods, notAllele, Collections.singletonList(allele), 1);
-        double sor = StrandOddsRatio.calculateSOR(contingency_table);
+        final int [][] contingency_table = StrandOddsRatio.getContingencyTableWrtAll(alleleLikelihoods, notAllele, Collections.singletonList(allele), 1);
+        final double sor = StrandOddsRatio.calculateSOR(contingency_table);
         logger.debug(() -> String.format("GAS:: %s: %f (%d %d %d %d)", allele.toString(), sor, contingency_table[0][0], contingency_table[0][1], contingency_table[1][0], contingency_table[1][1]));
         return sor;
 
@@ -377,7 +374,7 @@ public abstract class AlleleFiltering {
             final List<Pair<AlleleAndContext, AlleleAndContext>> allelePairs,
             final int minDist, final int maxDist) {
         logger.debug(() -> String.format("FBD: input %d pairs ", allelePairs.size()));
-        List<Pair<AlleleAndContext, AlleleAndContext>> result = new ArrayList<>(allelePairs);
+        final List<Pair<AlleleAndContext, AlleleAndContext>> result = new ArrayList<>(allelePairs);
         result.removeIf(v -> Math.abs(v.getLeft().getLoc() - v.getRight().getLoc())>maxDist);
         result.removeIf(v -> Math.abs(v.getLeft().getLoc() - v.getRight().getLoc())<minDist);
         logger.debug(() -> String.format("FBD: output %d pairs ", allelePairs.size()));
@@ -387,15 +384,15 @@ public abstract class AlleleFiltering {
 
     //filters pairs of alleles that are not same up to hmer indel
     private List<Pair<AlleleAndContext, AlleleAndContext>> filterSameUpToHmerPairs(final List<Pair<AlleleAndContext,
-            AlleleAndContext>> allelePairs, Haplotype refHaplotype, int activeWindowStart) {
+            AlleleAndContext>> allelePairs, final Haplotype refHaplotype, final int activeWindowStart) {
 
-        List<Pair<AlleleAndContext, AlleleAndContext>> result = new ArrayList<>();
-        for (Pair<AlleleAndContext, AlleleAndContext> allelePair: allelePairs) {
+        final List<Pair<AlleleAndContext, AlleleAndContext>> result = new ArrayList<>();
+        for (final Pair<AlleleAndContext, AlleleAndContext> allelePair: allelePairs) {
 
-            int commonPrefixLengthLeft = getCommonPrefixLength(allelePair.getLeft().getAllele(), allelePair.getLeft().getRefAllele());
-            int commonPrefixLengthRight = getCommonPrefixLength(allelePair.getRight().getAllele(), allelePair.getRight().getRefAllele());
+            final int commonPrefixLengthLeft = getCommonPrefixLength(allelePair.getLeft().getAllele(), allelePair.getLeft().getRefAllele());
+            final int commonPrefixLengthRight = getCommonPrefixLength(allelePair.getRight().getAllele(), allelePair.getRight().getRefAllele());
 
-            Pair<Haplotype, Haplotype> modifiedHaplotypes = new ImmutablePair<>(
+            final Pair<Haplotype, Haplotype> modifiedHaplotypes = new ImmutablePair<>(
                     refHaplotype.insertAllele(
                             allelePair.getLeft().getRefAllele(),
                             allelePair.getLeft().getAllele(),
@@ -420,8 +417,9 @@ public abstract class AlleleFiltering {
     }
 
 
-    static Haplotype findReferenceHaplotype(List<Haplotype> haplotypeList) {
-        for (Haplotype h: haplotypeList ) {
+    // find (the) reference haplotype within a list of haplotypes
+    static Haplotype findReferenceHaplotype(final List<Haplotype> haplotypeList) {
+        for (final Haplotype h: haplotypeList ) {
             if (h.isReference()) {
                 return h;
             }
@@ -429,7 +427,8 @@ public abstract class AlleleFiltering {
         return null;
     }
 
-    private int getCommonPrefixLength(Allele al1, Allele al2){
+    // if alleles are different in length, return their the length of their (potentially) common prefix, otherwise return 0
+    private int getCommonPrefixLength(final Allele al1, final Allele al2){
         if (al1.length()!=al2.length()){
             return Math.min(al1.length(), al2.length());
         } else {
@@ -437,7 +436,8 @@ public abstract class AlleleFiltering {
         }
     }
 
-    int[] argsortInt( List<Integer> values) {
+    // sort an integer list
+    int[] argsortInt( final List<Integer> values) {
         return IntStream.range(0, values.size()).
                 mapToObj(i -> new ImmutablePair<>(i, values.get(i)))
                 .sorted(Comparator.comparingInt( v -> (int)v.getRight()))
@@ -445,10 +445,11 @@ public abstract class AlleleFiltering {
 
     }
 
-    // the functions below are currently unused but I want to keep them for potential future uses.
+    // the functions below are currently unused but kept for potential future uses.
     // The goal of these functions is to look at how one allele affects the other and make decisions
     // only for the alleles that really affect others. The approach did not currently work that well
-    private AlleleAndContext identifyStrongInteractingAllele(List<AlleleAndContext> candidateList,
+    @SuppressWarnings("unused")
+    private AlleleAndContext identifyStrongInteractingAllele(final List<AlleleAndContext> candidateList,
                                                              final float prefilterThreshold,
                                                              final List<AlleleAndContext> allAlleles,
                                                              final List<Integer> rpls,
@@ -459,10 +460,10 @@ public abstract class AlleleFiltering {
 
 
         logger.debug("ISIA :: start");
-        Map<AlleleAndContext, Integer> initialRPLsMap = new HashMap<>();
+        final Map<AlleleAndContext, Integer> initialRPLsMap = new HashMap<>();
         IntStream.range(0, allAlleles.size()).forEach(i -> initialRPLsMap.put(allAlleles.get(i), rpls.get(i)));
 
-        for (AlleleAndContext cand: candidateList){
+        for (final AlleleAndContext cand: candidateList){
             logger.debug(String.format("ISIA :: test %s", cand.toString()));
             if ( initialRPLsMap.get(cand) > (-1)*prefilterThreshold){
                 logger.debug( String.format("ISIA:: selected %s due to low QUAL", cand));
@@ -473,9 +474,9 @@ public abstract class AlleleFiltering {
                 return null;
             }
 
-            Map<AlleleAndContext, Integer> interactionVector = getInteractionVector(cand,
+            final Map<AlleleAndContext, Integer> interactionVector = getInteractionVector(cand,
                     haplotypeAlleleMap, alleleHaplotypeMap, readLikelihoods, initialRPLsMap);
-            for (AlleleAndContext allele: interactionVector.keySet()){
+            for (final AlleleAndContext allele: interactionVector.keySet()){
                 logger.debug(() -> String.format(" --- %s: %d", allele.toString(), initialRPLsMap.get(allele) - interactionVector.get(allele)));
                 if (initialRPLsMap.get(allele) - interactionVector.get(allele) > prefilterThreshold ){
                     logger.debug(String.format("ISIA:: selected %s", cand));
@@ -495,10 +496,10 @@ public abstract class AlleleFiltering {
             final List<AlleleAndContext> alleles,
             final Map<Haplotype, Collection<AlleleAndContext>> haplotypeAlleleMap,
             final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods,
-             Map<AlleleAndContext, Integer> initialRPLsMap) {
+            final Map<AlleleAndContext, Integer> initialRPLsMap) {
 
         final Map<AlleleAndContext, List<Haplotype>> alleleHaplotypeMap = new CollectionUtil.DefaultingMap<>((k) -> new ArrayList<>(), true);
-        Set<Haplotype> haplotypes = new HashSet<>(readLikelihoods.alleles());
+        final Set<Haplotype> haplotypes = new HashSet<>(readLikelihoods.alleles());
         readLikelihoods.alleles().stream().forEach(h -> getAlleles(h).stream().filter(al -> alleles.contains(al)).filter(al -> !al.isReference()).forEach(
                         jh -> alleleHaplotypeMap.get(jh).add(h))
                 );
@@ -515,8 +516,8 @@ public abstract class AlleleFiltering {
             initialRPLsMap.put(allAlleles.get(i), initialRPLs.get(i));
         }
 
-        Map<AlleleAndContext, Map<AlleleAndContext, Integer>> result = new HashMap<>();
-        for ( AlleleAndContext alleleToDisable : allAlleles) {
+        final Map<AlleleAndContext, Map<AlleleAndContext, Integer>> result = new HashMap<>();
+        for ( final AlleleAndContext alleleToDisable : allAlleles) {
             Map<AlleleAndContext, Integer> rplsWithoutAlleleMap = getInteractionVector(alleleToDisable, haplotypeAlleleMap, alleleHaplotypeMap, readLikelihoods, initialRPLsMap);
             result.put(alleleToDisable, rplsWithoutAlleleMap);
         }
@@ -530,13 +531,13 @@ public abstract class AlleleFiltering {
             final Map<Haplotype, Collection<AlleleAndContext>> haplotypeAlleleMap,
             final Map<AlleleAndContext, List<Haplotype>> alleleHaplotypeMap,
             final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods,
-            Map<AlleleAndContext, Integer> initialRPLsMap) {
+            final Map<AlleleAndContext, Integer> initialRPLsMap) {
 
 
         final Set<AlleleAndContext> allAlleles = initialRPLsMap.keySet();
-        List<AlleleAndContext> allelesWithoutDisabledAllele = allAlleles.stream().filter(al -> al!=alleleToDisable).collect(Collectors.toList());
+        final List<AlleleAndContext> allelesWithoutDisabledAllele = allAlleles.stream().filter(al -> al!=alleleToDisable).collect(Collectors.toList());
         final Set<Haplotype> haplotypes = haplotypeAlleleMap.keySet();
-        Set<Haplotype> haplotypesWithoutDisabledAllele = haplotypes.stream().filter( h -> !alleleHaplotypeMap.get(alleleToDisable).contains(h)).collect(Collectors.toSet());
+        final Set<Haplotype> haplotypesWithoutDisabledAllele = haplotypes.stream().filter( h -> !alleleHaplotypeMap.get(alleleToDisable).contains(h)).collect(Collectors.toSet());
 
         final List<AlleleLikelihoods<GATKRead, Allele>> disabledAlleleLikelihood =
                 allelesWithoutDisabledAllele.stream().map(c -> getAlleleLikelihoodMatrix(readLikelihoods, c, haplotypeAlleleMap, haplotypesWithoutDisabledAllele)).collect(Collectors.toList());
@@ -544,7 +545,7 @@ public abstract class AlleleFiltering {
         final List<Integer> rplsWithoutAllele = IntStream.range(0, allelesWithoutDisabledAllele.size()).mapToObj(i -> getAlleleLikelihoodVsInverse(disabledAlleleLikelihood.get(i),
                 allelesWithoutDisabledAllele.get(i))).collect(Collectors.toList());
 
-        Map<AlleleAndContext, Integer> rplsWithoutAlleleMap = new HashMap<>();
+        final Map<AlleleAndContext, Integer> rplsWithoutAlleleMap = new HashMap<>();
         IntStream.range(0, allelesWithoutDisabledAllele.size()).forEach( i -> rplsWithoutAlleleMap.put(allelesWithoutDisabledAllele.get(i), rplsWithoutAllele.get(i)));
 
         return rplsWithoutAlleleMap;
@@ -552,16 +553,16 @@ public abstract class AlleleFiltering {
 
 
     DefaultDirectedWeightedGraph<AlleleAndContext, DefaultWeightedEdge> interactionMatrixToGraph(final Map<AlleleAndContext, Map<AlleleAndContext, Integer>> interactionMatrix,
-                                                                                                 Map<AlleleAndContext, Integer> initialRPL ){
-        DefaultDirectedWeightedGraph<AlleleAndContext, DefaultWeightedEdge> result = new DefaultDirectedWeightedGraph<>(DefaultWeightedEdge.class);
+                                                                                                 final Map<AlleleAndContext, Integer> initialRPL ){
+        final DefaultDirectedWeightedGraph<AlleleAndContext, DefaultWeightedEdge> result = new DefaultDirectedWeightedGraph<>(DefaultWeightedEdge.class);
         initialRPL.keySet().stream().forEach(x -> result.addVertex(x));
 
 
-        for ( AlleleAndContext loc1 : interactionMatrix.keySet() ) {
-            for (AlleleAndContext loc2 : interactionMatrix.get(loc1).keySet()){
-                int diff = interactionMatrix.get(loc1).get(loc2) - initialRPL.get(loc2);
+        for ( final AlleleAndContext loc1 : interactionMatrix.keySet() ) {
+            for ( final AlleleAndContext loc2 : interactionMatrix.get(loc1).keySet()){
+                final int diff = interactionMatrix.get(loc1).get(loc2) - initialRPL.get(loc2);
                 if (diff < 0){
-                    DefaultWeightedEdge edge = result.addEdge(loc1, loc2);
+                    final DefaultWeightedEdge edge = result.addEdge(loc1, loc2);
                     result.setEdgeWeight(edge, diff);
                 }
             }
@@ -570,30 +571,29 @@ public abstract class AlleleFiltering {
     }
 
     //debug function - prints dot file with edges between the alleles that affect each other
-    void printInteractionGraph(DefaultDirectedWeightedGraph<AlleleAndContext, DefaultWeightedEdge>  intm,
-                               Map<AlleleAndContext, Integer> rpls,
-                               Set<AlleleAndContext> alleleSet ){
-        IntegerComponentNameProvider<AlleleAndContext> p1 = new IntegerComponentNameProvider<>();
-        ComponentNameProvider<AlleleAndContext> p2 = (v -> v.toString() + " = " + rpls.get(v)) ;
-        ComponentNameProvider<DefaultWeightedEdge> p4 = (e -> String.valueOf(intm.getEdgeWeight(e)));
+    void printInteractionGraph(final DefaultDirectedWeightedGraph<AlleleAndContext, DefaultWeightedEdge>  intm,
+                               final Map<AlleleAndContext, Integer> rpls,
+                               final Set<AlleleAndContext> alleleSet ){
+        final IntegerComponentNameProvider<AlleleAndContext> p1 = new IntegerComponentNameProvider<>();
+        final ComponentNameProvider<AlleleAndContext> p2 = (v -> v.toString() + " = " + rpls.get(v)) ;
+        final ComponentNameProvider<DefaultWeightedEdge> p4 = (e -> String.valueOf(intm.getEdgeWeight(e)));
 
-        DOTExporter<AlleleAndContext, DefaultWeightedEdge> dotExporter = new DOTExporter<>(p1, p2, p4,
+        final DOTExporter<AlleleAndContext, DefaultWeightedEdge> dotExporter = new DOTExporter<>(p1, p2, p4,
                 null, null);
-        String contig = alleleSet.iterator().next().getContig();
-        int rangeStart = alleleSet.stream().mapToInt(al -> al.getLoc()).min().getAsInt();
-        int rangeEnd = alleleSet.stream().mapToInt(al -> al.getLoc()).max().getAsInt();
+        final String contig = alleleSet.iterator().next().getContig();
+        final int rangeStart = alleleSet.stream().mapToInt(al -> al.getLoc()).min().getAsInt();
+        final int rangeEnd = alleleSet.stream().mapToInt(al -> al.getLoc()).max().getAsInt();
         try {
-            Writer outfile = new FileWriter(String.format("allele.interaction.%s.%d-%d.dot", contig, rangeStart, rangeEnd));
+            final Writer outfile = new FileWriter(String.format("allele.interaction.%s.%d-%d.dot", contig, rangeStart, rangeEnd));
             dotExporter.exportGraph(intm, outfile);
         }
         catch (IOException e) {
-            logger.error("Unable to write a DOT file" + String.format("allele.interaction.%s.%d-%d.dot", contig, rangeStart, rangeEnd));
-            throw new RuntimeException();
+            throw new RuntimeException("Unable to write a DOT file" + String.format("allele.interaction.%s.%d-%d.dot", contig, rangeStart, rangeEnd));
         }
     }
 
     // are haplotypes different only in a single hmer's length?
-    private boolean equalUpToHmerChange(Haplotype h1, Haplotype h2) {
+    private boolean equalUpToHmerChange(final Haplotype h1, final Haplotype h2) {
 
         final BaseUtils.HmerIterator  i1 = new BaseUtils.HmerIterator(h1.getBases());
         final BaseUtils.HmerIterator  i2 = new BaseUtils.HmerIterator(h2.getBases());

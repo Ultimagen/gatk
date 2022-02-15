@@ -2,6 +2,7 @@ package org.broadinstitute.hellbender.tools.walkers.haplotypecaller;
 
 import htsjdk.samtools.*;
 import org.broadinstitute.hellbender.GATKBaseTest;
+import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.genotyper.LikelihoodMatrix;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
@@ -10,7 +11,6 @@ import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
 
 import java.io.File;
 import java.nio.file.FileSystems;
@@ -18,7 +18,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class FlowBasedAlignmentEngineUnitTest extends GATKBaseTest {
+public class FlowBasedAlignmentLikelihoodEngineUnitTest extends GATKBaseTest {
 
     final static String    testResourceDir = publicTestDir + "org/broadinstitute/hellbender/utils/read/flow/reads/";
     final static String    inputDir = testResourceDir + "/input/";
@@ -47,14 +47,14 @@ public class FlowBasedAlignmentEngineUnitTest extends GATKBaseTest {
     void testComputeReadLikelihoodsWithRandomlyModifiedHmers(final GATKRead read, final SAMFileHeader fileHeader) {
 
         // create engine
-        final FlowBasedAlignmentEngine engine = getTestAlignmentEngine();
+        final FlowBasedAlignmentLikelihoodEngine engine = getTestAlignmentEngine();
 
         // for each read, create extrapolated reads, and haplotypes. then invoke engine
         final List<GATKRead>  extrapolatedReads = getTestExtrapolatedReads(read);
         final List<Haplotype> haplotypes = getTestHaplotypes(extrapolatedReads);
 
         // run the engine
-        final AlleleLikelihoods<GATKRead, Haplotype> result = engine.computeReadLikelihoods(haplotypes, extrapolatedReads, true, fileHeader);
+        final AlleleLikelihoods<GATKRead, Haplotype> result = engine.computeReadLikelihoods(haplotypes, extrapolatedReads, false, fileHeader);
         Assert.assertNotNull(result);
 
         // check results (sanity)
@@ -76,13 +76,13 @@ public class FlowBasedAlignmentEngineUnitTest extends GATKBaseTest {
     }
 
     // create a new engine (to be used in testing code)
-    private FlowBasedAlignmentEngine getTestAlignmentEngine() {
+    private FlowBasedAlignmentLikelihoodEngine getTestAlignmentEngine() {
 
         // create (and possibly initialise) arguments
-        FlowBasedAlignmentArgumentCollection        args = new FlowBasedAlignmentArgumentCollection();
+        FlowBasedAlignmentArgumentCollection args = new FlowBasedAlignmentArgumentCollection();
 
         // create engine
-        return new FlowBasedAlignmentEngine(args,-5, 0.02, false, PairHMMLikelihoodCalculationEngine.DEFAULT_DYNAMIC_DISQUALIFICATION_SCALE_FACTOR);
+        return new FlowBasedAlignmentLikelihoodEngine(args,-5, 0.02, false, PairHMMLikelihoodCalculationEngine.DEFAULT_DYNAMIC_DISQUALIFICATION_SCALE_FACTOR);
     }
 
     // get test reads from a test file

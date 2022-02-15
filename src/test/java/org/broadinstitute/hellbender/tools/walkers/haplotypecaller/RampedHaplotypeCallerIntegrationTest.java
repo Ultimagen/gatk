@@ -11,7 +11,7 @@ import org.testng.annotations.Test;
 import java.io.File;
 
 @Test(groups = {"variantcalling"})
-public class HaplotypeCallerRampsIntegrationTest extends CommandLineProgramTest {
+public class RampedHaplotypeCallerIntegrationTest extends CommandLineProgramTest {
 
     public static final boolean UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS = false;
 
@@ -123,10 +123,5 @@ public class HaplotypeCallerRampsIntegrationTest extends CommandLineProgramTest 
                 .add(StandardArgumentDefinitions.ADD_OUTPUT_VCF_COMMANDLINE, false);
 
         return args;
-    }
-
-    @Override
-    public String getTestedToolName() {
-        return "HaplotypeCaller";
     }
 }
