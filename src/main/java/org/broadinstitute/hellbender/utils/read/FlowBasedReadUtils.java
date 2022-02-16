@@ -4,6 +4,7 @@ import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMReadGroupRecord;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.util.SequenceUtil;
+import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 import org.broadinstitute.hellbender.utils.Utils;
 
@@ -143,7 +144,7 @@ public class FlowBasedReadUtils {
     }
 
     /**
-     * Finds  a usable FlowOrder to be used for engine calculation (when no specufic flow order already established for a specific read)
+     * Finds a usable FlowOrder to be used for engine calculation (when no specufic flow order already established for a specific read)
      */
     public static String findFirstUsableFlowOrder(final SAMFileHeader hdr, final FlowBasedArgumentCollection fbargs) {
         for ( final SAMReadGroupRecord rg : hdr.getReadGroups() ) {
@@ -152,7 +153,57 @@ public class FlowBasedReadUtils {
                 return flowOrder.substring(0, fbargs.flowOrderCycleLength);
             }
         }
-        return null;
+
+        throw new GATKException("Unable to perform flow based operations without the flow order");
     }
 
+    /*
+     * clips flows from the left to clip the input number of bases
+     * Needed to trim the haplotype to the read
+     * Returns number of flows to remove and the change in the left most remaining flow if necessary
+     */
+    static public int[] findLeftClipping(final int baseClipping, final int[] flow2base, final int[] key) {
+        final int [] result = new int[2];
+        if (baseClipping == 0 ){
+            return result;
+        }
+
+        int stopClip = 0;
+        for (int i = 0 ; i < flow2base.length; i++ ) {
+
+            if (flow2base[i] + key[i] >= baseClipping) {
+                stopClip = i;
+                break;
+            }
+        }
+        final int hmerClipped = baseClipping - flow2base[stopClip] - 1;
+        result[0] = stopClip;
+        result[1] = hmerClipped;
+        return result;
+    }
+
+    /*
+     * clips flows from the right to trim the input number of bases
+     * Returns number of flows to remove and the change in the right most flow.
+     */
+    static public int[] findRightClipping(final int baseClipping, final int[] rFlow2Base, final int[] rKey) {
+        final int [] result = new int[2];
+        if (baseClipping == 0 ){
+            return result;
+        }
+
+        int stopClip = 0;
+
+        for (int i = 0; i < rFlow2Base.length; i++ ) {
+            if (rFlow2Base[i] + rKey[i] >= baseClipping) {
+                stopClip = i;
+                break;
+            }
+        }
+
+        final int hmerClipped = baseClipping - rFlow2Base[stopClip] - 1;
+        result[0] = stopClip;
+        result[1] = hmerClipped;
+        return result;
+    }
 }

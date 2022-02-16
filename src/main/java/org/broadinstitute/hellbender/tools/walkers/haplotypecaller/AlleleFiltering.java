@@ -406,12 +406,11 @@ public abstract class AlleleFiltering {
                             -1,
                             commonPrefixLengthRight));
 
-            if ( equalUpToHmerChange(modifiedHaplotypes.getLeft(), modifiedHaplotypes.getRight()) ) {
+            if ( BaseUtils.equalUpToHmerChange(modifiedHaplotypes.getLeft().getBases(), modifiedHaplotypes.getRight().getBases()) ) {
                 result.add(allelePair);
             }
 
         }
-
 
         return result;
     }
@@ -591,44 +590,5 @@ public abstract class AlleleFiltering {
             throw new RuntimeException("Unable to write a DOT file" + String.format("allele.interaction.%s.%d-%d.dot", contig, rangeStart, rangeEnd));
         }
     }
-
-    // are haplotypes different only in a single hmer's length?
-    private boolean equalUpToHmerChange(final Haplotype h1, final Haplotype h2) {
-
-        final BaseUtils.HmerIterator  i1 = new BaseUtils.HmerIterator(h1.getBases());
-        final BaseUtils.HmerIterator  i2 = new BaseUtils.HmerIterator(h2.getBases());
-
-        // walk the haplotype hmers, look for differences
-        boolean         acceptableDiffAlreadyFound = false;
-        while ( i1.hasNext() && i2.hasNext() ) {
-
-            // get hmers
-            final Pair<Byte,Integer>      p1 = i1.next();
-            final Pair<Byte,Integer>      p2 = i2.next();
-
-            // base must be the same
-            if ( p1.getLeft() != p2.getLeft() ) {
-                return false;
-            }
-
-            // if length the same, continue to next hmer
-            if ( p1.getRight() == p2.getRight() ) {
-                continue;
-            }
-
-            // hmers are of the same base but of different length.
-            // make sure we only allow one such hmer
-            if ( acceptableDiffAlreadyFound ) {
-                return false;
-            } else {
-                acceptableDiffAlreadyFound = true;
-            }
-        }
-
-        // if here, hmers are the same or only a single one is different.
-        // In any case, bother haplotypes should be out of hmers by now
-        return i1.hasNext() == i2.hasNext();
-    }
-
 }
 
