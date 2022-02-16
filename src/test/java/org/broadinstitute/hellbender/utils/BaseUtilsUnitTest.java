@@ -238,7 +238,7 @@ public final class BaseUtilsUnitTest extends GATKBaseTest {
 
         return tests.toArray(new Object[][]{});
     }
-    
+
     @Test(dataProvider = "hmerModificationProvider")
     public void testEqualUpToHmerChange(byte[] bases1, byte[] bases2, boolean answer) {
         Assert.assertEquals(BaseUtils.equalUpToHmerChange(bases1, bases2),answer);

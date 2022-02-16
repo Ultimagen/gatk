@@ -102,6 +102,8 @@ public class FlowModeArgumentUtils {
                 if ( setValue(parser, nameValuePairs[i], nameValuePairs[i+1]) ) {
                     modifiedArgs.put(cleanParamName(nameValuePairs[i]), nameValuePairs[i+1]);
                 }
+            } else {
+                logger.info("parameter not set by flow mode, as it was already set on the command line: " + cleanParamName(nameValuePairs[i]));
             }
         }
 
