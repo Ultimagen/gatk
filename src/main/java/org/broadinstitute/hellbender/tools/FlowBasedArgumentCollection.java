@@ -26,6 +26,7 @@ public class FlowBasedArgumentCollection implements Serializable {
     public static final String NUM_UNCERTAIN_FLOWS_LONG_NAME = "flow-number-of-uncertain-flows-to-clip";
     public static final String FIRST_UNCERTAIN_FLOW_LONG_NAME = "flow-nucleotide-of-first-uncertain-flow";
     public static final String FLOW_MATRIX_MODS_LONG_NAME = "flow-matrix-mods";
+    public static final String FLOW_KEEP_BOUNDARY_FLOWS_LONG_NAME = "keep-boundary-flows";
 
 
 
@@ -107,6 +108,10 @@ public class FlowBasedArgumentCollection implements Serializable {
     @Argument(fullName=FLOW_MATRIX_MODS_LONG_NAME, doc="Modifications instructions to the read flow matrix. " +
             "Format is src,dst{,src,dst}+. Example: 10,12,11,12 - these instructions will copy element 10 into 11 and 12", optional = true)
     public String flowMatrixMods = null;
+
+    @Advanced
+    @Argument(fullName=FLOW_KEEP_BOUNDARY_FLOWS_LONG_NAME, doc="prevent spreading of boundary flows.", optional = true)
+    public boolean keepBoundaryFlows = false;
 
     public FlowBasedArgumentCollection() {}
 
