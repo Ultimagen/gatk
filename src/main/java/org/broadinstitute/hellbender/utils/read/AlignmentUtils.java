@@ -64,7 +64,7 @@ public final class AlignmentUtils {
         // compute the smith-waterman alignment of read -> haplotype //TODO use more efficient than the read clipper here
         final GATKRead readMinusSoftClips = ReadClipper.hardClipSoftClippedBases(originalRead);
         final int softClippedBases = originalRead.getLength() - readMinusSoftClips.getLength();
-        final SmithWatermanAlignment readToHaplotypeSWAlignment = AlignmentThreadingUtils.getSimilarAlignerForCurrentThread(aligner).align(haplotype.getBases(), readMinusSoftClips.getBases(), readToHaplotypeSWParameters, SWOverhangStrategy.SOFTCLIP);
+        final SmithWatermanAlignment readToHaplotypeSWAlignment = aligner.align(haplotype.getBases(), readMinusSoftClips.getBases(), readToHaplotypeSWParameters, SWOverhangStrategy.SOFTCLIP);
         if ( readToHaplotypeSWAlignment.getAlignmentOffset() == -1 ) {
             // sw can fail (reasons not clear) so if it happens just don't realign the read
             return originalRead;

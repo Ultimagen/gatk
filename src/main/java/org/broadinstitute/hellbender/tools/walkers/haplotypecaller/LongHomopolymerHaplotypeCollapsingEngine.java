@@ -11,7 +11,6 @@ import org.broadinstitute.gatk.nativebindings.smithwaterman.SWParameters;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAlignment;
-import org.broadinstitute.hellbender.utils.read.AlignmentThreadingUtils;
 
 import java.util.*;
 
@@ -327,7 +326,7 @@ public class LongHomopolymerHaplotypeCollapsingEngine {
         }
 
         // use aligner to get CIGAR
-        final SmithWatermanAlignment alignment = AlignmentThreadingUtils.getSimilarAlignerForCurrentThread(aligner).align(ref, bases,
+        final SmithWatermanAlignment alignment = aligner.align(ref, bases,
                 alignmentParameters, SWOverhangStrategy.INDEL);
         if ( debug )
             logger.info("alignment.offset: " + alignment.getAlignmentOffset() + ", cigar: " + alignment.getCigar());
