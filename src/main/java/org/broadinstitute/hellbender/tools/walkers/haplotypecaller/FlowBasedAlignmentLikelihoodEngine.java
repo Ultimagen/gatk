@@ -2,6 +2,7 @@ package org.broadinstitute.hellbender.tools.walkers.haplotypecaller;
 
 import com.google.common.annotations.VisibleForTesting;
 import htsjdk.samtools.SAMFileHeader;
+import org.apache.commons.math3.util.Precision;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.exceptions.GATKException;
@@ -20,12 +21,21 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.IntStream;
 
-/* Flow based replacement for PairHMM likelihood calculation. Likelihood calculation all-vs-all flow based reads and haplotypes
-
+/**
+ * Flow based replacement for PairHMM likelihood calculation. Likelihood calculation all-vs-all flow based reads
+ * and haplotypes.
+ *
+ * see {@link #haplotypeReadMatching(FlowBasedHaplotype, FlowBasedRead)}
  */
 public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalculationEngine {
     public static final double MAX_ERRORS_FOR_READ_CAP = 3.0;
     public static final double MAX_CATASTROPHIC_ERRORS_FOR_READ_CAP = 2.0;
+
+    // for the two most common probability values, we pre-compute log10 to save runtime.
+    public static final double COMMON_PROB_VALUE_1 = 0.988;
+    public static final double COMMON_PROB_VALUE_2 = 0.001;
+    public static final double COMMON_PROB_VALUE_1_LOG10 = Math.log10(COMMON_PROB_VALUE_1);
+    public static final double COMMON_PROB_VALUE_2_LOG10 = Math.log10(COMMON_PROB_VALUE_2);
 
     private double log10globalReadMismappingRate;
     private final double expectedErrorRatePerBase;
@@ -35,16 +45,10 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
     final FlowBasedAlignmentArgumentCollection fbargs;
     private final Logger logger = LogManager.getLogger(this.getClass());
 
-    private final double commonProbValue = 0.001;
     private final boolean dynamicReadDisqualification;
     private final double readDisqualificationScale;
 
     private ForkJoinPool    threadPool;
-    static final double prob0 = 0.988;
-    static final double prob0log10 = Math.log10(prob0);
-    static final double prob1 = 0.001;
-    static final double prob1log10 = Math.log10(prob1);
-
 
     /**
      * Default constructor
@@ -123,7 +127,7 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
      * @param likelihoods Single sample likelihood matrix
      * @param hdr SAM header that corresponds to the sample
      */
-    private void computeReadLikelihoods(final LikelihoodMatrix<GATKRead, Haplotype> likelihoods,
+    protected void computeReadLikelihoods(final LikelihoodMatrix<GATKRead, Haplotype> likelihoods,
                                         final SAMFileHeader hdr) {
 
         final List<FlowBasedRead> processedReads = new ArrayList<>(likelihoods.evidenceCount());
@@ -145,10 +149,6 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
             fbRead.applyAlignment();
 
             processedReads.add(fbRead);
-        }
-
-        if ( flowOrder == null ) {
-            throw new GATKException("Unable to perform flow based alignment without the flow order");
         }
 
         for (int i = 0; i < likelihoods.numberOfAlleles(); i++){
@@ -198,7 +198,7 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
 
     /**
      * Aligns single read to a single haplotype. The alignment process is based on the assumption that the errors are only
-     * changes in the flow calls. Thus the length of the haplotype in flow space should be equal to the length of the read
+     * changes in the flow calls. Thus, the length of the haplotype in flow space should be equal to the length of the read
      * in the flow space (on the region where the read aligns).
      *
      * Example: align read ACGGT
@@ -212,7 +212,8 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
      *
      * @param haplotype FlowBasedHaplotype single haplotype
      * @param read FlowBasedRead single read (trimmed to the haplotype)
-     * @return
+     * @return a score for the alignment of the read to the haplotype. The higher the score the "better" the alignment
+     *         normally, scores will be negative.
      * @throws GATKException
      */
     public double haplotypeReadMatching(final FlowBasedHaplotype haplotype, final FlowBasedRead read) throws GATKException {
@@ -254,10 +255,8 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
         final int uncertainty = Math.max(readLength - haplotypeLength,0);
         final int leftClip = Math.max(haplotypeStart-uncertainty,0);
         final int rightClip = Math.max(haplotype.length()-haplotypeEnd-1-uncertainty,0);
-
-
-        if ((leftClip < 0) || (rightClip < 0)  || (leftClip >= haplotype.length() ) || ( rightClip >= haplotype.length())) {
-            return 1;
+        if ((leftClip >= haplotype.length() ) || ( rightClip >= haplotype.length())) {
+            return Double.NEGATIVE_INFINITY;
         }
 
         int [] leftClipping = haplotype.findLeftClipping(leftClip);
@@ -267,7 +266,6 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
         leftClipping = haplotype.findRightClipping(rightClip);
         int clipRight = leftClipping[0];
         final int rightHmerClip = leftClipping[1];
-
 
         if ((clipLeft >= haplotype.getKeyLength()) || (clipRight >= haplotype.getKeyLength())){
             return Double.NEGATIVE_INFINITY;
@@ -282,165 +280,139 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
         clipRight = originalLength - clipRight + ALIGNMENT_UNCERTAINTY < originalLength ?
                             originalLength - clipRight+ALIGNMENT_UNCERTAINTY : originalLength;
 
-        if ( fbargs.flowLikelihoodOptimizedComp ) {
-
-            int[]   key_o = haplotype.getKey();
-            int     key_ostart = clipLeft;
-            int     key_olen = clipRight - clipLeft;
-
-            byte[]  flow_order_o = haplotype.getFlowOrderArray();
-            int     flow_order_ostart = clipLeft;
-            int     flow_order_olen = clipRight - clipLeft;
-            byte    read_flow_0 = read.getFlowOrderArray()[0];
-            int startingPoint = 0;
-            for (int i = 0; i < flow_order_olen; i++) {
-                if (flow_order_o[i+flow_order_ostart] == read_flow_0) {
-                    startingPoint = i;
-                    break;
-                }
-            }
-
-            if (logger.isDebugEnabled()) {
-                logger.debug("haplotype   " + read.getName() + " " + haplotype.getBaseString());
-                logger.debug("read        " + read.getName() + " " + read.getBasesString());
-                logger.debug("haplotype.f " + read.getName() + " " + new String(haplotype.getFlowOrderArray()));
-                logger.debug("read.f      " + read.getName() + " " + new String(read.getFlowOrderArray()));
-                logger.debug("haplotype.K " + read.getName() + " " + FlowBasedKeyCodec.keyAsString(haplotype.getKey()));
-                logger.debug("haplotype.k " + read.getName() + " " + FlowBasedKeyCodec.keyAsString(Arrays.copyOfRange(haplotype.getKey(), clipLeft, clipRight)));
-                logger.debug("read.k      " + read.getName() + " " + FlowBasedKeyCodec.keyAsString(read.getKey()));
-                logger.debug("starting point: " + read.getName() + " " + startingPoint);
-            }
-
-            // this is the heart of the calculation of the likelihood. Since we assume in our model that between the
-            // read and the haplotype there are no insertions / deletions of flows, we just search for the best starting
-            // position of the read on the haplotype and then to calculate P(R|H) we just select the corresponding probabilities
-            // from the flow matrix.
-            // Another important optimization is that the best starting position of the read on the haplotype can be calculated
-            // from the starting position of the read on the reference and the alignment of the haplotype to the reference.
-            // This is why we trim the haplotype so that the aligned intervals have the same length as the read and allow a
-            // small uncertainty.
-            double bestAlignment = Double.NEGATIVE_INFINITY;
-            int    read_maxhmer_1 = read.getMaxHmer() + 1;
-            int    read_key_len = read.getKeyLength();
-            final int[] locationsToFetch = new int[read_key_len];
-            for (int s = startingPoint; (s + read_key_len <= key_olen); s += ALIGNMENT_UNCERTAINTY) {
-                for (int i = s; i < s + read_key_len; i++) {
-                    if ( (locationsToFetch[i - s] = key_o[i+key_ostart] & 0xff) >= read_maxhmer_1 )
-                        locationsToFetch[i - s] = read_maxhmer_1;
-                }
-                double result = 0;
-                for (int i = 0; i < read_key_len; i++) {
-                    final double prob = read.getProb(i, locationsToFetch[i]);
-                    double      log10;
-                    if ( prob == prob0 )
-                        log10 = prob0log10;
-                    else if ( prob == prob1 )
-                        log10 = prob1log10;
-                    else
-                        log10 = Math.log10(prob);
-                    result += log10;
-                    if (logger.isDebugEnabled())
-                        logger.debug("prob:" + read.getName() + " " + i + " " + locationsToFetch[i] + " " + prob);
-
-                    // shortcut - result will never rise
-                    if ( result < bestAlignment )
-                        break;
-                }
-                if (result > bestAlignment) {
-                    bestAlignment = result;
-                }
-            }
-            return bestAlignment;
-
-        } else {
-
-            final int[] key;
-            key = Arrays.copyOfRange(haplotype.getKey(), clipLeft, clipRight);
-
-            final byte[] flowOrder;
-            flowOrder = Arrays.copyOfRange(haplotype.getFlowOrderArray(), clipLeft, clipRight);
-            int startingPoint = 0;
-            for (int i = 0; i < flowOrder.length; i++) {
-                if (flowOrder[i] == read.getFlowOrderArray()[0]) {
-                    startingPoint = i;
-                    break;
-                }
-            }
-
-            if (logger.isDebugEnabled()) {
-                logger.debug("haplotype   " + read.getName() + " " + haplotype.getBaseString());
-                logger.debug("read        " + read.getName() + " " + read.getBasesString());
-                logger.debug("haplotype.f " + read.getName() + " " + new String(haplotype.getFlowOrderArray()));
-                logger.debug("read.f      " + read.getName() + " " + new String(read.getFlowOrderArray()));
-                logger.debug("haplotype.K " + read.getName() + " " + FlowBasedKeyCodec.keyAsString(haplotype.getKey()));
-                logger.debug("haplotype.k " + read.getName() + " " + FlowBasedKeyCodec.keyAsString(key));
-                logger.debug("read.k      " + read.getName() + " " + FlowBasedKeyCodec.keyAsString(read.getKey()));
-                logger.debug("starting point: " + read.getName() + " " + startingPoint);
-            }
-
-            // this is the heart of the calculation of the likelihood. Since we assume in our model that between the
-            // read and the haplotype there are no insertions / deletions of flows, we just search for the best starting
-            // position of the read on the haplotype and then to calculate P(R|H) we just select the corresponding probabilities
-            // from the flow matrix.
-            // Another important optimization is that the best starting position of the read on the haplotype can be calculated
-            // from the starting position of the read on the reference and the alignment of the haplotype to the reference.
-            // This is why we trim the haplotype so that the aligned intervals have the same length as the read and allow a
-            // small uncertainty.
-            double bestAlignment = Double.NEGATIVE_INFINITY;
-            for (int s = startingPoint; (s + read.getKeyLength() <= key.length); s += ALIGNMENT_UNCERTAINTY) {
-                final int[] locationsToFetch = new int[read.getKeyLength()];
-                for (int i = s; i < s + read.getKeyLength(); i++) {
-                    locationsToFetch[i - s] = key[i] & 0xff;
-                    locationsToFetch[i - s] = locationsToFetch[i - s] < read.getMaxHmer() + 1 ?
-                            locationsToFetch[i - s] : read.getMaxHmer() + 1;
-                }
-                double result = 0;
-                for (int i = 0; i < locationsToFetch.length; i++) {
-                    final double prob;
-                    result += Math.log10(prob = read.getProb(i, locationsToFetch[i]));
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("prob:" + read.getName() + " " + i + " " + locationsToFetch[i] + " " + prob);
-                    }
-                }
-                if (result > bestAlignment) {
-                    bestAlignment = result;
-                }
-            }
-            return bestAlignment;
-        }
+        return fbargs.flowLikelihoodOptimizedComp
+                ? optimizedFlowLikelihoodScore(haplotype, read, clipLeft, clipRight)
+                : flowLikelihoodScore(haplotype, read, clipLeft, clipRight);
     }
 
-    //This function is for testing purposes only
-    @VisibleForTesting
-    public AlleleLikelihoods<GATKRead, Haplotype> computeReadLikelihoods(
-            final List<Haplotype> haplotypeList, final List<GATKRead> reads, final boolean filterPoorly, final SAMFileHeader hdr) {
+    /*
+     * calculate likelihood score between a read and a haplotype. This code is the non-optimnized (original) version
+     * of the calculation code, as extracted from haplotypeReadMatching
+     */
+    private double flowLikelihoodScore(FlowBasedHaplotype haplotype, FlowBasedRead read, int clipLeft, int clipRight) {
+        final int[] key;
+        key = Arrays.copyOfRange(haplotype.getKey(), clipLeft, clipRight);
 
-
-        final AlleleList<Haplotype> haplotypes = new IndexedAlleleList<>(haplotypeList);
-        final ArrayList<String> _sampList = new ArrayList<>();
-        _sampList.add("HG001");
-        final SampleList samples = new IndexedSampleList(_sampList);
-
-        // Add likelihoods for each sample's reads to our result
-        final HashMap<String, List<GATKRead>> perSampleReadList = new HashMap<>();
-        perSampleReadList.put("HG001", reads);
-
-        final AlleleLikelihoods<GATKRead, Haplotype> result = new AlleleLikelihoods<>(samples, haplotypes, perSampleReadList);
-        final int sampleCount = result.numberOfSamples();
-        for (int i = 0; i < sampleCount; i++) {
-            computeReadLikelihoods(result.sampleMatrix(i), hdr);
+        final byte[] flowOrder;
+        flowOrder = Arrays.copyOfRange(haplotype.getFlowOrderArray(), clipLeft, clipRight);
+        int startingPoint = 0;
+        for (int i = 0; i < flowOrder.length; i++) {
+            if (flowOrder[i] == read.getFlowOrderArray()[0]) {
+                startingPoint = i;
+                break;
+            }
         }
 
-        result.normalizeLikelihoods(log10globalReadMismappingRate, symmetricallyNormalizeAllelesToReference);
-        if ( filterPoorly ) {
-            result.filterPoorlyModeledEvidence(log10MinTrueLikelihood(expectedErrorRatePerBase, false));
+        // this is the heart of the calculation of the likelihood. Since we assume in our model that between the
+        // read and the haplotype there are no insertions / deletions of flows, we just search for the best starting
+        // position of the read on the haplotype and then to calculate P(R|H) we just select the corresponding probabilities
+        // from the flow matrix.
+        // Another important optimization is that the best starting position of the read on the haplotype can be calculated
+        // from the starting position of the read on the reference and the alignment of the haplotype to the reference.
+        // This is why we trim the haplotype so that the aligned intervals have the same length as the read and allow a
+        // small uncertainty.
+        double bestAlignment = Double.NEGATIVE_INFINITY;
+        for (int s = startingPoint; (s + read.getKeyLength() <= key.length); s += ALIGNMENT_UNCERTAINTY) {
+            final int[] locationsToFetch = new int[read.getKeyLength()];
+            for (int i = s; i < s + read.getKeyLength(); i++) {
+                locationsToFetch[i - s] = key[i] & 0xff;
+                locationsToFetch[i - s] = locationsToFetch[i - s] < read.getMaxHmer() + 1 ?
+                        locationsToFetch[i - s] : read.getMaxHmer() + 1;
+            }
+            double result = 0;
+            for (int i = 0; i < locationsToFetch.length; i++) {
+                final double prob;
+                result += Math.log10(prob = read.getProb(i, locationsToFetch[i]));
+                if (logger.isDebugEnabled()) {
+                    logger.debug("prob:" + read.getName() + " " + i + " " + locationsToFetch[i] + " " + prob);
+                }
+            }
+            if (result > bestAlignment) {
+                bestAlignment = result;
+            }
+        }
+        return bestAlignment;
+    }
+
+    /*
+     * calculate likelihood score between a read and a haplotype. This code is based on original version
+     * of the calculation code, as extracted from haplotypeReadMatching.
+     *
+     * It code is optimized in that it performs fewer log10 calls - which are expensive - by using precomputed values
+     * for common probability values.
+     */
+    private double optimizedFlowLikelihoodScore(FlowBasedHaplotype haplotype, FlowBasedRead read, int clipLeft, int clipRight) {
+        int[]   key_o = haplotype.getKey();
+        int     key_ostart = clipLeft;
+        int     key_olen = clipRight - clipLeft;
+
+        byte[]  flow_order_o = haplotype.getFlowOrderArray();
+        int     flow_order_ostart = clipLeft;
+        int     flow_order_olen = clipRight - clipLeft;
+        byte    read_flow_0 = read.getFlowOrderArray()[0];
+        int startingPoint = 0;
+        for (int i = 0; i < flow_order_olen; i++) {
+            if (flow_order_o[i+flow_order_ostart] == read_flow_0) {
+                startingPoint = i;
+                break;
+            }
         }
 
-        return result;
+        // this is the heart of the calculation of the likelihood. Since we assume in our model that between the
+        // read and the haplotype there are no insertions / deletions of flows, we just search for the best starting
+        // position of the read on the haplotype and then to calculate P(R|H) we just select the corresponding probabilities
+        // from the flow matrix.
+        // Another important optimization is that the best starting position of the read on the haplotype can be calculated
+        // from the starting position of the read on the reference and the alignment of the haplotype to the reference.
+        // This is why we trim the haplotype so that the aligned intervals have the same length as the read and allow a
+        // small uncertainty.
+        double bestAlignment = Double.NEGATIVE_INFINITY;
+        int    read_maxhmer_1 = read.getMaxHmer() + 1;
+        int    read_key_len = read.getKeyLength();
+        final int[] locationsToFetch = new int[read_key_len];
+        for (int s = startingPoint; (s + read_key_len <= key_olen); s += ALIGNMENT_UNCERTAINTY) {
+            for (int i = s; i < s + read_key_len; i++) {
+                if ( (locationsToFetch[i - s] = key_o[i+key_ostart] & 0xff) >= read_maxhmer_1 )
+                    locationsToFetch[i - s] = read_maxhmer_1;
+            }
+            double result = 0;
+            for (int i = 0; i < read_key_len; i++) {
+                final double prob = read.getProb(i, locationsToFetch[i]);
+                double      log10;
+                if ( Precision.equals(prob, COMMON_PROB_VALUE_1) )
+                    log10 = COMMON_PROB_VALUE_1_LOG10;
+                else if ( Precision.equals(prob, COMMON_PROB_VALUE_2) )
+                    log10 = COMMON_PROB_VALUE_2_LOG10;
+                else
+                    log10 = Math.log10(prob);
+                result += log10;
+                if (logger.isDebugEnabled())
+                    logger.debug("prob:" + read.getName() + " " + i + " " + locationsToFetch[i] + " " + prob);
+
+                // shortcut - result will never rise
+                if ( result < bestAlignment )
+                    break;
+            }
+            if (result > bestAlignment) {
+                bestAlignment = result;
+            }
+        }
+        return bestAlignment;
     }
 
     @Override
     public void close() {}
 
+    public double getLog10globalReadMismappingRate() {
+        return log10globalReadMismappingRate;
+    }
+
+    public double getExpectedErrorRatePerBase() {
+        return expectedErrorRatePerBase;
+    }
+
+    public boolean isSymmetricallyNormalizeAllelesToReference() {
+        return symmetricallyNormalizeAllelesToReference;
+    }
 }
 

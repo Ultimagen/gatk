@@ -706,23 +706,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
 
     private int[] findLeftClipping(final int basesClipped){
-        final int[] result = new int[2];
-        if (basesClipped==0){
-            return result;
-        }
-
-        int stopClip = 0;
-        for (int i = 0 ; i < flow2base.length; i++ ) {
-
-            if (flow2base[i] + key[i] >= basesClipped) {
-                stopClip = i;
-                break;
-            }
-        }
-        final int hmerClipped = basesClipped - flow2base[stopClip] - 1;
-        result[0] = stopClip;
-        result[1] = hmerClipped;
-        return result;
+        return FlowBasedReadUtils.findLeftClipping(basesClipped, flow2base, key);
     }
 
     private int[] findRightClipping() {
@@ -747,30 +731,13 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     }
 
     private int[] findRightClipping(final int basesClipped) {
-        final int[] result = new int[2];
-        if (basesClipped==0){
-            return result;
-        }
-
-        int stopClip = 0;
-
         final int[] rkey = new int[key.length];
         for (int i = 0 ; i < key.length; i++ ){
             rkey[i] = key[key.length-1-i];
         }
-
         final int[] rflow2base = FlowBasedKeyCodec.getKey2Base(rkey);
-        for (int i = 0 ; i < rflow2base.length; i++ ) {
-            if (rflow2base[i] + rkey[i] >= basesClipped) {
-                stopClip = i;
-                break;
-            }
-        }
 
-        final int hmerClipped = basesClipped - rflow2base[stopClip] - 1;
-        result[0] = stopClip;
-        result[1] = hmerClipped;
-        return result;
+        return FlowBasedReadUtils.findRightClipping(basesClipped, rflow2base, rkey);
     }
 
 

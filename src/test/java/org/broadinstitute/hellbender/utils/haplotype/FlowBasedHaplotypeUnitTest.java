@@ -1,11 +1,9 @@
 package org.broadinstitute.hellbender.utils.haplotype;
 
 import org.broadinstitute.hellbender.GATKBaseTest;
-import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.broadinstitute.hellbender.utils.haplotype.FlowBasedHaplotype;
 
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -95,36 +93,6 @@ public class FlowBasedHaplotypeUnitTest extends GATKBaseTest {
 
     }
 
-    @DataProvider(name="haplotypeModificationProvider")
-    public Object[][] haplotypeModifier(){
-        boolean[] answers = {true, true, true, false, false};
-        String sourceHaplotype = "ATCGCAGGGAATTGTCCCCATGAAACTAAG";
-        String[] modifiedHaplotypes = {"ATCGCAGGGAATTGTCCCCATGAAACTAAG",
-                "ATCGCAGGGGAATTGTCCCCATGAAACTAAG",
-                "ATCGCAGGGATTGTCCCCATGAAACTAAG",
-                "ATCGCAGGGTTGTCCCCATGAAACTAAG",
-                "ATCGCAGGGAATAGTCCCCATGAAACTAAG"};
-
-
-        final List<Object[]> tests = new LinkedList<>();
-        for (int i = 0; i < modifiedHaplotypes.length; i++){
-            tests.add( new Object[]{ new Haplotype(sourceHaplotype.getBytes()),
-                    new Haplotype(modifiedHaplotypes[i].getBytes()), answers[i]});
-
-        }
-
-        return tests.toArray(new Object[][]{});
-
-    }
-
-
-    @Test(dataProvider = "haplotypeModificationProvider")
-    public void testEqualUpToHmerChange(Haplotype hap1, Haplotype hap2, boolean answer) {
-        FlowBasedHaplotype fbh1 = new FlowBasedHaplotype(hap1, "TACG");
-        FlowBasedHaplotype fbh2 = new FlowBasedHaplotype(hap2, "TACG");
-        Assert.assertEquals(fbh1.equalUpToHmerChange(fbh2),answer);
-    }
-
     private int findFirstNonzero(int [] key){
         for (int i = 0; i < key.length; i++){
             if (key[i]>0){
@@ -142,5 +110,4 @@ public class FlowBasedHaplotypeUnitTest extends GATKBaseTest {
         }
         return -1;
     }
-
 }
