@@ -162,7 +162,7 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
 
     // Internally used constructor.
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public AlleleLikelihoods(final AlleleList alleles,
+    private AlleleLikelihoods(final AlleleList alleles,
                       final SampleList samples,
                       final List<List<EVIDENCE>> evidenceBySampleIndex,
                       final List<List<EVIDENCE>> filteredEvidenceBySampleIndex,
@@ -197,8 +197,19 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
                 .toArray();
     }
 
+    /*
+     * create an object using the private constructor. Unless absolutely required, please use public constructor
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public static <EVIDENCE extends Locatable, A extends Allele> AlleleLikelihoods createAlleleLikelihoods(final AlleleList alleles,
+                                            final SampleList samples,
+                                            final List<List<EVIDENCE>> evidenceBySampleIndex,
+                                            final List<List<EVIDENCE>> filteredEvidenceBySampleIndex,
+                                            final double[][][] values) {
+        return new AlleleLikelihoods<>(alleles, samples, evidenceBySampleIndex, filteredEvidenceBySampleIndex, values);
+    }
 
-    public AlleleLikelihoods<EVIDENCE,A> subsetToAlleles(Collection<A> subsetOfAlleles){
+    public AlleleLikelihoods<EVIDENCE,A> removeAllelesToSubset(Collection<A> subsetOfAlleles){
         ValidationUtils.validateArg(alleles.asListOfAlleles().containsAll(subsetOfAlleles),
                 () -> String.format("subsetOfAlleles must be a subset of the present alleles. Found atleast one allele that is not present: %s",
                         subsetOfAlleles.stream()
@@ -694,11 +705,6 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
                 newEvidenceBySampleIndex,
                 null, //TODO this is only currently used for Somatic and i'm alright with removing this for now but this is NOT robust and 3 of these methods is too many
                 newLikelihoodValues);
-        for (int s = 0; s < sampleCount; s++) {
-            if ( numberOfEvidences[s] == 0 )
-                result.numberOfEvidences[s] = numberOfEvidences[s];
-        }
-
         result.isNaturalLog = this.isNaturalLog;
         return result;
     }
@@ -1227,8 +1233,8 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
     public int getFilteredHaplotypeCount() {
         return filteredHaplotypeCount;
     }
-    public void setFilteredHaplotypeCount(int filteredHaplotypeCout) {
-        this.filteredHaplotypeCount = filteredHaplotypeCout;
+    public void setFilteredHaplotypeCount(int filteredHaplotypeCount) {
+        this.filteredHaplotypeCount = filteredHaplotypeCount;
     }
 
     /**
@@ -1265,7 +1271,7 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
 
         private BestAllele(final int sampleIndex, final int evidenceIndex, final int bestAlleleIndex,
                            final double likelihood, final int secondBestAlleleIndex, final double secondBestLikelihood) {
-            allele = bestAlleleIndex == -1 ? null : alleles.getAllele(bestAlleleIndex);
+            allele = bestAlleleIndex == MISSING_INDEX ? null : alleles.getAllele(bestAlleleIndex);
             second_best_allele = secondBestAlleleIndex == -1 ? null : alleles.getAllele(secondBestAlleleIndex);
             this.likelihood = likelihood;
             sample = samples.getSample(sampleIndex);

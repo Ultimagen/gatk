@@ -15,7 +15,6 @@ import org.broadinstitute.hellbender.utils.BaseUtils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
-import org.checkerframework.framework.qual.Unused;
 import org.jgrapht.graph.DefaultDirectedWeightedGraph;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.io.ComponentNameProvider;
@@ -268,7 +267,7 @@ public abstract class AlleleFiltering {
 
 
 
-        final AlleleLikelihoods<GATKRead, Haplotype> currentReadLikelihoods = readLikelihoods.subsetToAlleles(eventualAlleles);
+        final AlleleLikelihoods<GATKRead, Haplotype> currentReadLikelihoods = readLikelihoods.removeAllelesToSubset(eventualAlleles);
         logger.debug("----- SHA list of remaining alleles start ----");
         final Set<AlleleAndContext> locAllele = new HashSet<>();
         currentReadLikelihoods.alleles().forEach(h -> getAlleles(h).stream().filter(al -> !al.isReference()).forEach(locAllele::add));
