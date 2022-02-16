@@ -2,7 +2,6 @@ package org.broadinstitute.hellbender.utils.read;
 
 import org.apache.commons.lang3.StringUtils;
 import org.broadinstitute.hellbender.GATKBaseTest;
-import org.broadinstitute.hellbender.utils.read.FlowBasedKeyCodec;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -49,7 +48,7 @@ public class FlowBasedKeyCodecUnitTest extends GATKBaseTest {
 
         // int version
         try {
-            final int[] intKey = FlowBasedKeyCodec.base2key(basesAsString.getBytes(), flowOrder);
+            final int[] intKey = FlowBasedKeyCodec.baseArrayToKey(basesAsString.getBytes(), flowOrder);
             Assert.assertNotNull(intKey);
             final String        intKeyAsString = StringUtils.join(intKey, ',');
             Assert.assertEquals(intKeyAsString, expectedKeyAsString);
@@ -73,11 +72,11 @@ public class FlowBasedKeyCodecUnitTest extends GATKBaseTest {
 
     @Test (dataProvider = "makeReadArrayTests")
     public void testBaseArray2KeySpace(final byte[] readBases, final byte[] qualArray, final String flowOrder, final byte defualtQual, final byte[] expected) {
-        final int[] flowBases = FlowBasedKeyCodec.base2key(readBases, flowOrder);
+        final int[] flowBases = FlowBasedKeyCodec.baseArrayToKey(readBases, flowOrder);
 
-        final byte[] result = FlowBasedKeyCodec.baseArray2KeySpace(readBases, flowBases.length, qualArray, defualtQual, flowOrder);
+        final byte[] result = FlowBasedKeyCodec.baseArrayToKeySpace(readBases, flowBases.length, qualArray, defualtQual, flowOrder);
 
-        Assert.assertEquals(flowBases.length, result.length, "Read bases in flow space and baseArray2KeySpace do not match in length");
+        Assert.assertEquals(flowBases.length, result.length, "Read bases in flow space and baseArrayToKeySpace do not match in length");
         Assert.assertEquals(result, expected);
     }
 
