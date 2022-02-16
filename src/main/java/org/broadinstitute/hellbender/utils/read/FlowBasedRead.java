@@ -36,7 +36,7 @@ import java.util.*;
  *
  **/
 
-public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRead, FlowBasedReadInterface, Serializable {
+public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRead, Serializable {
 
     final static public int     MAX_CLASS = 12;
     public static final String     DEFAULT_FLOW_ORDER = "TGCA";
@@ -251,7 +251,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         final int call = key[flowToSpread];
         if (call==0){
-            throw new GATKException.ShouldNeverReachHereException("Boundary key value should not be zero for the spreading");
+            throw new IllegalStateException("Boundary key value should not be zero for the spreading");
         }
 
         final int numberToFill = maxHmer - call+1;
@@ -401,6 +401,14 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         return validKey;
     }
 
+    /**
+     * get a specific cell from the flow matrix. Each cell contains the probability
+     * for an hmer of the given length to appear the given position in the flow key
+     *
+     * @param flow - position in the flow key (index into key[])
+     * @param hmer - length of the hmer
+     * @return
+     */
     public double getProb(final int flow, final int hmer) {
         double prob = flowMatrix[hmer < maxHmer ? hmer : maxHmer][flow];
         return (prob <= 1) ? prob : 1;
@@ -418,8 +426,8 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         final boolean isBase = isBaseFormat();
         final int[] basePair = {0, 0};
-        final int[] clipLeftPair = !isBase ? findLeftClipping() : basePair;
-        final int[] clipRightPair = !isBase ? findRightClipping() : basePair;
+        final int[] clipLeftPair = !isBase ? findLeftClippingFromCigar() : basePair;
+        final int[] clipRightPair = !isBase ? findRightClippingFromCigar() : basePair;
         final int clipLeft = clipLeftPair[0];
         final int leftHmerClip = clipLeftPair[1];
         final int clipRight = clipRightPair[0];
@@ -538,32 +546,27 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     private void applyClipping(int clipLeft, final int leftHmerClip, int clipRight, final int rightHmerClip, final boolean spread){
         if ((clipLeft < 0) || (clipRight < 0)  || (clipLeft >= getKeyLength() ) || ( clipRight >= getKeyLength())) {
-            throw new GATKException.ShouldNeverReachHereException("Weird read clip calculated");
-            //return 1;
+            throw new IllegalStateException("Weird read clip calculated");
         }
 
         if ((leftHmerClip < 0) || (rightHmerClip < 0)  || (leftHmerClip >= 14 ) || ( rightHmerClip >= 14)) {
-            throw new GATKException.ShouldNeverReachHereException("Weird read clip calculated");
-            //return 1;
+            throw new IllegalStateException("Weird read clip calculated");
         }
 
         final int originalLength = key.length;
 
         key[clipLeft]-=leftHmerClip;
         boolean shiftLeft = true;
-        if ( (clipLeft >= 0) || ( leftHmerClip >= 0 )  ) {
-            while (key[clipLeft] == 0) {
-                clipLeft += 1 ;
-                shiftLeft = false;
-            }
+        while (key[clipLeft] == 0) {
+            clipLeft += 1 ;
+            shiftLeft = false;
         }
+
         key[key.length - clipRight-1] -= rightHmerClip;
         boolean shiftRight = true;
-        if ( (clipRight >= 0) || ( rightHmerClip >= 0 )  ) {
-            while (key[originalLength - 1- clipRight] == 0) {
-                clipRight += 1 ;
-                shiftRight = false;
-            }
+        while (key[originalLength - 1- clipRight] == 0) {
+            clipRight += 1 ;
+            shiftRight = false;
         }
 
         key = Arrays.copyOfRange(key, clipLeft, originalLength - clipRight);
@@ -592,7 +595,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
-    private int[] findLeftClipping() {
+    private int[] findLeftClippingFromCigar() {
         final List<CigarElement> cigar = getCigarElements();
         final int[] result = new int[2];
         if (cigar.size() == 0 ) {
@@ -613,7 +616,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         return FlowBasedReadUtils.findLeftClipping(basesClipped, flow2base, key);
     }
 
-    private int[] findRightClipping() {
+    private int[] findRightClippingFromCigar() {
         final List<CigarElement> cigar = getCigarElements();
         final int[] result = new int[2];
         if (cigar.size() == 0 ) {
@@ -775,6 +778,9 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     }
 
+    /**
+     * clip probability values to fbargs.probabilityRatioThreshold
+     */
     private void clipProbs() {
         for ( int i = 0 ; i < getMaxHmer(); i++ ) {
             for ( int j =0; j < getNFlows(); j++) {
@@ -786,6 +792,9 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
+    /**
+     * remove probabilities larger than 1
+     */
     private void removeLargeProbs(){
         for (int i = 0; i < getNFlows(); i++){
             for (int j = 0 ; j < getMaxHmer()+1; j++) {
@@ -796,6 +805,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
+    /**
+     * This is vestigial and applies only to old formats
+     * @param key_kh
+     */
     private void removeLongIndels(final int [] key_kh ){
         for ( int i = 0 ; i < getNFlows(); i++ ) {
             for (int j = 0; j < getMaxHmer()+1; j++){
@@ -806,6 +819,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
+    /**
+     * This is vestigial and applies only to old formats
+     * @param key_kh
+     */
     private void removeOneToZeroProbs(final int [] key_kh) {
         for (int i = 0 ; i < getNFlows(); i++){
             if (key_kh[i] == 0){
@@ -817,6 +834,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     }
 
 
+    /**
+     * Quantize probability values according to fbargs.probabilityQuantization and fbargs.probabilityScalingFactor
+     * @param key_kh
+     */
 
     private void quantizeProbs(final int [] kd_probs ) {
         final int nQuants = fbargs.probabilityQuantization;
@@ -830,6 +851,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
+    /**
+     * Smooth out probabilities by averaging with neighbours
+     * @param kr
+     */
     private void smoothIndels(final int [] kr ) {
         for ( int i = 0 ; i < kr.length; i++ ){
             final int idx = kr[i];
