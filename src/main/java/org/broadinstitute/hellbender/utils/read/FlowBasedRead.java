@@ -221,13 +221,14 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         //Spread boundary flow probabilities when the read is unclipped
         //in this case the value of the hmer is uncertain
-        if (CigarUtils.countClippedBases(samRecord.getCigar(), Tail.LEFT, CigarOperator.HARD_CLIP) == 0){
-            spreadFlowProbs(findFirstNonZero(key));
+        if ( !fbargs.keepBoundaryFlows ) {
+            if (CigarUtils.countClippedBases(samRecord.getCigar(), Tail.LEFT, CigarOperator.HARD_CLIP) == 0) {
+                spreadFlowLengthProbsAcrossCountsAtFlow(findFirstNonZero(key));
+            }
+            if (CigarUtils.countClippedBases(samRecord.getCigar(), Tail.RIGHT, CigarOperator.HARD_CLIP) == 0) {
+                spreadFlowLengthProbsAcrossCountsAtFlow(findLastNonZero(key));
+            }
         }
-        if (CigarUtils.countClippedBases(samRecord.getCigar(), Tail.RIGHT, CigarOperator.HARD_CLIP) == 0){
-            spreadFlowProbs(findLastNonZero(key));
-        }
-
 
         if ( logger.isDebugEnabled() ) {
             logger.debug("cons: name: " + samRecord.getReadName()
@@ -244,7 +245,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     //since the last unclipped flow is uncertain (we give high probabilities to
     //also hmers higher than the called hmer)
-    private void spreadFlowProbs(final int flowToSpread) {
+    private void spreadFlowLengthProbsAcrossCountsAtFlow(final int flowToSpread) {
         if (flowToSpread<0) //boundary case when all the key is zero
             return;
 
@@ -586,8 +587,8 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         //Spread boundary flow probabilities for the boundary hmers of the read
         //in this case the value of the genome hmer is uncertain
         if ( spread ) {
-            spreadFlowProbs(findFirstNonZero(key));
-            spreadFlowProbs(findLastNonZero(key));
+            spreadFlowLengthProbsAcrossCountsAtFlow(findFirstNonZero(key));
+            spreadFlowLengthProbsAcrossCountsAtFlow(findLastNonZero(key));
         }
     }
 
@@ -653,10 +654,13 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     /**
      * Flow matrix logger
+     *
+     * This is used exclusively for testing
+     *
      * @param oos
      * @throws IOException
      */
-    public void writeMatrix(final OutputStreamWriter oos)
+    protected void writeMatrix(final OutputStreamWriter oos)
             throws IOException {
         final DecimalFormat formatter = new DecimalFormat("0.0000", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
 
@@ -678,7 +682,16 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             final String Ti = (key[col] != 0) ? Integer.toString(ti[basesOfs]) : ".";
             for (int row = 0; row < flowMatrix.length; row++) {
                 final String s = formatter.format(flowMatrix[row][col]);
-                oos.write(String.format("%d,%d,%d,%c,%s,%s,%s,%s %s\n", col, row, key[col], base, bi, q, Ti, isReverseStrand() ? "r" : ".", s));
+                oos.write(""
+                        + col + ","
+                        + row + ","
+                        + key[col] + ","
+                        + (char)base + ","
+                        + bi + ","
+                        + q + ","
+                        + Ti + ","
+                        + (isReverseStrand() ? "r" : ".") + " "
+                        + s + "\n");
             }
             if ( key[col] != 0 )
                 basesOfs +=  key[col];
