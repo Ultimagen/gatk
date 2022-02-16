@@ -37,7 +37,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private final Logger logger = LogManager.getLogger(this.getClass());
 
     // constants
-    protected static int N_ASCII=78;
     static private final int MINIMAL_READ_LENGTH = 10; // check if this is the right number
     static private final int MAXIMAL_MAXHMER = 100;
     private final double MINIMAL_CALL_PROB = 0.1;
@@ -261,9 +260,9 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
        // generate key (base to flow space)
         setDirection(Direction.REFERENCE);  // base is always in reference/alignment direction
-        key = FlowBasedKeyCodec.base2key(samRecord.getReadBases(), _flowOrder);
-        flow2base = FlowBasedKeyCodec.getKey2Base(key);
-        flowOrder = FlowBasedKeyCodec.getFlow2Base(_flowOrder, key.length);
+        key = FlowBasedKeyCodec.baseArrayToKey(samRecord.getReadBases(), _flowOrder);
+        flow2base = FlowBasedKeyCodec.getKeyToBase(key);
+        flowOrder = FlowBasedKeyCodec.getFlowToBase(_flowOrder, key.length);
 
        // initialize matrix
         flowMatrix = new double[maxHmer+1][key.length];
@@ -327,9 +326,9 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         // generate key (base to flow space)
         setDirection(Direction.REFERENCE);  // base is always in reference/alignment direction
 
-        key = FlowBasedKeyCodec.base2key(samRecord.getReadBases(), _flowOrder);
-        flow2base = FlowBasedKeyCodec.getKey2Base(key);
-        flowOrder = FlowBasedKeyCodec.getFlow2Base(_flowOrder, key.length);
+        key = FlowBasedKeyCodec.baseArrayToKey(samRecord.getReadBases(), _flowOrder);
+        flow2base = FlowBasedKeyCodec.getKeyToBase(key);
+        flowOrder = FlowBasedKeyCodec.getFlowToBase(_flowOrder, key.length);
 
         // initialize matrix
         flowMatrix = new double[maxHmer+1][key.length];
@@ -466,7 +465,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         if ((getDirection() == Direction.SYNTHESIS) && ( isReverseStrand() )) {
             flipMatrix();
             ArrayUtils.reverse(key);
-            flow2base = FlowBasedKeyCodec.getKey2Base(key);
+            flow2base = FlowBasedKeyCodec.getKeyToBase(key);
             SequenceUtil.reverseComplement(flowOrder);
 
         }
@@ -497,10 +496,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         key = getAttributeAsIntArray(FLOW_MATRiX_OLD_TAG_KR, true);
 
         // creates a translation from flow # to base #
-        flow2base = FlowBasedKeyCodec.getKey2Base(key);
+        flow2base = FlowBasedKeyCodec.getKeyToBase(key);
 
         // create a translation from
-        flowOrder = FlowBasedKeyCodec.getFlow2Base(_flowOrder, key.length);
+        flowOrder = FlowBasedKeyCodec.getFlowToBase(_flowOrder, key.length);
 
         flowMatrix = new double[maxHmer+1][key.length];
         for (int i = 0 ; i < maxHmer+1; i++) {
@@ -663,7 +662,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
 
         key = Arrays.copyOfRange(key, clipLeft, originalLength - clipRight);
-        flow2base = FlowBasedKeyCodec.getKey2Base(key);
+        flow2base = FlowBasedKeyCodec.getKeyToBase(key);
         flowOrder = Arrays.copyOfRange(flowOrder, clipLeft, originalLength - clipRight);
 
         final double [][] newFlowMatrix = new double[flowMatrix.length][originalLength - clipLeft - clipRight] ;
@@ -735,7 +734,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         for (int i = 0 ; i < key.length; i++ ){
             rkey[i] = key[key.length-1-i];
         }
-        final int[] rflow2base = FlowBasedKeyCodec.getKey2Base(rkey);
+        final int[] rflow2base = FlowBasedKeyCodec.getKeyToBase(rkey);
 
         return FlowBasedReadUtils.findRightClipping(basesClipped, rflow2base, rkey);
     }
@@ -1062,7 +1061,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             bases = ReadUtils.getBasesReverseComplement(inputRead).getBytes();
         }
 
-        final int[] key = FlowBasedKeyCodec.base2key(bases, flowOrder);
+        final int[] key = FlowBasedKeyCodec.baseArrayToKey(bases, flowOrder);
         final int nTrimFlows = Math.min(nUncertainFlows, key.length);
         int result = 0;
         for (int i = 0 ; i < nTrimFlows; i++){

@@ -127,9 +127,9 @@ public class FlowBasedPairHMM extends PairHMM {
             final byte[] readDelQuals = read.getReadDelQuals();
             final byte[] overallGCP = read.getOverallGCP();
 
-            final byte[] flowReadInsQuals = FlowBasedKeyCodec.baseArray2KeySpace(read.getBases(), read.getKeyLength(), readInsQuals, (byte) DEFAULT_INDEL_NO_DATA_FILL, read.getFlowOrder());
-            final byte[] flowReadDelQuals = FlowBasedKeyCodec.baseArray2KeySpace(read.getBases(), read.getKeyLength(), readDelQuals, (byte) DEFAULT_INDEL_NO_DATA_FILL, read.getFlowOrder());
-            final byte[] flowReadGCPQuals = FlowBasedKeyCodec.baseArray2KeySpace(read.getBases(), read.getKeyLength(), overallGCP, (byte) DEFAULT_MATCH_NO_DATA_FILL, read.getFlowOrder());
+            final byte[] flowReadInsQuals = FlowBasedKeyCodec.baseArrayToKeySpace(read.getBases(), read.getKeyLength(), readInsQuals, (byte) DEFAULT_INDEL_NO_DATA_FILL, read.getFlowOrder());
+            final byte[] flowReadDelQuals = FlowBasedKeyCodec.baseArrayToKeySpace(read.getBases(), read.getKeyLength(), readDelQuals, (byte) DEFAULT_INDEL_NO_DATA_FILL, read.getFlowOrder());
+            final byte[] flowReadGCPQuals = FlowBasedKeyCodec.baseArrayToKeySpace(read.getBases(), read.getKeyLength(), overallGCP, (byte) DEFAULT_MATCH_NO_DATA_FILL, read.getFlowOrder());
 
             // peek at the next haplotype in the list (necessary to get nextHaplotypeBases, which is required for caching in the array implementation)
             final boolean isFirstHaplotype = true;

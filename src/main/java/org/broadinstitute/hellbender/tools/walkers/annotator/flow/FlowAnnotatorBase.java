@@ -4,7 +4,6 @@ import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.walkers.annotator.InfoFieldAnnotation;
@@ -260,8 +259,8 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
             final byte[]      altHap = buildHaplotype(before, alt.getBases(), after);
 
             // convert to flow space
-            final int[]       refKey = FlowBasedKeyCodec.base2key(refHap, localContext.flowOrder);
-            final int[]       altKey = FlowBasedKeyCodec.base2key(altHap, localContext.flowOrder);
+            final int[]       refKey = FlowBasedKeyCodec.baseArrayToKey(refHap, localContext.flowOrder);
+            final int[]       altKey = FlowBasedKeyCodec.baseArrayToKey(altHap, localContext.flowOrder);
             if ( refKey == null || altKey == null ) {
                 throw new GATKException("failed to generate key from reference or alternate sequence");
             }
@@ -405,8 +404,8 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
 
                 // convert to flow space
                 final int         i = css.size();   // always working on the last
-                final int[]       refKey = FlowBasedKeyCodec.base2key((localContext.leftMotif.get(i) + ref.getBaseString() + localContext.rightMotif.get(i)).getBytes(), localContext.flowOrder);
-                final int[]       altKey = FlowBasedKeyCodec.base2key((localContext.leftMotif.get(i) + (!alt.equals(Allele.SPAN_DEL) ? alt.getBaseString() : "") + localContext.rightMotif.get(i)).getBytes(), localContext.flowOrder);
+                final int[]       refKey = FlowBasedKeyCodec.baseArrayToKey((localContext.leftMotif.get(i) + ref.getBaseString() + localContext.rightMotif.get(i)).getBytes(), localContext.flowOrder);
+                final int[]       altKey = FlowBasedKeyCodec.baseArrayToKey((localContext.leftMotif.get(i) + (!alt.equals(Allele.SPAN_DEL) ? alt.getBaseString() : "") + localContext.rightMotif.get(i)).getBytes(), localContext.flowOrder);
 
                 // assign initial css
                 String            cssValue = (refKey.length != altKey.length) ? C_CSS_CS : C_CSS_NS;
