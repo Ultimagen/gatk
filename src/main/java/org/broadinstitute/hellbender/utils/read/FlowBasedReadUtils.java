@@ -17,6 +17,7 @@ import java.util.Map;
 public class FlowBasedReadUtils {
 
     public static final int FLOW_SUM_OF_BASE_QUALITY_THRESHOLD = 15;
+    public static final FlowBasedArgumentCollection DEFAULT_FLOW_BASED_ARGUMENT_COLLECTION = new FlowBasedArgumentCollection();
 
     private static final Map<String, ReadGroupInfo> readGroupInfo = new LinkedHashMap<>();
 
@@ -205,5 +206,13 @@ public class FlowBasedReadUtils {
         result[0] = stopClip;
         result[1] = hmerClipped;
         return result;
+    }
+
+    /**
+     * create a FlowBasedRead from a proper SAMRecord
+     */
+    static public FlowBasedRead convertToFlowBasedRead(GATKRead read, SAMFileHeader header) {
+        final ReadGroupInfo readGroupInfo = getReadGroupInfo(header, read);
+        return new FlowBasedRead(read, readGroupInfo.flowOrder, readGroupInfo.maxClass, DEFAULT_FLOW_BASED_ARGUMENT_COLLECTION);
     }
 }

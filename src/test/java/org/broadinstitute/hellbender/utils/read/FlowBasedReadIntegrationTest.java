@@ -50,9 +50,10 @@ public class FlowBasedReadIntegrationTest extends GATKBaseTest {
         final SamReader reader = SamReaderFactory.makeDefault().open(new File(inputFile));
         int count = 0 ;
         Iterator<SAMRecord> i;
-        FlowBasedRead fbr = null;
         for (i = reader.iterator(), count=0; (i.hasNext()) && (count < limitCount); count++  ) {
-            fbr = new FlowBasedRead(i.next(), flowOrder, 12, fbargs);
+            final FlowBasedRead   fbr = FlowBasedReadUtils.convertToFlowBasedRead(
+                                            new SAMRecordToGATKReadAdapter(i.next()),
+                                            reader.getFileHeader());
             fbr.applyAlignment();
             Assert.assertEquals(fbr.totalKeyBases(), fbr.seqLength());
 
