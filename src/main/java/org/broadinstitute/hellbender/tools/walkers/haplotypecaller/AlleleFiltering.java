@@ -131,8 +131,8 @@ public abstract class AlleleFiltering {
         final OccurrenceMatrix<Haplotype, AlleleAndContext> occm = new OccurrenceMatrix<>(haplotypeAlleleMap);
         List<Pair<AlleleAndContext, AlleleAndContext>> nonCoOcurringAlleles = occm.nonCoOcurringColumns();
         final List<Pair<AlleleAndContext, AlleleAndContext>> closeNonCoOccurringAlleles = filterByDistance(nonCoOcurringAlleles, 0, 3);
-        nonCoOcurringAlleles = filterByDistance(nonCoOcurringAlleles, 0, 20);
-        nonCoOcurringAlleles = filterSameUpToHmerPairs(nonCoOcurringAlleles, findReferenceHaplotype(readLikelihoods.alleles()), activeWindowStart);
+        nonCoOcurringAlleles = filterSameUpToHmerPairs(filterByDistance(nonCoOcurringAlleles,0,20),
+                findReferenceHaplotype(readLikelihoods.alleles()), activeWindowStart);
         nonCoOcurringAlleles.addAll(closeNonCoOccurringAlleles);
         final List<Set<AlleleAndContext>> independentAlleles = occm.getIndependentSets(nonCoOcurringAlleles);
 

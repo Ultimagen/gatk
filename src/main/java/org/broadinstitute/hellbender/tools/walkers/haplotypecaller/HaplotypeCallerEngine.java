@@ -712,6 +712,8 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         alleleLikelihoodWriter.ifPresent(
                 writer -> writer.writeAlleleLikelihoods(readLikelihoods));
 
+        // Optional: pre-filter haplotypes by removing weak/noisy alleles
+        // this is important for the genotyping, as weak allele close to the real allele often decreases its quality
         AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
         Set<Integer> suspiciousLocations = new HashSet<>();
         if (hcArgs.filterAlleles) {

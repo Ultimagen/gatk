@@ -209,6 +209,9 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
         return new AlleleLikelihoods<>(alleles, samples, evidenceBySampleIndex, filteredEvidenceBySampleIndex, values);
     }
 
+    /**
+     * Removes subset of alleles
+     */
     public AlleleLikelihoods<EVIDENCE,A> removeAllelesToSubset(Collection<A> subsetOfAlleles){
         ValidationUtils.validateArg(alleles.asListOfAlleles().containsAll(subsetOfAlleles),
                 () -> String.format("subsetOfAlleles must be a subset of the present alleles. Found atleast one allele that is not present: %s",
@@ -218,23 +221,12 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
                                 .map(A::toString)
                                 .orElse("")));
 
-        final int numberOfAlleles = subsetOfAlleles.size();
-        final List<A> orderedSubsetOfAlleles=new ArrayList<>(subsetOfAlleles);
-
-        final double[][][] values = new double[this.numberOfSamples()][][];
-        for (int sampleI = 0; sampleI < this.numberOfSamples(); sampleI++) {
-            values[sampleI] = new double[numberOfAlleles][];
-            for (int alleleI = 0; alleleI < numberOfAlleles; alleleI++) {
-                values[sampleI][alleleI] = this.valuesBySampleIndex[sampleI][indexOfAllele(orderedSubsetOfAlleles.get(alleleI))];
-            }
+        Map<A, List<A>> alleleMap = new HashMap<>();
+        for (A al  : subsetOfAlleles){
+            alleleMap.put(al, Arrays.asList(al));
         }
 
-        return new AlleleLikelihoods<>(
-                new IndexedAlleleList<>(subsetOfAlleles),
-                this.samples,
-                evidenceBySampleIndex,
-                filteredEvidenceBySampleIndex,
-                values);
+        return marginalize(alleleMap);
     }
     
     // Add all the indices to alleles, sample and evidence in the look-up maps.
@@ -1226,6 +1218,11 @@ public class AlleleLikelihoods<EVIDENCE extends Locatable, A extends Allele> imp
         return subsettedGenomicLoc;
     }
 
+    /**
+     * Replaces the alleles in the readLikelihood matrix. Relevant for the uncollapsing code
+     *
+     * @param newAlleles
+     */
     public void changeAlleles(List<A> newAlleles) {
         alleles = new IndexedAlleleList<>(newAlleles);
     }

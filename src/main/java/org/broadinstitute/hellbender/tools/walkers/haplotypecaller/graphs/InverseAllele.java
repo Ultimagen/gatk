@@ -21,6 +21,9 @@ public class InverseAllele extends Allele {
         referenceStatus = isReference;
     }
 
+    // InverseAllele of inverseAllele. By definition it is the allele. In Allele filtering code we normally genotype
+    // three genotypes: Hom. Allele, Het Allele/InverseAllele, Hom InverseAllele
+    // Due to the way genotyping functions work one of the alleles has to be considered reference
     public static Allele of(final Allele allele, boolean refFlag){
         if (allele instanceof InverseAllele) {
             return ((InverseAllele)allele).internalAllele;

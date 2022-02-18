@@ -407,17 +407,17 @@ public final class ReadThreadingAssembler {
             // the first returned by any finder.
             // HERE we want to preserve the signal that assembly failed completely so in this case we don't add anything to the empty list
 
+            // downstream uncollapsing code needs to have a haplotype that is marked as reference that will be used to compare other haplotypes
+            // also uncollapsing code removes duplicated haplotypes (that become identical after uncollapsing) and needs to make sure that
+            // the reference haplotype is not removed after.
+            // thus we search for reference haplotype and mark it as reference
             Haplotype tmpRefHaplotype = new Haplotype(refHaplotype.getBases(), false);
             if (!returnHaplotypes.isEmpty()){
-
-
                 if ( returnHaplotypes.contains((tmpRefHaplotype))){
                     returnHaplotypes.remove(tmpRefHaplotype);
                 }
-
                 returnHaplotypes.add(refHaplotype);
             }
-
 
             // uncollapse haplotypes now?
             if ( resultSet != null && resultSet.getHaplotypeCollapsing() != null ) {

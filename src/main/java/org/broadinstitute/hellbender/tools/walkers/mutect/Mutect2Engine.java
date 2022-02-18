@@ -296,6 +296,8 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
 
 
         final AlleleLikelihoods<GATKRead, Haplotype> subsettedReadLikelihoodsFinal;
+        // Optional: pre-filter haplotypes by removing weak/noisy alleles
+        // this is important for the genotyping, as weak allele close to the real allele often decreases its quality
 
         Set<Integer> suspiciousLocations = new HashSet<>();
         if (MTAC.filterAlleles) {
