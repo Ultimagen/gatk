@@ -8,6 +8,7 @@ import htsjdk.variant.variantcontext.VariantContextBuilder;
 import htsjdk.variant.variantcontext.writer.Options;
 import htsjdk.variant.variantcontext.writer.VariantContextWriter;
 import htsjdk.variant.vcf.*;
+import org.apache.commons.math3.util.Precision;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.argparser.*;
@@ -490,7 +491,7 @@ public final class FlowFeatureMapper extends ReadWalker {
                 }
                 break;
             }
-            if ( prob == 0.0 ) {
+            if ( Precision.equals(prob, 0.0) ) {
                 prob = LOWEST_PROB;
             }
             result += Math.log10(prob);

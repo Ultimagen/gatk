@@ -14,32 +14,38 @@ import org.broadinstitute.hellbender.utils.clipping.ClippingOp;
 import org.broadinstitute.hellbender.utils.clipping.ClippingRepresentation;
 import org.broadinstitute.hellbender.utils.clipping.ReadClipper;
 import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
+import org.broadinstitute.hellbender.utils.logging.OneShotLogger;
 
 import java.io.*;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.*;
-/*
-Adds flow information to the usual GATKRead. In addition to the usual read data this class keeps flowMatrix,
-that contains probabilities for alternative hmer calls.
+/**
+ * Adds flow information to the usual GATKRead. In addition to the usual read data this class keeps flowMatrix,
+ * that contains probabilities for alternative hmer calls.
+ *
+ * Main function deals with parsing flow-specific QUAL representation readFlowMatrix.
+ * Note that there is a lot of code that deals with other various formats of the representation (e.g. when the matrix
+ * is coded in the tags of the BAM and is given in flow space). This code is not used in production, but was used in
+ * development and testing
+ *
+ * A common usage pattern is to covert a GATKRead into a FlowBasedRead. Additionally
+ * a SAMRecord can also be converted into a FlowBasedRead. Follows a common usage pattern:
+ *
+ * For a self contained example of a usage pattern, see {@link FlowBasedReadUtils#convertToFlowBasedRead(GATKRead, SAMFileHeader)}
+ *
+ **/
 
-Main function deals with parsing flow-specific QUAL representation readBaseMatrixProb.
-Note that there is a lot of code that deals with other varous formats of the representation (e.g. when the matrix
-is coded in the tags of the BAM and is given in flow space). This code is not used in production, but was used in
-development and testing
-*/
-
-public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRead, FlowBasedReadInterface, Serializable {
+public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRead, Serializable {
 
     final static public int     MAX_CLASS = 12;
     public static final String     DEFAULT_FLOW_ORDER = "TGCA";
     private static final long serialVersionUID = 42L;
     private final Logger logger = LogManager.getLogger(this.getClass());
+    private static final OneShotLogger vestigialOneShotLogger = new OneShotLogger(FlowBasedRead.class);
 
     // constants
-    protected static int N_ASCII=78;
     static private final int MINIMAL_READ_LENGTH = 10; // check if this is the right number
-    static private final int MAXIMAL_MAXHMER = 100;
     private final double MINIMAL_CALL_PROB = 0.1;
 
     // constants for clippingTagContains.
@@ -170,55 +176,59 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
      * Constructor from GATKRead. flow order, hmer and arguments
      * @param read GATK read
      * @param flowOrder flow order string (one cycle)
-     * @param _maxHmer maximal hmer to keep in the flow matrix
+     * @param maxHmer maximal hmer to keep in the flow matrix
      * @param fbargs arguments that control resolution etc. of the flow matrix
      */
-    public FlowBasedRead(final GATKRead read, final String flowOrder, final int _maxHmer, final FlowBasedArgumentCollection fbargs) {
-        this(read.convertToSAMRecord(null), flowOrder, _maxHmer, fbargs);
+    public FlowBasedRead(final GATKRead read, final String flowOrder, final int maxHmer, final FlowBasedArgumentCollection fbargs) {
+        this(read.convertToSAMRecord(null), flowOrder, maxHmer, fbargs);
 
     }
 
     /**
      * Same as above but constructs from SAMRecord
      * @param samRecord record from SAM file
-     * @param _flowOrder flow order (single cycle)
-     * @param _maxHmer maximal hmer to keep in the flow matrix
+     * @param flowOrder flow order (single cycle)
+     * @param maxHmer maximal hmer to keep in the flow matrix
      * @param fbargs arguments that control resoltion of the flow matrix
      */
-    public FlowBasedRead(final SAMRecord samRecord, final String _flowOrder, final int _maxHmer, final FlowBasedArgumentCollection fbargs) {
+    public FlowBasedRead(final SAMRecord samRecord, final String flowOrder, final int maxHmer, final FlowBasedArgumentCollection fbargs) {
         super(samRecord);
         Utils.nonNull(fbargs);
         Utils.validate(FlowBasedReadUtils.isFlow(samRecord), "FlowBasedRead can only be used on flow reads. failing read: " + samRecord);
         this.fbargs = fbargs;
-        maxHmer = _maxHmer;
+        this.maxHmer = maxHmer;
         this.samRecord = samRecord;
         forwardSequence = getForwardSequence();
 
-        //supports old format, where the matrix is stored in flow space in the record
-        if ( samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_KR) )
-            readFlowMatrix(_flowOrder);
-        // supports FASTQ-like format
-        else {
-            if (samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_TI)) {
-                readBaseMatrixRecal(_flowOrder);
-            } else if (samRecord.hasAttribute(FLOW_MATRIX_TAG_NAME)) {
-                readBaseMatrixProb(_flowOrder);
+        // read flow matrix in. note that below code contains accomodates for old formats
+        if ( samRecord.hasAttribute(FLOW_MATRIX_TAG_NAME) ) {
+
+            // this path is the production path. A flow read should contain a FLOW_MATRIX_TAG_NAME tag
+            readFlowMatrix(flowOrder);
+
+        } else {
+
+            // NOTE: this path is vestigial and deals with old formats of the matrix
+            if ( samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_KR) ) {
+                readVestigialFlowMatrixFromKR(flowOrder);
+            } else if ( samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_TI) ) {
+                readVestigialFlowMatrixFromTI(flowOrder);
             } else {
                 throw new GATKException("read missing flow matrix attribute: " + FLOW_MATRIX_TAG_NAME);
             }
         }
         implementMatrixMods(fbargs.getFlowMatrixModsInstructions());
 
-
         //Spread boundary flow probabilities when the read is unclipped
         //in this case the value of the hmer is uncertain
-        if (CigarUtils.countClippedBases(samRecord.getCigar(), Tail.LEFT, CigarOperator.HARD_CLIP) == 0){
-            _spreadFlowProbs(findFirstNonZero(key));
+        if ( !fbargs.keepBoundaryFlows ) {
+            if (CigarUtils.countClippedBases(samRecord.getCigar(), Tail.LEFT, CigarOperator.HARD_CLIP) == 0) {
+                spreadFlowLengthProbsAcrossCountsAtFlow(findFirstNonZero(key));
+            }
+            if (CigarUtils.countClippedBases(samRecord.getCigar(), Tail.RIGHT, CigarOperator.HARD_CLIP) == 0) {
+                spreadFlowLengthProbsAcrossCountsAtFlow(findLastNonZero(key));
+            }
         }
-        if (CigarUtils.countClippedBases(samRecord.getCigar(), Tail.RIGHT, CigarOperator.HARD_CLIP) == 0){
-            _spreadFlowProbs(findLastNonZero(key));
-        }
-
 
         if ( logger.isDebugEnabled() ) {
             logger.debug("cons: name: " + samRecord.getReadName()
@@ -235,13 +245,13 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     //since the last unclipped flow is uncertain (we give high probabilities to
     //also hmers higher than the called hmer)
-    private void _spreadFlowProbs(final int flowToSpread) {
+    private void spreadFlowLengthProbsAcrossCountsAtFlow(final int flowToSpread) {
         if (flowToSpread<0) //boundary case when all the key is zero
             return;
 
         final int call = key[flowToSpread];
         if (call==0){
-            throw new GATKException.ShouldNeverReachHereException("Boundary key value should not be zero for the spreading");
+            throw new IllegalStateException("Boundary key value should not be zero for the spreading");
         }
 
         final int numberToFill = maxHmer - call+1;
@@ -256,80 +266,15 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
 
 
-    // convert qualities and ti tag to flow matrix
-    private void readBaseMatrixRecal(final String _flowOrder) {
-
-       // generate key (base to flow space)
-        setDirection(Direction.REFERENCE);  // base is always in reference/alignment direction
-        key = FlowBasedKeyCodec.base2key(samRecord.getReadBases(), _flowOrder);
-        flow2base = FlowBasedKeyCodec.getKey2Base(key);
-        flowOrder = FlowBasedKeyCodec.getFlow2Base(_flowOrder, key.length);
-
-       // initialize matrix
-        flowMatrix = new double[maxHmer+1][key.length];
-        for (int i = 0 ; i < maxHmer+1; i++) {
-            for (int j = 0 ; j < key.length; j++ ){
-                flowMatrix[i][j] = fbargs.fillingValue;;
-            }
-        }
-
-        // access qual, convert to flow representation
-        final byte[]      quals = samRecord.getBaseQualities();
-        final byte[]      ti = samRecord.getByteArrayAttribute(FLOW_MATRiX_OLD_TAG_TI);
-        final double[]    probs = new double[quals.length];
-        for ( int i = 0 ; i < quals.length ; i++ ) {
-            final double q = quals[i];
-            final double p = QualityUtils.qualToErrorProb(q);
-            probs[i] = p*2;
-        }
-
-        // apply key and qual/ti to matrix
-        int     qualOfs = 0;
-        for ( int i = 0 ; i < key.length ; i++ ) {
-            final int        run = key[i];
-
-            // the probability is not divided by two for hmers of length 1
-            if ( run == 1 ) {
-                probs[qualOfs] = probs[qualOfs]/2;
-            }
-
-            //filling the probability for the called hmer (not reported by the quals
-            if ( run <= maxHmer ) {
-                flowMatrix[run][i] = (run > 0) ? (1 - probs[qualOfs]) : 1;
-                //require a prob. at least 0.1
-                flowMatrix[run][i] = Math.max(MINIMAL_CALL_PROB, flowMatrix[run][i]);
-
-            }
-
-            if ( run != 0 ) {
-                if ( quals[qualOfs] != 40 ) {
-                    final int     run1 = (ti[qualOfs] == 0) ? (run - 1) : (run + 1);
-                    if (( run1 <= maxHmer ) && (run <= maxHmer)){
-                        flowMatrix[run1][i] = probs[qualOfs] / flowMatrix[run][i];
-                    }
-                    if (run <= maxHmer) {
-                        flowMatrix[run][i] /= flowMatrix[run][i]; // for comparison to the flow space - probabilities are normalized by the key's probability
-                    }
-                }
-                qualOfs += run;
-            }
-
-        }
-
-        //this is just for tests of all kinds of
-        applyFilteringFlowMatrix();
-    }
-
-
-    //This is the code for parsing the current BAM format (with TP tag)
-    private void readBaseMatrixProb(final String _flowOrder) {
+    // This is the code for parsing the current/production BAM format (with TP tag)
+    private void readFlowMatrix(final String _flowOrder) {
 
         // generate key (base to flow space)
         setDirection(Direction.REFERENCE);  // base is always in reference/alignment direction
 
-        key = FlowBasedKeyCodec.base2key(samRecord.getReadBases(), _flowOrder);
-        flow2base = FlowBasedKeyCodec.getKey2Base(key);
-        flowOrder = FlowBasedKeyCodec.getFlow2Base(_flowOrder, key.length);
+        key = FlowBasedKeyCodec.baseArrayToKey(samRecord.getReadBases(), _flowOrder);
+        flow2base = FlowBasedKeyCodec.getKeyToBase(key);
+        flowOrder = FlowBasedKeyCodec.getFlowToBase(_flowOrder, key.length);
 
         // initialize matrix
         flowMatrix = new double[maxHmer+1][key.length];
@@ -456,6 +401,14 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         return validKey;
     }
 
+    /**
+     * get a specific cell from the flow matrix. Each cell contains the probability
+     * for an hmer of the given length to appear the given position in the flow key
+     *
+     * @param flow - position in the flow key (index into key[])
+     * @param hmer - length of the hmer
+     * @return
+     */
     public double getProb(final int flow, final int hmer) {
         double prob = flowMatrix[hmer < maxHmer ? hmer : maxHmer][flow];
         return (prob <= 1) ? prob : 1;
@@ -466,15 +419,15 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         if ((getDirection() == Direction.SYNTHESIS) && ( isReverseStrand() )) {
             flipMatrix();
             ArrayUtils.reverse(key);
-            flow2base = FlowBasedKeyCodec.getKey2Base(key);
+            flow2base = FlowBasedKeyCodec.getKeyToBase(key);
             SequenceUtil.reverseComplement(flowOrder);
 
         }
 
         final boolean isBase = isBaseFormat();
         final int[] basePair = {0, 0};
-        final int[] clipLeftPair = !isBase ? findLeftClipping() : basePair;
-        final int[] clipRightPair = !isBase ? findRightClipping() : basePair;
+        final int[] clipLeftPair = !isBase ? findLeftClippingFromCigar() : basePair;
+        final int[] clipRightPair = !isBase ? findRightClippingFromCigar() : basePair;
         final int clipLeft = clipLeftPair[0];
         final int leftHmerClip = clipLeftPair[1];
         final int clipRight = clipRightPair[0];
@@ -488,47 +441,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     private boolean isBaseFormat() {
        return samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_TI) || samRecord.hasAttribute(FLOW_MATRIX_TAG_NAME);
-    }
-
-    // code for reading BAM format where the flow matrix is stored in sparse representation in kr,kf,kh and kd tags
-    // used for development of the new basecalling, but not in production code
-    private void readFlowMatrix(final String _flowOrder) {
-
-        key = getAttributeAsIntArray(FLOW_MATRiX_OLD_TAG_KR, true);
-
-        // creates a translation from flow # to base #
-        flow2base = FlowBasedKeyCodec.getKey2Base(key);
-
-        // create a translation from
-        flowOrder = FlowBasedKeyCodec.getFlow2Base(_flowOrder, key.length);
-
-        flowMatrix = new double[maxHmer+1][key.length];
-        for (int i = 0 ; i < maxHmer+1; i++) {
-            for (int j = 0 ; j < key.length; j++ ){
-                flowMatrix[i][j] = fbargs.fillingValue;
-            }
-        }
-
-        int [] kh = getAttributeAsIntArray( "kh" , true);
-        int [] kf = getAttributeAsIntArray("kf", false);
-        int [] kd = getAttributeAsIntArray( "kd", true);
-
-        final int [] key_kh = key;
-        final int [] key_kf = new int[key.length];
-        for ( int i = 0 ; i < key_kf.length ; i++)
-            key_kf[i] = i;
-        final int [] key_kd = new int[key.length];
-
-        kh = ArrayUtils.addAll(kh, key_kh);
-        kf = ArrayUtils.addAll(kf, key_kf);
-        kd = ArrayUtils.addAll(kd, key_kd);
-
-        quantizeProbs(kd);
-
-        final double [] kdProbs = phredToProb(kd);
-        fillFlowMatrix( kh, kf, kdProbs);
-        applyFilteringFlowMatrix();
-        validateSequence();
     }
 
     private void fillFlowMatrix(final int [] kh, final int [] kf,
@@ -634,36 +546,31 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     private void applyClipping(int clipLeft, final int leftHmerClip, int clipRight, final int rightHmerClip, final boolean spread){
         if ((clipLeft < 0) || (clipRight < 0)  || (clipLeft >= getKeyLength() ) || ( clipRight >= getKeyLength())) {
-            throw new GATKException.ShouldNeverReachHereException("Weird read clip calculated");
-            //return 1;
+            throw new IllegalStateException("Weird read clip calculated");
         }
 
         if ((leftHmerClip < 0) || (rightHmerClip < 0)  || (leftHmerClip >= 14 ) || ( rightHmerClip >= 14)) {
-            throw new GATKException.ShouldNeverReachHereException("Weird read clip calculated");
-            //return 1;
+            throw new IllegalStateException("Weird read clip calculated");
         }
 
         final int originalLength = key.length;
 
         key[clipLeft]-=leftHmerClip;
         boolean shiftLeft = true;
-        if ( (clipLeft >= 0) || ( leftHmerClip >= 0 )  ) {
-            while (key[clipLeft] == 0) {
-                clipLeft += 1 ;
-                shiftLeft = false;
-            }
+        while (key[clipLeft] == 0) {
+            clipLeft += 1 ;
+            shiftLeft = false;
         }
+
         key[key.length - clipRight-1] -= rightHmerClip;
         boolean shiftRight = true;
-        if ( (clipRight >= 0) || ( rightHmerClip >= 0 )  ) {
-            while (key[originalLength - 1- clipRight] == 0) {
-                clipRight += 1 ;
-                shiftRight = false;
-            }
+        while (key[originalLength - 1- clipRight] == 0) {
+            clipRight += 1 ;
+            shiftRight = false;
         }
 
         key = Arrays.copyOfRange(key, clipLeft, originalLength - clipRight);
-        flow2base = FlowBasedKeyCodec.getKey2Base(key);
+        flow2base = FlowBasedKeyCodec.getKeyToBase(key);
         flowOrder = Arrays.copyOfRange(flowOrder, clipLeft, originalLength - clipRight);
 
         final double [][] newFlowMatrix = new double[flowMatrix.length][originalLength - clipLeft - clipRight] ;
@@ -683,12 +590,12 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         //Spread boundary flow probabilities for the boundary hmers of the read
         //in this case the value of the genome hmer is uncertain
         if ( spread ) {
-            _spreadFlowProbs(findFirstNonZero(key));
-            _spreadFlowProbs(findLastNonZero(key));
+            spreadFlowLengthProbsAcrossCountsAtFlow(findFirstNonZero(key));
+            spreadFlowLengthProbsAcrossCountsAtFlow(findLastNonZero(key));
         }
     }
 
-    private int[] findLeftClipping() {
+    private int[] findLeftClippingFromCigar() {
         final List<CigarElement> cigar = getCigarElements();
         final int[] result = new int[2];
         if (cigar.size() == 0 ) {
@@ -706,26 +613,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
 
     private int[] findLeftClipping(final int basesClipped){
-        final int[] result = new int[2];
-        if (basesClipped==0){
-            return result;
-        }
-
-        int stopClip = 0;
-        for (int i = 0 ; i < flow2base.length; i++ ) {
-
-            if (flow2base[i] + key[i] >= basesClipped) {
-                stopClip = i;
-                break;
-            }
-        }
-        final int hmerClipped = basesClipped - flow2base[stopClip] - 1;
-        result[0] = stopClip;
-        result[1] = hmerClipped;
-        return result;
+        return FlowBasedReadUtils.findLeftClipping(basesClipped, flow2base, key);
     }
 
-    private int[] findRightClipping() {
+    private int[] findRightClippingFromCigar() {
         final List<CigarElement> cigar = getCigarElements();
         final int[] result = new int[2];
         if (cigar.size() == 0 ) {
@@ -747,30 +638,13 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     }
 
     private int[] findRightClipping(final int basesClipped) {
-        final int[] result = new int[2];
-        if (basesClipped==0){
-            return result;
-        }
-
-        int stopClip = 0;
-
         final int[] rkey = new int[key.length];
         for (int i = 0 ; i < key.length; i++ ){
             rkey[i] = key[key.length-1-i];
         }
+        final int[] rflow2base = FlowBasedKeyCodec.getKeyToBase(rkey);
 
-        final int[] rflow2base = FlowBasedKeyCodec.getKey2Base(rkey);
-        for (int i = 0 ; i < rflow2base.length; i++ ) {
-            if (rflow2base[i] + rkey[i] >= basesClipped) {
-                stopClip = i;
-                break;
-            }
-        }
-
-        final int hmerClipped = basesClipped - rflow2base[stopClip] - 1;
-        result[0] = stopClip;
-        result[1] = hmerClipped;
-        return result;
+        return FlowBasedReadUtils.findRightClipping(basesClipped, rflow2base, rkey);
     }
 
 
@@ -783,10 +657,13 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     /**
      * Flow matrix logger
+     *
+     * This is used exclusively for testing
+     *
      * @param oos
      * @throws IOException
      */
-    public void writeMatrix(final OutputStreamWriter oos)
+    protected void writeMatrix(final OutputStreamWriter oos)
             throws IOException {
         final DecimalFormat formatter = new DecimalFormat("0.0000", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
 
@@ -808,7 +685,16 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             final String Ti = (key[col] != 0) ? Integer.toString(ti[basesOfs]) : ".";
             for (int row = 0; row < flowMatrix.length; row++) {
                 final String s = formatter.format(flowMatrix[row][col]);
-                oos.write(String.format("%d,%d,%d,%c,%s,%s,%s,%s %s\n", col, row, key[col], base, bi, q, Ti, isReverseStrand() ? "r" : ".", s));
+                oos.write(""
+                        + col + ","
+                        + row + ","
+                        + key[col] + ","
+                        + (char)base + ","
+                        + bi + ","
+                        + q + ","
+                        + Ti + ","
+                        + (isReverseStrand() ? "r" : ".") + " "
+                        + s + "\n");
             }
             if ( key[col] != 0 )
                 basesOfs +=  key[col];
@@ -892,6 +778,9 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     }
 
+    /**
+     * clip probability values to fbargs.probabilityRatioThreshold
+     */
     private void clipProbs() {
         for ( int i = 0 ; i < getMaxHmer(); i++ ) {
             for ( int j =0; j < getNFlows(); j++) {
@@ -903,6 +792,9 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
+    /**
+     * remove probabilities larger than 1
+     */
     private void removeLargeProbs(){
         for (int i = 0; i < getNFlows(); i++){
             for (int j = 0 ; j < getMaxHmer()+1; j++) {
@@ -913,6 +805,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
+    /**
+     * This is vestigial and applies only to old formats
+     * @param key_kh
+     */
     private void removeLongIndels(final int [] key_kh ){
         for ( int i = 0 ; i < getNFlows(); i++ ) {
             for (int j = 0; j < getMaxHmer()+1; j++){
@@ -923,6 +819,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
+    /**
+     * This is vestigial and applies only to old formats
+     * @param key_kh
+     */
     private void removeOneToZeroProbs(final int [] key_kh) {
         for (int i = 0 ; i < getNFlows(); i++){
             if (key_kh[i] == 0){
@@ -934,6 +834,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     }
 
 
+    /**
+     * Quantize probability values according to fbargs.probabilityQuantization and fbargs.probabilityScalingFactor
+     * @param key_kh
+     */
 
     private void quantizeProbs(final int [] kd_probs ) {
         final int nQuants = fbargs.probabilityQuantization;
@@ -947,6 +851,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
+    /**
+     * Smooth out probabilities by averaging with neighbours
+     * @param kr
+     */
     private void smoothIndels(final int [] kr ) {
         for ( int i = 0 ; i < kr.length; i++ ){
             final int idx = kr[i];
@@ -1095,7 +1003,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             bases = ReadUtils.getBasesReverseComplement(inputRead).getBytes();
         }
 
-        final int[] key = FlowBasedKeyCodec.base2key(bases, flowOrder);
+        final int[] key = FlowBasedKeyCodec.baseArrayToKey(bases, flowOrder);
         final int nTrimFlows = Math.min(nUncertainFlows, key.length);
         int result = 0;
         for (int i = 0 ; i < nTrimFlows; i++){
@@ -1106,6 +1014,115 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     public static void setMinimalReadLength(int minimalReadLength) {
         FlowBasedRead.minimalReadLength = minimalReadLength;
+    }
+
+    // convert qualities and ti tag to flow matrix
+    private void readVestigialFlowMatrixFromTI(final String _flowOrder) {
+
+        vestigialOneShotLogger.warn("Vestigial read format detected: " + samRecord);
+
+        // generate key (base to flow space)
+        setDirection(Direction.REFERENCE);  // base is always in reference/alignment direction
+        key = FlowBasedKeyCodec.baseArrayToKey(samRecord.getReadBases(), _flowOrder);
+        flow2base = FlowBasedKeyCodec.getKeyToBase(key);
+        flowOrder = FlowBasedKeyCodec.getFlowToBase(_flowOrder, key.length);
+
+        // initialize matrix
+        flowMatrix = new double[maxHmer+1][key.length];
+        for (int i = 0 ; i < maxHmer+1; i++) {
+            for (int j = 0 ; j < key.length; j++ ){
+                flowMatrix[i][j] = fbargs.fillingValue;;
+            }
+        }
+
+        // access qual, convert to flow representation
+        final byte[]      quals = samRecord.getBaseQualities();
+        final byte[]      ti = samRecord.getByteArrayAttribute(FLOW_MATRiX_OLD_TAG_TI);
+        final double[]    probs = new double[quals.length];
+        for ( int i = 0 ; i < quals.length ; i++ ) {
+            final double q = quals[i];
+            final double p = QualityUtils.qualToErrorProb(q);
+            probs[i] = p*2;
+        }
+
+        // apply key and qual/ti to matrix
+        int     qualOfs = 0;
+        for ( int i = 0 ; i < key.length ; i++ ) {
+            final int        run = key[i];
+
+            // the probability is not divided by two for hmers of length 1
+            if ( run == 1 ) {
+                probs[qualOfs] = probs[qualOfs]/2;
+            }
+
+            //filling the probability for the called hmer (not reported by the quals
+            if ( run <= maxHmer ) {
+                flowMatrix[run][i] = (run > 0) ? (1 - probs[qualOfs]) : 1;
+                //require a prob. at least 0.1
+                flowMatrix[run][i] = Math.max(MINIMAL_CALL_PROB, flowMatrix[run][i]);
+
+            }
+
+            if ( run != 0 ) {
+                if ( quals[qualOfs] != 40 ) {
+                    final int     run1 = (ti[qualOfs] == 0) ? (run - 1) : (run + 1);
+                    if (( run1 <= maxHmer ) && (run <= maxHmer)){
+                        flowMatrix[run1][i] = probs[qualOfs] / flowMatrix[run][i];
+                    }
+                    if (run <= maxHmer) {
+                        flowMatrix[run][i] /= flowMatrix[run][i]; // for comparison to the flow space - probabilities are normalized by the key's probability
+                    }
+                }
+                qualOfs += run;
+            }
+
+        }
+
+        //this is just for tests of all kinds of
+        applyFilteringFlowMatrix();
+    }
+
+    // code for reading BAM format where the flow matrix is stored in sparse representation in kr,kf,kh and kd tags
+    // used for development of the new basecalling, but not in production code
+    private void readVestigialFlowMatrixFromKR(final String _flowOrder) {
+
+        vestigialOneShotLogger.warn("Vestigial read format detected: " + samRecord);
+
+        key = getAttributeAsIntArray(FLOW_MATRiX_OLD_TAG_KR, true);
+
+        // creates a translation from flow # to base #
+        flow2base = FlowBasedKeyCodec.getKeyToBase(key);
+
+        // create a translation from
+        flowOrder = FlowBasedKeyCodec.getFlowToBase(_flowOrder, key.length);
+
+        flowMatrix = new double[maxHmer+1][key.length];
+        for (int i = 0 ; i < maxHmer+1; i++) {
+            for (int j = 0 ; j < key.length; j++ ){
+                flowMatrix[i][j] = fbargs.fillingValue;
+            }
+        }
+
+        int [] kh = getAttributeAsIntArray( "kh" , true);
+        int [] kf = getAttributeAsIntArray("kf", false);
+        int [] kd = getAttributeAsIntArray( "kd", true);
+
+        final int [] key_kh = key;
+        final int [] key_kf = new int[key.length];
+        for ( int i = 0 ; i < key_kf.length ; i++)
+            key_kf[i] = i;
+        final int [] key_kd = new int[key.length];
+
+        kh = ArrayUtils.addAll(kh, key_kh);
+        kf = ArrayUtils.addAll(kf, key_kf);
+        kd = ArrayUtils.addAll(kd, key_kd);
+
+        quantizeProbs(kd);
+
+        final double [] kdProbs = phredToProb(kd);
+        fillFlowMatrix( kh, kf, kdProbs);
+        applyFilteringFlowMatrix();
+        validateSequence();
     }
 
 }

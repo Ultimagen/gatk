@@ -2,6 +2,7 @@ package org.broadinstitute.hellbender.utils.read;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.broadinstitute.hellbender.exceptions.GATKException;
+import org.broadinstitute.hellbender.utils.BaseUtils;
 
 import java.util.ArrayList;
 
@@ -14,7 +15,7 @@ public class FlowBasedKeyCodec {
      * @return Array of flow values
      */
 
-    static public int[] base2key(final byte[] bases, final String flowOrder){
+    static public int[] baseArrayToKey(final byte[] bases, final String flowOrder){
 
         final ArrayList<Integer> result = new ArrayList<>();
         final byte[] flowOrderBytes = flowOrder.getBytes();
@@ -24,13 +25,14 @@ public class FlowBasedKeyCodec {
         int periodGuard = 0;
         while ( loc < bases.length ) {
             final byte flowBase = flowOrderBytes[flowNumber%period];
-            if ((bases[loc]!=flowBase) && ( bases[loc]!= FlowBasedRead.N_ASCII)) {
+            if ((bases[loc]!=flowBase) && ( bases[loc]!= BaseUtils.Base.N.base)) {
                 result.add(0);
                 if ( ++periodGuard > period )
-                    throw new GATKException("base2key periodGuard tripped, on " + new String(bases) + ", flowOrder: " + flowOrder);
+                    throw new GATKException("baseArrayToKey periodGuard tripped, on " + new String(bases) + ", flowOrder: " + flowOrder
+                    + " This probably indicates the presence of a base (value) in the sequence that is not included in the provided flow order");
             } else {
                 int count = 0;
-                while ( ( loc < bases.length) && ((bases[loc]==flowBase) || (bases[loc]== FlowBasedRead.N_ASCII)) ){
+                while ( ( loc < bases.length) && ((bases[loc]==flowBase) || (bases[loc]== BaseUtils.Base.N.base)) ){
                     loc++;
                     count ++;
                 }
@@ -48,24 +50,10 @@ public class FlowBasedKeyCodec {
 
     /**
      * For every flow of the key output the index of the last base that was output prior to this flow
-     * @param key
+     * @param key given key
      * @return array
      */
-    static protected int[] getKey2Base(final byte[] key){
-        final int[] result = new int[key.length];
-        result[0] = -1;
-        for (int i = 1 ; i < result.length; i++) {
-            result[i] = result[i-1] + key[i-1];
-        }
-        return result;
-    }
-
-    /**
-     * For every flow of the key output the index of the last base that was output prior to this flow
-     * @param key
-     * @return array
-     */
-    static public int[] getKey2Base(final int[] key) {
+    static public int[] getKeyToBase(final int[] key) {
         final int[] result = new int[key.length];
         result[0] = -1;
         for (int i = 1; i < result.length; i++) {
@@ -77,12 +65,12 @@ public class FlowBasedKeyCodec {
 
     /**
      * For every flow of the key output the nucleotide that is being read for this flow
-     * @param flowOrder
+     * @param flowOrder given flow order
      * @param expectedLength the length of the key (key is not provided)
      * @return array of bases
      */
 
-    static public byte[] getFlow2Base(final String flowOrder, final int expectedLength) {
+    static public byte[] getFlowToBase(final String flowOrder, final int expectedLength) {
         final byte[] result = new byte[expectedLength] ;
         for ( int i = 0; i < result.length; i++ ) {
             result[i] = (byte)flowOrder.charAt(i%flowOrder.length());
@@ -112,8 +100,8 @@ public class FlowBasedKeyCodec {
      *
      * The rules are as follows:
      *  - For every run of homopolymers, the minimum score for any given base is translated to cover the whole run
-     *  - For every 0 base flow, the score from the previous filled flow is coppied into place.
-     *  - For the beginning of the array (in the case of preceeding 0-flows) the given default value is uesd.
+     *  - For every 0 base flow, the score from the previous filled flow is copied into place.
+     *  - For the beginning of the array (in the case of preceding 0-flows) the given default value is used.
      *
      * Example:
      *  A read with the following bases with a base-space calculated into flow space (ACTG) as:
@@ -131,7 +119,7 @@ public class FlowBasedKeyCodec {
      * @return Array of translated bases comparable to the keyLength
      */
     @VisibleForTesting
-    static public byte[] baseArray2KeySpace(final byte[] bases, final int keyLength, final byte[] baseSpacedArrayToConvert, final byte defaultQual, final String flowOrder){
+    static public byte[] baseArrayToKeySpace(final byte[] bases, final int keyLength, final byte[] baseSpacedArrayToConvert, final byte defaultQual, final String flowOrder){
 
         if (bases.length != baseSpacedArrayToConvert.length) {
             throw new IllegalArgumentException("Read and qual arrays do not match");
@@ -145,11 +133,11 @@ public class FlowBasedKeyCodec {
         final int period = flowOrderBytes.length;
         while ( loc < bases.length ) {
             final byte flowBase = flowOrderBytes[flowNumber%period];
-            if ((bases[loc]!=flowBase) && ( bases[loc]!= FlowBasedRead.N_ASCII)) {
+            if ((bases[loc]!=flowBase) && ( bases[loc]!= BaseUtils.Base.N.base)) {
                 result[flowNumber] = lastQual;
             } else {
                 byte qual = Byte.MAX_VALUE;
-                while ( ( loc < bases.length) && ((bases[loc]==flowBase) || (bases[loc]== FlowBasedRead.N_ASCII)) ){
+                while ( ( loc < bases.length) && ((bases[loc]==flowBase) || (bases[loc]== BaseUtils.Base.N.base)) ){
                     qual = (byte)Math.min(baseSpacedArrayToConvert[loc], qual);
                     loc++;
                 }

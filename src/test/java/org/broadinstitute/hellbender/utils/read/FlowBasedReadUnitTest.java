@@ -99,7 +99,7 @@ public class FlowBasedReadUnitTest extends GATKBaseTest {
     }
 
     @Test
-    public void testFlowBasedReadConstructorEforcesMatrix() {
+    public void testFlowBasedReadConstructorEnforcesMatrix() {
 
         // make a non-flow read
         final GATKRead        read = makeRead("AAAAA".getBytes(), false);
@@ -128,4 +128,6 @@ public class FlowBasedReadUnitTest extends GATKBaseTest {
         // try to make it into a flow base read object, should not fail
         new FlowBasedRead(read, FlowBasedRead.DEFAULT_FLOW_ORDER, FlowBasedRead.MAX_CLASS, new FlowBasedArgumentCollection());
     }
+
+
 }

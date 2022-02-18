@@ -47,7 +47,8 @@ public class PostFilterOnRamp extends OnRampBase {
 
         // create returned object
         final IndexedAlleleList<Haplotype> allelList = new IndexedAlleleList<>(haplotypes);
-        final AlleleLikelihoods<GATKRead, Haplotype>      alleleLikelihoods = new AlleleLikelihoods<GATKRead, Haplotype>(
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        final AlleleLikelihoods<GATKRead, Haplotype>      alleleLikelihoods = AlleleLikelihoods.<GATKRead, Haplotype>createAlleleLikelihoods(
                                                         allelList, sampleList, evidenceBySampleList, null, values);
         for ( int sampleIndex = 0 ; sampleIndex < sampleList.numberOfSamples() ; sampleIndex++ ) {
             alleleLikelihoods.sampleMatrix(sampleIndex);

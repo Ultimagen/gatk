@@ -32,6 +32,9 @@ public final class Haplotype extends Allele {
     private int alignmentStartHapwrtRef;
     private double score = Double.NaN;
 
+    /**
+     * see {@link org.broadinstitute.hellbender.tools.walkers.haplotypecaller.LongHomopolymerHaplotypeCollapsingEngine} for a description of the semantics of collapsing
+     */
     private boolean isCollapsed;
     private int uniquenessValue;   // uniquely diffrentiates the haplotype from others with same ref/bases.
 

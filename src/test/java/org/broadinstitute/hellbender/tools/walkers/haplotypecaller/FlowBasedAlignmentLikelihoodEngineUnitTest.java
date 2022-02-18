@@ -54,7 +54,7 @@ public class FlowBasedAlignmentLikelihoodEngineUnitTest extends GATKBaseTest {
         final List<Haplotype> haplotypes = getTestHaplotypes(extrapolatedReads);
 
         // run the engine
-        final AlleleLikelihoods<GATKRead, Haplotype> result = engine.computeReadLikelihoods(haplotypes, extrapolatedReads, false, fileHeader);
+        final AlleleLikelihoods<GATKRead, Haplotype> result = FlowBasedAlignmentLikelihoodEngineTestUtils.computeReadLikelihoods(haplotypes, extrapolatedReads, false, fileHeader, engine);
         Assert.assertNotNull(result);
 
         // check results (sanity)

@@ -238,9 +238,6 @@ public class FlowBasedHMMEngine implements ReadLikelihoodCalculationEngine {
             processedReads.add(fbRead);
         }
 
-        if ( flowOrder == null ) {
-            throw new GATKException("Unable to perform flow based alignment without the flow order");
-        }
         for (int i = 0; i < likelihoods.numberOfAlleles(); i++){
             final FlowBasedHaplotype fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i), flowOrder);
             processedHaplotypes.add(fbh);

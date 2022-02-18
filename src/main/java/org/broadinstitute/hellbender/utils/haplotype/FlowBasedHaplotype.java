@@ -3,7 +3,9 @@ package org.broadinstitute.hellbender.utils.haplotype;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.util.Locatable;
 import htsjdk.variant.variantcontext.Allele;
+import org.apache.commons.lang3.ArrayUtils;
 import org.broadinstitute.hellbender.utils.read.FlowBasedKeyCodec;
+import org.broadinstitute.hellbender.utils.read.FlowBasedReadUtils;
 
 /**
  * Haplotype that also keeps information on the flow space @see FlowBasedRead
@@ -22,14 +24,14 @@ public class FlowBasedHaplotype  extends Allele {
     /* Create flow based haplotype from the haplotype */
     public FlowBasedHaplotype(final Haplotype sourceHaplotype, final String flowOrder){
         super(sourceHaplotype.getBases(), sourceHaplotype.isReference());
-        key = FlowBasedKeyCodec.base2key(sourceHaplotype.getBases(), flowOrder);
+        key = FlowBasedKeyCodec.baseArrayToKey(sourceHaplotype.getBases(), flowOrder);
         genomeLoc = sourceHaplotype.getGenomeLocation();
         cigar = sourceHaplotype.getCigar();
-        flow2base = FlowBasedKeyCodec.getKey2Base(key);
+        flow2base = FlowBasedKeyCodec.getKeyToBase(key);
         rKey = key.clone();
-        reverse(rKey, rKey.length);
-        rFlow2Base = FlowBasedKeyCodec.getKey2Base(rKey);
-        flowOrderArray = FlowBasedKeyCodec.getFlow2Base(flowOrder, key.length);
+        ArrayUtils.reverse(rKey);
+        rFlow2Base = FlowBasedKeyCodec.getKeyToBase(rKey);
+        flowOrderArray = FlowBasedKeyCodec.getFlowToBase(flowOrder, key.length);
     }
 
 
@@ -57,91 +59,15 @@ public class FlowBasedHaplotype  extends Allele {
         return cigar;
     }
 
-    /* clips flows from the left to clip the input number of bases
-    Needed to trim the haplotype to the read
-    Returns number of flows to remove and the change in the left most remaining flow if necessary
-     */
     public int[] findLeftClipping(final int baseClipping) {
-        final int [] result = new int[2];
-        if (baseClipping == 0 ){
-            return result;
-        }
-
-        int stopClip = 0;
-        for (int i = 0 ; i < flow2base.length; i++ ) {
-
-            if (flow2base[i] + key[i] >= baseClipping) {
-                stopClip = i;
-                break;
-            }
-        }
-        final int hmerClipped = baseClipping - flow2base[stopClip] - 1;
-        result[0] = stopClip;
-        result[1] = hmerClipped;
-        return result;
+        return FlowBasedReadUtils.findLeftClipping(baseClipping, flow2base, key);
     }
-
-    /* clips flows from the right to trim the input number of bases
-    Returns number of flows to remove and the change in the right most flow.
-     */
 
     public int[] findRightClipping(final int baseClipping) {
-        final int [] result = new int[2];
-        if (baseClipping == 0 ){
-            return result;
-        }
-
-
-        int stopClip = 0;
-
-        for (int i = 0; i < rFlow2Base.length; i++ ) {
-            if (rFlow2Base[i] + rKey[i] >= baseClipping) {
-                stopClip = i;
-                break;
-            }
-        }
-
-        final int hmerClipped = baseClipping - rFlow2Base[stopClip] - 1;
-        result[0] = stopClip;
-        result[1] = hmerClipped;
-        return result;
-    }
-
-    private void reverse(final int [] a, final int n)
-    {
-        int i, t;
-        for (i = 0; i < n / 2; i++) {
-            t = a[i];
-            a[i] = a[n - i - 1];
-            a[n - i - 1] = t;
-        }
-
+        return FlowBasedReadUtils.findRightClipping(baseClipping, rFlow2Base, rKey);
     }
 
     public byte [] getFlowOrderArray() {
         return flowOrderArray;
-    }
-
-    //check if two haplotypes are equal up to a single hmer change
-    public boolean equalUpToHmerChange(final FlowBasedHaplotype other ) {
-        if (other.getKeyLength() != getKeyLength() ){
-            return false;
-        }
-        int diffCounts = 0;
-        final int [] otherkey = other.getKey();
-        for (int i = 0 ; i < getKeyLength(); i ++ ) {
-            if (((key[i]==0) && (otherkey[i]!=0)) ||
-                    ((key[i]!=0) && ( otherkey[i]==0))) {
-                return false;
-            }
-
-            if (Math.abs(key[i]-otherkey[i]) > 0 ){
-                diffCounts ++;
-            }
-            if (diffCounts > 1 ) {
-                return false;
-            }
-        }
-        return true;
     }
 }
