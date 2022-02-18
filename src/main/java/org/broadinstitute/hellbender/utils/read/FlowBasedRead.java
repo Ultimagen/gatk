@@ -414,7 +414,11 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         return (prob <= 1) ? prob : 1;
     }
 
-    // this applies clipping when the flow matrix is in flow space. Does nothing in base space
+    /*
+    * Legacy function from the time when the error probability were in flow space and when the read was clipped we had to
+    * translate the clipping in the base space to the clipping in the flow space. Now does nothing (isBaseFormat() is true)
+    * but is kept for R&D cases.
+     */
     public void applyAlignment(){
         if ((getDirection() == Direction.SYNTHESIS) && ( isReverseStrand() )) {
             flipMatrix();
@@ -742,9 +746,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         return getEnd() - trimRightBase;
     }
 
+
+
     //functions that take care of simulating base format
     //they perform modifications on the flow matrix that are defined in applyFilteringFlowMatrix
-
     //this function was only applied when we tested what is the necessary information to be reported in the flow matrix
     private void applyFilteringFlowMatrix(){
 
@@ -836,7 +841,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     /**
      * Quantize probability values according to fbargs.probabilityQuantization and fbargs.probabilityScalingFactor
-     * @param key_kh
+     * @param kd_probs
      */
 
     private void quantizeProbs(final int [] kd_probs ) {
@@ -866,6 +871,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
+    /**
+     * Only report probability of insertions or of deletions, never both
+     * @param kr
+     */
     private void reportInsOrDel(final int [] kr ) {
         for ( int i = 0 ; i < kr.length; i++ ){
             final int idx = kr[i];
@@ -878,6 +887,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
     }
 
+    /**
+     * Combine all probabilities of insertions together and report them as probabilities of 1-mer insertion
+     * Combine all probabilities of deletions together and report them as probabilities of 1-mer deletion
+     */
     private void lumpProbs() {
 
         for (int i = 0; i < getMaxHmer(); i++) {
@@ -901,7 +914,10 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     }
 
-
+    /*
+    Given full vector of error probabilities retain only the probabilities that can be reported in the base format
+    (N+1/2 highest error probabilities)
+     */
     private void reportMaxNProbsHmer(final int [] key) {
         final double [] tmpContainer = new double[maxHmer];
         for (int i = 0 ; i < key.length;i++){

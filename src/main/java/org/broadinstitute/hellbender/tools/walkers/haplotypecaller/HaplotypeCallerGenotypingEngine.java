@@ -517,10 +517,10 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
         final ReferenceContext referenceContext = new ReferenceContext(refData, locus, refLocInterval);
 
         final VariantContext untrimmedResult =  annotationEngine.annotateContext(call, tracker, referenceContext, readAlleleLikelihoods, Optional.empty(), Optional.empty(), Optional.ofNullable(preFilteringAlleleLikelihoods), a -> true);
-        if ( mergedVC.getAttribute(AssemblyBasedCallerUtils.EXT_COLLAPSED_TAG) != null )
+        if ( mergedVC.getAttribute(AssemblyBasedCallerUtils.EXT_COLLAPSED_TAG) != null ) {
             untrimmedResult.getCommonInfo().putAttribute(AssemblyBasedCallerUtils.EXT_COLLAPSED_TAG,
-                                    mergedVC.getAttribute(AssemblyBasedCallerUtils.EXT_COLLAPSED_TAG));
-
+                    mergedVC.getAttribute(AssemblyBasedCallerUtils.EXT_COLLAPSED_TAG));
+        }
         // NOTE: We choose to reverseTrimAlleles() here as opposed to when we actually do the trimming because otherwise we would have to resolve
         //       the mismatching readAlleleLikelihoods object which is keyed to the old, possibly incorrectly trimmed alleles.
         return untrimmedResult.getAlleles().size() == mergedAllelesListSizeBeforePossibleTrimming ? untrimmedResult
