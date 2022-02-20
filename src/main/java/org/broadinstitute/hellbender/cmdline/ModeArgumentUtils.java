@@ -13,26 +13,24 @@ import java.util.*;
 public class ModeArgumentUtils {
 
     protected static final Logger logger = LogManager.getLogger(ModeArgumentUtils.class);
-    public static final String OPTIONAL_SUFFIX = "/o";
 
     /**
      * set this mode's defaults - using a set of argValues
      */
-    public static Map<String, String> setArgValues(final CommandLineParser parser, final String[] argValues, final String modeName) {
+    public static void setArgValues(final CommandLineParser parser, final String[] argValues, final String modeName) {
         final Map<String, String>  modifiedArgs = new LinkedHashMap<>();
 
         for ( int i = 0 ; i < argValues.length ; i += 2 ) {
-            if ( !hasBeenSet(parser, cleanParamName(argValues[i])) ) {
+            if ( !hasBeenSet(parser, argValues[i]) ) {
                 if ( setValue(parser, argValues[i], argValues[i+1]) ) {
-                    modifiedArgs.put(cleanParamName(argValues[i]), argValues[i+1]);
+                    modifiedArgs.put(argValues[i], argValues[i+1]);
                 }
             } else {
-                logger.info("parameter not set by this mode, as it was already set on the command line: " + cleanParamName(argValues[i]));
+                logger.info("parameter not set by this mode, as it was already set on the command line: " + argValues[i]);
             }
         }
 
         logModeNotice(modifiedArgs, modeName);
-        return modifiedArgs;
     }
 
     private static boolean hasBeenSet(final CommandLineParser parser, final String alias) {
@@ -48,14 +46,9 @@ public class ModeArgumentUtils {
 
     private static boolean setValue(final CommandLineParser parser, final String alias, final String value) {
         if ( parser instanceof CommandLineArgumentParser ) {
-            NamedArgumentDefinition namedArg = ((CommandLineArgumentParser)parser).getNamedArgumentDefinitionByAlias(cleanParamName(alias));
+            NamedArgumentDefinition namedArg = ((CommandLineArgumentParser)parser).getNamedArgumentDefinitionByAlias(alias);
             if ( namedArg == null ) {
-                if ( isParamOptional(alias) ) {
-                    // exit silenently, as it is optional
-                    return false;
-                } else {
-                    throw new IllegalArgumentException("alias not found: " + alias);
-                }
+                throw new IllegalArgumentException("alias not found: " + alias);
             }
 
             PrintStream         ps = new PrintStream(new ByteArrayOutputStream());
@@ -66,14 +59,6 @@ public class ModeArgumentUtils {
             throw new IllegalArgumentException("command line parser is not CommandLineArgumentParser");
         }
 
-    }
-
-    private static boolean isParamOptional(final String name) {
-        return name.endsWith(OPTIONAL_SUFFIX);
-    }
-
-    private static String cleanParamName(final String name) {
-        return name.replace(OPTIONAL_SUFFIX, "");
     }
 
     private static void logModeNotice(final Map<String, String> modifiedArgs, final String modeName) {

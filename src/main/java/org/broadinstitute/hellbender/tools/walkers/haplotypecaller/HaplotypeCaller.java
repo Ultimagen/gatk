@@ -15,7 +15,6 @@ import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.engine.filters.MappingQualityReadFilter;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.engine.spark.AssemblyRegionArgumentCollection;
-import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.annotator.Annotation;
 import org.broadinstitute.hellbender.tools.walkers.annotator.HaplotypeFilteringAnnotation;
 import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine;
@@ -177,7 +176,7 @@ public class HaplotypeCaller extends AssemblyRegionWalker {
             Optional<ReadFilter> filterOptional = readFilterPlugin.getResolvedInstances().stream().filter(rf -> rf instanceof MappingQualityReadFilter).findFirst();
             filterOptional.ifPresent(readFilter -> ((MappingQualityReadFilter) readFilter).minMappingQualityScore = 1);
         }
-        if (hcArgs.flowMode != FlowBasedArgumentCollection.FlowMode.NONE) {
+        if (hcArgs.flowMode != HaplotypeCallerArgumentCollection.FlowMode.NONE) {
             ModeArgumentUtils.setArgValues(
                     getCommandLineParser(),
                     hcArgs.flowMode.getNameValuePairs(),

@@ -1,16 +1,15 @@
 package org.broadinstitute.hellbender.tools.walkers.mutect;
 
 import htsjdk.variant.variantcontext.VariantContext;
+import org.apache.commons.lang3.ArrayUtils;
 import org.broadinstitute.barclay.argparser.Advanced;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.ArgumentCollection;
+import org.broadinstitute.hellbender.cmdline.ReadFilterArgumentDefinitions;
 import org.broadinstitute.hellbender.engine.FeatureInput;
 import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
 import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyBasedCallerArgumentCollection;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.MutectReadThreadingAssemblerArgumentCollection;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.ReadThreadingAssemblerArgumentCollection;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.ReferenceConfidenceMode;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.*;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.readthreading.ReadThreadingAssembler;
 import org.broadinstitute.hellbender.tools.walkers.mutect.filtering.FilterMutectCalls;
 import org.broadinstitute.hellbender.tools.walkers.readorientation.CollectF1R2CountsArgumentCollection;
@@ -284,5 +283,50 @@ public class M2ArgumentCollection extends AssemblyBasedCallerArgumentCollection 
 
     @Advanced
     @Argument(fullName = FLOW_M2_MODE_LONG_NAME, optional = true, doc="Single argument for enabling the bulk of Flow Based features. NOTE: THIS WILL OVERWRITE PROVIDED ARGUMENT CHECK TOOL INFO TO SEE WHICH ARGUMENTS ARE SET).")
-    public FlowBasedArgumentCollection.FlowMode flowMode = FlowBasedArgumentCollection.FlowMode.NONE;
+    public FlowMode flowMode = FlowMode.NONE;
+
+    /**
+     * the different flow modes, in terms of their parameters and their values
+     *
+     * NOTE: a parameter value ending with /o is optional - meaning it will not fail the process if it
+     * is not existent on the target parameters collection. This allows setting parameters which are
+     * specific to only a subset of the tools supporting flow-mode
+     */
+    public enum FlowMode {
+        NONE(new String[]{}, null),
+
+        STANDARD(new String[]{
+                MIN_BASE_QUALITY_SCORE_SHORT_NAME, "0",
+                FILTER_ALLELES, "true",
+                FILTER_ALLELES_SOR_THRESHOLD, "3",
+                FLOW_ASSEMBLY_COLLAPSE_HMER_SIZE_LONG_NAME, "12",
+                FlowBasedArgumentCollection.FLOW_MATRIX_MODS_LONG_NAME, "10,12,11,12",
+                OVERRIDE_FRAGMENT_SOFTCLIP_CHECK_LONG_NAME, "true",
+                FlowBasedAlignmentArgumentCollection.FLOW_LIKELIHOOD_PARALLEL_THREADS_LONG_NAME, "2",
+                FlowBasedAlignmentArgumentCollection.FLOW_LIKELIHOOD_OPTIMIZED_COMP_LONG_NAME, "true",
+                LikelihoodEngineArgumentCollection.LIKELIHOOD_CALCULATION_ENGINE_FULL_NAME, ReadLikelihoodCalculationEngine.Implementation.FlowBased.toString()
+        }, null),
+
+        ADVANCED(new String[]{
+                ReadThreadingAssemblerArgumentCollection.PRUNING_LOD_THRESHOLD_LONG_NAME, "3.0",
+                LikelihoodEngineArgumentCollection.ENABLE_DYNAMIC_READ_DISQUALIFICATION_FOR_GENOTYPING_LONG_NAME, "true",
+                LikelihoodEngineArgumentCollection.DYNAMIC_READ_DISQUALIFICATION_THRESHOLD_LONG_NAME, "10",
+                ReadFilterArgumentDefinitions.MINIMUM_MAPPING_QUALITY_NAME, "1"
+        }, STANDARD);
+
+        final private String[] nameValuePairs;
+        final private FlowMode parent;
+
+        FlowMode(final String[] nameValuePairs, final FlowMode parent) {
+            this.nameValuePairs = nameValuePairs;
+            this.parent = parent;
+        }
+
+        public String[] getNameValuePairs() {
+            if ( parent == null )
+                return nameValuePairs;
+            else
+                return ArrayUtils.addAll(nameValuePairs, parent.getNameValuePairs());
+        }
+    }
 }
