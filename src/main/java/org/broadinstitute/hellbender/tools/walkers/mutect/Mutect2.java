@@ -11,12 +11,13 @@ import org.broadinstitute.hellbender.cmdline.programgroups.ShortVariantDiscovery
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.exceptions.UserException;
+import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.annotator.*;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.ReferenceConfidenceMode;
 import org.broadinstitute.hellbender.transformers.ReadTransformer;
 import org.broadinstitute.hellbender.utils.downsampling.MutectDownsampler;
 import org.broadinstitute.hellbender.utils.downsampling.ReadsDownsampler;
-import org.broadinstitute.hellbender.utils.flow.FlowModeArgumentUtils;
+import org.broadinstitute.hellbender.cmdline.ModeArgumentUtils;
 import org.broadinstitute.hellbender.utils.variant.writers.SomaticGVCFWriter;
 
 import java.io.File;
@@ -320,8 +321,12 @@ public final class Mutect2 extends AssemblyRegionWalker {
      */
     @Override
     protected String[] customCommandLineValidation() {
-        if (MTAC.flowMode != FlowModeArgumentUtils.FlowMode.NONE) {
-            FlowModeArgumentUtils.setFlowMode(getCommandLineParser(), MTAC.flowMode);
+        if (MTAC.flowMode != FlowBasedArgumentCollection.FlowMode.NONE) {
+            ModeArgumentUtils.setArgValues(
+                    getCommandLineParser(),
+                    MTAC.flowMode.getNameValuePairs(),
+                    M2ArgumentCollection.FLOW_M2_MODE_LONG_NAME
+                    );
         }
         return null;
     }

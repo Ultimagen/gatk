@@ -1,9 +1,13 @@
 package org.broadinstitute.hellbender.tools;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.broadinstitute.barclay.argparser.Advanced;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.Hidden;
+import org.broadinstitute.hellbender.cmdline.ReadFilterArgumentDefinitions;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.*;
 import org.broadinstitute.hellbender.utils.Utils;
+import org.broadinstitute.hellbender.cmdline.ModeArgumentUtils;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 
 import java.io.Serializable;
@@ -138,4 +142,53 @@ public class FlowBasedArgumentCollection implements Serializable {
 
         return flowMatrixModsInstructions;
     }
+
+    /**
+     * the different flow modes, in terms of their parameters and their values
+     *
+     * NOTE: a parameter value ending with /o is optional - meaning it will not fail the process if it
+     * is not existent on the target parameters collection. This allows setting parameters which are
+     * specific to only a subset of the tools supporting flow-mode
+     */
+    public enum FlowMode {
+        NONE(new String[]{}, null),
+
+        STANDARD(new String[]{
+                AssemblyBasedCallerArgumentCollection.MIN_BASE_QUALITY_SCORE_SHORT_NAME, "0",
+                AssemblyBasedCallerArgumentCollection.FILTER_ALLELES, "true",
+                AssemblyBasedCallerArgumentCollection.FILTER_ALLELES_SOR_THRESHOLD, "3",
+                AssemblyBasedCallerArgumentCollection.FLOW_ASSEMBLY_COLLAPSE_HMER_SIZE_LONG_NAME, "12",
+                FlowBasedArgumentCollection.FLOW_MATRIX_MODS_LONG_NAME, "10,12,11,12",
+                AssemblyBasedCallerArgumentCollection.OVERRIDE_FRAGMENT_SOFTCLIP_CHECK_LONG_NAME, "true",
+                FlowBasedAlignmentArgumentCollection.FLOW_LIKELIHOOD_PARALLEL_THREADS_LONG_NAME, "2",
+                FlowBasedAlignmentArgumentCollection.FLOW_LIKELIHOOD_OPTIMIZED_COMP_LONG_NAME, "true",
+                LikelihoodEngineArgumentCollection.LIKELIHOOD_CALCULATION_ENGINE_FULL_NAME, ReadLikelihoodCalculationEngine.Implementation.FlowBased.toString()
+        }, null),
+
+        ADVANCED(new String[]{
+                HaplotypeCallerReadThreadingAssemblerArgumentCollection.ADAPTIVE_PRUNING_LONG_NAME + ModeArgumentUtils.OPTIONAL_SUFFIX, "true",
+                ReadThreadingAssemblerArgumentCollection.PRUNING_LOD_THRESHOLD_LONG_NAME, "3.0",
+                LikelihoodEngineArgumentCollection.ENABLE_DYNAMIC_READ_DISQUALIFICATION_FOR_GENOTYPING_LONG_NAME, "true",
+                LikelihoodEngineArgumentCollection.DYNAMIC_READ_DISQUALIFICATION_THRESHOLD_LONG_NAME, "10",
+                HaplotypeCallerArgumentCollection.APPLY_FRD_LONG_NAME + ModeArgumentUtils.OPTIONAL_SUFFIX, "true",
+                ReadFilterArgumentDefinitions.MINIMUM_MAPPING_QUALITY_NAME, "1",
+                HaplotypeCallerArgumentCollection.MAPPING_QUALITY_THRESHOLD_FOR_GENOTYPING_LONG_NAME + ModeArgumentUtils.OPTIONAL_SUFFIX, "1"
+        }, STANDARD);
+
+        final private String[] nameValuePairs;
+        final private FlowMode parent;
+
+        FlowMode(final String[] nameValuePairs, final FlowMode parent) {
+            this.nameValuePairs = nameValuePairs;
+            this.parent = parent;
+        }
+
+        public String[] getNameValuePairs() {
+            if ( parent == null )
+                return nameValuePairs;
+            else
+                return ArrayUtils.addAll(nameValuePairs, parent.getNameValuePairs());
+        }
+    } ;
+
 }
