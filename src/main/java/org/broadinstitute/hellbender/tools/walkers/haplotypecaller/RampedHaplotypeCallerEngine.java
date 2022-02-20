@@ -113,9 +113,16 @@ public class RampedHaplotypeCallerEngine extends HaplotypeCallerEngine {
                     case NONE:
                         break;
                     case POST_FILTER_ON:
+                        if ( rpArgs.offRampType == RampedHaplotypeCallerArgumentCollection.OffRampTypeEnum.PRE_FILTER_OFF ) {
+                            throw new IllegalArgumentException("an on ramp, if present, must be before the off ramp");
+                        }
                         postFilterOnRamp = new PostFilterOnRamp(rpArgs.onRampFile);
                         break;
                     case POST_ASSEMBLER_ON:
+                        if ( rpArgs.offRampType != null &&
+                                rpArgs.offRampType != RampedHaplotypeCallerArgumentCollection.OffRampTypeEnum.NONE ) {
+                            throw new IllegalArgumentException("an on ramp, if present, must be before the off ramp");
+                        }
                         postAssemblerOnRamp = new PostAssemblerOnRamp(rpArgs.onRampFile);
                         break;
                 }
