@@ -168,7 +168,7 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
         for ( Allele a : vc.getAlleles() ) {
             if ( !a.isReference() ) {
                 indelClassify.add(refLength == a.length() ? C_NA : (refLength < a.length() ? C_INSERT : C_DELETE));
-                if ( !a.equals(Allele.SPAN_DEL) && (a.length() != refLength) ) {
+                if ( !isSpecial(a) && (a.length() != refLength) ) {
                     indelLength.add(Math.abs(refLength - a.length()));
                 } else {
                     indelLength.add(null);
@@ -184,7 +184,7 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
         List<Allele> alleles = vc.getAlternateAlleles();
         boolean isSnp = true;
         for (int i = 0;  i < alleles.size(); i++){
-            if (alleles.get(i).equals(Allele.SPAN_DEL)){
+            if (isSpecial(alleles.get(i))){
                 continue;
             }
             if (!localContext.indel.get(i).equals(C_NA)){
@@ -198,7 +198,7 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
 
         boolean isHmer = true;
         for (int i = 0;  i < alleles.size(); i++){
-            if (alleles.get(i).equals(Allele.SPAN_DEL)){
+            if (isSpecial(alleles.get(i))){
                 continue;
             }
             if ((localContext.hmerIndelLength.get(i)==null) || (localContext.hmerIndelLength.get(i)==0)){
@@ -247,7 +247,7 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
             // access alleles
             final Allele      ref = vc.getReference();
             final Allele      alt = a;
-            if ( a.equals(Allele.SPAN_DEL) )
+            if ( isSpecial(a) )
                 continue;;
 
             // get byte before and after
@@ -394,7 +394,7 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
             }
 
             // meaningful only for non indels
-            if ( a.equals(Allele.SPAN_DEL) || (a.length() != refLength) ) {
+            if ( isSpecial(a) || (a.length() != refLength) ) {
                 css.add(C_NA);
             } else {
 
@@ -405,7 +405,7 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
                 // convert to flow space
                 final int         i = css.size();   // always working on the last
                 final int[]       refKey = FlowBasedKeyCodec.baseArrayToKey((localContext.leftMotif.get(i) + ref.getBaseString() + localContext.rightMotif.get(i)).getBytes(), localContext.flowOrder);
-                final int[]       altKey = FlowBasedKeyCodec.baseArrayToKey((localContext.leftMotif.get(i) + (!alt.equals(Allele.SPAN_DEL) ? alt.getBaseString() : "") + localContext.rightMotif.get(i)).getBytes(), localContext.flowOrder);
+                final int[]       altKey = FlowBasedKeyCodec.baseArrayToKey((localContext.leftMotif.get(i) + (!isSpecial(alt) ? alt.getBaseString() : "") + localContext.rightMotif.get(i)).getBytes(), localContext.flowOrder);
 
                 // assign initial css
                 String            cssValue = (refKey.length != altKey.length) ? C_CSS_CS : C_CSS_NS;
@@ -468,5 +468,9 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
 
     public void setFlowOrder(final List<String> flowOrder) {
         this.flowOrder = flowOrder;
+    }
+
+    private boolean isSpecial(Allele a) {
+        return a.equals(Allele.SPAN_DEL) || a.equals(Allele.NON_REF_ALLELE);
     }
 }
