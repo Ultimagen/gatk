@@ -11,8 +11,8 @@ import org.broadinstitute.hellbender.cmdline.programgroups.ShortVariantDiscovery
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.exceptions.UserException;
-import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.annotator.*;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.ReferenceConfidenceMode;
 import org.broadinstitute.hellbender.transformers.ReadTransformer;
 import org.broadinstitute.hellbender.utils.downsampling.MutectDownsampler;
@@ -321,7 +321,7 @@ public final class Mutect2 extends AssemblyRegionWalker {
      */
     @Override
     protected String[] customCommandLineValidation() {
-        if (MTAC.flowMode != FlowBasedArgumentCollection.FlowMode.NONE) {
+        if (MTAC.flowMode != M2ArgumentCollection.FlowMode.NONE) {
             ModeArgumentUtils.setArgValues(
                     getCommandLineParser(),
                     MTAC.flowMode.getNameValuePairs(),
