@@ -51,7 +51,7 @@ import java.util.*;
  *
  * <h3>Input</h3>
  * <ul>
- *     <li>Input VCG file with Alelles to recall</li>
+ *     <li>Input VCF file with Alelles to recall</li>
  *     <li>Input BAM file with Reads against which Alelles are recalled</li>
  *     <li>Input BAM file with Haplotypes to limit reads by</li>
  * </ul>
@@ -172,7 +172,6 @@ public final class HaplotypeBasedVariantRecaller extends GATKTool {
                                 assemblyResult, samplesList, perSampleReadList, false);
 
                         // assign
-                        final Map<String, List<GATKRead>> perSampleFilteredReadList = perSampleReadList;
                         final SAMFileHeader readsHeader = samReader.getFileHeader();
                         final Map<Integer, AlleleLikelihoods<GATKRead, Allele>> genotypeLikelihoods = simplifiedAssignGenotypeLikelihood(
                                 processedHaplotypes,
