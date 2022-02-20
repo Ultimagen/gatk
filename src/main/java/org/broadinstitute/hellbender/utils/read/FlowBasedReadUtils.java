@@ -288,8 +288,9 @@ public class FlowBasedReadUtils {
             return ReadUtils.FLOW_BASED_INSIGNIFICANT_END;
         } else if ( mdArgs.FLOW_USE_CLIPPED_LOCATIONS ) {
             return gatkRead.getStart();
-        } else
+        } else {
             return gatkRead.getUnclippedStart();
+        }
     }
 
     // this method complements getMarkDupReadStart with respect to the read's end location for MarkDuplicates
@@ -340,8 +341,9 @@ public class FlowBasedReadUtils {
             return ReadUtils.FLOW_BASED_INSIGNIFICANT_END;
         } else if ( mdArgs.FLOW_USE_CLIPPED_LOCATIONS ) {
             return gatkRead.getEnd();
-        } else
+        } else {
             return gatkRead.getUnclippedEnd();
+        }
     }
 
 }
