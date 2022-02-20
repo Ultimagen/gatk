@@ -18,7 +18,7 @@ import java.util.List;
  */
 public final class ReservoirDownsampler extends ReadsDownsampler {
 
-    static boolean      deterministicMode = false;
+    static boolean nonRandomReplacementMode = false;
 
     /**
      * size of our reservoir -- ie., the maximum number of reads from the stream that will be retained
@@ -115,7 +115,7 @@ public final class ReservoirDownsampler extends ReadsDownsampler {
             // replacing overwritten slot selection to a deterministic mechanism (optional)
             // should still provide similar distribution
             // original line is left below for reference
-            final int randomSlot = !deterministicMode
+            final int randomSlot = !nonRandomReplacementMode
                                         ? Utils.getRandomGenerator().nextInt(totalReadsSeen)
                                         : Math.abs(newRead.getName().hashCode()) % totalReadsSeen;
             if ( randomSlot < targetSampleSize ) {
@@ -211,7 +211,7 @@ public final class ReservoirDownsampler extends ReadsDownsampler {
         // NO-OP
     }
 
-    public static void setDeterministicMode(boolean deterministicMode) {
-        ReservoirDownsampler.deterministicMode = deterministicMode;
+    public static void setNonRandomReplacementMode(boolean nonRandomReplacementMode) {
+        ReservoirDownsampler.nonRandomReplacementMode = nonRandomReplacementMode;
     }
 }
