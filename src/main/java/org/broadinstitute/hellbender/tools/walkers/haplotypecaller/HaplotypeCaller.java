@@ -15,6 +15,7 @@ import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.engine.filters.MappingQualityReadFilter;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.engine.spark.AssemblyRegionArgumentCollection;
+import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.annotator.Annotation;
 import org.broadinstitute.hellbender.tools.walkers.annotator.HaplotypeFilteringAnnotation;
 import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine;
@@ -22,7 +23,7 @@ import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeAssignmentM
 import org.broadinstitute.hellbender.transformers.DRAGENMappingQualityReadTransformer;
 import org.broadinstitute.hellbender.transformers.ReadTransformer;
 import org.broadinstitute.hellbender.utils.fasta.CachingIndexedFastaSequenceFile;
-import org.broadinstitute.hellbender.utils.flow.FlowModeArgumentUtils;
+import org.broadinstitute.hellbender.cmdline.ModeArgumentUtils;
 
 import java.util.Collection;
 import java.util.List;
@@ -176,8 +177,11 @@ public class HaplotypeCaller extends AssemblyRegionWalker {
             Optional<ReadFilter> filterOptional = readFilterPlugin.getResolvedInstances().stream().filter(rf -> rf instanceof MappingQualityReadFilter).findFirst();
             filterOptional.ifPresent(readFilter -> ((MappingQualityReadFilter) readFilter).minMappingQualityScore = 1);
         }
-        if (hcArgs.flowMode != FlowModeArgumentUtils.FlowMode.NONE) {
-            FlowModeArgumentUtils.setFlowMode(getCommandLineParser(), hcArgs.flowMode);
+        if (hcArgs.flowMode != FlowBasedArgumentCollection.FlowMode.NONE) {
+            ModeArgumentUtils.setArgValues(
+                    getCommandLineParser(),
+                    hcArgs.flowMode.getNameValuePairs(),
+                    HaplotypeCallerArgumentCollection.FLOW_GATK_MODE_LONG_NAME);
         }
         return null;
     }

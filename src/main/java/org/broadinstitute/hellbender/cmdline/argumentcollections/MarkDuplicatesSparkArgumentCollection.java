@@ -82,4 +82,14 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
     public boolean isFlowEnabled() {
         return FLOW_QUALITY_SUM_STRATEGY || FLOW_END_LOCATION_SIGNIFICANT || FLOW_USE_CLIPPED_LOCATIONS || FLOW_SKIP_START_HOMOPOLYMERS != 0;
     }
+
+    public String[] getFlowModeArgValues() {
+        return new String[] {
+                MarkDuplicatesSparkArgumentCollection.SINGLE_END_READS_END_POSITION_SIGNIFICANT, "true",
+                MarkDuplicatesSparkArgumentCollection.SINGLE_END_READS_CLIPPING_IS_END_LONG_NAME, "true",
+                MarkDuplicatesSparkArgumentCollection.FLOW_END_POS_UNCERTAINTY_LONG_NAME, "1",
+                MarkDuplicatesSparkArgumentCollection.FLOW_SKIP_START_HOMOPOLYMERS_LONG_NAME, "0"
+        };
+
+    }
 }

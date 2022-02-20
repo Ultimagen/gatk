@@ -11,8 +11,8 @@ import org.broadinstitute.hellbender.cmdline.argumentcollections.DbsnpArgumentCo
 import org.broadinstitute.hellbender.engine.FeatureInput;
 import org.broadinstitute.hellbender.engine.GATKPath;
 import org.broadinstitute.hellbender.tools.FlowBasedAlignmentArgumentCollection;
+import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.StandardCallerArgumentCollection;
-import org.broadinstitute.hellbender.utils.flow.FlowModeArgumentUtils;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -152,7 +152,7 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
     public Boolean dragenMode = false;
     @Advanced
     @Argument(fullName = FLOW_GATK_MODE_LONG_NAME, optional = true, doc="Single argument for enabling the bulk of Flow Based features. NOTE: THIS WILL OVERWRITE PROVIDED ARGUMENT CHECK TOOL INFO TO SEE WHICH ARGUMENTS ARE SET).")
-    public FlowModeArgumentUtils.FlowMode flowMode = FlowModeArgumentUtils.FlowMode.NONE;
+    public FlowBasedArgumentCollection.FlowMode flowMode = FlowBasedArgumentCollection.FlowMode.NONE;
     @Advanced
     @Argument(fullName = APPLY_BQD_LONG_NAME, doc = "If enabled this argument will apply the DRAGEN-GATK BaseQualityDropout model to the genotyping model for filtering sites due to Linked Error mode.", optional = true)
     public boolean applyBQD = false;
