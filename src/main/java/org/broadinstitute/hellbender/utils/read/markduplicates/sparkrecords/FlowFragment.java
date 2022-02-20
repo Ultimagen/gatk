@@ -31,9 +31,9 @@ public class FlowFragment extends Fragment {
 
         int        start = !mdArgs.isFlowEnabled()
                                     ? ReadUtils.getStrandedUnclippedStart(first)
-                                    : ReadUtils.getStrandedUnclippedStartForFlow(first, header, mdArgs);
+                                    : FlowBasedReadUtils.getStrandedUnclippedStartForFlow(first, header, mdArgs);
         if ( mdArgs.FLOW_END_LOCATION_SIGNIFICANT ) {
-            this.end = ReadUtils.getStrandedUnclippedEndForFlow(first, header, mdArgs);
+            this.end = FlowBasedReadUtils.getStrandedUnclippedEndForFlow(first, header, mdArgs);
         }
         this.key = ReadsKey.getKeyForFragment(start,
                 isRead1ReverseStrand(),
