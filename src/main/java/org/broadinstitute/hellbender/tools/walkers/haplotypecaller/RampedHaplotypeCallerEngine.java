@@ -5,13 +5,11 @@ import htsjdk.samtools.reference.ReferenceSequenceFile;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.broadinstitute.barclay.argparser.Advanced;
-import org.broadinstitute.barclay.argparser.Argument;
-import org.broadinstitute.barclay.argparser.Hidden;
 import org.broadinstitute.hellbender.engine.AssemblyRegion;
 import org.broadinstitute.hellbender.engine.FeatureContext;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.engine.spark.AssemblyRegionArgumentCollection;
+import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.walkers.annotator.*;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.ramps.*;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
@@ -23,6 +21,7 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -49,6 +48,17 @@ public class RampedHaplotypeCallerEngine extends HaplotypeCallerEngine {
     protected AssemblerOffRamp postAssemblerOffRamp = null;
     protected PostAssemblerOnRamp postAssemblerOnRamp = null;
 
+    // haplotype caller phases, as consumers
+    final private List<Consumer<CallRegionContext>>   phases =
+            Arrays.asList(
+                    p -> prepare(p),
+                    p -> assemble(p),
+                    p -> computeReadLikelihoods(p),
+                    p -> uncollapse(p),
+                    p -> filter(p),
+                    p -> genotype(p)
+            );
+
     public RampedHaplotypeCallerEngine(final HaplotypeCallerArgumentCollection hcArgs, AssemblyRegionArgumentCollection assemblyRegionArgs, boolean createBamOutIndex,
                                        boolean createBamOutMD5, final SAMFileHeader readsHeader,
                                        ReferenceSequenceFile referenceReader, VariantAnnotatorEngine annotationEngine,
@@ -59,7 +69,7 @@ public class RampedHaplotypeCallerEngine extends HaplotypeCallerEngine {
                 referenceReader, annotationEngine);
         this.rpArgs = rpArgs;
 
-        ReservoirDownsampler.setDeterministicMode(true);
+        ReservoirDownsampler.setNonRandomReplacementMode(true);
         buildRamps();
     }
 
@@ -185,26 +195,20 @@ public class RampedHaplotypeCallerEngine extends HaplotypeCallerEngine {
         // dump reads upon entry
         RampUtils.logReads(rpArgs.rampsDebugReads, "callRegion entered: " + region, region.getReads());
 
-        try {
-            // create initial context
-            CallRegionContext context = new CallRegionContext(region, features, referenceContext);
+        // create initial context
+        CallRegionContext context = new CallRegionContext(region, features, referenceContext);
 
-            // execute stages
-            prepare(context);
-            assemble(context);
-            computeReadLikelihoods(context);
-            uncollapse(context);
-            filter(context);
-            genotype(context);
-
-            // return variants
-            return context.regionVariants;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        // execute stages
+        final Iterator<Consumer<CallRegionContext>> iter = phases.iterator();
+        while ( iter.hasNext() && context.regionVariants == null ) {
+            iter.next().accept(context);
         }
+
+        // return variants
+        return context.regionVariants;
     }
 
-    private void prepare(final CallRegionContext context) throws IOException {
+    private void prepare(final CallRegionContext context) {
 
         // no need for this step?
         if ( context.regionVariants != null ) {
@@ -241,134 +245,137 @@ public class RampedHaplotypeCallerEngine extends HaplotypeCallerEngine {
         }
     }
 
-    private void assemble(final CallRegionContext context) throws IOException {
+    private void assemble(final CallRegionContext context) {
 
-        // no need for this step?
-        if ( context.regionVariants != null ) {
-            return;
-        }
-
-        if (assemblyDebugOutStream != null) {
-            assemblyDebugOutStream.write("\n\n\n\n" + context.region.getSpan() + "\nNumber of reads in region: " + context.region.getReads().size() + "     they are:");
-            for (GATKRead read : context.region.getReads()) {
-                assemblyDebugOutStream.write(read.getName() + "   " + read.convertToSAMRecord(context.region.getHeader()).getFlags());
-            }
-        }
-
-        // get off?
-        if (preAssemblerOffRamp != null) {
-            preAssemblerOffRamp.add(context.region, "assemblyResult", context.assemblyResult, context.nonVariantLeftFlankRegion, context.nonVariantRightFlankRegion, readsHeader);
-            context.regionVariants = NO_CALLS;
-        }
-
-        // assembler on ramp?
-        CallRegionContext   debugContext = null;
-        if ( postAssemblerOnRamp != null ) {
-
-            // clean part
-            context.nonVariantLeftFlankRegion = postAssemblerOnRamp.getOptionalAssemblyRegion(context.region, "assemblyResult.nonVariantLeftFlankRegion", readsHeader);
-            context.nonVariantRightFlankRegion = postAssemblerOnRamp.getOptionalAssemblyRegion(context.region, "assemblyResult.nonVariantRightFlankRegion", readsHeader);
-            context.assemblyResult = postAssemblerOnRamp.getAssembyResult(context.region, "assemblyResult", readsHeader,  hcArgs, logger, aligner, referenceReader);
-            if ( context.assemblyResult == null ) {
-                context.regionVariants = NO_CALLS;
+        try {
+            // no need for this step?
+            if (context.regionVariants != null) {
                 return;
             }
-            context.haplotypeCollapsing = context.assemblyResult.getHaplotypeCollapsing();
-            RampUtils.logReads(rpArgs.rampsDebugReads, "onramp: reads before trimming", context.assemblyResult.getRegionForGenotyping().getReads());
 
-            RampUtils.logReads(rpArgs.rampsDebugReads, "onramp: BEFORE untrimmedAssemblyResult reads", context.region.getReads());
+            if (assemblyDebugOutStream != null) {
+                assemblyDebugOutStream.write("\n\n\n\n" + context.region.getSpan() + "\nNumber of reads in region: " + context.region.getReads().size() + "     they are:");
+                for (GATKRead read : context.region.getReads()) {
+                    assemblyDebugOutStream.write(read.getName() + "   " + read.convertToSAMRecord(context.region.getHeader()).getFlags());
+                }
+            }
+
+            // get off?
+            if (preAssemblerOffRamp != null) {
+                preAssemblerOffRamp.add(context.region, "assemblyResult", context.assemblyResult, context.nonVariantLeftFlankRegion, context.nonVariantRightFlankRegion, readsHeader);
+                context.regionVariants = NO_CALLS;
+            }
+
+            // assembler on ramp?
+            CallRegionContext debugContext = null;
+            if (postAssemblerOnRamp != null) {
+
+                // clean part
+                context.nonVariantLeftFlankRegion = postAssemblerOnRamp.getOptionalAssemblyRegion(context.region, "assemblyResult.nonVariantLeftFlankRegion", readsHeader);
+                context.nonVariantRightFlankRegion = postAssemblerOnRamp.getOptionalAssemblyRegion(context.region, "assemblyResult.nonVariantRightFlankRegion", readsHeader);
+                context.assemblyResult = postAssemblerOnRamp.getAssembyResult(context.region, "assemblyResult", readsHeader, hcArgs, logger, aligner, referenceReader);
+                if (context.assemblyResult == null) {
+                    context.regionVariants = NO_CALLS;
+                    return;
+                }
+                context.haplotypeCollapsing = context.assemblyResult.getHaplotypeCollapsing();
+                RampUtils.logReads(rpArgs.rampsDebugReads, "onramp: reads before trimming", context.assemblyResult.getRegionForGenotyping().getReads());
+
+                RampUtils.logReads(rpArgs.rampsDebugReads, "onramp: BEFORE untrimmedAssemblyResult reads", context.region.getReads());
+                final AssemblyResultSet untrimmedAssemblyResult = AssemblyBasedCallerUtils.assembleReads(context.region, context.givenAlleles, hcArgs, readsHeader, samplesList, logger, referenceReader, assemblyEngine, aligner,
+                        !hcArgs.doNotCorrectOverlappingBaseQualities, hcArgs.fbargs, postFilterOnRamp != null);
+                RampUtils.logReads(rpArgs.rampsDebugReads, "onramp: AFTER untrimmedAssemblyResult reads", context.region.getReads());
+                context.assemblyResult.setRegionForGenotyping(untrimmedAssemblyResult.getRegionForGenotyping());
+
+
+                // restore trimmed reads
+                final SortedSet<VariantContext> allVariationEvents = context.assemblyResult.getVariationEvents(hcArgs.maxMnpDistance);
+                final AssemblyRegionTrimmer.Result trimmingResult = trimmer.trim(context.region, allVariationEvents, context.referenceContext);
+                try {
+                    context.assemblyResult = context.assemblyResult.trimTo(trimmingResult.getVariantRegion());
+                } catch (IllegalStateException e) {
+                    logger.warn("assembler bailing out on " + context.region + " bacause " + e.getMessage());
+                    context.regionVariants = NO_CALLS;
+                    return;
+                    // TODO: investigate further
+                }
+                context.haplotypeCollapsing = context.assemblyResult.getHaplotypeCollapsing();
+                RampUtils.logReads(rpArgs.rampsDebugReads, "onramp: reads after trimming", context.assemblyResult.getRegionForGenotyping().getReads());
+
+                if (rpArgs.rampsDebugPostAssemblerOn) {
+                    debugContext = new CallRegionContext(context);
+                    logger.debug("debugContext: " + debugContext);
+                } else {
+                    return;
+                }
+            }
+
+            // run the local assembler, getting back a collection of information on how we should proceed
+            RampUtils.logReads(rpArgs.rampsDebugReads, "BEFORE untrimmedAssemblyResult reads", context.region.getReads());
             final AssemblyResultSet untrimmedAssemblyResult = AssemblyBasedCallerUtils.assembleReads(context.region, context.givenAlleles, hcArgs, readsHeader, samplesList, logger, referenceReader, assemblyEngine, aligner,
                     !hcArgs.doNotCorrectOverlappingBaseQualities, hcArgs.fbargs, postFilterOnRamp != null);
-            RampUtils.logReads(rpArgs.rampsDebugReads, "onramp: AFTER untrimmedAssemblyResult reads", context.region.getReads());
-            context.assemblyResult.setRegionForGenotyping(untrimmedAssemblyResult.getRegionForGenotyping());
+            RampUtils.logReads(rpArgs.rampsDebugReads, "AFTER untrimmedAssemblyResult reads", context.region.getReads());
+            if (postFilterOnRamp != null) {
+                if (!postFilterOnRamp.hasRegion(context.region.getSpan())) {
+                    context.regionVariants = NO_CALLS;
+                    return;
+                }
+                for (Haplotype h : postFilterOnRamp.getHaplotypes(context.region, "readLikelihoods.haplotypes")) {
+                    if (!h.isReference())
+                        untrimmedAssemblyResult.add(h);
+                }
+            }
+            context.haplotypeCollapsing = untrimmedAssemblyResult.getHaplotypeCollapsing();
 
+            if (assemblyDebugOutStream != null) {
+                assemblyDebugOutStream.write("\nThere were " + untrimmedAssemblyResult.getHaplotypeList().size() + " haplotypes found. Here they are:");
+                for (final String haplotype : untrimmedAssemblyResult.getHaplotypeList().stream().map(Haplotype::toString).sorted().collect(Collectors.toList())) {
+                    assemblyDebugOutStream.write(haplotype);
+                }
+            }
 
+            final SortedSet<VariantContext> allVariationEvents = untrimmedAssemblyResult.getVariationEvents(hcArgs.maxMnpDistance);
 
-            // restore trimmed reads
-            final SortedSet<VariantContext> allVariationEvents = context.assemblyResult.getVariationEvents(hcArgs.maxMnpDistance);
-            final AssemblyRegionTrimmer.Result trimmingResult = trimmer.trim(context.region, allVariationEvents, context.referenceContext);
-            try {
-                context.assemblyResult = context.assemblyResult.trimTo(trimmingResult.getVariantRegion());
-            } catch (IllegalStateException e) {
-                logger.warn("assembler bailing out on " + context.region + " bacause " + e.getMessage());
+            AssemblyRegionTrimmer.Result trimmingResult = trimmer.trim(context.region, allVariationEvents, context.referenceContext);
+
+            if (!trimmingResult.isVariationPresent() && !hcArgs.disableOptimizations && postFilterOnRamp == null) {
+                context.regionVariants = referenceModelForNoVariation(context.region, false, context.VCpriors);
+                return;
+            }
+
+            RampUtils.logReads(rpArgs.rampsDebugReads, "untrimmedAssemblyResult reads", untrimmedAssemblyResult.getRegionForGenotyping().getReads());
+            context.assemblyResult = untrimmedAssemblyResult.trimTo(
+                    postFilterOnRamp == null
+                            ? trimmingResult.getVariantRegion()
+                            : trimmingResult.getVariantRegion(
+                            new SimpleInterval(postFilterOnRamp.getRegion(context.region.getSpan(), "readLikelihoods").getString("r4g")),
+                            new SimpleInterval(postFilterOnRamp.getRegion(context.region.getSpan(), "readLikelihoods").getString("r4gp"))));
+            context.nonVariantLeftFlankRegion = trimmingResult.nonVariantLeftFlankRegion();
+            context.nonVariantRightFlankRegion = trimmingResult.nonVariantRightFlankRegion();
+            RampUtils.logReads(rpArgs.rampsDebugReads, "assemblyResult final reads", context.assemblyResult.getRegionForGenotyping().getReads());
+
+            if (rpArgs.rampsDebugPostAssemblerOn && debugContext != null) {
+                RampUtils.compareHaplotypes(context.assemblyResult.getHaplotypeList(),
+                        debugContext.assemblyResult.getHaplotypeList());
+
+                // DEBUG:: makes it fail here?
+                //context.assemblyResult.getRegionForGenotyping().clearReads();
+                //debugContext.assemblyResult.getRegionForGenotyping().getReads().forEach(r -> context.assemblyResult.getRegionForGenotyping().add(r));
+                RampUtils.compareReads(context.assemblyResult.getRegionForGenotyping().getReads(),
+                        debugContext.assemblyResult.getRegionForGenotyping().getReads());
+            }
+
+            // get off?
+            if (postAssemblerOffRamp != null) {
+                postAssemblerOffRamp.add(context.region, "assemblyResult", context.assemblyResult, context.nonVariantLeftFlankRegion, context.nonVariantRightFlankRegion, readsHeader);
                 context.regionVariants = NO_CALLS;
-                return;
-                // TODO: investigate further
             }
-            context.haplotypeCollapsing = context.assemblyResult.getHaplotypeCollapsing();
-            RampUtils.logReads(rpArgs.rampsDebugReads, "onramp: reads after trimming", context.assemblyResult.getRegionForGenotyping().getReads());
-
-            if ( rpArgs.rampsDebugPostAssemblerOn) {
-                debugContext = new CallRegionContext(context);
-                logger.debug("debugContext: " + debugContext);
-            } else {
-                return;
-            }
-        }
-
-        // run the local assembler, getting back a collection of information on how we should proceed
-        RampUtils.logReads(rpArgs.rampsDebugReads, "BEFORE untrimmedAssemblyResult reads", context.region.getReads());
-        final AssemblyResultSet untrimmedAssemblyResult = AssemblyBasedCallerUtils.assembleReads(context.region, context.givenAlleles, hcArgs, readsHeader, samplesList, logger, referenceReader, assemblyEngine, aligner,
-                !hcArgs.doNotCorrectOverlappingBaseQualities, hcArgs.fbargs, postFilterOnRamp != null);
-        RampUtils.logReads(rpArgs.rampsDebugReads, "AFTER untrimmedAssemblyResult reads", context.region.getReads());
-        if (postFilterOnRamp != null) {
-            if ( !postFilterOnRamp.hasRegion(context.region.getSpan()) ) {
-                context.regionVariants = NO_CALLS;
-                return;
-            }
-            for (Haplotype h : postFilterOnRamp.getHaplotypes(context.region, "readLikelihoods.haplotypes")) {
-                if (!h.isReference())
-                    untrimmedAssemblyResult.add(h);
-            }
-        }
-        context.haplotypeCollapsing = untrimmedAssemblyResult.getHaplotypeCollapsing();
-
-        if (assemblyDebugOutStream != null) {
-            assemblyDebugOutStream.write("\nThere were " + untrimmedAssemblyResult.getHaplotypeList().size() + " haplotypes found. Here they are:");
-            for (final String haplotype : untrimmedAssemblyResult.getHaplotypeList().stream().map(Haplotype::toString).sorted().collect(Collectors.toList())) {
-                assemblyDebugOutStream.write(haplotype);
-            }
-        }
-
-        final SortedSet<VariantContext> allVariationEvents = untrimmedAssemblyResult.getVariationEvents(hcArgs.maxMnpDistance);
-
-        AssemblyRegionTrimmer.Result trimmingResult = trimmer.trim(context.region, allVariationEvents, context.referenceContext);
-
-        if (!trimmingResult.isVariationPresent() && !hcArgs.disableOptimizations && postFilterOnRamp == null) {
-            context.regionVariants = referenceModelForNoVariation(context.region, false, context.VCpriors);
-            return;
-        }
-
-        RampUtils.logReads(rpArgs.rampsDebugReads, "untrimmedAssemblyResult reads", untrimmedAssemblyResult.getRegionForGenotyping().getReads());
-        context.assemblyResult = untrimmedAssemblyResult.trimTo(
-                postFilterOnRamp == null
-                        ? trimmingResult.getVariantRegion()
-                        : trimmingResult.getVariantRegion(
-                        new SimpleInterval(postFilterOnRamp.getRegion(context.region.getSpan(), "readLikelihoods").getString("r4g")),
-                        new SimpleInterval(postFilterOnRamp.getRegion(context.region.getSpan(), "readLikelihoods").getString("r4gp"))));
-        context.nonVariantLeftFlankRegion = trimmingResult.nonVariantLeftFlankRegion();
-        context.nonVariantRightFlankRegion = trimmingResult.nonVariantRightFlankRegion();
-        RampUtils.logReads(rpArgs.rampsDebugReads, "assemblyResult final reads", context.assemblyResult.getRegionForGenotyping().getReads());
-
-        if ( rpArgs.rampsDebugPostAssemblerOn && debugContext != null ) {
-            RampUtils.compareHaplotypes(context.assemblyResult.getHaplotypeList(),
-                    debugContext.assemblyResult.getHaplotypeList());
-
-            // DEBUG:: makes it fail here?
-            //context.assemblyResult.getRegionForGenotyping().clearReads();
-            //debugContext.assemblyResult.getRegionForGenotyping().getReads().forEach(r -> context.assemblyResult.getRegionForGenotyping().add(r));
-            RampUtils.compareReads(context.assemblyResult.getRegionForGenotyping().getReads(),
-                    debugContext.assemblyResult.getRegionForGenotyping().getReads());
-        }
-
-        // get off?
-        if (postAssemblerOffRamp != null) {
-            postAssemblerOffRamp.add(context.region, "assemblyResult", context.assemblyResult, context.nonVariantLeftFlankRegion, context.nonVariantRightFlankRegion, readsHeader);
-            context.regionVariants = NO_CALLS;
+        } catch (IOException e) {
+            throw new GATKException("assmble failed", e);
         }
     }
 
-    private void computeReadLikelihoods(final CallRegionContext context) throws IOException {
+    private void computeReadLikelihoods(final CallRegionContext context) {
 
         // no need for this step?
         if ( context.regionVariants != null ) {
@@ -411,7 +418,7 @@ public class RampedHaplotypeCallerEngine extends HaplotypeCallerEngine {
                 writer -> writer.writeAlleleLikelihoods(context.readLikelihoods));
     }
 
-    private void uncollapse(final CallRegionContext context) throws IOException {
+    private void uncollapse(final CallRegionContext context) {
 
         // no need for this step?
         if ( context.regionVariants != null ) {
@@ -439,64 +446,67 @@ public class RampedHaplotypeCallerEngine extends HaplotypeCallerEngine {
         }
     }
 
-    private void filter(final CallRegionContext context) throws IOException {
+    private void filter(final CallRegionContext context) {
 
-        // no need for this step?
-        if ( context.regionVariants != null ) {
-            return;
-        }
+        try {
+            // no need for this step?
+            if (context.regionVariants != null) {
+                return;
+            }
 
-        // ramp point: pre-filter off ramp
-        if ( preFilterOffRamp != null ) {
+            // ramp point: pre-filter off ramp
+            if (preFilterOffRamp != null) {
 
-            // if we are here, we are getting off before the filter
-            preFilterOffRamp.add(context.region, "readLikelihoods", context.readLikelihoods, context.assemblyResult.getRegionForGenotyping(), context.region);
-            context.regionVariants = NO_CALLS;
-        }
-        else if ( postFilterOnRamp == null ) {
+                // if we are here, we are getting off before the filter
+                preFilterOffRamp.add(context.region, "readLikelihoods", context.readLikelihoods, context.assemblyResult.getRegionForGenotyping(), context.region);
+                context.regionVariants = NO_CALLS;
+            } else if (postFilterOnRamp == null) {
 
-            // if we are here, we are running the filter
-            context.suspiciousLocations = new HashSet<>();
-            if (hcArgs.filterAlleles) {
-                logger.debug("Filtering alleles");
-                AlleleFilteringHC alleleFilter = new AlleleFilteringHC(hcArgs, assemblyDebugOutStream, genotypingEngine);
-                //need to update haplotypes to find the alleles
-                EventMap.buildEventMapsForHaplotypes(context.readLikelihoods.alleles(),
-                        context.assemblyResult.getFullReferenceWithPadding(),
-                        context.assemblyResult.getPaddedReferenceLoc(),
-                        hcArgs.assemblerArgs.debugAssembly,
-                        hcArgs.maxMnpDistance);
-                context.readLikelihoods = alleleFilter.filterAlleles(context.readLikelihoods, context.assemblyResult.getPaddedReferenceLoc().getStart(), context.suspiciousLocations);
+                // if we are here, we are running the filter
+                context.suspiciousLocations = new HashSet<>();
+                if (hcArgs.filterAlleles) {
+                    logger.debug("Filtering alleles");
+                    AlleleFilteringHC alleleFilter = new AlleleFilteringHC(hcArgs, assemblyDebugOutStream, genotypingEngine);
+                    //need to update haplotypes to find the alleles
+                    EventMap.buildEventMapsForHaplotypes(context.readLikelihoods.alleles(),
+                            context.assemblyResult.getFullReferenceWithPadding(),
+                            context.assemblyResult.getPaddedReferenceLoc(),
+                            hcArgs.assemblerArgs.debugAssembly,
+                            hcArgs.maxMnpDistance);
+                    context.readLikelihoods = alleleFilter.filterAlleles(context.readLikelihoods, context.assemblyResult.getPaddedReferenceLoc().getStart(), context.suspiciousLocations);
+
+                } else {
+                    logger.debug("Not filtering alleles");
+                }
+
+                // Reproscess with the HMM if we are in stepwise filtering mode
+                if (hcArgs.stepwiseFiltering) {
+                    final Map<String, List<GATKRead>> reads = AssemblyBasedCallerUtils.splitReadsBySample(samplesList, readsHeader, context.assemblyResult.getRegionForGenotyping().getReads());
+                    context.readLikelihoods = (likelihoodCalculationEngine).computeReadLikelihoods(
+                            context.readLikelihoods.alleles(),
+                            context.assemblyResult.getRegionForGenotyping().getHeader(),
+                            samplesList, reads, true);
+                }
+
 
             } else {
-                logger.debug("Not filtering alleles");
+
+                // if here, we are getting on after the filter
+                final AssemblyRegion regionForGenotyping = context.assemblyResult.getRegionForGenotyping();
+                final Map<String, List<GATKRead>> reads = AssemblyBasedCallerUtils.splitReadsBySample(samplesList, readsHeader, regionForGenotyping.getReads());
+                final Map<String, List<GATKRead>> reads2 = AssemblyBasedCallerUtils.splitReadsBySample(samplesList, readsHeader, getAllRegionReads(context));
+
+                context.readLikelihoods = postFilterOnRamp.getAlleleLikelihoods(context.region, "readLikelihoods", samplesList, reads, reads2);
             }
 
-            // Reproscess with the HMM if we are in stepwise filtering mode
-            if (hcArgs.stepwiseFiltering) {
-                final Map<String,List<GATKRead>> reads = AssemblyBasedCallerUtils.splitReadsBySample(samplesList, readsHeader, context.assemblyResult.getRegionForGenotyping().getReads());
-                context.readLikelihoods = (likelihoodCalculationEngine).computeReadLikelihoods(
-                        context.readLikelihoods.alleles(),
-                        context.assemblyResult.getRegionForGenotyping().getHeader(),
-                        samplesList, reads, true);
-            }
-
-
-        } else {
-
-            // if here, we are getting on after the filter
-            final AssemblyRegion regionForGenotyping = context.assemblyResult.getRegionForGenotyping();
-            final Map<String, List<GATKRead>> reads = AssemblyBasedCallerUtils.splitReadsBySample(samplesList, readsHeader, regionForGenotyping.getReads());
-            final Map<String, List<GATKRead>> reads2 = AssemblyBasedCallerUtils.splitReadsBySample(samplesList, readsHeader, getAllRegionReads(context));
-
-            context.readLikelihoods = postFilterOnRamp.getAlleleLikelihoods(context.region, "readLikelihoods", samplesList, reads, reads2);
+            for (int sampleIndex = 0; sampleIndex < context.readLikelihoods.samples().size(); sampleIndex++)
+                RampUtils.logReads(rpArgs.rampsDebugReads, "filter (END): " + sampleIndex, context.readLikelihoods.sampleEvidence(sampleIndex));
+        } catch (IOException e) {
+            throw new GATKException("filter failed", e);
         }
-
-        for ( int sampleIndex = 0; sampleIndex < context.readLikelihoods.samples().size() ; sampleIndex++ )
-            RampUtils.logReads(rpArgs.rampsDebugReads, "filter (END): " + sampleIndex, context.readLikelihoods.sampleEvidence(sampleIndex));
     }
 
-    private void genotype(final CallRegionContext context) throws IOException {
+    private void genotype(final CallRegionContext context) {
 
         // no need for this step?
         if ( context.regionVariants != null ) {
