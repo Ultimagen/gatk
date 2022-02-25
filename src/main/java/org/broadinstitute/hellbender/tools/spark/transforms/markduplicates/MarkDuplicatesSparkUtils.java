@@ -374,8 +374,16 @@ public class MarkDuplicatesSparkUtils {
             return Collections.singletonList(new Tuple2<>(new IndexPair<>(duplicateFragmentGroup.get(0).getName(), duplicateFragmentGroup.get(0).getPartitionIndex()), 0));
         }
 
-        // sort on end to create/ensure consistency
-        Collections.sort(duplicateFragmentGroup, Comparator.comparingInt(MarkDuplicatesSparkRecord::getEnd));
+        // this should only be called with FlowModeFragments
+        if (duplicateFragmentGroup.stream().filter(r -> !(r instanceof FlowModeFragment )).count() > 0 ) {
+            throw new IllegalArgumentException("handleFragmentsWithEndPosition should only be called with FlowModeFragment(s)");
+        }
+
+        // collect as flow mode fragments and sort on end to ensure consistency
+        final List<FlowModeFragment>  flowDuplicateFragmentGroup = duplicateFragmentGroup.stream()
+                .map(r -> (FlowModeFragment)r)
+                .sorted(Comparator.comparingInt(FlowModeFragment::getEnd))
+                .collect(Collectors.toList());
 
         // this will accumulate the primary from each subgroup
         List<Tuple2<IndexPair<String>, Integer>> output = new ArrayList<>();
@@ -384,7 +392,7 @@ public class MarkDuplicatesSparkUtils {
         List<MarkDuplicatesSparkRecord> subGroup = new LinkedList<>();
         int         subGroupMinEnd = 0;
         int         subGroupMaxEnd = 0;
-        for ( MarkDuplicatesSparkRecord fragment : duplicateFragmentGroup ) {
+        for ( FlowModeFragment fragment : flowDuplicateFragmentGroup ) {
 
             final int         end = fragment.getEnd();
 
@@ -477,7 +485,7 @@ public class MarkDuplicatesSparkUtils {
      */
     private static Tuple2<IndexPair<String>, Integer> handleFragments(List<MarkDuplicatesSparkRecord> duplicateFragmentGroup, OpticalDuplicateFinder finder) {
         return duplicateFragmentGroup.stream()
-                .map(f -> (Fragment)f)
+                .map(f -> (TransientFieldPhysicalLocation)f)
                 .peek(f -> finder.addLocationInformation(f.getName(), f))
                 .max(PAIRED_ENDS_SCORE_COMPARATOR)
                 .map(best -> new Tuple2<>(new IndexPair<>(best.getName(), best.getPartitionIndex()), -1))
