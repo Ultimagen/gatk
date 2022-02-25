@@ -9,29 +9,33 @@ import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.read.markduplicates.LibraryIdGenerator;
 import org.broadinstitute.hellbender.utils.read.markduplicates.MarkDuplicatesScoringStrategy;
 import org.broadinstitute.hellbender.utils.read.markduplicates.ReadsKey;
+import picard.sam.markduplicates.util.ReadEnds;
 
 import java.util.Map;
 
 /**
- * Flow-based specific class  representing a single read fragment at a particular start location without a mapped mate.
+ * Class representing a single read fragment at a particular start location without a mapped mate.
  *
  * This class holds onto as little information as possible in an attempt to prevent excessive serialization of
  * during the processing step of MarkDuplicatesSpark
- *
- * It differs from its parent class in that it takes into account the end of the fragment as well (if instructed
- * to by FLOW_END_LOCATION_SIGNIFICANT). It also allows for an alternative flow-specific score function to be deployed.
  */
-public class FlowFragment extends Fragment {
-    static final long serialVersionUID = 1L;
+public class FlowModeFragment extends TransientFieldPhysicalLocation {
+    private static final long serialVersionUID = 0L;
     public static final String FLOW_DUPLICATE_SCORE_ATTR_NAME = "FlowDuplicateScore";
-    protected final short flowScore;
 
-    public FlowFragment(final GATKRead first, final SAMFileHeader header, int partitionIndex, MarkDuplicatesScoringStrategy scoringStrategy, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
-        super(first, header, partitionIndex, scoringStrategy, headerLibraryMap);
+    protected transient ReadsKey key;
+    protected int end = ReadUtils.FLOW_BASED_INSIGNIFICANT_END;
 
-        int        start = !mdArgs.isFlowEnabled()
-                                    ? ReadUtils.getStrandedUnclippedStart(first)
-                                    : FlowBasedReadUtils.getStrandedUnclippedStartForFlow(first, header, mdArgs);
+    private final boolean R1R;
+
+    protected final short score;
+
+    public FlowModeFragment(final GATKRead first, final SAMFileHeader header, int partitionIndex, MarkDuplicatesScoringStrategy scoringStrategy, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
+        super(partitionIndex, first.getName());
+
+        this.R1R = first.isReverseStrand();
+
+        int start = FlowBasedReadUtils.getStrandedUnclippedStartForFlow(first, header, mdArgs);
         if ( mdArgs.FLOW_END_LOCATION_SIGNIFICANT ) {
             this.end = FlowBasedReadUtils.getStrandedUnclippedEndForFlow(first, header, mdArgs);
         }
@@ -40,7 +44,7 @@ public class FlowFragment extends Fragment {
                 (short)ReadUtils.getReferenceIndex(first, header),
                 headerLibraryMap.get(MarkDuplicatesSparkUtils.getLibraryForRead(first, header, LibraryIdGenerator.UNKNOWN_LIBRARY)));
 
-        this.flowScore = (this.end != ReadUtils.FLOW_BASED_INSIGNIFICANT_END)
+        this.score = (this.end != ReadUtils.FLOW_BASED_INSIGNIFICANT_END)
                 ? ((mdArgs.FLOW_QUALITY_SUM_STRATEGY && FlowBasedReadUtils.isFlow(first)) ? computeFlowDuplicateScore(first, start, end) : scoringStrategy.score(first))
                 : -1;
     }
@@ -103,8 +107,37 @@ public class FlowFragment extends Fragment {
     }
 
     @Override
-    public short getScore() {
-        return flowScore;
+    public Type getType() {
+      return Type.FRAGMENT;
     }
 
+    @Override
+    // NOTE: This is transient and thus may not exist if the object gets serialized
+    public ReadsKey key() {
+        return key;
+    }
+
+    @Override
+    public short getScore() {
+      return score;
+    }
+
+    @Override
+    public boolean isRead1ReverseStrand() {
+      return R1R;
+    }
+
+    @Override
+    public byte getOrientationForPCRDuplicates() {
+        return (R1R)? ReadEnds.R : ReadEnds.F;
+    }
+
+    @Override
+    public String toString() {
+        return "flow mode fragment: " + name;
+    }
+
+    public int getEnd() {
+        return end;
+    }
 }

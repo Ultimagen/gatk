@@ -563,8 +563,8 @@ public class MarkDuplicatesSparkIntegrationTest extends AbstractMarkDuplicatesCo
         runCommandLine(args);
 
         if ( !UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
-            SamAssertionUtils.assertEqualBamFiles(output, expectedOutput, false, ValidationStringency.SILENT);
             IntegrationTestSpec.assertEqualTextFiles(metricsFile, expectedMetricsFile, "#");
+            SamAssertionUtils.assertEqualBamFiles(output, expectedOutput, false, ValidationStringency.SILENT);
         }
     }
 }

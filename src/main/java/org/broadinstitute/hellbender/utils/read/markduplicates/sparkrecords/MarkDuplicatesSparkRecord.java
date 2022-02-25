@@ -19,8 +19,6 @@ public abstract class MarkDuplicatesSparkRecord {
     protected final int partitionIndex;
     protected final String name;
 
-    protected int end = ReadUtils.FLOW_BASED_INSIGNIFICANT_END;
-
     MarkDuplicatesSparkRecord(int partitionIndex, String name) {
         this.name = name;
         this.partitionIndex = partitionIndex;
@@ -33,11 +31,11 @@ public abstract class MarkDuplicatesSparkRecord {
 
 
     // A fragment containing only one read without a mapped mate
-    public static Fragment newFragment(final GATKRead first, final SAMFileHeader header, int partitionIndex, MarkDuplicatesScoringStrategy scoringStrategy, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
-        if ( !mdArgs.FLOW_END_LOCATION_SIGNIFICANT && !mdArgs.FLOW_QUALITY_SUM_STRATEGY ) {
+    public static PairedEnds newFragment(final GATKRead first, final SAMFileHeader header, int partitionIndex, MarkDuplicatesScoringStrategy scoringStrategy, Map<String, Byte> headerLibraryMap, final MarkDuplicatesSparkArgumentCollection mdArgs) {
+        if ( !mdArgs.isFlowEnabled() ) {
             return new Fragment(first, header, partitionIndex, scoringStrategy, headerLibraryMap);
         } else {
-            return new FlowFragment(first, header, partitionIndex, scoringStrategy, headerLibraryMap, mdArgs);
+            return new FlowModeFragment(first, header, partitionIndex, scoringStrategy, headerLibraryMap, mdArgs);
         }
     }
 
@@ -67,9 +65,5 @@ public abstract class MarkDuplicatesSparkRecord {
 
     public enum Type {
         FRAGMENT, PAIR, PASSTHROUGH, EMPTY_FRAGMENT
-    }
-
-    public int getEnd() {
-        return end;
     }
 }
