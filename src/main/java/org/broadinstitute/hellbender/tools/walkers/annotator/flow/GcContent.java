@@ -25,7 +25,7 @@ public class GcContent extends FlowAnnotatorBase implements StandardFlowBasedAnn
                                         VariantContext vc,
                                         AlleleLikelihoods<GATKRead, Allele> likelihoods) {
 
-        final LocalContext        localContext = new LocalContext(ref, vc, likelihoods, false);
+        final LocalContext        localContext = new LocalContext(ref, vc, likelihoods, true);
 
         if ( localContext.generateAnnotation ) {
             gcContent(vc, localContext);
