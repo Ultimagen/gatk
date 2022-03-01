@@ -356,6 +356,21 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     }
 
     //convert qualities from the single hmer to a column in a flow matrix
+    private void parseZeroQuals(final double[] probs, final byte[] t0, final int flowIdx,
+                                 final int flowCall, final int qualOfs){
+        for (int i = qualOfs ; i < qualOfs+flowCall; i++) {
+            if (t0[i]!=0) {
+                final int loc = Math.max(Math.min(flowCall+t0[i], maxHmer),0);
+                if (flowMatrix[loc][flowIdx] == fbargs.fillingValue) {
+                    flowMatrix[loc][flowIdx] = probs[i];
+                } else {
+                    flowMatrix[loc][flowIdx] += probs[i];
+                }
+            }
+        }
+    }
+
+    //convert qualities from the single hmer to a column in a flow matrix
     private void parseZeroQuals(final double[] probs, final int flowIdx, final int qualOfs){
         if ((qualOfs == 0) | (qualOfs==probs.length)){ // do not report zero error probability on the edge of the read
             return;
