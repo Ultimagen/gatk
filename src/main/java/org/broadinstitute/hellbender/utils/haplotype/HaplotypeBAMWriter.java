@@ -33,6 +33,7 @@ public class HaplotypeBAMWriter implements AutoCloseable {
     public static final String DEFAULT_GATK3_HAPLOTYPE_READ_GROUP_ID = "ArtificialHaplotype";
     private static final int bestHaplotypeMQ = 60;
     private static final int otherMQ = 0;
+    private boolean addSpecialTag = false;
 
     private final HaplotypeBAMDestination output;
     private WriterType writerType;
@@ -234,14 +235,20 @@ public class HaplotypeBAMWriter implements AutoCloseable {
             record.setAttribute(AssemblyBasedCallerUtils.EXT_COLLAPSED_TAG, "1");
 
         // add special
-        record.setAttribute(AssemblyBasedCallerUtils.EXT_SPECIAL_TAG,
-                        (haplotype.isReference() ? "1" : "0") + ","
-                                    + haplotype.getScore() + ","
-                                    + haplotype.getAlignmentStartHapwrtRef() + ","
-                                    + ((callableRegion == null)
-                                            ? "" : (callableRegion.getContig() + ":"
-                                                    + callableRegion.getStart() + "-" + callableRegion.getEnd())));
+        if ( addSpecialTag ) {
+            record.setAttribute(AssemblyBasedCallerUtils.EXT_SPECIAL_TAG,
+                    (haplotype.isReference() ? "1" : "0") + ","
+                            + haplotype.getScore() + ","
+                            + haplotype.getAlignmentStartHapwrtRef() + ","
+                            + ((callableRegion == null)
+                            ? "" : (callableRegion.getContig() + ":"
+                            + callableRegion.getStart() + "-" + callableRegion.getEnd())));
+        }
 
         output.add(new SAMRecordToGATKReadAdapter(record));
+    }
+
+    public void setAddSpecialTag(final boolean addSpecialTag) {
+        this.addSpecialTag = addSpecialTag;
     }
 }

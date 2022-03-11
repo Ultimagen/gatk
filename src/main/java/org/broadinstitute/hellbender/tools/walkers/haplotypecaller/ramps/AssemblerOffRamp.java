@@ -80,6 +80,7 @@ public class AssemblerOffRamp extends OffRampBase {
                                             false,
                                             header
                                             );
+            haplotypeBAMWriter.setAddSpecialTag(true);
         }
 
         haplotypeBAMWriter.writeReadsAlignedToHaplotypes(
