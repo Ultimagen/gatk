@@ -271,6 +271,7 @@ public class RampedHaplotypeCallerEngine extends HaplotypeCallerEngine {
             if (preAssemblerOffRamp != null) {
                 preAssemblerOffRamp.add(context.region, "assemblyResult", context.assemblyResult, context.nonVariantLeftFlankRegion, context.nonVariantRightFlankRegion, readsHeader);
                 context.regionVariants = NO_CALLS;
+                return;
             }
 
             // assembler on ramp?
