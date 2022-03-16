@@ -137,7 +137,8 @@ public final class AssemblyBasedCallerUtils {
             // TODO include a deletion w.r.t. the reference.  We must remove kmers that occur before the reference haplotype start
             GATKRead read = FlowBasedReadUtils.isFlow(originalRead) ? FlowBasedRead.hardClipUncertainBases(originalRead, readsHeader, fbargs):originalRead;
             read =  dontUseSoftClippedBases || ! ( overrideSoftclipFragmentCheck || ReadUtils.hasWellDefinedFragmentSize(read)) ?
-                    ReadClipper.hardClipSoftClippedBases(read) : ReadClipper.revertSoftClippedBases(read);
+                    ReadClipper.hardClipSoftClippedBases(read) : revertSoftClippedBases(read);
+
             read = (softClipLowQualityEnds ? ReadClipper.softClipLowQualEnds(read, minTailQualityToUse) :
                     ReadClipper.hardClipLowQualEnds(read, minTailQualityToUse));
 
@@ -1020,5 +1021,15 @@ public final class AssemblyBasedCallerUtils {
                     alt1.basesMatch(Arrays.copyOf(alt2.getBases(), alt1.length())) :
                     alt2.basesMatch(Arrays.copyOf(alt1.getBases(), alt2.length())));
         }
+    }
+
+    // revert soft clipped bases, but also save the original position in a tag
+    private static GATKRead revertSoftClippedBases(GATKRead inputRead){
+        int softStart = inputRead.getStart();
+        int softEnd = inputRead.getEnd();
+        GATKRead result = ReadClipper.revertSoftClippedBases(inputRead);
+        result.setAttribute(ReferenceConfidenceModel.ORIGINAL_START_TAG, softStart);
+        result.setAttribute(ReferenceConfidenceModel.ORIGINAL_END_TAG, softEnd);
+        return result;
     }
 }

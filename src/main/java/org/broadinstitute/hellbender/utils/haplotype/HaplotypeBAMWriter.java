@@ -9,6 +9,7 @@ import htsjdk.samtools.util.Locatable;
 import java.nio.file.Path;
 
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyBasedCallerUtils;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.ReferenceConfidenceModel;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.read.*;
 import org.broadinstitute.hellbender.utils.Utils;
@@ -151,7 +152,17 @@ public class HaplotypeBAMWriter implements AutoCloseable {
             final int sampleCount = readLikelihoods.numberOfSamples();
             for (int i = 0; i < sampleCount; i++) {
                 for (final GATKRead read : readLikelihoods.sampleEvidence(i)) {
-                    writeReadAgainstHaplotype(read);
+
+                    //ugly santiization of the attributes that reference confidence model adds sometimes
+                    if (read.hasAttribute(ReferenceConfidenceModel.ORIGINAL_START_TAG) ||
+                            read.hasAttribute(ReferenceConfidenceModel.ORIGINAL_END_TAG)) {
+                        GATKRead readCopy = read.copy();
+                        readCopy.clearAttribute(ReferenceConfidenceModel.ORIGINAL_START_TAG);
+                        readCopy.clearAttribute(ReferenceConfidenceModel.ORIGINAL_END_TAG);
+                        writeReadAgainstHaplotype(readCopy);
+                    } else {
+                        writeReadAgainstHaplotype(read);
+                    }
                 }
             }
         }

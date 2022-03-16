@@ -240,10 +240,13 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samplesList, ! hcArgs.doNotRunPhysicalPhasing, hcArgs.applyBQD);
         genotypingEngine.setAnnotationEngine(annotationEngine);
 
+        boolean isFlowBased = (hcArgs.likelihoodArgs.likelihoodEngineImplementation == ReadLikelihoodCalculationEngine.Implementation.FlowBased);
         referenceConfidenceModel = new ReferenceConfidenceModel(samplesList, readsHeader,
                 hcArgs.indelSizeToEliminateInRefModel,
                 hcArgs.standardArgs.genotypeArgs.numRefIfMissing,
-                hcArgs.refModelDelQual);
+                hcArgs.refModelDelQual,
+                !hcArgs.overrideSoftclipFragmentCheck,
+                isFlowBased);
 
         //Allele-specific annotations are not yet supported in the VCF mode
         if (isAlleleSpecificExceptHmerLengthOrStrandBiasMode(annotationEngine) && isVCFMode()){

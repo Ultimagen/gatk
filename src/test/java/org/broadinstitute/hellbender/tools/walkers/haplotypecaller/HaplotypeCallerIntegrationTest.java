@@ -1699,11 +1699,11 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
     }
 
     @Test
-    public void testVcfWithAssemblyComplexityAnnotationRevamp() throws Exception {
+    public void testGvcfWithAssemblyComplexityAnnotationRevamp() throws Exception {
         Utils.resetRandomGenerator();
         final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
         final File output = createTempFile("testVcfWithAssemblyComplexityAnnotation", ".vcf");
-        final File expected = new File(TEST_FILES_DIR, "testVcfWithAssemblyComplexityAnnotationRevamp.expected.flowbased.vcf");
+        final File expected = new File(TEST_FILES_DIR, "testGvcfWithAssemblyComplexityAnnotationRevamp.expected.flowbased.vcf");
         final String outputPath = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expected.getAbsolutePath() : output.getAbsolutePath();
 
         final ArgumentsBuilder args = new ArgumentsBuilder()
