@@ -361,7 +361,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             return;
         }
         if ((probs[qualOfs-1])==(probs[qualOfs])){
-            flowMatrix[1][flowIdx] = probs[qualOfs-1]+probs[qualOfs];
+            flowMatrix[1][flowIdx] = Math.max(probs[qualOfs-1],probs[qualOfs]);
         }
     }
 
