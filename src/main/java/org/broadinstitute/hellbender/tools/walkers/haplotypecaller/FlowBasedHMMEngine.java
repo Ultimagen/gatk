@@ -219,39 +219,29 @@ public class FlowBasedHMMEngine implements ReadLikelihoodCalculationEngine {
             final GATKRead rd = likelihoods.evidence().get(i);
 
             // create a flow based read
-            final FlowBasedRead flowReadCopy = new FlowBasedRead(rd, flowOrder, rgInfo.maxClass, fbargs);
-            flowReadCopy.applyAlignment();
-
-            // extract flow order if not know already. FlowBasedRead.getFlowOrder() already caps the result
-            // to fbargs.flowOrderCycleLength in length
-            if ( flowOrder == null)  {
-                flowOrder = flowReadCopy.getFlowOrder();
-            }
+            final FlowBasedRead fbRead = new FlowBasedRead(rd, flowOrder, rgInfo.maxClass, fbargs);
+            fbRead.applyAlignment();
 
             //TODO This currently supports any ScoreImputator in GATK but will probably need a custom one to handle flow based data in the future:
-            final PairHMMInputScoreImputation inputScoreImputation = inputScoreImputator.impute(flowReadCopy);
+            final PairHMMInputScoreImputation inputScoreImputation = inputScoreImputator.impute(fbRead);
             final byte[] readInsQuals = inputScoreImputation.insOpenPenalties();
             final byte[] readDelQuals = inputScoreImputation.delOpenPenalties();
             final byte[] overallGCP = inputScoreImputation.gapContinuationPenalties();
 
-            applyPCRErrorModel(flowReadCopy.getBases(), readInsQuals, readDelQuals);
+            applyPCRErrorModel(fbRead.getBases(), readInsQuals, readDelQuals);
             capMinimumReadIndelQualities(readInsQuals, readDelQuals, minUsableIndelScoreToUse);
 
-            flowReadCopy.setReadInsQuals(readInsQuals);
-            flowReadCopy.setReadDelQuals(readDelQuals);
-            flowReadCopy.setOverallGCP(overallGCP);
+            fbRead.setReadInsQuals(readInsQuals);
+            fbRead.setReadDelQuals(readDelQuals);
+            fbRead.setOverallGCP(overallGCP);
 
-            processedReads.add(flowReadCopy);
+            processedReads.add(fbRead);
         }
 
         //same for the haplotypes - each haplotype is converted to FlowBasedHaplotype
-        if ( flowOrder == null ) {
-            flowOrder = FlowBasedReadUtils.findFirstUsableFlowOrder(hdr, fbargs);
-        }
 
         for (int i = 0; i < likelihoods.numberOfAlleles(); i++){
-            FlowBasedHaplotype fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i),
-                    trimmedFlowOrder != null ? trimmedFlowOrder : flowOrder);
+            final FlowBasedHaplotype fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i), flowOrder);
             processedHaplotypes.add(fbh);
         }
 
