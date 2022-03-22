@@ -807,11 +807,23 @@ public final class ReadUtils {
         read.setAttribute(BQSR_BASE_DELETION_QUALITIES, quals == null ? null : SAMUtils.phredToFastq(quals));
     }
 
+    public static void setT0Tag( final GATKRead read, final byte[] t0) {
+        read.setAttribute(FlowBasedRead.FLOW_MATRIX_T0_TAG_NAME, t0 == null ? null : SAMUtils.phredToFastq(t0));
+    }
+
     /**
      * @return whether or not this read has base insertion or deletion qualities (one of the two is sufficient to return true)
      */
     public static boolean hasBaseIndelQualities(final GATKRead read) {
         return read.hasAttribute(BQSR_BASE_INSERTION_QUALITIES) || read.hasAttribute(BQSR_BASE_DELETION_QUALITIES);
+    }
+
+
+    /**
+     * @return whether or not this read has T0 tag
+     */
+    public static boolean hasT0Tag(final GATKRead read) {
+        return read.hasAttribute(FlowBasedRead.FLOW_MATRIX_T0_TAG_NAME);
     }
 
 
@@ -829,6 +841,12 @@ public final class ReadUtils {
         return SAMUtils.fastqToPhred( read.getAttributeAsString(BQSR_BASE_DELETION_QUALITIES));
     }
 
+    /**
+     * @return the t0 tag as byte array
+     */
+    public static byte[] getT0Tag(final GATKRead read){
+        return SAMUtils.fastqToPhred( read.getAttributeAsString(FlowBasedRead.FLOW_MATRIX_T0_TAG_NAME));
+    }
     /**
      * Default utility to query the base insertion quality of a read. If the read doesn't have one, it creates an array of default qualities (currently Q45)
      * and assigns it to the read.

@@ -220,6 +220,12 @@ public final class ClippingOp {
             ReadUtils.setDeletionBaseQualities(hardClippedRead, newBaseDeletionQuals);
         }
 
+        if (ReadUtils.hasT0Tag(read)) {
+            final byte[] newT0Tag = new byte[newLength];
+            System.arraycopy(ReadUtils.getT0Tag(read), copyStart, newT0Tag, 0, newLength);
+            ReadUtils.setT0Tag(hardClippedRead, newT0Tag);
+        }
+
         return hardClippedRead;
     }
 }
