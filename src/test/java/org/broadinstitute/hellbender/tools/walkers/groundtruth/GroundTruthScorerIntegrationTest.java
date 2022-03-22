@@ -17,8 +17,9 @@ public class GroundTruthScorerIntegrationTest extends CommandLineProgramTest {
     public static final String OUTPUT_FILENAME_UNCLIPPED = "ground_truth_scorer_output_unclipped.csv";
     public static final String OUTPUT_FILENAME_GENOME_PRIOR = "ground_truth_scorer_output_genome_prior.csv";
     public static final String OUTPUT_FILENAME_FILTER = "ground_truth_scorer_output_filter.csv";
+    public static final String OUTPUT_FILENAME_QUAL_REPORT = "ground_truth_scorer_output_qual_report.csv";
+    public static final String OUTPUT_FILENAME_HMER_REPORT = "ground_truth_scorer_output_hmer_report.csv";
     public static final String GT_SCORER_INPUT_BAM = "gt_scorer_input.bam";
-    public static final String GT_SCORER_INPUT2_BAM = "gt_scorer_input2.bam";
     public static final String REF_38_FASTA = "Homo_sapiens_assembly38.fasta.gz";
     public static final String CHR9_SMALL_INTERVAL = "chr9:71000-74000";
     public static final String CHR9_ALL_INTERVAL = "chr9";
@@ -41,7 +42,7 @@ public class GroundTruthScorerIntegrationTest extends CommandLineProgramTest {
 
         runCommandLine(args);  // no assert, just make sure we don't throw
 
-        // make sure we've generated the otuput file
+        // make sure we've generated the output file
         Assert.assertTrue(outputFile.exists());
 
         // walk the output and expected files, compare non-comment lines
@@ -114,6 +115,37 @@ public class GroundTruthScorerIntegrationTest extends CommandLineProgramTest {
         // walk the output and expected files, compare non-comment lines
         if ( !UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
             (new TestFileVerifySame()).verifySame(outputFile, expectedFile);
+        }
+    }
+
+    @Test
+    public void testReports() throws IOException {
+
+        final File outputDir = createTempDir("testGroundTruthTest");
+        final File expectedFile = new File(testDir + "/" + OUTPUT_FILENAME);
+        final File qualReportExpectedFile = new File(testDir + "/" + OUTPUT_FILENAME_QUAL_REPORT);
+        final File hmerReportExpectedFile = new File(testDir + "/" + OUTPUT_FILENAME_HMER_REPORT);
+
+        final File outputFile = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expectedFile : new File(outputDir + "/" + OUTPUT_FILENAME);
+        final File qualReportFile = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? qualReportExpectedFile : new File(outputDir + "/" + OUTPUT_FILENAME_QUAL_REPORT);
+        final File hmerReportFile = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? hmerReportExpectedFile : new File(outputDir + "/" + OUTPUT_FILENAME_HMER_REPORT);
+
+        final String[] args = ArrayUtils.addAll(buildCommonArgs(outputFile, GT_SCORER_INPUT_BAM, true),
+                new String[] {
+                        "--qual-report-csv", qualReportFile.getAbsolutePath(),
+                        "--hmer-report-csv", hmerReportFile.getAbsolutePath()
+                });
+
+        runCommandLine(args);  // no assert, just make sure we don't throw
+
+        // make sure we've generated the otuput file
+        Assert.assertTrue(outputFile.exists());
+
+        // walk the output and expected files, compare non-comment lines
+        if ( !UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
+            (new TestFileVerifySame()).verifySame(outputFile, expectedFile);
+            (new TestFileVerifySame()).verifySame(qualReportFile, qualReportExpectedFile);
+            (new TestFileVerifySame()).verifySame(hmerReportFile, hmerReportExpectedFile);
         }
     }
 
