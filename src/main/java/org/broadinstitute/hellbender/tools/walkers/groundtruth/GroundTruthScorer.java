@@ -311,11 +311,11 @@ public class GroundTruthScorer extends ReadWalker {
                 }
 
                 // assign normalized result
-                result[i] = 1 - (probCol[key[i]] / sum);
+                result[i] = 1 - (probCol[Math.min(key[i], flowRead.getMaxHmer())] / sum);
             } else {
 
                 // assign normalized result
-                result[i] = 1 - probCol[key[i]];
+                result[i] = 1 - probCol[Math.min(key[i], flowRead.getMaxHmer())];
             }
         }
 
