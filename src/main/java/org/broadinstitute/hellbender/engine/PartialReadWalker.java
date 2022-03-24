@@ -11,6 +11,10 @@ import java.util.stream.Stream;
 
 /**
  * A specialized read walker that may be gracefully stopped before the input stream ends
+ * 
+ * A tool derived from this class should implement {@link PartialReadWalker#shouldExitEarly(GATKRead)}
+ * to indicate when to stop. This method is called before {@link ReadWalker#apply(GATKRead, ReferenceContext, FeatureContext)}
+ *
  */
 abstract public class PartialReadWalker extends ReadWalker {
 
