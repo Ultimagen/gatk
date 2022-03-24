@@ -62,7 +62,7 @@ public class FlowBasedArgumentCollection implements Serializable {
     public boolean removeOneToZeroProbs = DEFAULT_REMOVE_ONE_TO_ZERO;
 
     @Advanced
-    @Argument(fullName = NUMBER_OF_POSSIBLE_PROBS_LONG_NAME, doc = "Probability quantization", optional = true)
+    @Argument(fullName = NUMBER_OF_POSSIBLE_PROBS_LONG_NAME, doc = "Number of bins for probability quantization", optional = true)
     public int probabilityQuantization = DEFAULT_QUANTIZATION;
 
     @Advanced
@@ -90,7 +90,7 @@ public class FlowBasedArgumentCollection implements Serializable {
     public boolean retainMaxNProbs = DEFAULT_RETAIN_MAX_N_PROBS;
 
     @Advanced
-    @Argument(fullName = PROB_SF_LONG_NAME, doc = "probability scaling factor for (phred=10)", optional=true)
+    @Argument(fullName = PROB_SF_LONG_NAME, doc = "probability scaling factor for (phred=10) for probability quantization", optional=true)
     public int probabilityScalingFactor = DEFAULT_PROB_SCALING_FACTOR;
 
     @Advanced
