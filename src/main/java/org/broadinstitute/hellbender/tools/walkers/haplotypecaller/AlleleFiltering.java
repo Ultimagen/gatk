@@ -462,7 +462,7 @@ public abstract class AlleleFiltering {
         IntStream.range(0, allAlleles.size()).forEach(i -> initialRPLsMap.put(allAlleles.get(i), rpls.get(i)));
 
         for (final AlleleAndContext cand: candidateList){
-            logger.debug(String.format("ISIA :: test %s", cand.toString()));
+            logger.debug(() -> String.format("ISIA :: test %s", cand.toString()));
             if ( initialRPLsMap.get(cand) > (-1)*prefilterThreshold){
                 logger.debug( String.format("ISIA:: selected %s due to low QUAL", cand));
                 return cand;
