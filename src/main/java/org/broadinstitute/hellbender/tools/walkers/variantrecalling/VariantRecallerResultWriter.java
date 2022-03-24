@@ -31,7 +31,7 @@ public class VariantRecallerResultWriter {
         try {
             pw = new PrintWriter(file);
         } catch (IOException e) {
-            throw new GATKException("Unbale to open output file: " + file.getAbsolutePath(), e);
+            throw new GATKException("Unable to open output file: " + file.getAbsolutePath(), e);
         }
     }
 
