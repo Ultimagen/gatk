@@ -2,6 +2,7 @@ package org.broadinstitute.hellbender.engine.filters.flow;
 
 import htsjdk.samtools.SAMFileHeader;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
+import org.broadinstitute.hellbender.utils.logging.OneShotLogger;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
 /**
@@ -9,6 +10,7 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
  */
 public class ReadGroupHasFlowOrderReadFilter extends ReadFilter {
     private static final long serialVersionUID = 1l;
+    private final static OneShotLogger readGroupFiltered = new OneShotLogger(ReadGroupHasFlowOrderReadFilter.class);
 
     public ReadGroupHasFlowOrderReadFilter() {
 
@@ -21,13 +23,22 @@ public class ReadGroupHasFlowOrderReadFilter extends ReadFilter {
     @Override
     public boolean test(final GATKRead read) {
 
-        if ( read.getReadGroup() == null )
-            return false;
-        else if ( samHeader.getReadGroup(read.getReadGroup()) == null )
-            return false;
-        else if ( samHeader.getReadGroup(read.getReadGroup()).getFlowOrder() == null )
-            return false;
-        else
-            return true;
+        final boolean     result;
+
+        if ( read.getReadGroup() == null ) {
+            result = false;
+        } else if ( samHeader.getReadGroup(read.getReadGroup()) == null ) {
+            result = false;
+        } else if ( samHeader.getReadGroup(read.getReadGroup()).getFlowOrder() == null ) {
+            result = false;
+        } else {
+            result = true;
+        }
+
+        if ( !result ) {
+            readGroupFiltered.warn("at least one of  readgroup is missing or missing a flow order.");
+        }
+
+        return result;
     }
 }
