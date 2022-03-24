@@ -39,7 +39,8 @@ import java.util.*;
  * reference in each read and writes them into a VCF file.
  *
  * The sense of what a 'feature' is left somewhat open. In the most general sense, it is a haplotype
- * located in a specific location on the read. It does not necessarily defined as a deviation from the reference.
+ * located in a specific location on the read. It is not necessarily defined as a deviation from the reference.
+ *
  * A feature is indeed scored against the reference (in terms of its deviation).
  *
  * The current version implements a single type of feature: a SNP (aka SNV).
