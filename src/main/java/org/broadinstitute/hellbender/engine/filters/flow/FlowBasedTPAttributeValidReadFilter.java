@@ -13,7 +13,7 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
 
     @Argument(fullName = "read-filter-max-hmer",
             doc = "maxHmer to use for testing in the filter", optional = true)
-    public int maxHher = 12;
+    public int maxHmer = 12;
 
     public FlowBasedTPAttributeValidReadFilter() {
         super();
@@ -37,7 +37,7 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
         for ( int i = 0 ; i < hmerLength ; i++ ) {
             final int targetValue = values[hmerStartingOffset + i] + hmerLength;
 
-            if (targetValue < 0 || targetValue > maxHher)
+            if (targetValue < 0 || targetValue > maxHmer)
                 return false;
         }
 
