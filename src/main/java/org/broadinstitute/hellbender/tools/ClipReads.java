@@ -90,7 +90,7 @@ import java.util.regex.Pattern;
  * Number of range clipped bases         0
  * Number of sequence clipped bases      0
  *
- * if --clip-adapte is provided, an additional line will be appended:
+ * if --clip-adapter is provided, an additional line will be appended:
  * Number of adapter clipped bases       18228
  * </pre>
  *
