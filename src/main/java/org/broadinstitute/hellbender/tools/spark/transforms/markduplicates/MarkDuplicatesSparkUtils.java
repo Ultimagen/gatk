@@ -376,7 +376,7 @@ public class MarkDuplicatesSparkUtils {
 
         // this should only be called with FlowModeFragments
         if (duplicateFragmentGroup.stream().filter(r -> !(r instanceof FlowModeFragment )).count() > 0 ) {
-            throw new IllegalArgumentException("handleFragmentsWithEndPosition should only be called with FlowModeFragment(s)");
+            throw new IllegalArgumentException("handleFragmentsWithEndPosition currently only supports FlowModeFragment(s) in duplicateFragmentGroup");
         }
 
         // collect as flow mode fragments and sort on end to ensure consistency
