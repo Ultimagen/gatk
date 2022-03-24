@@ -59,10 +59,16 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     final public static String FLOW_MATRIX_TAG_NAME = "tp";
     final public static String FLOW_MATRiX_OLD_TAG_KR = "kr";
     final public static String FLOW_MATRiX_OLD_TAG_TI = "ti";
+    public static final String FLOW_MATRiX_OLD_TAG_KH = "kh";
+    public static final String FLOW_MATRiX_OLD_TAG_KF = "kf";
+    public static final String FLOW_MATRiX_OLD_TAG_KD = "kd";
 
     final public static String MAX_CLASS_READ_GROUP_TAG = "mc";
 
-
+    final public static String[] HARD_CLIPPED_TAGS = new String[] {
+            FLOW_MATRIX_TAG_NAME, FLOW_MATRiX_OLD_TAG_KR, FLOW_MATRiX_OLD_TAG_TI,
+            FLOW_MATRiX_OLD_TAG_KH, FLOW_MATRiX_OLD_TAG_KF, FLOW_MATRiX_OLD_TAG_KD
+    };
 
     /**
      * The sam record from which this flow based read originated
@@ -1119,9 +1125,9 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             }
         }
 
-        int [] kh = getAttributeAsIntArray( "kh" , true);
-        int [] kf = getAttributeAsIntArray("kf", false);
-        int [] kd = getAttributeAsIntArray( "kd", true);
+        int [] kh = getAttributeAsIntArray(FLOW_MATRiX_OLD_TAG_KH, true);
+        int [] kf = getAttributeAsIntArray(FLOW_MATRiX_OLD_TAG_KF, false);
+        int [] kd = getAttributeAsIntArray(FLOW_MATRiX_OLD_TAG_KD, true);
 
         final int [] key_kh = key;
         final int [] key_kf = new int[key.length];
