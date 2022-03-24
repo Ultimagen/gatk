@@ -1,5 +1,6 @@
 package org.broadinstitute.hellbender.utils;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.broadinstitute.hellbender.GATKBaseTest;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.testng.Assert;
@@ -242,6 +243,33 @@ public final class BaseUtilsUnitTest extends GATKBaseTest {
     @Test(dataProvider = "hmerModificationProvider")
     public void testEqualUpToHmerChange(byte[] bases1, byte[] bases2, boolean answer) {
         Assert.assertEquals(BaseUtils.equalUpToHmerChange(bases1, bases2),answer);
+    }
+
+    @DataProvider(name="HmerIteratorDataProvider")
+    public Object[][] getDataProvider() {
+        return new Object[][] {
+                {
+                        "AAAABBBCCD", new int[]{'A', 4, 'B', 3, 'C', 2, 'D', 1}
+                }
+        };
+    }
+
+    @Test(dataProvider = "HmerIteratorDataProvider")
+    public void testHmerIterator(final String bases, int[] expectedResults) {
+
+        final BaseUtils.HmerIterator iter = new BaseUtils.HmerIterator(bases.getBytes());
+        int i = 0;
+
+        // loop over hmers
+        while ( iter.hasNext() ) {
+            Pair<Byte,Integer> pair = iter.next();
+            Assert.assertEquals(pair.getLeft().intValue(), expectedResults[i]);
+            Assert.assertEquals(pair.getRight().intValue(), expectedResults[i+1]);
+            i += 2;
+        }
+
+        // must be at end
+        Assert.assertEquals(i, expectedResults.length);
     }
 
 }
