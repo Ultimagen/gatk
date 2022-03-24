@@ -36,7 +36,7 @@ import java.util.*;
 
 
 /**
- * Calculate likelyhood matrix for each Allele in VCF against a set of Reads limited by a set of Haplotypes
+ * Calculate likelihood matrix for each Allele in VCF against a set of Reads limited by a set of Haplotypes
  *
  * <h3>How HaplotypeBasedVariantRecaller works</h3>
  * For every variant in the VCF:
@@ -64,7 +64,7 @@ import java.util.*;
  */
 @CommandLineProgramProperties(
         summary = "Recalling variants from haplotypes",
-        oneLineSummary = "Calculate likelyhood matrix for each Allele in VCF against a set of Reads limited by a set of Haplotypes",
+        oneLineSummary = "Calculate likelihood matrix for each Allele in VCF against a set of Reads limited by a set of Haplotypes",
         programGroup = ShortVariantDiscoveryProgramGroup.class
 )
 @DocumentedFeature
