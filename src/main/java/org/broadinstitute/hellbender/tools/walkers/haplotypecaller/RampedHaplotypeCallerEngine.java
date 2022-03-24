@@ -25,15 +25,15 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
- * The core engine for the HaplotypeCaller that does all of the actual work of the tool.
+ * This is a specialized haplotype caller engine, designed to allow for breaking the monolithic haplotype
+ * caller process into smaller discrete steps. This version allows for stopping the process at after (or before)
+ * a specific step and saving a state file (an off-ramp) that can later be used to restart the process from the
+ * same step (an on-ramp).
  *
- * Usage:
- * -Pass the HaplotypeCaller args into the constructor, which will initialize the HC engine completely.
- * -Get the appropriate VCF or GVCF writer (depending on our arguments) from {@link #makeVCFWriter}
- * -Write the appropriate VCF header via {@link #writeHeader}
- * -Repeatedly call {@link #isActive} to identify active vs. inactive regions
- * -Repeatedly call {@link #callRegion} to call variants in each region, and add them to your writer
- * -When done, call {@link #shutdown}. Close the writer you got from {@link #makeVCFWriter} yourself.
+ * The major steps of the haplotype caller are: assembly, filtering and genotyping
+ *
+ * At this off ramps are implemented before and after the assembler and before the filtering
+ * On ramps are implemented after the assembler and after the filtering.
  */
 public class RampedHaplotypeCallerEngine extends HaplotypeCallerEngine {
 
