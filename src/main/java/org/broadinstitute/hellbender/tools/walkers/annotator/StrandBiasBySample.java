@@ -68,9 +68,8 @@ public final class StrandBiasBySample implements GenotypeAnnotation, StandardMut
         Utils.nonNull(g);
         Utils.nonNull(gb);
 
-        // not recalculate StrandBiasBySampleKey when likelihhods is null (in genotypeGVCF), if there is a request to
-        // recalculate it and the variant already has StrandBiasTable.  In this case it will be impossible to calculate anyway
-        // was needed when we asked HaplotypeCaller to add this annotation
+        // Do not recalculate StrandBiasBySampleKey when likelihoods is null (in genotypeGVCF) and the variant
+        // already has StrandBiasTable
         if ( g.hasExtendedAttribute(GATKVCFConstants.STRAND_BIAS_BY_SAMPLE_KEY) && (likelihoods == null)) {
             return;
         }
