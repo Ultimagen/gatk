@@ -767,6 +767,12 @@ public class SAMRecordToGATKReadAdapter implements GATKRead, Serializable {
     @Override
     public void hardClipAttributes(final int newStart, final int newLength, final int originalLength)
     {
+        // this is currently applicable only for flow based read groups
+        if ( samRecord.getReadGroup() == null || samRecord.getReadGroup().getFlowOrder() == null ) {
+            return;
+        }
+
+        // loop over whitelist
         for ( final String tag : hardClipAttributesWhiteListTags ) {
 
             // attribute present?
