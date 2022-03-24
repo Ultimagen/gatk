@@ -144,7 +144,7 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
                     + ", ploidy:" + reducedVC.getMaxPloidy(defaultPloidy) + ") is likely to reach " + maxPLLength + ", so processing may take a long time.");
         }
 
-        final AFCalculationResult AFresult = alleleFrequencyCalculator.calculate(reducedVC, defaultPloidy);
+        final AFCalculationResult AFresult = alleleFrequencyCalculator.fastCalculateDiploidBasedOnGLs(reducedVC, defaultPloidy);
         final OutputAlleleSubset outputAlternativeAlleles = calculateOutputAlleleSubset(AFresult, vc, givenAlleles);
 
         // note the math.abs is necessary because -10 * 0.0 => -0.0 which isn't nice
