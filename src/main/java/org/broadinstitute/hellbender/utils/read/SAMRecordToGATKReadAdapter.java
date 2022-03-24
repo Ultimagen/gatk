@@ -30,10 +30,6 @@ public class SAMRecordToGATKReadAdapter implements GATKRead, Serializable {
     private transient Integer cachedAdaptorBoundary = null;
     private transient Integer cachedCigarLength = null;
 
-    // white list for attribute names/tags  to hard clip, as long as they are arrays and on the same length as sequence
-    // at this time, the list is sourced from FlowBasedRead as it is the only code that depends on hardclipping attributes
-    static final Set<String> hardClipAttributesWhiteListTags = new HashSet<>(Arrays.asList(FlowBasedRead.HARD_CLIPPED_TAGS));
-
     private void clearCachedValues() {
         cachedSoftStart = null;
         cachedSoftEnd = null;
@@ -773,7 +769,7 @@ public class SAMRecordToGATKReadAdapter implements GATKRead, Serializable {
         }
 
         // loop over whitelist
-        for ( final String tag : hardClipAttributesWhiteListTags ) {
+        for ( final String tag : FlowBasedRead.HARD_CLIPPED_TAGS ) {
 
             // attribute present?
             if ( !samRecord.hasAttribute(tag) ) {

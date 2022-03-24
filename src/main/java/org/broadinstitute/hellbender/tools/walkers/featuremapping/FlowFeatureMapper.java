@@ -242,7 +242,9 @@ public final class FlowFeatureMapper extends ReadWalker {
     public void closeTool() {
         flushQueue(null, null);
         super.closeTool();
-        vcfWriter.close();
+        if ( vcfWriter != null ) {
+            vcfWriter.close();
+        }
     }
 
     public VariantContextWriter makeVCFWriter( final GATKPath outputVCF, final SAMSequenceDictionary readsDictionary,

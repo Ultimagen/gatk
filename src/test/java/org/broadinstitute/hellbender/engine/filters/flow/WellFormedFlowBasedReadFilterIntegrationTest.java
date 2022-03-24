@@ -3,7 +3,6 @@ package org.broadinstitute.hellbender.engine.filters.flow;
 import org.broadinstitute.hellbender.CommandLineProgramTest;
 import org.broadinstitute.hellbender.testutils.IntegrationTestSpec;
 import org.broadinstitute.hellbender.tools.walkers.variantrecalling.FlowTestConstants;
-import org.broadinstitute.hellbender.tools.walkers.variantrecalling.TestFileVerifySame;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 

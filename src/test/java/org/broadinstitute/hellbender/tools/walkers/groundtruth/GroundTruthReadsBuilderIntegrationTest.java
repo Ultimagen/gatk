@@ -1,8 +1,8 @@
 package org.broadinstitute.hellbender.tools.walkers.groundtruth;
 
 import org.broadinstitute.hellbender.CommandLineProgramTest;
+import org.broadinstitute.hellbender.testutils.IntegrationTestSpec;
 import org.broadinstitute.hellbender.tools.walkers.variantrecalling.FlowTestConstants;
-import org.broadinstitute.hellbender.tools.walkers.variantrecalling.TestFileVerifySame;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -39,7 +39,7 @@ public class GroundTruthReadsBuilderIntegrationTest extends CommandLineProgramTe
 
         // walk the output and expected files, compare non-comment lines
         if ( !UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
-            (new TestFileVerifySame()).verifySame(outputFile, expectedFile);
+            IntegrationTestSpec.assertEqualTextFiles(outputFile, expectedFile);
         }
     }
 
@@ -61,7 +61,7 @@ public class GroundTruthReadsBuilderIntegrationTest extends CommandLineProgramTe
 
         // walk the output and expected files, compare non-comment lines
         if ( !UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
-            (new TestFileVerifySame()).verifySame(outputFile, expectedFile);
+            IntegrationTestSpec.assertEqualTextFiles(outputFile, expectedFile);
         }
     }
 

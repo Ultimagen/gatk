@@ -1,6 +1,7 @@
 package org.broadinstitute.hellbender.tools.walkers.variantrecalling;
 
 import org.broadinstitute.hellbender.CommandLineProgramTest;
+import org.broadinstitute.hellbender.testutils.IntegrationTestSpec;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -42,7 +43,7 @@ public class HaplotypeBasedVariantRecallerIntegrationTest extends CommandLinePro
         // walk the output and expected files, compare non-comment lines
         Assert.assertTrue(outputFile.exists());
         if ( !UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
-            (new TestFileVerifySame.NearlySameDoubles()).verifySame(outputFile, expectedFile);
+            IntegrationTestSpec.assertEqualTextFiles(outputFile, expectedFile, "#");
         }
     }
 }
