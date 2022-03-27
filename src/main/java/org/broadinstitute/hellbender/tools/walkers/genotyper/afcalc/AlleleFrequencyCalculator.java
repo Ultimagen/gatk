@@ -122,7 +122,7 @@ public final class AlleleFrequencyCalculator {
 
     public AFCalculationResult calculate(final VariantContext vc) {
         // maxAltAlleles is not used by getLog10PNonRef, so don't worry about the 0
-        return fastCalculateDiploidBasedOnGLs(vc, defaultPloidy);
+        return calculate(vc, defaultPloidy);
     }
 
     /**
@@ -132,7 +132,7 @@ public final class AlleleFrequencyCalculator {
      *           must have at least 1 alternative allele
      * @return result (for programming convenience)
      */
-    public AFCalculationResult fastCalculateDiploidBasedOnGLs(final VariantContext vc, final int defaultPloidy) {
+    public AFCalculationResult calculate(final VariantContext vc, final int defaultPloidy) {
         Utils.nonNull(vc, "VariantContext cannot be null");
         final int numAlleles = vc.getNAlleles();
         final List<Allele> alleles = vc.getAlleles();
