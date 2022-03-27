@@ -24,10 +24,10 @@ import org.broadinstitute.hellbender.utils.clipping.ReadClipper;
 import org.broadinstitute.hellbender.utils.haplotype.FlowBasedHaplotype;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.*;
+import org.broadinstitute.hellbender.utils.report.GATKReport;
+import org.broadinstitute.hellbender.utils.report.GATKReportTable;
 
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.zip.GZIPOutputStream;
@@ -42,8 +42,7 @@ import java.util.zip.GZIPOutputStream;
 public class GroundTruthScorer extends ReadWalker {
     private static final Logger logger = LogManager.getLogger(GroundTruthScorer.class);
     public static final String OUTPUT_CSV_LONG_NAME = "output-csv";
-    public static final String QUAL_REPORT_CSV_LONG_NAME = "qual-report-csv";
-    public static final String HMER_REPORT_CSV_LONG_NAME = "hmer-report-csv";
+    public static final String REPORT_FILE_LONG_NAME = "report-file";
     public static final String USE_SOFTCLIPPED_BASES_LONG_NAME = "use-softclipped-bases";
     public static final String GENOME_PRIOR_LONG_NAME = "genome-prior";
     public static final String FEATURES_FILE_LONG_NAME = "features-file";
@@ -51,42 +50,45 @@ public class GroundTruthScorer extends ReadWalker {
     private static final int QUAL_VALUE_MAX = 60;
     private static final int HMER_VALUE_MAX = FlowBasedRead.MAX_CLASS;
 
-    private static class ReportEntry {
-        final int id;
-        long count;
-        double errorSum;
-        double errorMin = Double.MAX_VALUE;
-        double errorMax = Double.MIN_VALUE;
+    private static class BooleanAccumulator {
+        long falseCount;
+        long trueCount;
 
-        ReportEntry(final int id) {
-            this.id = id;
-        }
-
-        void add(final double error) {
-            count++;
-            errorSum += error;
-            errorMin = Math.min(errorMin, error);
-            errorMax = Math.max(errorMax, error);
-        }
-
-        String toCsvString() {
-            if ( count == 0 ) {
-                return id + ",0,0.0";
+        void add(final boolean b) {
+            if ( b ) {
+                trueCount++;
             } else {
-                return id + String.format(",%d,%f", count, errorSum / count);
+                falseCount++;
             }
         }
 
-        static String csvHeading(final String idName) {
-            return idName + ",count,value";
+        long getCount() {
+            return falseCount + trueCount;
         }
 
-        static ReportEntry[] newReport(final int size) {
-            ReportEntry[]   report = new ReportEntry[size];
+        double getFalseRate() {
+            return (getCount() == 0) ? 0.0 : (falseCount / getCount());
+        }
+
+        static BooleanAccumulator[] newReport(final int size) {
+            BooleanAccumulator[]   report = new BooleanAccumulator[size];
             for ( byte i = 0 ; i < report.length ; i++ ) {
-                report[i] = new ReportEntry(i);
+                report[i] = new BooleanAccumulator();
             }
             return report;
+        }
+
+        static GATKReportTable newReportTable(final BooleanAccumulator[] report, final String name) {
+            final GATKReportTable table = new GATKReportTable(name + "Report", "error rate per " + name, 3);
+            table.addColumn(name, "%d");
+            table.addColumn("count", "%d");
+            table.addColumn("error", "%f");
+            for (int i = 0; i < report.length; i++) {
+                table.set(i, 0, i);
+                table.set(i, 1, report[i].getCount());
+                table.set(i, 2, report[i].getFalseRate());
+            }
+            return table;
         }
     }
 
@@ -94,11 +96,8 @@ public class GroundTruthScorer extends ReadWalker {
     @Argument(fullName = OUTPUT_CSV_LONG_NAME, doc="main CSV output file. supported file extensions: .csv, .csv.gz.")
     public GATKPath outputCsvPath = null;
 
-    @Argument(fullName = QUAL_REPORT_CSV_LONG_NAME, doc="quality report output file. supported file extensions: .csv", optional = true)
-    public GATKPath qualReportCsvPath = null;
-
-    @Argument(fullName = HMER_REPORT_CSV_LONG_NAME, doc="hmer report output file. supported file extensions: .csv", optional = true)
-    public GATKPath hmerReportCsvPath = null;
+    @Argument(fullName = REPORT_FILE_LONG_NAME, doc="report output file.", optional = true)
+    public GATKPath reportFilePath = null;
 
     @ArgumentCollection
     public LikelihoodEngineArgumentCollection likelihoodArgs = new LikelihoodEngineArgumentCollection();
@@ -120,8 +119,8 @@ public class GroundTruthScorer extends ReadWalker {
     private PrintWriter                         outputCsv;
     private DecimalFormat                       doubleFormat = new DecimalFormat("0.0#####");
     private GenomePriorDB                       genomePriorDB;
-    private ReportEntry[]                       qualReport;
-    private ReportEntry[]                       hmerReport;
+    private BooleanAccumulator[]                       qualReport;
+    private BooleanAccumulator[]                       hmerReport;
 
     // static/const
     static final private String[]       CSV_FIELD_ORDER = {
@@ -163,11 +162,8 @@ public class GroundTruthScorer extends ReadWalker {
         emitCsvHeaders();
 
         // initialize reports
-        if ( qualReportCsvPath != null ) {
-            qualReport = ReportEntry.newReport(QUAL_VALUE_MAX + 1);
-        }
-        if ( hmerReportCsvPath != null ) {
-            hmerReport = ReportEntry.newReport(HMER_VALUE_MAX + 1);
+        if ( reportFilePath != null ) {
+            qualReport = BooleanAccumulator.newReport(QUAL_VALUE_MAX + 1);
         }
     }
 
@@ -180,11 +176,11 @@ public class GroundTruthScorer extends ReadWalker {
         }
 
         // write reports
-        if ( qualReport != null ) {
-            writeReport(qualReport, "qual", qualReportCsvPath);
-        }
-        if ( hmerReport != null ) {
-            writeReport(hmerReport, "hmer", hmerReportCsvPath);
+        if ( reportFilePath != null ) {
+            final GATKReport report = new GATKReport(BooleanAccumulator.newReportTable(qualReport, "qual"));
+            try ( final PrintStream ps = new PrintStream(reportFilePath.getOutputStream()) ) {
+                report.print(ps);
+            }
         }
 
         super.closeTool();
@@ -233,9 +229,6 @@ public class GroundTruthScorer extends ReadWalker {
         final FlowBasedReadUtils.CycleSkipStatus cycleSkipStatus = FlowBasedReadUtils.getCycleSkipStatus(flowRead, referenceContext);
 
         // accumulate reports
-        if ( hmerReport != null ) {
-            addToHmerReport(flowRead.getKey(), errorProb);
-        }
         if ( cycleSkipStatus == FlowBasedReadUtils.CycleSkipStatus.NS &&  qualReport != null ) {
             addToQualReport(flowRead, referenceContext, errorProb);
         }
@@ -403,25 +396,6 @@ public class GroundTruthScorer extends ReadWalker {
         }
     }
 
-    private void addToHmerReport(final int[] key, final double[] errorProb) {
-
-        for ( int i = 0 ; i < key.length ; i++ ) {
-            if ( key[i] < hmerReport.length ) {
-                hmerReport[key[i]].add(errorProb[i]);
-            }
-        }
-    }
-
-    private void writeReport(final ReportEntry[] report, final String idName, final GATKPath outputCsvPath) {
-
-        PrintWriter     pw = new PrintWriter(outputCsvPath.getOutputStream());
-        pw.println(ReportEntry.csvHeading(idName));
-        for ( int i = 0 ; i < report.length ; i++ ) {
-            pw.println(report[i].toCsvString());
-        }
-        pw.close();
-    }
-
     private void addToQualReport(FlowBasedRead flowRead, ReferenceContext referenceContext, final double[] errorProb) {
 
         // convert reference to key space
@@ -440,11 +414,11 @@ public class GroundTruthScorer extends ReadWalker {
             final int           qual = (int)(-10 * Math.log10(prob));
 
             // determine if matches reference
-            final boolean       diff = readKey[flow] != hapKey[flow];
+            final boolean       same = readKey[flow] == hapKey[flow];
 
             // accumulate
             if ( qual < qualReport.length ) {
-                qualReport[qual].add(diff ? 1.0 : 0.0);
+                qualReport[qual].add(same);
             }
         }
     }
