@@ -24,7 +24,7 @@ public class FlowModeFragment extends TransientFieldPhysicalLocation {
     public static final String FLOW_DUPLICATE_SCORE_ATTR_NAME = "FlowDuplicateScore";
 
     protected transient ReadsKey key;
-    protected int end = ReadUtils.FLOW_BASED_INSIGNIFICANT_END;
+    protected int end = FlowBasedReadUtils.FLOW_BASED_INSIGNIFICANT_END;
 
     private final boolean R1R;
 
@@ -44,7 +44,7 @@ public class FlowModeFragment extends TransientFieldPhysicalLocation {
                 (short)ReadUtils.getReferenceIndex(first, header),
                 headerLibraryMap.get(MarkDuplicatesSparkUtils.getLibraryForRead(first, header, LibraryIdGenerator.UNKNOWN_LIBRARY)));
 
-        this.score = (this.end != ReadUtils.FLOW_BASED_INSIGNIFICANT_END)
+        this.score = (this.end != FlowBasedReadUtils.FLOW_BASED_INSIGNIFICANT_END)
                 ? ((mdArgs.FLOW_QUALITY_SUM_STRATEGY && FlowBasedReadUtils.isFlow(first)) ? computeFlowDuplicateScore(first, start, end) : scoringStrategy.score(first))
                 : -1;
     }

@@ -17,6 +17,7 @@ import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.metrics.MetricsUtils;
 import org.broadinstitute.hellbender.utils.Utils;
+import org.broadinstitute.hellbender.utils.read.FlowBasedReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
@@ -399,11 +400,11 @@ public class MarkDuplicatesSparkUtils {
             if ( subGroup.size() == 0 ) {
                 // first one?
                 subGroup.add(fragment);
-                if ( end != ReadUtils.FLOW_BASED_INSIGNIFICANT_END) {
+                if ( end != FlowBasedReadUtils.FLOW_BASED_INSIGNIFICANT_END) {
                     subGroupMinEnd = end - endUncert;
                     subGroupMaxEnd = end + endUncert;
                 }
-            } else if ( end == ReadUtils.FLOW_BASED_INSIGNIFICANT_END)  {
+            } else if ( end == FlowBasedReadUtils.FLOW_BASED_INSIGNIFICANT_END)  {
                 // insignificant end, simply accumulate
                 subGroup.add(fragment);
             } else if ( subGroupMinEnd == 0 ) {
@@ -421,7 +422,7 @@ public class MarkDuplicatesSparkUtils {
                 output.add(handleFragments(subGroup, finder));
                 subGroup.clear();
                 subGroup.add(fragment);
-                if ( end != ReadUtils.FLOW_BASED_INSIGNIFICANT_END) {
+                if ( end != FlowBasedReadUtils.FLOW_BASED_INSIGNIFICANT_END) {
                     subGroupMinEnd = end - endUncert;
                     subGroupMaxEnd = end + endUncert;
                 } else {

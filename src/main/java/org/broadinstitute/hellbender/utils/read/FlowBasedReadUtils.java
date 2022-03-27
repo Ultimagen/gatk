@@ -19,6 +19,7 @@ public class FlowBasedReadUtils {
 
     public static final int FLOW_SUM_OF_BASE_QUALITY_THRESHOLD = 15;
     public static final FlowBasedArgumentCollection DEFAULT_FLOW_BASED_ARGUMENT_COLLECTION = new FlowBasedArgumentCollection();
+    static final public int FLOW_BASED_INSIGNIFICANT_END = 0;
 
     private static final Map<String, ReadGroupInfo> readGroupInfo = new LinkedHashMap<>();
 
@@ -285,7 +286,7 @@ public class FlowBasedReadUtils {
         else if ( readEndMarkedUnclipped(gatkRead, mdArgs.FLOW_Q_IS_KNOWN_END) ) {
             return gatkRead.getUnclippedStart();
         } else if ( endSemantics && readEndMarkedUncertain(gatkRead) ) {
-            return ReadUtils.FLOW_BASED_INSIGNIFICANT_END;
+            return FLOW_BASED_INSIGNIFICANT_END;
         } else if ( mdArgs.FLOW_USE_CLIPPED_LOCATIONS ) {
             return gatkRead.getStart();
         } else {
@@ -338,7 +339,7 @@ public class FlowBasedReadUtils {
         else if ( readEndMarkedUnclipped(gatkRead, mdArgs.FLOW_Q_IS_KNOWN_END) ) {
             return gatkRead.getUnclippedEnd();
         } else if ( endSemantics && readEndMarkedUncertain(gatkRead) ) {
-            return ReadUtils.FLOW_BASED_INSIGNIFICANT_END;
+            return FLOW_BASED_INSIGNIFICANT_END;
         } else if ( mdArgs.FLOW_USE_CLIPPED_LOCATIONS ) {
             return gatkRead.getEnd();
         } else {

@@ -32,8 +32,6 @@ import java.util.*;
  */
 public final class ReadUtils {
 
-    static final public int FLOW_BASED_INSIGNIFICANT_END = 0;
-
     private ReadUtils() {
     }
 
