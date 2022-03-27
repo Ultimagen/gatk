@@ -46,7 +46,7 @@ public final class AssemblyResultSet {
     private OptionalInt lastMaxMnpDistanceUsed = OptionalInt.empty();
     private boolean debug;
     private static final Logger logger = LogManager.getLogger(AssemblyResultSet.class);
-    private LongHomopolymerHaplotypeCollapsingEngine haplotypeCollapsing;
+    private LongHomopolymerHaplotypeCollapsingEngine haplotypeCollapsingEngine; // this is nullable - indicating no collapsing engine (flow-based specific)
 
     /**
      * Constructs a new empty assembly result set.
@@ -71,8 +71,7 @@ public final class AssemblyResultSet {
      */
     public AssemblyResultSet trimTo(final AssemblyRegion trimmedAssemblyRegion) {
 
-        Locatable                span = trimmedAssemblyRegion.getPaddedSpan();
-        final Map<Haplotype,Haplotype> originalByTrimmedHaplotypes = calculateOriginalByTrimmedHaplotypes(span);
+        final Map<Haplotype,Haplotype> originalByTrimmedHaplotypes = calculateOriginalByTrimmedHaplotypes(trimmedAssemblyRegion.getPaddedSpan());
         if (refHaplotype == null) {
             throw new IllegalStateException("refHaplotype is null");
         }
@@ -569,12 +568,12 @@ public final class AssemblyResultSet {
         this.debug = debug;
     }
 
-    public LongHomopolymerHaplotypeCollapsingEngine getHaplotypeCollapsing() {
-        return haplotypeCollapsing;
+    public LongHomopolymerHaplotypeCollapsingEngine getHaplotypeCollapsingEngine() {
+        return haplotypeCollapsingEngine;
     }
 
-    public void setHaplotypeCollapsing(LongHomopolymerHaplotypeCollapsingEngine haplotypeCollapsing) {
-        this.haplotypeCollapsing = haplotypeCollapsing;
+    public void setHaplotypeCollapsingEngine(LongHomopolymerHaplotypeCollapsingEngine haplotypeCollapsingEngine) {
+        this.haplotypeCollapsingEngine = haplotypeCollapsingEngine;
     }
 
     public void clearHaplotypes() {

@@ -170,7 +170,7 @@ public final class ReadThreadingAssembler {
         final SimpleInterval activeRegionExtendedLocation = assemblyRegion.getPaddedSpan();
         refHaplotype.setGenomeLocation(activeRegionExtendedLocation);
         resultSet.add(refHaplotype);
-        resultSet.setHaplotypeCollapsing(haplotypeCollapsing);
+        resultSet.setHaplotypeCollapsingEngine(haplotypeCollapsing);
 
         // either follow the old method for building graphs and then assembling or assemble and haplotype call before expanding kmers
         if (generateSeqGraph) {
@@ -420,9 +420,9 @@ public final class ReadThreadingAssembler {
             }
 
             // uncollapse haplotypes now?
-            if ( resultSet != null && resultSet.getHaplotypeCollapsing() != null ) {
-                returnHaplotypes = new LinkedHashSet<>(resultSet.getHaplotypeCollapsing().uncollapseHmersInHaplotypes(resultSet.getHaplotypeList(), true, null));
-                resultSet.getHaplotypeCollapsing().replaceAllHaplotypes(resultSet, returnHaplotypes);
+            if ( resultSet != null && resultSet.getHaplotypeCollapsingEngine() != null ) {
+                returnHaplotypes = new LinkedHashSet<>(resultSet.getHaplotypeCollapsingEngine().uncollapseHmersInHaplotypes(resultSet.getHaplotypeList(), true, null));
+                resultSet.getHaplotypeCollapsingEngine().replaceAllHaplotypes(resultSet, returnHaplotypes);
             }
 
             assemblyResult.setDiscoveredHaplotypes(returnHaplotypes);
@@ -937,7 +937,7 @@ public final class ReadThreadingAssembler {
         final SimpleInterval activeRegionExtendedLocation = assemblyRegion.getPaddedSpan();
         refHaplotype.setGenomeLocation(activeRegionExtendedLocation);
         resultSet.add(refHaplotype);
-        resultSet.setHaplotypeCollapsing(haplotypeCollapsing);
+        resultSet.setHaplotypeCollapsingEngine(haplotypeCollapsing);
 
         return resultSet;
     }

@@ -109,7 +109,7 @@ public class PostAssemblerOnRamp extends OnRampBase {
                 ? new LongHomopolymerHaplotypeCollapsingEngine(hcArgs.flowAssemblyCollapseHKerSize, hcArgs.flowAssemblyCollapsePartialMode, assemblyResult.getFullReferenceWithPadding(),
                 paddedReferenceLoc, logger, hcArgs.assemblerArgs.debugAssembly, aligner, hcArgs.getHaplotypeToReferenceSWParameters())
                 : null;
-        assemblyResult.setHaplotypeCollapsing(haplotypeCollapsing);
+        assemblyResult.setHaplotypeCollapsingEngine(haplotypeCollapsing);
 
         return assemblyResult;
     }

@@ -369,7 +369,7 @@ public final class AssemblyBasedCallerUtils {
                                paddedReferenceLoc,
                                haplotypeCollapsing);
 
-            assemblyResultSet.setHaplotypeCollapsing(haplotypeCollapsing);
+            assemblyResultSet.setHaplotypeCollapsingEngine(haplotypeCollapsing);
 
             if (!givenAlleles.isEmpty()) {
                 addGivenAlleles(region.getPaddedSpan().getStart(), givenAlleles, argumentCollection.maxMnpDistance, aligner, haplotypeToReferenceSWParameters, refHaplotype, assemblyResultSet);

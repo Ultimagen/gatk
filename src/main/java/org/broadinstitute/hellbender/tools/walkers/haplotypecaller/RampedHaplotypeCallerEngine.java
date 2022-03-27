@@ -286,7 +286,7 @@ public class RampedHaplotypeCallerEngine extends HaplotypeCallerEngine {
                     context.regionVariants = NO_CALLS;
                     return;
                 }
-                context.haplotypeCollapsing = context.assemblyResult.getHaplotypeCollapsing();
+                context.haplotypeCollapsing = context.assemblyResult.getHaplotypeCollapsingEngine();
                 RampUtils.logReads(rpArgs.rampsDebugReads, "onramp: reads before trimming", context.assemblyResult.getRegionForGenotyping().getReads());
 
                 RampUtils.logReads(rpArgs.rampsDebugReads, "onramp: BEFORE untrimmedAssemblyResult reads", context.region.getReads());
@@ -307,7 +307,7 @@ public class RampedHaplotypeCallerEngine extends HaplotypeCallerEngine {
                     return;
                     // TODO: investigate further
                 }
-                context.haplotypeCollapsing = context.assemblyResult.getHaplotypeCollapsing();
+                context.haplotypeCollapsing = context.assemblyResult.getHaplotypeCollapsingEngine();
                 RampUtils.logReads(rpArgs.rampsDebugReads, "onramp: reads after trimming", context.assemblyResult.getRegionForGenotyping().getReads());
 
                 if (rpArgs.rampsDebugPostAssemblerOn) {
@@ -333,7 +333,7 @@ public class RampedHaplotypeCallerEngine extends HaplotypeCallerEngine {
                         untrimmedAssemblyResult.add(h);
                 }
             }
-            context.haplotypeCollapsing = untrimmedAssemblyResult.getHaplotypeCollapsing();
+            context.haplotypeCollapsing = untrimmedAssemblyResult.getHaplotypeCollapsingEngine();
 
             if (assemblyDebugOutStream != null) {
                 assemblyDebugOutStream.write("\nThere were " + untrimmedAssemblyResult.getHaplotypeList().size() + " haplotypes found. Here they are:");

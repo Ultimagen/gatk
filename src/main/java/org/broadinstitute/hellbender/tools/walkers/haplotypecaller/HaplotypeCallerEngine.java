@@ -837,11 +837,11 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
      */
     private AlleleLikelihoods<GATKRead, Haplotype> possiblyUncollapseHaplotypesInReadLikelihoods(final AssemblyResultSet assemblyResultSet, final AlleleLikelihoods<GATKRead, Haplotype> readLikelihoods) {
 
-        if ( assemblyResultSet.getHaplotypeCollapsing() != null ) {
+        if ( assemblyResultSet.getHaplotypeCollapsingEngine() != null ) {
 
             List<Haplotype>     haplotypes = readLikelihoods.alleles();
 
-            haplotypes = assemblyResultSet.getHaplotypeCollapsing().uncollapseHmersInHaplotypes(haplotypes, false, null);
+            haplotypes = assemblyResultSet.getHaplotypeCollapsingEngine().uncollapseHmersInHaplotypes(haplotypes, false, null);
             if ( logger.isDebugEnabled() ) {
                 logger.debug(String.format("%d haplotypes before uncollapsing", haplotypes.size()));
             }
