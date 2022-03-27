@@ -297,7 +297,7 @@ public abstract class AlleleFiltering {
 
         //collected RPLs are the -10*QUAL of the alleles. high RPL means low quality.
         // SORs are regular: high SOR - strongly biased
-        final int[] rplsIndices = argsortInt(collectedRPLs);
+        final int[] rplsIndices = getSortedIndexList(collectedRPLs);
         final int[] sorIndices = rplsIndices; // the variants that have high sor are ordered according to their quality
 
 
@@ -435,7 +435,7 @@ public abstract class AlleleFiltering {
     }
 
     // sort an integer list
-    int[] argsortInt( final List<Integer> values) {
+    private int[] getSortedIndexList(final List<Integer> values) {
         return IntStream.range(0, values.size()).
                 mapToObj(i -> new ImmutablePair<>(i, values.get(i)))
                 .sorted(Comparator.comparingInt( v -> (int)v.getRight()))
@@ -550,7 +550,7 @@ public abstract class AlleleFiltering {
     }
 
 
-    DefaultDirectedWeightedGraph<AlleleAndContext, DefaultWeightedEdge> interactionMatrixToGraph(final Map<AlleleAndContext, Map<AlleleAndContext, Integer>> interactionMatrix,
+    private DefaultDirectedWeightedGraph<AlleleAndContext, DefaultWeightedEdge> interactionMatrixToGraph(final Map<AlleleAndContext, Map<AlleleAndContext, Integer>> interactionMatrix,
                                                                                                  final Map<AlleleAndContext, Integer> initialRPL ){
         final DefaultDirectedWeightedGraph<AlleleAndContext, DefaultWeightedEdge> result = new DefaultDirectedWeightedGraph<>(DefaultWeightedEdge.class);
         initialRPL.keySet().stream().forEach(x -> result.addVertex(x));

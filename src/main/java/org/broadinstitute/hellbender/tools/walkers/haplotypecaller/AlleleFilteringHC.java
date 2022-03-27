@@ -41,7 +41,7 @@ public class AlleleFilteringHC extends AlleleFiltering {
      *
      * @param alleleLikelihoods
      * @param allele
-     * @return
+     * @return likelihood, expressed as phred-scaled confidence
      */
     @Override
     int getAlleleLikelihoodVsInverse(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele) {

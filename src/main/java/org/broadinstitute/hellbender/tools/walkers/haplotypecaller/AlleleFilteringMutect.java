@@ -41,7 +41,7 @@ public class AlleleFilteringMutect extends AlleleFiltering {
      *
      * @param alleleLikelihoods
      * @param allele
-     * @return
+     * @return likelihood, expressed as phred-scaled confidence
      */
 
     @Override
