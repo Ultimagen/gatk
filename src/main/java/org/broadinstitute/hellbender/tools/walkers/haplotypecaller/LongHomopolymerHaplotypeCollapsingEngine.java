@@ -444,6 +444,14 @@ public class LongHomopolymerHaplotypeCollapsingEngine {
         }
     }
 
+    /**
+     * Replace the haplotypes contained in the assembly result set with a fresh set.
+     *
+     * This method is used to replace the haplotypes in the aseembly result with uncollapsed ones.
+     *
+     * @param assemblyResultSet - assembly result to modify
+     * @param list - fresh set of haplotypes
+     */
     public void replaceAllHaplotypes(final AssemblyResultSet assemblyResultSet, final Set<Haplotype> list) {
         assemblyResultSet.clearHaplotypes();
         for ( Haplotype h : list )
