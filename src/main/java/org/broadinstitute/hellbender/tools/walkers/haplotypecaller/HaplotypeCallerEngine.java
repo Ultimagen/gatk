@@ -839,19 +839,12 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
         if ( assemblyResultSet.getHaplotypeCollapsingEngine() != null ) {
 
-            List<Haplotype>     haplotypes = readLikelihoods.alleles();
-
-            haplotypes = assemblyResultSet.getHaplotypeCollapsingEngine().uncollapseHmersInHaplotypes(haplotypes, false, null);
-            if ( logger.isDebugEnabled() ) {
-                logger.debug(String.format("%d haplotypes before uncollapsing", haplotypes.size()));
-            }
+            final List<Haplotype> haplotypes = assemblyResultSet.getHaplotypeCollapsingEngine().uncollapseHmersInHaplotypes(readLikelihoods.alleles(), false, null);
+            logger.debug(() -> String.format("%d haplotypes before uncollapsing", haplotypes.size()));
             Map<Haplotype, List<Haplotype>> identicalHaplotypesMap = LongHomopolymerHaplotypeCollapsingEngine.identicalBySequence(haplotypes);
             readLikelihoods.changeAlleles(haplotypes);
             final AlleleLikelihoods<GATKRead, Haplotype>  uncollapsedReadLikelihoods = readLikelihoods.marginalize(identicalHaplotypesMap);
-
-            if ( logger.isDebugEnabled() ) {
-                logger.debug(String.format("%d haplotypes after uncollapsing", uncollapsedReadLikelihoods.numberOfAlleles()));
-            }
+            logger.debug(() -> String.format("%d haplotypes after uncollapsing", uncollapsedReadLikelihoods.numberOfAlleles()));
 
             return uncollapsedReadLikelihoods;
         } else {
