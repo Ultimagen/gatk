@@ -154,11 +154,11 @@ public class HaplotypeBAMWriter implements AutoCloseable {
                 for (final GATKRead read : readLikelihoods.sampleEvidence(i)) {
 
                     //ugly santiization of the attributes that reference confidence model adds sometimes
-                    if (read.hasAttribute(ReferenceConfidenceModel.ORIGINAL_START_TAG) ||
-                            read.hasAttribute(ReferenceConfidenceModel.ORIGINAL_END_TAG)) {
+                    if (read.hasAttribute(ReferenceConfidenceModel.ORIGINAL_SOFTCLIP_START_TAG) ||
+                            read.hasAttribute(ReferenceConfidenceModel.ORIGINAL_SOFTCLIP_END_TAG)) {
                         GATKRead readCopy = read.copy();
-                        readCopy.clearAttribute(ReferenceConfidenceModel.ORIGINAL_START_TAG);
-                        readCopy.clearAttribute(ReferenceConfidenceModel.ORIGINAL_END_TAG);
+                        readCopy.clearAttribute(ReferenceConfidenceModel.ORIGINAL_SOFTCLIP_START_TAG);
+                        readCopy.clearAttribute(ReferenceConfidenceModel.ORIGINAL_SOFTCLIP_END_TAG);
                         writeReadAgainstHaplotype(readCopy);
                     } else {
                         writeReadAgainstHaplotype(read);

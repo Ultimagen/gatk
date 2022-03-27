@@ -56,8 +56,8 @@ public class ReferenceConfidenceModel {
     public static final String INDEL_INFORMATIVE_BASES_CACHE_ATTRIBUTE_NAME = "IDL";
     public static final boolean USE_CACHED_READ_INDEL_INFORMATIVENESS_VALUES = true;
     // these are filled only when the softclipping is being reversed
-    public static final String ORIGINAL_START_TAG = "os";
-    public static final String ORIGINAL_END_TAG = "oe";
+    public static final String ORIGINAL_SOFTCLIP_START_TAG = "os";
+    public static final String ORIGINAL_SOFTCLIP_END_TAG = "oe";
 
     private final SampleList samples;
     private final int indelInformativeDepthIndelSize;
@@ -436,18 +436,18 @@ public class ReferenceConfidenceModel {
     }
 
     private int getOriginalSoftStart(GATKRead read) {
-        if (!read.hasAttribute(ORIGINAL_START_TAG)){
+        if (!read.hasAttribute(ORIGINAL_SOFTCLIP_START_TAG)){
             throw new GATKException("Attempt to read soft clip start that was not saved");
         } else {
-            return read.getAttributeAsInteger(ORIGINAL_START_TAG);
+            return read.getAttributeAsInteger(ORIGINAL_SOFTCLIP_START_TAG);
         }
     }
 
     private int getOriginalSoftEnd(GATKRead read) {
-        if (!read.hasAttribute(ORIGINAL_END_TAG)){
+        if (!read.hasAttribute(ORIGINAL_SOFTCLIP_END_TAG)){
             throw new GATKException("Attempt to read soft clip end that was not saved");
         } else {
-            return read.getAttributeAsInteger(ORIGINAL_END_TAG);
+            return read.getAttributeAsInteger(ORIGINAL_SOFTCLIP_END_TAG);
         }
     }
 

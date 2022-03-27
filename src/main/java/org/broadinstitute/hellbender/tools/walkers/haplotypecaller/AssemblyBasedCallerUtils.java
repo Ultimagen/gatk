@@ -1028,8 +1028,8 @@ public final class AssemblyBasedCallerUtils {
         int softStart = inputRead.getStart();
         int softEnd = inputRead.getEnd();
         GATKRead result = ReadClipper.revertSoftClippedBases(inputRead);
-        result.setAttribute(ReferenceConfidenceModel.ORIGINAL_START_TAG, softStart);
-        result.setAttribute(ReferenceConfidenceModel.ORIGINAL_END_TAG, softEnd);
+        result.setAttribute(ReferenceConfidenceModel.ORIGINAL_SOFTCLIP_START_TAG, softStart);
+        result.setAttribute(ReferenceConfidenceModel.ORIGINAL_SOFTCLIP_END_TAG, softEnd);
         return result;
     }
 }
