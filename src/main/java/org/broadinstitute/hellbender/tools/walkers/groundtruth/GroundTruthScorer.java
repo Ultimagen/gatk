@@ -71,14 +71,14 @@ public class GroundTruthScorer extends ReadWalker {
 
         String toCsvString() {
             if ( count == 0 ) {
-                return id + ",0,0.0,0.0,0.0";
+                return id + ",0,0.0";
             } else {
-                return id + String.format(",%d,%f,%f,%f", count, errorMin, errorSum / count, errorMax);
+                return id + String.format(",%d,%f", count, errorSum / count);
             }
         }
 
         static String csvHeading(final String idName) {
-            return idName + ",count,errorMin,errorAvg,errorMax";
+            return idName + ",count,value";
         }
 
         static ReportEntry[] newReport(final int size) {
@@ -229,17 +229,20 @@ public class GroundTruthScorer extends ReadWalker {
         // compute error probability
         final double[]    errorProb = computeErrorProb(flowRead, genomePriorDB);
 
-        // accumulate report
-        if ( qualReport != null ) {
-            addToQualReport(flowRead.getKey(), errorProb, flowRead.getBaseQualitiesNoCopy());
-        }
+        // cycle skip
+        final FlowBasedReadUtils.CycleSkipStatus cycleSkipStatus = FlowBasedReadUtils.getCycleSkipStatus(flowRead, referenceContext);
+
+        // accumulate reports
         if ( hmerReport != null ) {
             addToHmerReport(flowRead.getKey(), errorProb);
+        }
+        if ( cycleSkipStatus == FlowBasedReadUtils.CycleSkipStatus.NS &&  qualReport != null ) {
+            addToQualReport(flowRead, referenceContext, errorProb);
         }
 
         // emit
         try {
-            emit(flowRead, flowHaplotype, score, errorProb, read, referenceContext);
+            emit(flowRead, flowHaplotype, score, errorProb, read, referenceContext, cycleSkipStatus);
         } catch (IOException e) {
             throw new GATKException("failed to write output record", e);
         }
@@ -327,7 +330,9 @@ public class GroundTruthScorer extends ReadWalker {
         outputCsv.println(StringUtils.join(CSV_FIELD_ORDER, ","));
     }
 
-    private void emit(final FlowBasedRead flowRead, final FlowBasedHaplotype refHaplotype, final double score, final double[] errorProb, GATKRead read, ReferenceContext referenceContext) throws IOException {
+    private void emit(final FlowBasedRead flowRead, final FlowBasedHaplotype refHaplotype, final double score, final double[] errorProb,
+                      GATKRead read, ReferenceContext referenceContext,
+                      FlowBasedReadUtils.CycleSkipStatus cycleSkipStatus) throws IOException {
 
         // build line columns
         final Map<String,Object> cols = new LinkedHashMap<>();
@@ -337,7 +342,7 @@ public class GroundTruthScorer extends ReadWalker {
         cols.put("ReadIsReversed", flowRead.isReverseStrand() ? 1 : 0);
         cols.put("ReadMQ", flowRead.getMappingQuality());
         cols.put("ReadRQ", flowRead.getAttributeAsFloat("rq"));
-        cols.put("CycleSkipStatus", FlowBasedReadUtils.getCycleSkipStatus(flowRead, referenceContext));
+        cols.put("CycleSkipStatus", cycleSkipStatus);
         cols.put("Cigar", read.getCigar().toString());
 
 
@@ -398,21 +403,6 @@ public class GroundTruthScorer extends ReadWalker {
         }
     }
 
-    private void addToQualReport(final int[] key, final double[] errorProb, final byte[] quals) {
-
-        int qualOfs = 0;
-        for ( int flow = 0 ; flow < key.length ; flow++ ) {
-            if ( key[flow] != 0 ) {
-                for ( int i = 0 ; i < key[flow] ; i++ ) {
-                    final byte qual = quals[qualOfs++];
-                    if ( qual < qualReport.length ) {
-                        qualReport[qual].add(errorProb[flow]);
-                    }
-                }
-            }
-        }
-    }
-
     private void addToHmerReport(final int[] key, final double[] errorProb) {
 
         for ( int i = 0 ; i < key.length ; i++ ) {
@@ -431,5 +421,33 @@ public class GroundTruthScorer extends ReadWalker {
         }
         pw.close();
     }
+
+    private void addToQualReport(FlowBasedRead flowRead, ReferenceContext referenceContext, final double[] errorProb) {
+
+        // convert reference to key space
+        final Haplotype             haplotype = new Haplotype(referenceContext.getBases(), true);
+        final FlowBasedHaplotype    flowHaplotype = new FlowBasedHaplotype(haplotype, flowRead.getFlowOrder());
+
+        // access keys
+        final int[]                 readKey = flowRead.getKey();
+        final int[]                 hapKey = flowHaplotype.getKey();
+
+        // loop on key positions
+        for ( int flow = 0 ; flow < Math.min(readKey.length, hapKey.length) ; flow++ ) {
+
+            // determine quality
+            final double        prob = errorProb[flow];
+            final int           qual = (int)(-10 * Math.log10(prob));
+
+            // determine if matches reference
+            final boolean       diff = readKey[flow] != hapKey[flow];
+
+            // accumulate
+            if ( qual < qualReport.length ) {
+                qualReport[qual].add(diff ? 1.0 : 0.0);
+            }
+        }
+    }
+
 
 }

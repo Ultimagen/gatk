@@ -24,7 +24,7 @@ public class FlowBasedReadUtils {
 
     private static final Map<String, ReadGroupInfo> readGroupInfo = new LinkedHashMap<>();
 
-    private enum CycleSkipStatus {
+    public enum CycleSkipStatus {
         NS(0),         // no skip
         PCS(1),        // possible cycle skip
         CS(2);         // cycle skip
