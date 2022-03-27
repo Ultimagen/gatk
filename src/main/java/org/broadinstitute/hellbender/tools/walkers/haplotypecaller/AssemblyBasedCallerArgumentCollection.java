@@ -204,11 +204,6 @@ public abstract class AssemblyBasedCallerArgumentCollection {
             optional = true)
     public int informativeReadOverlapMargin = 2;
 
-    /**
-     * Specific parameters for the reads in flow space
-     */
-
-
     // -----------------------------------------------------------------------------------------------
     // Smith-Waterman parameters for dangling-end recovery
     // -----------------------------------------------------------------------------------------------
@@ -335,7 +330,7 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     public int flowAssemblyCollapseHKerSize = 0;
 
     @Advanced
-    @Argument(fullName=FLOW_ASSEMBLY_COLLAPSE_PARTIAL_MODE_LONG_NAME, doc="Collapse only up to difference in reference", optional = true)
+    @Argument(fullName=FLOW_ASSEMBLY_COLLAPSE_PARTIAL_MODE_LONG_NAME, doc="Collapse long flow-based hmers only up to difference in reference", optional = true)
     public boolean flowAssemblyCollapsePartialMode = false;
 
     /**
