@@ -3,7 +3,7 @@ import htsjdk.variant.variantcontext.Allele;
 
 /**
  * This class is similar to {@link org.broadinstitute.hellbender.tools.walkers.haplotypecaller.LocationAndAlleles} but
- * allows to keep only an allele/ref pair rather than a list of alleles. The comparison is done on allele by allele basis and
+ * allows keeping only an allele/ref pair rather than a list of alleles. The comparison is done on allele by allele basis and
  * not in the way it is done on LocationAndAlleles
  */
 
