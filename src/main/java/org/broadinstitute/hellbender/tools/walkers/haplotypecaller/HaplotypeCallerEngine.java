@@ -733,7 +733,6 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             subsettedReadLikelihoodsFinal = alleleFilter.filterAlleles(readLikelihoods, assemblyResult.getPaddedReferenceLoc().getStart(), suspiciousLocations);
 
         } else {
-            logger.debug("Not filtering alleles");
             subsettedReadLikelihoodsFinal = readLikelihoods;
         }
 
