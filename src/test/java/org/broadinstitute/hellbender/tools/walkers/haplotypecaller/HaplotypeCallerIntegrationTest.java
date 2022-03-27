@@ -1548,7 +1548,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         runCommandLine(args);
 
         if ( ! UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
-            IntegrationTestSpec.assertEqualTextFiles(output, expected);
+            IntegrationTestSpec.assertEqualTextFiles(output, expected, "#");
         }
     }
 
@@ -1572,7 +1572,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         runCommandLine(args);
 
         if ( ! UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
-            IntegrationTestSpec.assertEqualTextFiles(output, expected);
+            IntegrationTestSpec.assertEqualTextFiles(output, expected, "#");
         }
     }
 
@@ -1596,7 +1596,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         runCommandLine(args);
 
         if ( ! UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
-            IntegrationTestSpec.assertEqualTextFiles(output, expected);
+            IntegrationTestSpec.assertEqualTextFiles(output, expected, "#");
         }
     }
 
@@ -1629,7 +1629,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         runCommandLine(args);
 
         if ( !UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
-            IntegrationTestSpec.assertEqualTextFiles(output, expected);
+            IntegrationTestSpec.assertEqualTextFiles(output, expected, "#");
         }
     }
 
@@ -1661,7 +1661,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         runCommandLine(args);
 
         if ( ! UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
-            IntegrationTestSpec.assertEqualTextFiles(output, expected);
+            IntegrationTestSpec.assertEqualTextFiles(output, expected, "#");
         }
     }
 
@@ -1694,7 +1694,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         runCommandLine(args);
 
         if ( ! UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
-            IntegrationTestSpec.assertEqualTextFiles(output, expected);
+            IntegrationTestSpec.assertEqualTextFiles(output, expected, "#");
         }
     }
 
@@ -1740,7 +1740,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
         runCommandLine(args);
 
         if ( ! UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
-            IntegrationTestSpec.assertEqualTextFiles(output, expected);
+            IntegrationTestSpec.assertEqualTextFiles(output, expected, "#");
         }
     }
 
@@ -1857,7 +1857,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
 
         runCommandLine(args);
 
-        IntegrationTestSpec.assertEqualTextFiles(output, expected);
+        IntegrationTestSpec.assertEqualTextFiles(output, expected, "#");
     }
 
     @Test
@@ -1888,7 +1888,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
 
         runCommandLine(args);
 
-        IntegrationTestSpec.assertEqualTextFiles(output, expected);
+        IntegrationTestSpec.assertEqualTextFiles(output, expected, "#");
     }
 
     @Test
@@ -1918,7 +1918,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
 
         runCommandLine(args);
         if ( ! UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
-            IntegrationTestSpec.assertEqualTextFiles(output, expected);
+            IntegrationTestSpec.assertEqualTextFiles(output, expected, "#");
         }
     }
 
@@ -1950,7 +1950,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
 
         runCommandLine(args);
         if ( ! UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
-            IntegrationTestSpec.assertEqualTextFiles(output, expected);
+            IntegrationTestSpec.assertEqualTextFiles(output, expected, "#");
         }
     }
 }
