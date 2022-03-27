@@ -40,6 +40,15 @@ import java.util.*;
  *
  * To perform this 'uncollapsing' the class employs several heuristics.
  *
+ * Note that although the class uses "Collapsing" in its name, the main operation performed is actually
+ * uncollapsing  (collapsing is a contracting operation, where uncollapsing is an expansion operation).
+ * Reads are already collapsed as a result of the limit flow-based format puts on hmer lengths. It is the function
+ * of this class to uncollapse such data back to a hmer length compatible with the reference.
+ * 
+ * To determine if a sequence (of bases) can benefit from (un)collapsing, use {@link #needsCollapsing(byte[], int, Logger)}.
+ *
+ * To uncollapse a set of haplotypes, use {@link #uncollapseHmersInHaplotypes(Collection, boolean, byte[])}.
+ *
  */
 public class LongHomopolymerHaplotypeCollapsingEngine {
 
