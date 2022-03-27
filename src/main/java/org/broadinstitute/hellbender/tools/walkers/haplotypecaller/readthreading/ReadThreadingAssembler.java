@@ -161,8 +161,9 @@ public final class ReadThreadingAssembler {
 
         final List<AbstractReadThreadingGraph> nonRefRTGraphs = new LinkedList<>();
         final List<SeqGraph> nonRefSeqGraphs = new LinkedList<>();
-        if ( haplotypeCollapsing != null )
+        if ( haplotypeCollapsing != null ) {
             logger.debug("starting runLocalAssembly with haplotypeCollapsing: " + haplotypeCollapsing);
+        }
         final AssemblyResultSet resultSet = new AssemblyResultSet();
         resultSet.setRegionForGenotyping(assemblyRegion);
         resultSet.setFullReferenceWithPadding(fullReferenceWithPadding);
