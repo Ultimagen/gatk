@@ -150,7 +150,7 @@ public final class AlleleFrequencyCalculator {
      * @param gls the GenotyplingLikelihoods holding the alleles and sample information.
      * @return result (for programming convenience)
      */
-    public AFCalculationResult calculate(final GenotypingLikelihoods<Allele> gls, final int defaultPloidy) {
+    public AFCalculationResult fastCalculateDiploidBasedOnGLs(final GenotypingLikelihoods<Allele> gls, final int defaultPloidy) {
         Utils.nonNull(gls, "Likelihoods can only be non-null");
         Utils.validateArg(gls.numberOfAlleles()==2, "Only case of two alleles is supported");
         final int numAlleles = gls.numberOfAlleles();
