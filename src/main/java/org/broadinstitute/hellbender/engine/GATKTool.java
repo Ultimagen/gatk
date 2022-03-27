@@ -1107,7 +1107,13 @@ public abstract class GATKTool extends CommandLineProgram {
     public void closeTool(){
     }
 
-    public List<SimpleInterval> getUserIntervals() {
+    /**
+     * expose a read-only version of the user-supplied intervals. This can be used by tools that need to explicitly
+     * traverse the intervals themselves (rather than, for example, walking the reads based on the intervals)
+     *
+     * @return - intervals, as an unmodifiable list
+     */
+    protected List<SimpleInterval> getUserIntervals() {
 
         return Collections.unmodifiableList(userIntervals);
     }
