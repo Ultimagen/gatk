@@ -517,6 +517,8 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
         final ReferenceContext referenceContext = new ReferenceContext(refData, locus, refLocInterval);
 
         final VariantContext untrimmedResult =  annotationEngine.annotateContext(call, tracker, referenceContext, readAlleleLikelihoods, Optional.empty(), Optional.empty(), Optional.ofNullable(preFilteringAlleleLikelihoods), a -> true);
+
+        // propagate the tag indicating that the VC was collapsed
         if ( mergedVC.getAttribute(AssemblyBasedCallerUtils.EXT_COLLAPSED_TAG) != null ) {
             untrimmedResult.getCommonInfo().putAttribute(AssemblyBasedCallerUtils.EXT_COLLAPSED_TAG,
                     mergedVC.getAttribute(AssemblyBasedCallerUtils.EXT_COLLAPSED_TAG));
