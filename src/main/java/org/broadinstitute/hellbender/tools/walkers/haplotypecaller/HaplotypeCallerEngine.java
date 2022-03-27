@@ -552,7 +552,7 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
             final int activeRegionDetectionHackishSamplePloidy = activeRegionEvaluationGenotyperEngine.getConfiguration().genotypeArgs.samplePloidy;
             final double[] genotypeLikelihoods = ((RefVsAnyResult) referenceConfidenceModel.calcGenotypeLikelihoodsOfRefVsAny(
                     activeRegionDetectionHackishSamplePloidy,
-                    sample.getValue().stratify(AlignmentContext.ReadOrientation.COMPLETE).getBasePileup(), ref.getBase(),
+                    sample.getValue().getBasePileup(), ref.getBase(),
                     hcArgs.minBaseQualityScore,
                     averageHQSoftClips, false)).genotypeLikelihoods;
             genotypes.add(new GenotypeBuilder(sample.getKey()).alleles(noCall).PL(genotypeLikelihoods).make());
