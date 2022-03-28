@@ -53,12 +53,20 @@ public class GroundTruthScorer extends ReadWalker {
     private static class BooleanAccumulator {
         long falseCount;
         long trueCount;
+        BooleanAccumulator[] bins;
 
         void add(final boolean b) {
-            if ( b ) {
+            if (b) {
                 trueCount++;
             } else {
                 falseCount++;
+            }
+        }
+
+        void add(final boolean b, final int bin) {
+            add(b);
+            if ( bins != null && bin < bins.length ) {
+                bins[bin].add(b);
             }
         }
 
@@ -67,13 +75,19 @@ public class GroundTruthScorer extends ReadWalker {
         }
 
         double getFalseRate() {
-            return (getCount() == 0) ? 0.0 : (falseCount / getCount());
+            return (getCount() == 0) ? 0.0 : ((double)falseCount / getCount());
         }
 
-        static BooleanAccumulator[] newReport(final int size) {
+        static BooleanAccumulator[] newReport(final int size, final int binCount) {
             BooleanAccumulator[]   report = new BooleanAccumulator[size];
             for ( byte i = 0 ; i < report.length ; i++ ) {
                 report[i] = new BooleanAccumulator();
+                if ( binCount != 0 ) {
+                    report[i].bins = new BooleanAccumulator[binCount];
+                    for ( int j = 0 ; j < report[i].bins.length ; j++ ) {
+                        report[i].bins[j] = new BooleanAccumulator();
+                    }
+                }
             }
             return report;
         }
@@ -90,6 +104,26 @@ public class GroundTruthScorer extends ReadWalker {
             }
             return table;
         }
+
+        static GATKReportTable newReportTable(final BooleanAccumulator[] report, final String name1, final String name2) {
+            final GATKReportTable table = new GATKReportTable(name1 + "_" + name2 + "Report", "error rate per " + name1 + " by " + name2, 4);
+            table.addColumn(name1, "%d");
+            table.addColumn(name2, "%d");
+            table.addColumn("count", "%d");
+            table.addColumn("error", "%f");
+            int rowIndex = 0;
+            for (int i = 0; i < report.length; i++) {
+                for ( int j = 0; j < report[i].bins.length ; j++ ) {
+                    table.set(rowIndex, 0, i);
+                    table.set(rowIndex, 1, j);
+                    table.set(rowIndex, 2, report[i].bins[j].getCount());
+                    table.set(rowIndex, 3, report[i].bins[j].getFalseRate());
+                    rowIndex++;
+                }
+            }
+            return table;
+        }
+
     }
 
 
@@ -114,13 +148,16 @@ public class GroundTruthScorer extends ReadWalker {
     @Argument(fullName = FEATURES_FILE_LONG_NAME, doc="A VCF file containing features to be used as a use for filtering reads.", optional = true)
     public FeatureDataSource<VariantContext> features;
 
+    @Argument(fullName = "gt-no-output", doc = "do not generate output records", optional = true)
+    public boolean      noOutput = false;
+
+
     // locals
     private FlowBasedAlignmentLikelihoodEngine likelihoodCalculationEngine;
     private PrintWriter                         outputCsv;
     private DecimalFormat                       doubleFormat = new DecimalFormat("0.0#####");
     private GenomePriorDB                       genomePriorDB;
-    private BooleanAccumulator[]                       qualReport;
-    private BooleanAccumulator[]                       hmerReport;
+    private BooleanAccumulator[]                qualReport;
 
     // static/const
     static final private String[]       CSV_FIELD_ORDER = {
@@ -163,7 +200,7 @@ public class GroundTruthScorer extends ReadWalker {
 
         // initialize reports
         if ( reportFilePath != null ) {
-            qualReport = BooleanAccumulator.newReport(QUAL_VALUE_MAX + 1);
+            qualReport = BooleanAccumulator.newReport(QUAL_VALUE_MAX + 1, HMER_VALUE_MAX + 1);
         }
     }
 
@@ -177,7 +214,9 @@ public class GroundTruthScorer extends ReadWalker {
 
         // write reports
         if ( reportFilePath != null ) {
-            final GATKReport report = new GATKReport(BooleanAccumulator.newReportTable(qualReport, "qual"));
+            final GATKReport report = new GATKReport(
+                    BooleanAccumulator.newReportTable(qualReport, "qual"),
+                    BooleanAccumulator.newReportTable(qualReport, "qual", "hmer"));
             try ( final PrintStream ps = new PrintStream(reportFilePath.getOutputStream()) ) {
                 report.print(ps);
             }
@@ -327,6 +366,11 @@ public class GroundTruthScorer extends ReadWalker {
                       GATKRead read, ReferenceContext referenceContext,
                       FlowBasedReadUtils.CycleSkipStatus cycleSkipStatus) throws IOException {
 
+        // no output?
+        if ( noOutput ) {
+            return;
+        }
+
         // build line columns
         final Map<String,Object> cols = new LinkedHashMap<>();
 
@@ -418,7 +462,7 @@ public class GroundTruthScorer extends ReadWalker {
 
             // accumulate
             if ( qual < qualReport.length ) {
-                qualReport[qual].add(same);
+                qualReport[qual].add(same, readKey[flow]);
             }
         }
     }
