@@ -755,10 +755,11 @@ public class SAMRecordToGATKReadAdapter implements GATKRead, Serializable {
     }
 
     /**
-     * Clip  attributes that change after a hard clipping operation
+     * Clip attributes that change after a hard clipping operation
      *
-     * The method clips array attributes that are at the same length as the sequence
-     * A blacklist is available to specifically exclude attributes.
+     * The method clips array attributes that are part of a pre-set list
+     * originating from FlowBasedRead (a white-list), that are at the same length
+     * as the sequence.
      */
     @Override
     public void hardClipAttributes(final int newStart, final int newLength, final int originalLength)
