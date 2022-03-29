@@ -10,6 +10,7 @@ import org.broadinstitute.barclay.argparser.ArgumentCollection;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
 import org.broadinstitute.barclay.argparser.ExperimentalFeature;
 import org.broadinstitute.barclay.help.DocumentedFeature;
+import org.broadinstitute.barclay.utils.Utils;
 import org.broadinstitute.hellbender.cmdline.programgroups.FlowBasedProgramGroup;
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.exceptions.GATKException;
@@ -49,6 +50,7 @@ public class GroundTruthScorer extends ReadWalker {
 
     private static final int QUAL_VALUE_MAX = 60;
     private static final int HMER_VALUE_MAX = FlowBasedRead.MAX_CLASS;
+    private static final int BASE_VALUE_MAX = FlowBasedRead.DEFAULT_FLOW_ORDER.length() - 1;
 
     private static class BooleanAccumulator {
         long falseCount;
@@ -63,10 +65,14 @@ public class GroundTruthScorer extends ReadWalker {
             }
         }
 
-        void add(final boolean b, final int bin) {
+        void add(final boolean b, final int bin, final int bin2) {
             add(b);
             if ( bins != null && bin < bins.length ) {
-                bins[bin].add(b);
+                if ( bin2 >= 0 ) {
+                    bins[bin].add(b, bin2, -1);
+                } else {
+                    bins[bin].add(b);
+                }
             }
         }
 
@@ -78,7 +84,7 @@ public class GroundTruthScorer extends ReadWalker {
             return (getCount() == 0) ? 0.0 : ((double)falseCount / getCount());
         }
 
-        static BooleanAccumulator[] newReport(final int size, final int binCount) {
+        static BooleanAccumulator[] newReport(final int size, final int binCount, final int binCount2) {
             BooleanAccumulator[]   report = new BooleanAccumulator[size];
             for ( byte i = 0 ; i < report.length ; i++ ) {
                 report[i] = new BooleanAccumulator();
@@ -86,6 +92,13 @@ public class GroundTruthScorer extends ReadWalker {
                     report[i].bins = new BooleanAccumulator[binCount];
                     for ( int j = 0 ; j < report[i].bins.length ; j++ ) {
                         report[i].bins[j] = new BooleanAccumulator();
+                        if ( binCount2 != 0 ) {
+                            report[i].bins[j].bins = new BooleanAccumulator[binCount2];
+                            for ( int k = 0 ; k < report[i].bins[j].bins.length ; k++ ) {
+                                report[i].bins[j].bins[k] = new BooleanAccumulator();
+                            }
+
+                        }
                     }
                 }
             }
@@ -93,14 +106,18 @@ public class GroundTruthScorer extends ReadWalker {
         }
 
         static GATKReportTable newReportTable(final BooleanAccumulator[] report, final String name) {
-            final GATKReportTable table = new GATKReportTable(name + "Report", "error rate per " + name, 3);
+            final GATKReportTable table = new GATKReportTable(name + "Report", "error rate per " + name, 4);
             table.addColumn(name, "%d");
             table.addColumn("count", "%d");
             table.addColumn("error", "%f");
+            table.addColumn("phred", "%d");
             for (int i = 0; i < report.length; i++) {
+                double      rate =  report[i].getFalseRate();
+
                 table.set(i, 0, i);
                 table.set(i, 1, report[i].getCount());
-                table.set(i, 2, report[i].getFalseRate());
+                table.set(i, 2, rate);
+                table.set(i, 3, rate != 0 ? (int)Math.ceil(-10.0 * Math.log10(rate)) : 0);
             }
             return table;
         }
@@ -124,6 +141,28 @@ public class GroundTruthScorer extends ReadWalker {
             return table;
         }
 
+        static GATKReportTable newReportTable(final BooleanAccumulator[] report, final String name1, final String name2, final String name3) {
+            final GATKReportTable table = new GATKReportTable(name1 + "_" + name2 + "_" + name3 + "_Report", "error rate per " + name1 + " by " + name2 + " and " + name3, 5);
+            table.addColumn(name1, "%d");
+            table.addColumn(name2, "%d");
+            table.addColumn(name3, "%s");
+            table.addColumn("count", "%d");
+            table.addColumn("error", "%f");
+            int rowIndex = 0;
+            for (int i = 0; i < report.length; i++) {
+                for ( int j = 0; j < report[i].bins.length ; j++ ) {
+                    for ( int k = 0; k < report[i].bins[j].bins.length ; k++ ) {
+                        table.set(rowIndex, 0, i);
+                        table.set(rowIndex, 1, j);
+                        table.set(rowIndex, 2, String.format("%c", binToBase(k)));
+                        table.set(rowIndex, 3, report[i].bins[j].bins[k].getCount());
+                        table.set(rowIndex, 4, report[i].bins[j].bins[k].getFalseRate());
+                        rowIndex++;
+                    }
+                }
+            }
+            return table;
+        }
     }
 
 
@@ -200,7 +239,7 @@ public class GroundTruthScorer extends ReadWalker {
 
         // initialize reports
         if ( reportFilePath != null ) {
-            qualReport = BooleanAccumulator.newReport(QUAL_VALUE_MAX + 1, HMER_VALUE_MAX + 1);
+            qualReport = BooleanAccumulator.newReport(QUAL_VALUE_MAX + 1, HMER_VALUE_MAX + 1, BASE_VALUE_MAX + 1);
         }
     }
 
@@ -216,7 +255,8 @@ public class GroundTruthScorer extends ReadWalker {
         if ( reportFilePath != null ) {
             final GATKReport report = new GATKReport(
                     BooleanAccumulator.newReportTable(qualReport, "qual"),
-                    BooleanAccumulator.newReportTable(qualReport, "qual", "hmer"));
+                    BooleanAccumulator.newReportTable(qualReport, "qual", "hmer"),
+                    BooleanAccumulator.newReportTable(qualReport, "qual", "hmer", "base"));
             try ( final PrintStream ps = new PrintStream(reportFilePath.getOutputStream()) ) {
                 report.print(ps);
             }
@@ -274,7 +314,7 @@ public class GroundTruthScorer extends ReadWalker {
 
         // emit
         try {
-            emit(flowRead, flowHaplotype, score, errorProb, read, referenceContext, cycleSkipStatus);
+            emit(flowRead, flowHaplotype, score, errorProb, read, cycleSkipStatus);
         } catch (IOException e) {
             throw new GATKException("failed to write output record", e);
         }
@@ -363,7 +403,7 @@ public class GroundTruthScorer extends ReadWalker {
     }
 
     private void emit(final FlowBasedRead flowRead, final FlowBasedHaplotype refHaplotype, final double score, final double[] errorProb,
-                      GATKRead read, ReferenceContext referenceContext,
+                      GATKRead read,
                       FlowBasedReadUtils.CycleSkipStatus cycleSkipStatus) throws IOException {
 
         // no output?
@@ -446,12 +486,16 @@ public class GroundTruthScorer extends ReadWalker {
         final Haplotype             haplotype = new Haplotype(referenceContext.getBases(), true);
         final FlowBasedHaplotype    flowHaplotype = new FlowBasedHaplotype(haplotype, flowRead.getFlowOrder());
 
-        // access keys
+        // access keys & flow order
         final int[]                 readKey = flowRead.getKey();
         final int[]                 hapKey = flowHaplotype.getKey();
+        final byte[]                flowOrder = flowRead.getFlowOrder().getBytes();
 
         // loop on key positions
-        for ( int flow = 0 ; flow < Math.min(readKey.length, hapKey.length) ; flow++ ) {
+        if ( readKey.length != hapKey.length ) {
+            return;
+        }
+        for ( int flow = 0 ; flow < readKey.length ; flow++ ) {
 
             // determine quality
             final double        prob = errorProb[flow];
@@ -462,10 +506,18 @@ public class GroundTruthScorer extends ReadWalker {
 
             // accumulate
             if ( qual < qualReport.length ) {
-                qualReport[qual].add(same, readKey[flow]);
+                int         baseBin = baseToBin(flowOrder[flow % flowOrder.length]);
+                qualReport[qual].add(same, readKey[flow], baseBin);
             }
         }
     }
 
+    static private int baseToBin(byte base) {
+        return FlowBasedRead.DEFAULT_FLOW_ORDER.indexOf(base);
+    }
+
+    static private byte binToBase(int bin) {
+        return (byte)FlowBasedRead.DEFAULT_FLOW_ORDER.charAt(bin);
+    }
 
 }
