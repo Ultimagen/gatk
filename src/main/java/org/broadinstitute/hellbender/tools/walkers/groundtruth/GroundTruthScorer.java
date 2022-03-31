@@ -42,15 +42,19 @@ import java.util.zip.GZIPOutputStream;
 @ExperimentalFeature
 public class GroundTruthScorer extends ReadWalker {
     private static final Logger logger = LogManager.getLogger(GroundTruthScorer.class);
+
     public static final String OUTPUT_CSV_LONG_NAME = "output-csv";
     public static final String REPORT_FILE_LONG_NAME = "report-file";
     public static final String USE_SOFTCLIPPED_BASES_LONG_NAME = "use-softclipped-bases";
     public static final String GENOME_PRIOR_LONG_NAME = "genome-prior";
     public static final String FEATURES_FILE_LONG_NAME = "features-file";
+    public static final String NORMALIZED_SCORE_THRESHOLD_LONG_NAME = "normalized-score-threshold";
 
     private static final int QUAL_VALUE_MAX = 60;
     private static final int HMER_VALUE_MAX = FlowBasedRead.MAX_CLASS;
     private static final int BASE_VALUE_MAX = FlowBasedRead.DEFAULT_FLOW_ORDER.length() - 1;
+
+    private static final double NORMALIZED_SCORE_THRESHOLD_DEFAULT = -0.1;
 
     private static class BooleanAccumulator {
         long falseCount;
@@ -187,6 +191,9 @@ public class GroundTruthScorer extends ReadWalker {
     @Argument(fullName = FEATURES_FILE_LONG_NAME, doc="A VCF file containing features to be used as a use for filtering reads.", optional = true)
     public FeatureDataSource<VariantContext> features;
 
+    @Argument(fullName = NORMALIZED_SCORE_THRESHOLD_LONG_NAME, doc="threshold for normalized score, below which reads are ignored", optional = true)
+    public double normalizedScoreThreshold = NORMALIZED_SCORE_THRESHOLD_DEFAULT;
+
     @Argument(fullName = "gt-no-output", doc = "do not generate output records", optional = true)
     public boolean      noOutput = false;
 
@@ -200,7 +207,8 @@ public class GroundTruthScorer extends ReadWalker {
 
     // static/const
     static final private String[]       CSV_FIELD_ORDER = {
-            "ReadName", "ReadKey", "ReadIsReversed", "ReadMQ", "ReadRQ", "GroundTruthKey", "ReadSequence", "Score", "ErrorProbability",
+            "ReadName", "ReadKey", "ReadIsReversed", "ReadMQ", "ReadRQ", "GroundTruthKey", "ReadSequence",
+            "Score", "NormalizedScore", "ErrorProbability",
             "ReadKeyLength", "GroundTruthKeyLength", "CycleSkipStatus", "Cigar"
     };
 
@@ -300,6 +308,9 @@ public class GroundTruthScorer extends ReadWalker {
         // compute score
         final int         hapKeyLength = flowHaplotype.getKeyLength();
         final double      score = FlowFeatureMapper.computeLikelihoodLocal(flowRead, flowHaplotype, hapKeyLength, false);
+        final double      normalizedScore = score / flowRead.getKeyLength();
+        if ( normalizedScore < normalizedScoreThreshold )
+            return;
 
         // compute error probability
         final double[]    errorProb = computeErrorProb(flowRead, genomePriorDB);
@@ -314,7 +325,7 @@ public class GroundTruthScorer extends ReadWalker {
 
         // emit
         try {
-            emit(flowRead, flowHaplotype, score, errorProb, read, cycleSkipStatus);
+            emit(flowRead, flowHaplotype, score, normalizedScore, errorProb, read, cycleSkipStatus);
         } catch (IOException e) {
             throw new GATKException("failed to write output record", e);
         }
@@ -402,7 +413,7 @@ public class GroundTruthScorer extends ReadWalker {
         outputCsv.println(StringUtils.join(CSV_FIELD_ORDER, ","));
     }
 
-    private void emit(final FlowBasedRead flowRead, final FlowBasedHaplotype refHaplotype, final double score, final double[] errorProb,
+    private void emit(final FlowBasedRead flowRead, final FlowBasedHaplotype refHaplotype, double score, final double normalizedScore, final double[] errorProb,
                       GATKRead read,
                       FlowBasedReadUtils.CycleSkipStatus cycleSkipStatus) throws IOException {
 
@@ -432,6 +443,7 @@ public class GroundTruthScorer extends ReadWalker {
 
         // scores
         cols.put("Score", score);
+        cols.put("NormalizedScore", normalizedScore);
         cols.put("ErrorProbability", "\"" + StringUtils.join(
                 Arrays.stream(errorProb).mapToObj(v -> doubleFormat.format(v)).toArray(),
                 ',') + "\"");
