@@ -69,7 +69,6 @@ public class RampedHaplotypeCallerEngine extends HaplotypeCallerEngine {
                 referenceReader, annotationEngine);
         this.rpArgs = rpArgs;
 
-        ReservoirDownsampler.setNonRandomReplacementMode(true);
         buildRamps();
     }
 

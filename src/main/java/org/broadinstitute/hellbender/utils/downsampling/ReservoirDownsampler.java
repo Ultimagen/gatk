@@ -18,8 +18,6 @@ import java.util.List;
  */
 public final class ReservoirDownsampler extends ReadsDownsampler {
 
-    static boolean nonRandomReplacementMode = false;
-
     /**
      * size of our reservoir -- ie., the maximum number of reads from the stream that will be retained
      * (not including any undiscardable items)
@@ -59,6 +57,12 @@ public final class ReservoirDownsampler extends ReadsDownsampler {
      * remain pending until endOfInputStream is called, at which point they become finalized.
      */
     private boolean endOfInputStream;
+
+
+    /**
+     * allow for deterministic behavior. used by RampedHaplotypeCaller
+     */
+    private boolean nonRandomReplacementMode = false;
 
 
     /**
@@ -211,7 +215,7 @@ public final class ReservoirDownsampler extends ReadsDownsampler {
         // NO-OP
     }
 
-    public static void setNonRandomReplacementMode(boolean nonRandomReplacementMode) {
-        ReservoirDownsampler.nonRandomReplacementMode = nonRandomReplacementMode;
+    public void setNonRandomReplacementMode(boolean nonRandomReplacementMode) {
+        this.nonRandomReplacementMode = nonRandomReplacementMode;
     }
 }
