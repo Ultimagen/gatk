@@ -511,7 +511,7 @@ public class GroundTruthScorer extends ReadWalker {
 
             // determine quality
             final double        prob = errorProb[flow];
-            final int           qual = (int)(-10 * Math.log10(prob));
+            final int           qual = (int)Math.ceil(-10 * Math.log10(prob));
 
             // determine if matches reference
             final boolean       same = readKey[flow] == hapKey[flow];
