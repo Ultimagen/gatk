@@ -319,7 +319,7 @@ public class GroundTruthScorer extends ReadWalker {
         final FlowBasedReadUtils.CycleSkipStatus cycleSkipStatus = FlowBasedReadUtils.getCycleSkipStatus(flowRead, referenceContext);
 
         // accumulate reports
-        if ( cycleSkipStatus == FlowBasedReadUtils.CycleSkipStatus.NS &&  qualReport != null ) {
+        if ( cycleSkipStatus != FlowBasedReadUtils.CycleSkipStatus.CS && qualReport != null ) {
             addToQualReport(flowRead, referenceContext, errorProb);
         }
 
