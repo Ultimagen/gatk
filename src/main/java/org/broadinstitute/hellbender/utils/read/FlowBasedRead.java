@@ -209,12 +209,9 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         // read flow matrix in. note that below code contains accomodates for old formats
         if ( samRecord.hasAttribute(FLOW_MATRIX_TAG_NAME) ) {
-
             // this path is the production path. A flow read should contain a FLOW_MATRIX_TAG_NAME tag
             readFlowMatrix(flowOrder);
-
         } else {
-
             // NOTE: this path is vestigial and deals with old formats of the matrix
             if ( samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_KR) ) {
                 readVestigialFlowMatrixFromKR(flowOrder);
