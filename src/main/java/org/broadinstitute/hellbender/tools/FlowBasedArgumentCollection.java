@@ -15,6 +15,7 @@ import java.io.Serializable;
 public class FlowBasedArgumentCollection implements Serializable {
     private static final long serialVersionUID = 0;
 
+    public static final String FLOW_USE_T0_TAG = "flow-use-t0-tag";
     public static final String PROBABILITY_RATIO_THRESHOLD_LONG_NAME = "flow-probability-threshold";
     public static final String REMOVE_LONGER_THAN_ONE_INDELS_LONG_NAME = "flow-remove-non-single-base-pair-indels";
     public static final String REMOVE_ONE_TO_ZERO_PROBS_LONG_NAME = "flow-remove-one-zero-probs";
@@ -48,6 +49,11 @@ public class FlowBasedArgumentCollection implements Serializable {
     private static final int DEFAULT_FLOW_ORDER_CYCLE_LENGTH = 4;
     private static final int DEFAULT_NUM_UNCERTAIN_FLOWS = 0;
     private static final String DEFAULT_FIRST_UNCERTAIN_FLOW = "T";
+    private static final boolean DEFAULT_FLOW_USE_T0_TAG = false;
+
+    @Advanced
+    @Argument(fullName = FLOW_USE_T0_TAG, doc = "Use t0 tag if exists in the read to create flow matrix", optional = true)
+    public boolean useT0Tag = DEFAULT_FLOW_USE_T0_TAG;
 
     @Advanced
     @Argument(fullName = PROBABILITY_RATIO_THRESHOLD_LONG_NAME, doc = "Lowest probability ratio to be used as an option", optional = true)

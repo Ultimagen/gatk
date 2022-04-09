@@ -57,6 +57,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     final  public static String  CLIPPING_TAG_NAME = "tm";
 
     final public static String FLOW_MATRIX_TAG_NAME = "tp";
+    final public static String FLOW_MATRIX_T0_TAG_NAME = "t0";
     final public static String FLOW_MATRiX_OLD_TAG_KR = "kr";
     final public static String FLOW_MATRiX_OLD_TAG_TI = "ti";
     public static final String FLOW_MATRiX_OLD_TAG_KH = "kh";
@@ -67,7 +68,8 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     final public static String[] HARD_CLIPPED_TAGS = new String[] {
             FLOW_MATRIX_TAG_NAME, FLOW_MATRiX_OLD_TAG_KR, FLOW_MATRiX_OLD_TAG_TI,
-            FLOW_MATRiX_OLD_TAG_KH, FLOW_MATRiX_OLD_TAG_KF, FLOW_MATRiX_OLD_TAG_KD
+            FLOW_MATRiX_OLD_TAG_KH, FLOW_MATRiX_OLD_TAG_KF, FLOW_MATRiX_OLD_TAG_KD,
+            FLOW_MATRIX_T0_TAG_NAME
     };
 
     /**
@@ -187,7 +189,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
      */
     public FlowBasedRead(final GATKRead read, final String flowOrder, final int maxHmer, final FlowBasedArgumentCollection fbargs) {
         this(read.convertToSAMRecord(null), flowOrder, maxHmer, fbargs);
-
     }
 
     /**
@@ -293,11 +294,26 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         // access qual, convert to flow representation
         final byte[]      quals = samRecord.getBaseQualities();
         final byte[]      tp = samRecord.getSignedByteArrayAttribute(FLOW_MATRIX_TAG_NAME);
+        boolean specialTreatmentForZeroCalls = false;
+        final byte[]      t0 = SAMUtils.fastqToPhred(samRecord.getStringAttribute(FLOW_MATRIX_T0_TAG_NAME));
+        final double[]     t0probs = new double[quals.length];
+        if ((t0!=null) && fbargs.useT0Tag){
+            specialTreatmentForZeroCalls = true;
+
+            if (t0.length!=tp.length){
+                throw new GATKException("Illegal read len(t0)!=len(qual): " + samRecord.getReadName());
+            }
+        }
+
         final double[]    probs = new double[quals.length];
         for ( int i = 0 ; i < quals.length ; i++ ) {
             final double q = quals[i];
             final double p = Math.pow(10, -q/10);
             probs[i] = p;
+            if (specialTreatmentForZeroCalls){
+                final double qq = t0[i];
+                t0probs[i] = Math.pow(10,-qq/10);
+            }
         }
 
         // apply key and qual/tp to matrix
@@ -307,6 +323,11 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             if (run > 0) {
                 parseSingleHmer(probs, tp, i, run, qualOfs);
             }
+
+            if ((run == 0)&&(specialTreatmentForZeroCalls)){
+                parseZeroQuals(t0probs, i, qualOfs);
+            }
+
             double totalErrorProb = 0;
 
             for (int k=0; k < maxHmer; k++ ){
@@ -333,6 +354,16 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
                     flowMatrix[loc][flowIdx] += probs[i];
                 }
             }
+        }
+    }
+
+    //convert qualities from the single hmer to a column in a flow matrix
+    private void parseZeroQuals(final double[] probs, final int flowIdx, final int qualOfs){
+        if ((qualOfs == 0) | (qualOfs==probs.length)){ // do not report zero error probability on the edge of the read
+            return;
+        }
+        if ((probs[qualOfs-1])==(probs[qualOfs])){
+            flowMatrix[1][flowIdx] = Math.max(flowMatrix[1][flowIdx], Math.max(probs[qualOfs-1],probs[qualOfs]));
         }
     }
 
@@ -795,7 +826,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private void clipProbs() {
         for ( int i = 0 ; i < getMaxHmer(); i++ ) {
             for ( int j =0; j < getNFlows(); j++) {
-                if ((flowMatrix[i][j] < fbargs.probabilityRatioThreshold) &&
+                if ((flowMatrix[i][j] <= fbargs.probabilityRatioThreshold) &&
                         (key[j]!=i)) {
                     flowMatrix[i][j] = fbargs.fillingValue;
                 }

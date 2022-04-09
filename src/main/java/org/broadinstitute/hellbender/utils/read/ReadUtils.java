@@ -814,6 +814,7 @@ public final class ReadUtils {
         return read.hasAttribute(BQSR_BASE_INSERTION_QUALITIES) || read.hasAttribute(BQSR_BASE_DELETION_QUALITIES);
     }
 
+
     /**
      * @return the base deletion quality or null if read doesn't have one
      */

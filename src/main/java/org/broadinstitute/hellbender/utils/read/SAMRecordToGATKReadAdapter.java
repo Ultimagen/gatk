@@ -757,7 +757,7 @@ public class SAMRecordToGATKReadAdapter implements GATKRead, Serializable {
     /**
      * Clip attributes that change after a hard clipping operation
      *
-     * The method clips array attributes that are part of a pre-set list
+     * The method clips string or array attributes that are part of a pre-set list
      * originating from FlowBasedRead (a white-list), that are at the same length
      * as the sequence.
      */
@@ -779,13 +779,19 @@ public class SAMRecordToGATKReadAdapter implements GATKRead, Serializable {
 
             // ignore if not array
             Object  value = samRecord.getAttribute(tag);
-            if ( !value.getClass().isArray() ) {
+
+            if ( !(value.getClass().isArray() || (value instanceof String) )) {
                 continue;
             }
 
             // check if length is same as original sequence
-            if ( Array.getLength(value) != originalLength )
+            if ( value.getClass().isArray() && (Array.getLength(value) != originalLength) ) {
                 continue;
+            }
+
+            if ((value instanceof String )&&(((String) value).length()!=originalLength)) {
+                continue;
+            }
 
             // clip
             if ( value instanceof byte[] ) {
@@ -795,7 +801,9 @@ public class SAMRecordToGATKReadAdapter implements GATKRead, Serializable {
             } else if ( value instanceof int[] ) {
                 samRecord.setAttribute(tag, Arrays.copyOfRange((int[])value, newStart, newStart + newLength));
             } else if ( value instanceof float[] ) {
-                samRecord.setAttribute(tag, Arrays.copyOfRange((float[])value, newStart, newStart + newLength));
+                samRecord.setAttribute(tag, Arrays.copyOfRange((float[]) value, newStart, newStart + newLength));
+            } else if (value instanceof String){
+                samRecord.setAttribute(tag, ((String) value).substring(newStart, newStart + newLength));
             } else {
                 throw new GATKException("unknown array type on attribute value: " + value.getClass().getName());
             }

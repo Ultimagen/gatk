@@ -773,6 +773,8 @@ public final class ArtificialReadUtils {
         Arrays.fill(tp, (byte)1);
         read.setAttribute(FlowBasedRead.FLOW_MATRIX_TAG_NAME, tp);
 
+        String      t0 = new String(new char[read.getBasesNoCopy().length]).replace('\0', 'I');
+        read.setAttribute(FlowBasedRead.FLOW_MATRIX_T0_TAG_NAME, t0);
         // ensure that read group has a flow order
         if ( read instanceof SAMRecordToGATKReadAdapter ) {
             makeIntoFlowBased(((SAMRecordToGATKReadAdapter)read).getEncapsulatedSamRecord().getReadGroup());

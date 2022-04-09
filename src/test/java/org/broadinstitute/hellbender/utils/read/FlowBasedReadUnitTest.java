@@ -40,20 +40,56 @@ public class FlowBasedReadUnitTest extends GATKBaseTest {
             fbr.applyAlignment();
             Assert.assertEquals(fbr.totalKeyBases(), fbr.seqLength());
 
-            try (FileWriter fos = new FileWriter(tempOutputDir + curRead + ".key.txt")) {
+            try (FileWriter fos = new FileWriter(tempOutputDir + "/" + curRead + ".key.txt")) {
                 fbr.writeKey(fos);
             }
 
 
             String expectedFile = outputDir + "sample." + curRead + ".key.txt";
-            IntegrationTestSpec.assertEqualTextFiles(new File(tempOutputDir + curRead + ".key.txt"), new File(expectedFile));
-            try (FileWriter fos = new FileWriter(tempOutputDir + curRead + ".matrix.txt")){
+            IntegrationTestSpec.assertEqualTextFiles(new File(tempOutputDir + "/" + curRead + ".key.txt"), new File(expectedFile));
+            try (FileWriter fos = new FileWriter(tempOutputDir + "/" + curRead + ".matrix.txt")){
                 fbr.writeMatrix(fos);
             }
             expectedFile = outputDir + "sample." + curRead + ".matrix.txt";
-            IntegrationTestSpec.assertEqualTextFiles(new File(tempOutputDir + curRead + ".matrix.txt"), new File(expectedFile));
+            IntegrationTestSpec.assertEqualTextFiles(new File(tempOutputDir + "/" + curRead + ".matrix.txt"), new File(expectedFile));
         }
     }
+
+    @Test
+    void testBAMFormatParsingWithT0() throws Exception{
+        final String    testResourceDir = publicTestDir + "org/broadinstitute/hellbender/utils/read/flow/reads/";
+        final String inputDir = testResourceDir + "/input/";
+        final String outputDir = testResourceDir + "/outputs/";
+
+        final Path inputFile = FileSystems.getDefault().getPath(inputDir, "sample.t0.bam");
+        final SamReader reader = SamReaderFactory.makeDefault().open(new File(inputFile.toString()));
+        final String flowOrder = "TGCA";
+        final FlowBasedArgumentCollection fbargs = new FlowBasedArgumentCollection();
+        fbargs.useT0Tag = true;
+        final String tempOutputDir = createTempDir("expected_outputs").toString();
+
+        int curRead = 0;
+        final Iterator<SAMRecord> sr;
+        for ( sr = reader.iterator(), curRead = 0 ; sr.hasNext(); curRead++) {
+            final FlowBasedRead fbr = new FlowBasedRead(sr.next(),flowOrder, 12, fbargs);
+            fbr.applyAlignment();
+            Assert.assertEquals(fbr.totalKeyBases(), fbr.seqLength());
+
+            try (FileWriter fos = new FileWriter(tempOutputDir + "/" + curRead + ".key.txt")) {
+                fbr.writeKey(fos);
+            }
+
+
+            String expectedFile = outputDir + "sample.t0." + curRead + ".key.txt";
+            IntegrationTestSpec.assertEqualTextFiles(new File(tempOutputDir + "/" + curRead + ".key.txt"), new File(expectedFile));
+            try (FileWriter fos = new FileWriter(tempOutputDir + "/" + curRead + ".matrix.txt")){
+                fbr.writeMatrix(fos);
+            }
+            expectedFile = outputDir + "sample.t0." + curRead + ".matrix.txt";
+            IntegrationTestSpec.assertEqualTextFiles(new File(tempOutputDir + "/" + curRead + ".matrix.txt"), new File(expectedFile));
+        }
+    }
+
 
     @Test (dataProvider = "makeReads")
     public void testUncertainFlowTrimming(final GATKRead read, int nTrim, String uncertainFlowBase, final byte[] output, final int start, final int end) {
