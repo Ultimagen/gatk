@@ -481,7 +481,11 @@ public class GroundTruthScorer extends ReadWalker {
                 long[]          prior = new long[FlowBasedRead.MAX_CLASS + 1];
                 Byte            base = line[0].getBytes()[0];
                 for ( int i = 0 ; i < prior.length ; i++ ) {
-                    prior[i] = Long.parseLong(line[i+1]);
+                    if ( i == 0){
+                        prior[i] = Long.parseLong(line[i+1]);
+                    } else {
+                        prior[i] = Long.parseLong(line[i]);
+                    }
                 }
                 db.put(base, prior);
             }
