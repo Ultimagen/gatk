@@ -3,6 +3,7 @@ package org.broadinstitute.hellbender.tools.walkers.groundtruth;
 import com.opencsv.CSVReader;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.math3.util.Precision;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.argparser.Argument;
@@ -109,19 +110,20 @@ public class GroundTruthScorer extends ReadWalker {
             return report;
         }
 
-        static GATKReportTable newReportTable(final BooleanAccumulator[] report, final String name) {
+        static GATKReportTable newReportTable(final BooleanAccumulator[] report, final String name, final double probThreshold) {
             final GATKReportTable table = new GATKReportTable(name + "Report", "error rate per " + name, 4);
             table.addColumn(name, "%d");
             table.addColumn("count", "%d");
             table.addColumn("error", "%f");
             table.addColumn("phred", "%d");
             for (int i = 0; i < report.length; i++) {
-                double      rate =  report[i].getFalseRate();
+                final double rate =  report[i].getFalseRate();
+                final double phredRate = (rate == 0.0 && report[i].getCount() != 0 && probThreshold != 0.0 ) ? probThreshold : rate;
 
                 table.set(i, 0, i);
                 table.set(i, 1, report[i].getCount());
                 table.set(i, 2, rate);
-                table.set(i, 3, rate != 0 ? (int)Math.ceil(-10.0 * Math.log10(rate)) : 0);
+                table.set(i, 3, phredRate != 0 ? (int)Math.ceil(-10.0 * Math.log10(phredRate)) : 0);
             }
             return table;
         }
@@ -262,7 +264,7 @@ public class GroundTruthScorer extends ReadWalker {
         // write reports
         if ( reportFilePath != null ) {
             final GATKReport report = new GATKReport(
-                    BooleanAccumulator.newReportTable(qualReport, "qual"),
+                    BooleanAccumulator.newReportTable(qualReport, "qual", fbargs.probabilityRatioThreshold),
                     BooleanAccumulator.newReportTable(qualReport, "qual", "hmer"),
                     BooleanAccumulator.newReportTable(qualReport, "qual", "hmer", "base"));
             try ( final PrintStream ps = new PrintStream(reportFilePath.getOutputStream()) ) {
@@ -514,7 +516,7 @@ public class GroundTruthScorer extends ReadWalker {
         for ( int flow = 0 ; flow < readKey.length ; flow++ ) {
 
             // determine quality
-            final double        prob = errorProb[flow];
+            final double        prob = Precision.round(errorProb[flow], (QUAL_VALUE_MAX / 10) + 1);
             final int           qual = (int)Math.ceil(-10 * Math.log10(prob));
 
             // determine if matches reference
