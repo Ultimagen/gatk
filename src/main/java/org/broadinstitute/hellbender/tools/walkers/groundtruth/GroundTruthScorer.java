@@ -399,7 +399,7 @@ public class GroundTruthScorer extends ReadWalker {
                 }
 
                 // assign normalized result
-                result[i] = 1 - (probCol[Math.min(key[i], flowRead.getMaxHmer())] / sum);
+                result[i] = 1 - (probCol[Math.min(probCol.length - 1, Math.min(key[i], flowRead.getMaxHmer()))] / sum);
             } else {
 
                 // assign normalized result
@@ -418,11 +418,6 @@ public class GroundTruthScorer extends ReadWalker {
     private void emit(final FlowBasedRead flowRead, final FlowBasedHaplotype refHaplotype, double score, final double normalizedScore, final double[] errorProb,
                       GATKRead read,
                       FlowBasedReadUtils.CycleSkipStatus cycleSkipStatus) throws IOException {
-
-        // no output?
-        if ( noOutput ) {
-            return;
-        }
 
         // build line columns
         final Map<String,Object> cols = new LinkedHashMap<>();
@@ -468,7 +463,9 @@ public class GroundTruthScorer extends ReadWalker {
         }
 
         // output line
-        outputCsv.println(sb);
+        if ( !noOutput ) {
+            outputCsv.println(sb);
+        }
     }
 
     static private class GenomePriorDB {
@@ -483,7 +480,7 @@ public class GroundTruthScorer extends ReadWalker {
                 long[]          prior = new long[FlowBasedRead.MAX_CLASS + 1];
                 Byte            base = line[0].getBytes()[0];
                 for ( int i = 0 ; i < prior.length ; i++ ) {
-                    if ( i == 0){
+                    if ( i == 0 ){
                         prior[i] = Long.parseLong(line[i+1]);
                     } else {
                         prior[i] = Long.parseLong(line[i]);
