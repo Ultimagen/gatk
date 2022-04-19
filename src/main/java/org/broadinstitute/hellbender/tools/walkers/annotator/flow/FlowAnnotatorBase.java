@@ -108,7 +108,7 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
     not always be sourced from a bam file with a flow order. In these cases, we can either get it from a
     --flow-order parameter (VariantAnnotator tool) or the default input source (bam)
      */
-    private String establishFlowOrder(final LocalContext localContext, final AlleleLikelihoods<GATKRead, Allele> likelihoods) {
+    protected String establishFlowOrder(final LocalContext localContext, final AlleleLikelihoods<GATKRead, Allele> likelihoods) {
 
         // extract from a read
         if ( (likelihoods != null) && (likelihoods.numberOfSamples() > 0) ) {
@@ -436,7 +436,7 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
     }
 
     // get an hmer from reference plus a number of additional bases
-    private byte[] getReferenceHmerPlus(final LocalContext localContext, final int start, final int additional) {
+    protected byte[] getReferenceHmerPlus(final LocalContext localContext, final int start, final int additional) {
         int               index = start - localContext.ref.getWindow().getStart();
         final byte[]      bases = localContext.ref.getBases();
         Utils.validIndex(index, bases.length);

@@ -252,6 +252,7 @@ public class GATKVCFHeaderLines {
         addInfoLine(new VCFInfoHeaderLine(FLOW_GC_CONTENT, 1, VCFHeaderLineType.Float, "Flow: percentage of G or C in the window around hmer"));
         addInfoLine(new VCFInfoHeaderLine(FLOW_CYCLESKIP_STATUS, VCFHeaderLineCount.A, VCFHeaderLineType.String, "Flow: cycle skip status: cycle-skip, possible-cycle-skip, non-skip"));
         addInfoLine(new VCFInfoHeaderLine(FLOW_VARIANT_TYPE, 1, VCFHeaderLineType.String, "Flow: type of variant: SNP/NON-H-INDEL/H-INDEL"));
+        addInfoLine(new VCFInfoHeaderLine(FLOW_AS_TP_TABLE, 1, VCFHeaderLineType.String, "Flow: additional strand based error information derived from tp attribute"));
         addInfoLine(new VCFInfoHeaderLine(REFERENCE_BASES_KEY, 1, VCFHeaderLineType.String, "local reference bases."));
         addInfoLine(new VCFInfoHeaderLine(HAPLOTYPE_EQUIVALENCE_COUNTS_KEY, VCFHeaderLineCount.UNBOUNDED, VCFHeaderLineType.Integer, "Counts of support for haplotype groups excluding difference at the site in question."));
         addInfoLine(new VCFInfoHeaderLine(HAPLOTYPE_COMPLEXITY_KEY, VCFHeaderLineCount.A, VCFHeaderLineType.Integer, "Edit distances of each alt allele's most common supporting haplotype from closest germline haplotype, excluding differences at the site in question."));

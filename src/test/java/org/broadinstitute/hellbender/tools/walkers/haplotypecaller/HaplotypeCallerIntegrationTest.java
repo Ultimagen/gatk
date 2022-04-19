@@ -1767,6 +1767,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
                 .add("G","StandardAnnotation")
                 .add("G","StandardHCAnnotation")
                 .add("G","AS_StandardAnnotation")
+                .add("G","StandardFlowBasedAnnotation")
                 .add("GQB","10").add("GQB","20").add("GQB","30").add("GQB","40").add("GQB","50").add("GQB","60").add("GQB","70").add("GQB","80").add("GQB","90")
                 .add("likelihood-calculation-engine","FlowBased")
                 .add("A", "AssemblyComplexity")

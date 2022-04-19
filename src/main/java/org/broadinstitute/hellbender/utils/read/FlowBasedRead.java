@@ -1172,6 +1172,17 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         applyFilteringFlowMatrix();
         validateSequence();
     }
+
+    public Byte getByteAttributeForBaseIndex(final int index, final String tag) {
+        final byte[] ar = getAttributeAsByteArray(tag);
+        if ( ar == null ) {
+            return null;
+        }
+        if ( index < 0 || index >= ar.length )
+            return null;
+
+        return ar[index];
+    }
 }
 
 
