@@ -245,7 +245,6 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
                 FILTER_ALLELES, "true",
                 FILTER_ALLELES_SOR_THRESHOLD, "3",
                 FLOW_ASSEMBLY_COLLAPSE_HMER_SIZE_LONG_NAME, "12",
-                FlowBasedArgumentCollection.FLOW_MATRIX_MODS_LONG_NAME, "10,12,11,12",
                 OVERRIDE_FRAGMENT_SOFTCLIP_CHECK_LONG_NAME, "true",
                 FlowBasedAlignmentArgumentCollection.FLOW_LIKELIHOOD_PARALLEL_THREADS_LONG_NAME, "2",
                 FlowBasedAlignmentArgumentCollection.FLOW_LIKELIHOOD_OPTIMIZED_COMP_LONG_NAME, "true",
