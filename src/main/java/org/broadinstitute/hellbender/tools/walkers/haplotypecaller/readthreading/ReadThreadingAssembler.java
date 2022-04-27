@@ -419,13 +419,6 @@ public final class ReadThreadingAssembler {
                 }
                 returnHaplotypes.add(refHaplotype);
             }
-
-            // uncollapse haplotypes now?
-            if ( resultSet != null && resultSet.getHaplotypeCollapsingEngine() != null ) {
-                returnHaplotypes = new LinkedHashSet<>(resultSet.getHaplotypeCollapsingEngine().uncollapseHmersInHaplotypes(resultSet.getHaplotypeList(), true, null));
-                resultSet.getHaplotypeCollapsingEngine().replaceAllHaplotypes(resultSet, returnHaplotypes);
-            }
-
             assemblyResult.setDiscoveredHaplotypes(returnHaplotypes);
 
             if (failedCigars != 0) {
