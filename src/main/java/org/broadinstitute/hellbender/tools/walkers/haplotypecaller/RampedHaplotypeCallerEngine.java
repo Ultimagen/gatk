@@ -196,6 +196,7 @@ public class RampedHaplotypeCallerEngine extends HaplotypeCallerEngine {
      * @param features Features overlapping the assembly region
      * @return List of variants discovered in the region (may be empty)
      */
+    @Override
     public List<VariantContext> callRegion(final AssemblyRegion region, final FeatureContext features, final ReferenceContext referenceContext) {
 
         // dump reads upon entry
