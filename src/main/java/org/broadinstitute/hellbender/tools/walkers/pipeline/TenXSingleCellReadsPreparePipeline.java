@@ -31,9 +31,9 @@ public class TenXSingleCellReadsPreparePipeline extends ReadWalker {
     public TenXSingleCellArgumentCollection args = new TenXSingleCellArgumentCollection();
 
     // locals
-    private AdapterUtils.Adapter adapter5p;
-    private AdapterUtils.Adapter adapter3p;
-    private AdapterUtils.Adapter adapterMiddle;
+    private AdapterUtils.AdapterPattern adapter5pPattern;
+    private AdapterUtils.AdapterPattern adapter3pPattern;
+    private AdapterUtils.AdapterPattern adapterMiddlePattern;
 
     // fastq output
     private FastqWriterFactory fastqWriterFactory = new FastqWriterFactory();
@@ -47,16 +47,18 @@ public class TenXSingleCellReadsPreparePipeline extends ReadWalker {
         final byte[]        bases = read.getBasesNoCopy();
 
         // temp! look for the adapters
-        int         adapter5pOfs = AdapterUtils.findAdapter(bases, adapter5p);
-        int         adapter3pOfs = AdapterUtils.findAdapter(bases, adapter3p);
-        int         adapterMiddleOfs = AdapterUtils.findAdapter(bases, adapterMiddle);
+        AdapterUtils.FoundAdapter adapter5p = AdapterUtils.findAdapter(bases, adapter5pPattern);
+        AdapterUtils.FoundAdapter adapterMiddle = AdapterUtils.findAdapter(bases, adapterMiddlePattern);
+        AdapterUtils.FoundAdapter adapter3p = AdapterUtils.findAdapter(bases, adapter3pPattern);
 
         // temp - build 2 reads and write them out
-        if ( adapter5pOfs >= 0
-                && adapterMiddleOfs > (adapter5pOfs + adapter5p.length())
-                && adapter3pOfs > (adapterMiddleOfs + adapterMiddle.length()) ) {
-            read1Writer.write(makeFastQRecord(read, adapter5pOfs + adapter5p.length(), adapterMiddleOfs));
-            read2Writer.write(makeFastQRecord(read, adapterMiddleOfs + adapterMiddle.length(), adapter3pOfs));
+        if ( adapter5p != null && adapterMiddle != null && adapter3p != null ) {
+            if (adapter5p.start >= 0
+                    && adapterMiddle.start > (adapter5p.start + adapter5p.length)
+                    && adapter3p.start > (adapterMiddle.start + adapterMiddle.length)) {
+                read1Writer.write(makeFastQRecord(read, adapter5p.start + adapter5p.length, adapterMiddle.start));
+                read2Writer.write(makeFastQRecord(read, adapterMiddle.start + adapterMiddle.length, adapter3p.start));
+            }
         }
     }
 
@@ -76,9 +78,9 @@ public class TenXSingleCellReadsPreparePipeline extends ReadWalker {
         super.onTraversalStart();
 
         // log adapters
-        logger.info("adapter5p: " + adapter5p.getDescription());
-        logger.info("adapter3p: " + adapter3p.getDescription());
-        logger.info("adapterMiddle: " + adapterMiddle.getDescription());
+        logger.info("adapter5p: " + adapter5pPattern.getDescription());
+        logger.info("adapter3p: " + adapter3pPattern.getDescription());
+        logger.info("adapterMiddle: " + adapterMiddlePattern.getDescription());
 
         // open writers
         File f;
@@ -121,7 +123,7 @@ public class TenXSingleCellReadsPreparePipeline extends ReadWalker {
             adapter = (!args.guide || args.libraryDirection == TenXSingleCellArgumentCollection.LibraryDirection.FivePrime)
                     ? "CTACACGACGCTCTTCCGATCT" : "TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG";
         }
-        adapter5p = new AdapterUtils.Adapter(adapter.getBytes(), args.adapterMinErrorRate, args.adapterMinOverlap);
+        adapter5pPattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap);
 
         adapter = null;
         if ( args.adapter3pOverride != null ) {
@@ -135,7 +137,7 @@ public class TenXSingleCellReadsPreparePipeline extends ReadWalker {
                         ? "CTGTCTCTTATACACATCT" : "AGATCGGAAGAGCACACGTCTG";
             }
         }
-        adapter3p = new AdapterUtils.Adapter(adapter.getBytes(), args.adapterMinErrorRate, args.adapterMinOverlap);
+        adapter3pPattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap);
 
         adapter = null;
         if ( args.adapterMiddleOverride != null ) {
@@ -148,7 +150,7 @@ public class TenXSingleCellReadsPreparePipeline extends ReadWalker {
                         ? "GCTGTTTCCAGCTTAGCTCTTAAAC" : "XTTTTTTTTTTTTTTTTTTTTTTTTT";
             }
         }
-        adapterMiddle = new AdapterUtils.Adapter(adapter.getBytes(), args.adapterMinErrorRate, args.adapterMinOverlap);
+        adapterMiddlePattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap);
 
 
         return super.instanceMainPostParseArgs();

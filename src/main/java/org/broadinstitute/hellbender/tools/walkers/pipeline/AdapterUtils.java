@@ -6,39 +6,48 @@ public class AdapterUtils {
 
     public static final int ADAPTER_NOT_FOUND = -1;
 
-    static public class Adapter {
-        final private byte[] adapter;
+    static public class AdapterPattern {
+        final private byte[] pattern;
         final private boolean mustBeAtStart;
         final private boolean mustBeAtEnd;
         final private int errorThreshold;
         final private int minOverlap;
         final private String description;
 
-        public Adapter(final byte[] bases, double errorRate, int minOverlap) {
-            this.mustBeAtStart = bases.length > 0 && bases[0] == '^';
-            this.mustBeAtEnd = bases.length > 0 && bases[bases.length - 1] == '$';
-            this.adapter = Arrays.copyOfRange(bases, mustBeAtStart ? 1 : 0, bases.length - (mustBeAtEnd ? 1 : 0));
-            this.errorThreshold = (int)(errorRate * adapter.length);
+        public AdapterPattern(final String pattern, double errorRate, int minOverlap) {
+            this.mustBeAtStart = pattern.length() > 0 && pattern.charAt(0) == '^';
+            this.mustBeAtEnd = pattern.length() > 0 && pattern.charAt(pattern.length() - 1) == '$';
+            this.pattern = Arrays.copyOfRange(pattern.getBytes(), mustBeAtStart ? 1 : 0, pattern.length() - (mustBeAtEnd ? 1 : 0));
+            this.errorThreshold = (int)(errorRate * this.pattern.length);
             this.minOverlap = minOverlap;
-            this.description = String.format("%s;max_error_rate=%f;min_overlap=%d", new String(bases), errorRate, minOverlap);
+            this.description = String.format("%s;max_error_rate=%f;min_overlap=%d", new String(pattern), errorRate, minOverlap);
         }
 
         public int length() {
-            return adapter.length;
+            return pattern.length;
         }
 
         public String getDescription() {
             return this.description;
         }
-
     }
 
-    static public int findAdapter(final byte[] read, final Adapter adapter) {
+    static public class FoundAdapter {
+        final int start;
+        final int length;
+
+        public FoundAdapter(final int start, final AdapterPattern adapter) {
+            this.start = start;
+            this.length = adapter.length();
+        }
+    }
+
+    static public FoundAdapter findAdapter(final byte[] read, final AdapterPattern adapter) {
 
         // adapter must have some length
         final int adapterLength = adapter.length();
         if ( adapterLength == 0 ) {
-            return ADAPTER_NOT_FOUND;
+            return null;
         }
 
 
@@ -53,14 +62,14 @@ public class AdapterUtils {
             // check if an adapter is at this offset
             int errors = 0;
             for ( int i = 0 ; (i < adapterLength) && (errors < adapter.errorThreshold) ; i++ ) {
-                if ( !iupacMatch(read[ofs+i], adapter.adapter[i]) ) {
+                if ( !iupacMatch(read[ofs+i], adapter.pattern[i]) ) {
                     errors++;
                 }
             }
 
             // exact match found? then return it
             if ( errors == 0 ) {
-                return ofs;
+                return new FoundAdapter(ofs, adapter);
             }
 
             // found?
@@ -80,7 +89,7 @@ public class AdapterUtils {
         }
 
         // if here, return what we found (or not)
-        return foundOfs;
+        return (foundOfs != ADAPTER_NOT_FOUND) ? new FoundAdapter(foundOfs, adapter) : null;
     }
 
     public static boolean iupacMatch(byte b, byte iupac) {
