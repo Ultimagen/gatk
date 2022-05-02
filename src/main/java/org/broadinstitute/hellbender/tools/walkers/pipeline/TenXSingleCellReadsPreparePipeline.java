@@ -1,5 +1,8 @@
 package org.broadinstitute.hellbender.tools.walkers.pipeline;
 
+import htsjdk.samtools.fastq.FastqRecord;
+import htsjdk.samtools.fastq.FastqWriter;
+import htsjdk.samtools.fastq.FastqWriterFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.argparser.ArgumentCollection;
@@ -11,7 +14,7 @@ import org.broadinstitute.hellbender.engine.ReadWalker;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
-import java.util.List;
+import java.io.File;
 
 @CommandLineProgramProperties(
         summary = "Split reads file (normally a CRAM) into appropriate read files ready for 10X Cell Ranger invocation",
@@ -28,16 +31,14 @@ public class TenXSingleCellReadsPreparePipeline extends ReadWalker {
     public TenXSingleCellArgumentCollection args = new TenXSingleCellArgumentCollection();
 
     // locals
-    private String adapter_5p;
-    private String adapter_3p;
-    private String adapter_middle;
+    private AdapterUtils.Adapter adapter5p;
+    private AdapterUtils.Adapter adapter3p;
+    private AdapterUtils.Adapter adapterMiddle;
 
-    // temp
-    private int readCount;
-    private int adapter5pCount;
-    private int adapter3pCount;
-    private int adapterMiddleCount;
-
+    // fastq output
+    private FastqWriterFactory fastqWriterFactory = new FastqWriterFactory();
+    private FastqWriter read1Writer;
+    private FastqWriter read2Writer;
 
     @Override
     public void apply(GATKRead read, ReferenceContext referenceContext, FeatureContext featureContext) {
@@ -46,29 +47,63 @@ public class TenXSingleCellReadsPreparePipeline extends ReadWalker {
         final byte[]        bases = read.getBasesNoCopy();
 
         // temp! look for the adapters
-        int         adapter5pOfs = AdapterUtils.findAdapter(bases, adapter_5p.getBytes(), args.adapterMinErrorRate, args.adapterMinOverlap);
-        int         adapter3pOfs = AdapterUtils.findAdapter(bases, adapter_3p.getBytes(), args.adapterMinErrorRate, args.adapterMinOverlap);
-        int         adapterMiddleOfs = AdapterUtils.findAdapter(bases, adapter_middle.getBytes(), args.adapterMinErrorRate, args.adapterMinOverlap);
+        int         adapter5pOfs = AdapterUtils.findAdapter(bases, adapter5p);
+        int         adapter3pOfs = AdapterUtils.findAdapter(bases, adapter3p);
+        int         adapterMiddleOfs = AdapterUtils.findAdapter(bases, adapterMiddle);
 
-        // count
-        readCount++;
-        if ( adapter5pOfs >= 0 ) {
-            adapter5pCount++;
+        // temp - build 2 reads and write them out
+        if ( adapter5pOfs >= 0
+                && adapterMiddleOfs > (adapter5pOfs + adapter5p.length())
+                && adapter3pOfs > (adapterMiddleOfs + adapterMiddle.length()) ) {
+            read1Writer.write(makeFastQRecord(read, adapter5pOfs + adapter5p.length(), adapterMiddleOfs));
+            read2Writer.write(makeFastQRecord(read, adapterMiddleOfs + adapterMiddle.length(), adapter3pOfs));
         }
-        if ( adapter3pOfs >= 0 ) {
-            adapter3pCount++;
-        }
-        if ( adapterMiddleOfs >= 0 ) {
-            adapterMiddleCount++;
-        }
+    }
+
+    private FastqRecord makeFastQRecord(GATKRead read, int startOfs, int endOfs) {
+
+        final int length = endOfs - startOfs;
+        final byte[] bases = new byte[length];
+        final byte[] quals = new byte[length];
+        read.copyBases(startOfs, bases, 0, length);
+        read.copyBaseQualities(startOfs, quals, 0, length);
+
+        return new FastqRecord(read.getName(), bases, null, quals);
+    }
+
+    @Override
+    public void onTraversalStart() {
+        super.onTraversalStart();
+
+        // log adapters
+        logger.info("adapter5p: " + adapter5p.getDescription());
+        logger.info("adapter3p: " + adapter3p.getDescription());
+        logger.info("adapterMiddle: " + adapterMiddle.getDescription());
+
+        // open writers
+        File f;
+        read1Writer = fastqWriterFactory.newWriter(f = buildFastQReedsOutputFile(1));
+        logger.info("read1 output: " + f);
+        read2Writer = fastqWriterFactory.newWriter(f = buildFastQReedsOutputFile(2));
+        logger.info("read2 output: " + f);
+
+    }
+
+    private File buildFastQReedsOutputFile(int i) {
+        return new File(args.baseFilename + "_read" + i + ".fastq");
     }
 
     @Override
     public void closeTool() {
         super.closeTool();
 
-        logger.info(String.format("counts: %d %d %d %d",
-                readCount, adapter5pCount, adapter3pCount, adapterMiddleCount));
+        // close writers
+        if ( read1Writer != null ) {
+            read1Writer.close();;
+        }
+        if ( read2Writer != null ) {
+            read2Writer.close();;
+        }
     }
 
     // perform additional argument verification and adjustments, assign defaults
@@ -79,27 +114,42 @@ public class TenXSingleCellReadsPreparePipeline extends ReadWalker {
         args.validate();
 
         // adapters
-        if ( (adapter_5p = args.adapter5pOverride) == null ) {
-            adapter_5p = (!args.guide || args.libraryDirection == TenXSingleCellArgumentCollection.LibraryDirection.FivePrime)
+        String adapter = null;
+        if ( args.adapter5pOverride != null ) {
+            adapter = args.adapter5pOverride;
+        } else {
+            adapter = (!args.guide || args.libraryDirection == TenXSingleCellArgumentCollection.LibraryDirection.FivePrime)
                     ? "CTACACGACGCTCTTCCGATCT" : "TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG";
         }
-        if ( (adapter_3p = args.adapter3pOverride) == null ) {
+        adapter5p = new AdapterUtils.Adapter(adapter.getBytes(), args.adapterMinErrorRate, args.adapterMinOverlap);
+
+        adapter = null;
+        if ( args.adapter3pOverride != null ) {
+            adapter = args.adapter3pOverride;
+        } else {
             if ( args.libraryDirection == TenXSingleCellArgumentCollection.LibraryDirection.ThreePrime) {
-                adapter_3p = args.guide
+                adapter = args.guide
                         ? "AGATCGGAAGAGCACACGTCTG" : "CCCATGTACTCTGCGTTGATACCACTGCTT";
             } else {
-                adapter_3p = args.guide
+                adapter = args.guide
                         ? "CTGTCTCTTATACACATCT" : "AGATCGGAAGAGCACACGTCTG";
             }
         }
-        if ( (adapter_middle = args.adapterMiddleOverride) == null) {
+        adapter3p = new AdapterUtils.Adapter(adapter.getBytes(), args.adapterMinErrorRate, args.adapterMinOverlap);
+
+        adapter = null;
+        if ( args.adapterMiddleOverride != null ) {
+            adapter = args.adapterMiddleOverride;
+        } else {
             if ( args.libraryDirection == TenXSingleCellArgumentCollection.LibraryDirection.FivePrime ) {
-                adapter_middle = "^TTTCTTATATGGG";
+                adapter = "^TTTCTTATATGGG";
             } else {
-                adapter_middle = args.guide
+                adapter = args.guide
                         ? "GCTGTTTCCAGCTTAGCTCTTAAAC" : "XTTTTTTTTTTTTTTTTTTTTTTTTT";
             }
         }
+        adapterMiddle = new AdapterUtils.Adapter(adapter.getBytes(), args.adapterMinErrorRate, args.adapterMinOverlap);
+
 
         return super.instanceMainPostParseArgs();
     }
