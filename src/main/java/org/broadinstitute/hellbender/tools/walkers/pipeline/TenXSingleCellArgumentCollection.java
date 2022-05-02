@@ -1,0 +1,88 @@
+package org.broadinstitute.hellbender.tools.walkers.pipeline;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.broadinstitute.barclay.argparser.Argument;
+import org.broadinstitute.hellbender.engine.GATKPath;
+
+import java.io.Serializable;
+import java.util.List;
+
+public class TenXSingleCellArgumentCollection implements Serializable {
+    private static final long serialVersionUID = 0;
+    public static final String FULL_NAME_BASE_FILENAME = "base-filename";
+    public static final String FULL_NAME_UMI_LENGTH_OVERRIDE = "umi-length-override";
+    public static final String FULL_NAME_GUIDE = "guide";
+    public static final String FULL_NAME_LIBRARY_DIRECTION = "library-direction";
+    public static final String FULL_NAME_CHEMISTRY = "chemistry";
+    public static final String FULL_NAME_ADAPTER_5_P_OVERRIDE = "adapter-5p-override";
+    public static final String FULL_NAME_ADAPTER_3_P_OVERRIDE = "adapter-3p-override";
+    public static final String FULL_NAME_ADAPTER_MIDDLE_OVERRIDE = "adapter-middle-override";
+    public static final String FULL_NAME_ILLUMINA = "illumina";
+    public static final String FULL_NAME_ILLUMINA_READ_1_LIST = "illumina-read1-list";
+    public static final String FULL_NAME_ILLUMINA_READ_2_LIST = "illumina-read2-list";
+    public static final String FULL_NAME_ADAPTER_MIN_ERROR_RATE = "adapter-min-error-rate";
+    public static final String FULL_NAME_ADAPTER_MIN_OVERLAP = "adapter-min-overlap";
+
+    @Argument(fullName = FULL_NAME_BASE_FILENAME)
+    public String baseFilename;
+
+    @Argument(fullName = FULL_NAME_UMI_LENGTH_OVERRIDE, optional = true)
+    public int umiLengthOverride;
+
+    @Argument(fullName = FULL_NAME_GUIDE, doc = "=is guide (true) or hash(false)", optional = true)
+    public boolean guide;
+
+    @Argument(fullName = FULL_NAME_LIBRARY_DIRECTION, optional = true)
+    public LibraryDirection libraryDirection = LibraryDirection.ThreePrime;
+
+    @Argument(fullName = FULL_NAME_CHEMISTRY, optional = true)
+    public Chemistry chemistry = Chemistry.TenX_V3;
+
+    @Argument(fullName = FULL_NAME_ADAPTER_5_P_OVERRIDE, optional = true)
+    public String adapter5pOverride;
+
+    @Argument(fullName = FULL_NAME_ADAPTER_3_P_OVERRIDE, optional = true)
+    public String adapter3pOverride;
+
+    @Argument(fullName = FULL_NAME_ADAPTER_MIDDLE_OVERRIDE, optional = true)
+    public String adapterMiddleOverride;
+
+    @Argument(fullName = FULL_NAME_ILLUMINA, optional = true)
+    public boolean illumina;
+
+    @Argument(fullName = FULL_NAME_ILLUMINA_READ_1_LIST, optional = true)
+    public List<GATKPath> illuminaRead1List;
+
+    @Argument(fullName = FULL_NAME_ILLUMINA_READ_2_LIST, optional = true)
+    public List<GATKPath> illuminaRead2List;
+
+    @Argument(fullName = FULL_NAME_ADAPTER_MIN_ERROR_RATE)
+    public double adapterMinErrorRate = 0.2;
+
+    @Argument(fullName = FULL_NAME_ADAPTER_MIN_OVERLAP)
+    public int adapterMinOverlap = 10;
+
+    enum LibraryDirection {
+        ThreePrime,
+        FivePrime
+    }
+
+    enum Chemistry {
+        TenX_V2,
+        TenX_V3
+    }
+
+    protected void validate() {
+
+        // illumina read lists apply to illumina mode only
+        if ( !illumina ) {
+            if (!CollectionUtils.isEmpty(illuminaRead1List)) {
+                throw new IllegalArgumentException("--" + FULL_NAME_ILLUMINA_READ_1_LIST + " can only be used in illumina mode");
+            }
+            if (!CollectionUtils.isEmpty(illuminaRead2List)) {
+                throw new IllegalArgumentException("--" + FULL_NAME_ILLUMINA_READ_2_LIST + " can only be used in illumina mode");
+            }
+        }
+
+    }
+}
