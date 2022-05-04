@@ -22,6 +22,8 @@ public class TenXSingleCellArgumentCollection implements Serializable {
     public static final String FULL_NAME_ILLUMINA_READ_2_LIST = "illumina-read2-list";
     public static final String FULL_NAME_ADAPTER_MIN_ERROR_RATE = "adapter-min-error-rate";
     public static final String FULL_NAME_ADAPTER_MIN_OVERLAP = "adapter-min-overlap";
+    public static final String LONG_NAME_NO_5_P_3_P_ADAPTERS = "no-5p-3p-adapters";
+    public static final String FULL_NAME_REVERSE_COMPLEMENT_READ_2 = "reverse-complement-read2";
 
     @Argument(fullName = FULL_NAME_BASE_FILENAME)
     public String baseFilename;
@@ -46,6 +48,12 @@ public class TenXSingleCellArgumentCollection implements Serializable {
 
     @Argument(fullName = FULL_NAME_ADAPTER_MIDDLE_OVERRIDE, optional = true)
     public String adapterMiddleOverride;
+
+    @Argument(fullName = LONG_NAME_NO_5_P_3_P_ADAPTERS, optional = true)
+    public boolean no5p3pAdapters;
+
+    @Argument(fullName = FULL_NAME_REVERSE_COMPLEMENT_READ_2, optional = true)
+    public boolean reverseComplementRead2 = true;
 
     @Argument(fullName = FULL_NAME_ILLUMINA, optional = true)
     public boolean illumina;

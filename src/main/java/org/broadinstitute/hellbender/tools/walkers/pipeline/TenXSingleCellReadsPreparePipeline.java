@@ -3,6 +3,8 @@ package org.broadinstitute.hellbender.tools.walkers.pipeline;
 import htsjdk.samtools.fastq.FastqRecord;
 import htsjdk.samtools.fastq.FastqWriter;
 import htsjdk.samtools.fastq.FastqWriterFactory;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.argparser.ArgumentCollection;
@@ -12,6 +14,7 @@ import org.broadinstitute.hellbender.cmdline.programgroups.FlowBasedProgramGroup
 import org.broadinstitute.hellbender.engine.FeatureContext;
 import org.broadinstitute.hellbender.engine.ReadWalker;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
+import org.broadinstitute.hellbender.utils.BaseUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
 import java.io.File;
@@ -56,19 +59,23 @@ public class TenXSingleCellReadsPreparePipeline extends ReadWalker {
             if (adapter5p.start >= 0
                     && adapterMiddle.start > (adapter5p.start + adapter5p.length)
                     && adapter3p.start > (adapterMiddle.start + adapterMiddle.length)) {
-                read1Writer.write(makeFastQRecord(read, adapter5p.start + adapter5p.length, adapterMiddle.start));
-                read2Writer.write(makeFastQRecord(read, adapterMiddle.start + adapterMiddle.length, adapter3p.start));
+                read1Writer.write(makeFastQRecord(read, adapter5p.start + adapter5p.length, adapterMiddle.start, false));
+                read2Writer.write(makeFastQRecord(read, adapterMiddle.start + adapterMiddle.length, adapter3p.start, args.reverseComplementRead2));
             }
         }
     }
 
-    private FastqRecord makeFastQRecord(GATKRead read, int startOfs, int endOfs) {
+    private FastqRecord makeFastQRecord(GATKRead read, int startOfs, int endOfs, boolean rc) {
 
         final int length = endOfs - startOfs;
-        final byte[] bases = new byte[length];
+        byte[] bases = new byte[length];
         final byte[] quals = new byte[length];
         read.copyBases(startOfs, bases, 0, length);
         read.copyBaseQualities(startOfs, quals, 0, length);
+        if ( rc ) {
+            ArrayUtils.reverse(quals);
+            bases = BaseUtils.simpleReverseComplement(bases);
+        }
 
         return new FastqRecord(read.getName(), bases, null, quals);
     }
@@ -116,8 +123,10 @@ public class TenXSingleCellReadsPreparePipeline extends ReadWalker {
         args.validate();
 
         // adapters
-        String adapter = null;
-        if ( args.adapter5pOverride != null ) {
+        String adapter;
+        if ( args.no5p3pAdapters ) {
+            adapter = "^";
+        } else if ( args.adapter5pOverride != null ) {
             adapter = args.adapter5pOverride;
         } else {
             adapter = (!args.guide || args.libraryDirection == TenXSingleCellArgumentCollection.LibraryDirection.FivePrime)
@@ -126,7 +135,9 @@ public class TenXSingleCellReadsPreparePipeline extends ReadWalker {
         adapter5pPattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap);
 
         adapter = null;
-        if ( args.adapter3pOverride != null ) {
+        if ( args.no5p3pAdapters ) {
+            adapter = "$";
+        } else if ( args.adapter3pOverride != null ) {
             adapter = args.adapter3pOverride;
         } else {
             if ( args.libraryDirection == TenXSingleCellArgumentCollection.LibraryDirection.ThreePrime) {

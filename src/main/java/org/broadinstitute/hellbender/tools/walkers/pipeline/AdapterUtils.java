@@ -20,7 +20,7 @@ public class AdapterUtils {
             this.pattern = Arrays.copyOfRange(pattern.getBytes(), mustBeAtStart ? 1 : 0, pattern.length() - (mustBeAtEnd ? 1 : 0));
             this.errorThreshold = (int)(errorRate * this.pattern.length);
             this.minOverlap = minOverlap;
-            this.description = String.format("%s;max_error_rate=%f;min_overlap=%d", new String(pattern), errorRate, minOverlap);
+            this.description = String.format("%s;max_error_rate=%f;min_overlap=%d", pattern, errorRate, minOverlap);
         }
 
         public int length() {
@@ -46,7 +46,7 @@ public class AdapterUtils {
 
         // adapter must have some length
         final int adapterLength = adapter.length();
-        if ( adapterLength == 0 ) {
+        if ( adapterLength == 0 && !adapter.mustBeAtStart && !adapter.mustBeAtEnd ) {
             return null;
         }
 
@@ -61,7 +61,7 @@ public class AdapterUtils {
 
             // check if an adapter is at this offset
             int errors = 0;
-            for ( int i = 0 ; (i < adapterLength) && (errors < adapter.errorThreshold) ; i++ ) {
+            for ( int i = 0 ; (i < adapterLength) && (errors <= adapter.errorThreshold) ; i++ ) {
                 if ( !iupacMatch(read[ofs+i], adapter.pattern[i]) ) {
                     errors++;
                 }
@@ -73,7 +73,7 @@ public class AdapterUtils {
             }
 
             // found?
-            if ( (errors < adapter.errorThreshold) && (adapterLength - errors) >= adapter.minOverlap ){
+            if ( (errors <= adapter.errorThreshold) && (adapterLength - errors) >= adapter.minOverlap ){
                 // update best
                 double rate = errors / adapterLength;
                 if ( rate < foundErrorRate ) {
