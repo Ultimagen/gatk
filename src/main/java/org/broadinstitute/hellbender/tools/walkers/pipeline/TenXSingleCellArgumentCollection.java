@@ -24,6 +24,11 @@ public class TenXSingleCellArgumentCollection implements Serializable {
     public static final String FULL_NAME_ADAPTER_MIN_OVERLAP = "adapter-min-overlap";
     public static final String LONG_NAME_NO_5_P_3_P_ADAPTERS = "no-5p-3p-adapters";
     public static final String FULL_NAME_REVERSE_COMPLEMENT_READ_2 = "reverse-complement-read2";
+    public static final String FULL_NANE_FASTQ_ASYNC_IO = "fastq-async-io";
+    public static final String FULL_NAME_BYPASS_MODE = "bypass-mode";
+    public static final String FULL_NAME_BYPASS_MODE2 = "bypass-mode2";
+    public static final String FULL_NAME_NO_OUTPUT = "no-output";
+    public static final String FULL_NAME_RETURN_FIRST_FOUND_ADAPTER = "return-first-found-adapter";
 
     @Argument(fullName = FULL_NAME_BASE_FILENAME)
     public String baseFilename;
@@ -69,6 +74,21 @@ public class TenXSingleCellArgumentCollection implements Serializable {
 
     @Argument(fullName = FULL_NAME_ADAPTER_MIN_OVERLAP)
     public int adapterMinOverlap = 10;
+
+    @Argument(fullName = FULL_NANE_FASTQ_ASYNC_IO)
+    public boolean fastqAsyncIO;
+
+    @Argument(fullName = FULL_NAME_BYPASS_MODE)
+    public boolean bypassMode;
+
+    @Argument(fullName = FULL_NAME_BYPASS_MODE2)
+    public boolean bypassMode2;
+
+    @Argument(fullName = FULL_NAME_NO_OUTPUT)
+    public boolean noOutput;
+
+    @Argument(fullName = FULL_NAME_RETURN_FIRST_FOUND_ADAPTER)
+    public boolean returnFirstFoundAdapter;
 
     enum LibraryDirection {
         ThreePrime,

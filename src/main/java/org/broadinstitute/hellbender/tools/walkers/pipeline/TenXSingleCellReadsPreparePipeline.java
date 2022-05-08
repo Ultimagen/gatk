@@ -3,7 +3,6 @@ package org.broadinstitute.hellbender.tools.walkers.pipeline;
 import htsjdk.samtools.fastq.FastqRecord;
 import htsjdk.samtools.fastq.FastqWriter;
 import htsjdk.samtools.fastq.FastqWriterFactory;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -46,21 +45,42 @@ public class TenXSingleCellReadsPreparePipeline extends ReadWalker {
     @Override
     public void apply(GATKRead read, ReferenceContext referenceContext, FeatureContext featureContext) {
 
-        // access read
-        final byte[]        bases = read.getBasesNoCopy();
+        if ( args.bypassMode ) {
+            read1Writer.write(new FastqRecord(read.getName(), read.getBasesNoCopy(), null, read.getBaseQualitiesNoCopy()));
+        } else {
+            // access read
+            final byte[] bases = read.getBasesNoCopy();
 
-        // temp! look for the adapters
-        AdapterUtils.FoundAdapter adapter5p = AdapterUtils.findAdapter(bases, adapter5pPattern);
-        AdapterUtils.FoundAdapter adapterMiddle = AdapterUtils.findAdapter(bases, adapterMiddlePattern);
-        AdapterUtils.FoundAdapter adapter3p = AdapterUtils.findAdapter(bases, adapter3pPattern);
+            // temp! look for the adapters
+            AdapterUtils.FoundAdapter adapter5p = null;
+            AdapterUtils.FoundAdapter adapterMiddle = null;
+            AdapterUtils.FoundAdapter adapter3p = null;
+            if ( args.bypassMode2 ) {
+                final int     length = read.getLength();
+                final int     half = length / 2;
+                adapter5p = new AdapterUtils.FoundAdapter(0, 1);
+                adapterMiddle = new AdapterUtils.FoundAdapter(half, 1);
+                adapter3p = new AdapterUtils.FoundAdapter(length - 2, 1);
+            } else {
+                adapterMiddle = AdapterUtils.findAdapter(bases, adapterMiddlePattern, 0, bases.length, args.returnFirstFoundAdapter);
+                if ( adapterMiddle != null ) {
+                    adapter5p = AdapterUtils.findAdapter(bases, adapter5pPattern, 0, adapterMiddle.start, args.returnFirstFoundAdapter);
+                    if ( adapter5p != null ) {
+                        adapter3p = AdapterUtils.findAdapter(bases, adapter3pPattern, adapterMiddle.start + adapterMiddle.length, bases.length, args.returnFirstFoundAdapter);
+                    }
+                }
+            }
 
-        // temp - build 2 reads and write them out
-        if ( adapter5p != null && adapterMiddle != null && adapter3p != null ) {
-            if (adapter5p.start >= 0
-                    && adapterMiddle.start > (adapter5p.start + adapter5p.length)
-                    && adapter3p.start > (adapterMiddle.start + adapterMiddle.length)) {
-                read1Writer.write(makeFastQRecord(read, adapter5p.start + adapter5p.length, adapterMiddle.start, false));
-                read2Writer.write(makeFastQRecord(read, adapterMiddle.start + adapterMiddle.length, adapter3p.start, args.reverseComplementRead2));
+            // temp - build 2 reads and write them out
+            if (adapter5p != null && adapterMiddle != null && adapter3p != null) {
+                if (adapter5p.start >= 0
+                        && adapterMiddle.start > (adapter5p.start + adapter5p.length)
+                        && adapter3p.start > (adapterMiddle.start + adapterMiddle.length)) {
+                    if ( !args.noOutput ) {
+                        read1Writer.write(makeFastQRecord(read, adapter5p.start + adapter5p.length, adapterMiddle.start, false));
+                        read2Writer.write(makeFastQRecord(read, adapterMiddle.start + adapterMiddle.length, adapter3p.start, args.reverseComplementRead2));
+                    }
+                }
             }
         }
     }
@@ -91,6 +111,8 @@ public class TenXSingleCellReadsPreparePipeline extends ReadWalker {
 
         // open writers
         File f;
+        fastqWriterFactory.setCreateMd5(false);
+        fastqWriterFactory.setUseAsyncIo(args.fastqAsyncIO);
         read1Writer = fastqWriterFactory.newWriter(f = buildFastQReedsOutputFile(1));
         logger.info("read1 output: " + f);
         read2Writer = fastqWriterFactory.newWriter(f = buildFastQReedsOutputFile(2));

@@ -40,29 +40,44 @@ public class AdapterUtils {
             this.start = start;
             this.length = adapter.length();
         }
+        public FoundAdapter(final int start, final int length) {
+            this.start = start;
+            this.length = length;
+        }
     }
 
-    static public FoundAdapter findAdapter(final byte[] read, final AdapterPattern adapter) {
+    static public FoundAdapter findAdapter(final byte[] read, final AdapterPattern adapter, final int start, final int end, final boolean returnFirstFound) {
 
-        // adapter must have some length
+        // adapter must have some length, unless it is a special case
         final int adapterLength = adapter.length();
-        if ( adapterLength == 0 && !adapter.mustBeAtStart && !adapter.mustBeAtEnd ) {
-            return null;
-        }
+        if (adapterLength == 0) {
+            if (adapter.mustBeAtStart) {
+                return new FoundAdapter(0, 0);
+            } else if (adapter.mustBeAtEnd) {
+                return new FoundAdapter(read.length, 0);
+            } else {
+                return null;
+            }
+    }
 
 
         // trivial implementation to begin with
         int foundOfs = ADAPTER_NOT_FOUND;
         double foundErrorRate = 1.0;
-        final int readScanStart = !adapter.mustBeAtEnd ? 0 : read.length - adapterLength;
-        final int readScanEnd = read.length - adapterLength;
+        final int readScanStart = Math.max(!adapter.mustBeAtEnd ? 0 : read.length - adapterLength, start);
+        final int readScanEnd = Math.min(read.length, end) - adapterLength;
 
         for ( int ofs = readScanStart ; ofs <= readScanEnd ; ofs++ ) {
 
             // check if an adapter is at this offset
             int errors = 0;
             for ( int i = 0 ; (i < adapterLength) && (errors <= adapter.errorThreshold) ; i++ ) {
+                /*
                 if ( !iupacMatch(read[ofs+i], adapter.pattern[i]) ) {
+                    errors++;
+                }
+                 */
+                if ( (read[ofs+i] != adapter.pattern[i]) && (adapter.pattern[i] != 'X') ) {
                     errors++;
                 }
             }
@@ -79,6 +94,9 @@ public class AdapterUtils {
                 if ( rate < foundErrorRate ) {
                     foundOfs = ofs;
                     foundErrorRate = rate;
+                    if ( returnFirstFound ) {
+                        break;
+                    }
                 }
             }
 
