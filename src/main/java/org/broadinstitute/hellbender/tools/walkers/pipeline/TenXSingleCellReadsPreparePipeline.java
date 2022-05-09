@@ -56,15 +56,16 @@ public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
         } else {
             // access read
             final byte[] bases = read.getBasesNoCopy();
+            final int basesTrimmedLength = findTrimmedLength(bases, read.getBaseQualitiesNoCopy(), args.qualityCutoff);
 
             // temp! look for the adapters
             AdapterUtils.FoundAdapter adapter5p = null;
             AdapterUtils.FoundAdapter adapter3p = null;
-            final AdapterUtils.FoundAdapter adapterMiddle = AdapterUtils.findAdapter(bases, adapterMiddlePattern, 0, bases.length);
+            final AdapterUtils.FoundAdapter adapterMiddle = AdapterUtils.findAdapter(bases, adapterMiddlePattern, 0, basesTrimmedLength);
             if ( adapterMiddle != null ) {
                 adapter5p = AdapterUtils.findAdapter(bases, adapter5pPattern, 0, adapterMiddle.start);
                 if ( adapter5p != null ) {
-                    adapter3p = AdapterUtils.findAdapter(bases, adapter3pPattern, adapterMiddle.start + adapterMiddle.length, bases.length);
+                    adapter3p = AdapterUtils.findAdapter(bases, adapter3pPattern, adapterMiddle.start + adapterMiddle.length, basesTrimmedLength);
                 }
             }
 
@@ -100,6 +101,16 @@ public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
             }
 
         }
+    }
+
+    private int findTrimmedLength(byte[] bases, byte[] quals, int qualityCutoff) {
+        int     length = bases.length;
+        if ( qualityCutoff != 0 ) {
+            while ( length > 0 && quals[length-1] < qualityCutoff ) {
+                length--;
+            }
+        }
+        return length;
     }
 
     private FastqRecord makeFastQRecord(GATKRead read, int startOfs, int endOfs, boolean rc) {
