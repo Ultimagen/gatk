@@ -88,7 +88,7 @@ public class TenXSingleCellArgumentCollection implements Serializable {
     public boolean noOutput;
 
     @Argument(fullName = FULL_NAME_RETURN_FIRST_FOUND_ADAPTER)
-    public boolean returnFirstFoundAdapter;
+    public boolean returnFirstFoundAdapter = true;
 
     enum LibraryDirection {
         ThreePrime,

@@ -62,11 +62,11 @@ public class TenXSingleCellReadsPreparePipeline extends ReadWalker {
                 adapterMiddle = new AdapterUtils.FoundAdapter(half, 1);
                 adapter3p = new AdapterUtils.FoundAdapter(length - 2, 1);
             } else {
-                adapterMiddle = AdapterUtils.findAdapter(bases, adapterMiddlePattern, 0, bases.length, args.returnFirstFoundAdapter);
+                adapterMiddle = AdapterUtils.findAdapter(bases, adapterMiddlePattern, 0, bases.length);
                 if ( adapterMiddle != null ) {
-                    adapter5p = AdapterUtils.findAdapter(bases, adapter5pPattern, 0, adapterMiddle.start, args.returnFirstFoundAdapter);
+                    adapter5p = AdapterUtils.findAdapter(bases, adapter5pPattern, 0, adapterMiddle.start);
                     if ( adapter5p != null ) {
-                        adapter3p = AdapterUtils.findAdapter(bases, adapter3pPattern, adapterMiddle.start + adapterMiddle.length, bases.length, args.returnFirstFoundAdapter);
+                        adapter3p = AdapterUtils.findAdapter(bases, adapter3pPattern, adapterMiddle.start + adapterMiddle.length, bases.length);
                     }
                 }
             }
@@ -154,7 +154,7 @@ public class TenXSingleCellReadsPreparePipeline extends ReadWalker {
             adapter = (!args.guide || args.libraryDirection == TenXSingleCellArgumentCollection.LibraryDirection.FivePrime)
                     ? "CTACACGACGCTCTTCCGATCT" : "TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG";
         }
-        adapter5pPattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap);
+        adapter5pPattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap, args.returnFirstFoundAdapter, false);
 
         adapter = null;
         if ( args.no5p3pAdapters ) {
@@ -170,7 +170,7 @@ public class TenXSingleCellReadsPreparePipeline extends ReadWalker {
                         ? "CTGTCTCTTATACACATCT" : "AGATCGGAAGAGCACACGTCTG";
             }
         }
-        adapter3pPattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap);
+        adapter3pPattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap, args.returnFirstFoundAdapter, true);
 
         adapter = null;
         if ( args.adapterMiddleOverride != null ) {
@@ -183,7 +183,7 @@ public class TenXSingleCellReadsPreparePipeline extends ReadWalker {
                         ? "GCTGTTTCCAGCTTAGCTCTTAAAC" : "XTTTTTTTTTTTTTTTTTTTTTTTTT";
             }
         }
-        adapterMiddlePattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap);
+        adapterMiddlePattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap, args.returnFirstFoundAdapter, false);
 
 
         return super.instanceMainPostParseArgs();

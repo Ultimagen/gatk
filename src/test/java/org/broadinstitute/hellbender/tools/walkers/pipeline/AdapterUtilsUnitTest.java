@@ -89,8 +89,8 @@ public class AdapterUtilsUnitTest extends GATKBaseTest {
     @Test(dataProvider = "findAdapter")
     public void testFindAdapter(String read, String pattern, double errorRate, int minOverlap, int foundStart, int foundLength) {
 
-        AdapterUtils.AdapterPattern ap = new AdapterUtils.AdapterPattern(pattern, errorRate, minOverlap);
-        AdapterUtils.FoundAdapter fa = AdapterUtils.findAdapter(read.getBytes(), ap, 0, read.getBytes().length, false);
+        AdapterUtils.AdapterPattern ap = new AdapterUtils.AdapterPattern(pattern, errorRate, minOverlap, false, false);
+        AdapterUtils.FoundAdapter fa = AdapterUtils.findAdapter(read.getBytes(), ap, 0, read.getBytes().length);
 
         if ( fa == null ) {
             Assert.assertEquals(-1, foundStart, "wrong start. should have found " + pattern + " in " + read + " " + errorRate + "/" + minOverlap);

@@ -12,14 +12,19 @@ public class AdapterUtils {
         final private boolean mustBeAtEnd;
         final private int errorThreshold;
         final private int minOverlap;
+        final private boolean returnFirstFound;
+        final private boolean scanFromEnd;
         final private String description;
 
-        public AdapterPattern(final String pattern, double errorRate, int minOverlap) {
+        public AdapterPattern(final String pattern, final double errorRate, final int minOverlap,
+                              final boolean returnFirstFound, final boolean scanFromEnd) {
             this.mustBeAtStart = pattern.length() > 0 && pattern.charAt(0) == '^';
             this.mustBeAtEnd = pattern.length() > 0 && pattern.charAt(pattern.length() - 1) == '$';
             this.pattern = Arrays.copyOfRange(pattern.getBytes(), mustBeAtStart ? 1 : 0, pattern.length() - (mustBeAtEnd ? 1 : 0));
             this.errorThreshold = (int)(errorRate * this.pattern.length);
             this.minOverlap = minOverlap;
+            this.returnFirstFound = returnFirstFound;
+            this.scanFromEnd = scanFromEnd;
             this.description = String.format("%s;max_error_rate=%f;min_overlap=%d", pattern, errorRate, minOverlap);
         }
 
@@ -46,7 +51,7 @@ public class AdapterUtils {
         }
     }
 
-    static public FoundAdapter findAdapter(final byte[] read, final AdapterPattern adapter, final int start, final int end, final boolean returnFirstFound) {
+    static public FoundAdapter findAdapter(final byte[] read, final AdapterPattern adapter, final int start, final int end) {
 
         // adapter must have some length, unless it is a special case
         final int adapterLength = adapter.length();
@@ -66,8 +71,26 @@ public class AdapterUtils {
         double foundErrorRate = 1.0;
         final int readScanStart = Math.max(!adapter.mustBeAtEnd ? 0 : read.length - adapterLength, start);
         final int readScanEnd = Math.min(read.length, end) - adapterLength;
+        if ( readScanStart > readScanEnd ) {
+            return null;
+        }
 
-        for ( int ofs = readScanStart ; ofs <= readScanEnd ; ofs++ ) {
+        // scan from end?
+        final int scanIncr;
+        final int scanStart;
+        final int scanEnd;
+        if ( !adapter.scanFromEnd ) {
+            scanIncr = 1;
+            scanStart = readScanStart;
+            scanEnd = readScanEnd;
+        } else {
+            scanIncr = -1;
+            scanStart = readScanEnd;
+            scanEnd = readScanStart;
+        }
+
+        // scan
+        for ( int ofs = scanStart ; ; ofs += scanIncr ) {
 
             // check if an adapter is at this offset
             int errors = 0;
@@ -94,7 +117,7 @@ public class AdapterUtils {
                 if ( rate < foundErrorRate ) {
                     foundOfs = ofs;
                     foundErrorRate = rate;
-                    if ( returnFirstFound ) {
+                    if ( adapter.returnFirstFound ) {
                         break;
                     }
                 }
@@ -102,6 +125,11 @@ public class AdapterUtils {
 
             // scanning only at start? if here then it must be the first iteration, let's stop
             if ( adapter.mustBeAtStart ) {
+                break;
+            }
+
+            //  was this the last iteration
+            if ( ofs == scanEnd ) {
                 break;
             }
         }
