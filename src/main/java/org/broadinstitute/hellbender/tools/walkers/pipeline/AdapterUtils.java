@@ -35,19 +35,26 @@ public class AdapterUtils {
         public String getDescription() {
             return this.description;
         }
+
+        public byte[] getPattern() {
+            return this.pattern;
+        }
     }
 
     static public class FoundAdapter {
         final int start;
         final int length;
+        final AdapterPattern adapter;
 
         public FoundAdapter(final int start, final AdapterPattern adapter) {
             this.start = start;
             this.length = adapter.length();
+            this.adapter = adapter;
         }
         public FoundAdapter(final int start, final int length) {
             this.start = start;
             this.length = length;
+            this.adapter = null;
         }
     }
 
