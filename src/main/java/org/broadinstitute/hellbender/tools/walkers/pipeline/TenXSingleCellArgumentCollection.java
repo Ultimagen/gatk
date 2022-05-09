@@ -10,7 +10,7 @@ import java.util.List;
 public class TenXSingleCellArgumentCollection implements Serializable {
     private static final long serialVersionUID = 0;
     public static final String LONG_NAME_BASE_FILENAME = "base-filename";
-    public static final String LONG_NAME_UMI_LENGTH_OVERRIDE = "umi-length-override";
+    public static final String LONG_NAME_UMI_LENGTH = "umi-length";
     public static final String LONG_NAME_GUIDE = "guide";
     public static final String LONG_NAME_LIBRARY_DIRECTION = "library-direction";
     public static final String LONG_NAME_CHEMISTRY = "chemistry";
@@ -32,12 +32,34 @@ public class TenXSingleCellArgumentCollection implements Serializable {
     public static final String FULL_NAME_LOG_ADAPTERS = "log-adapters";
     public static final String FULL_NAME_MAX_OUTPUT_READS = "max-output-reads";
     public static final String FULL_NAME_MAX_INPUT_READS = "max-input-reads";
+    public static final String LONG_NAME_MIN_CDNA_LENGTH = "min-cdna-length";
+    public static final String LONG_NAME_CDNA_FIRST_BASES_TO_CLIP = "cdna-first-bases-to-clip";
+    public static final String LONG_NAME_CDNA_TRIMMING_LENGTH = "cdna-trimming-length";
+    public static final String LONG_NAME_RSQ_THRESHOLD = "rsq-threshold";
+    public static final String FULL_NAME_CBC_UMI_MASK_LAST_BYTES = "cbc_umi_mask_last_bytes";
 
     @Argument(fullName = LONG_NAME_BASE_FILENAME)
     public String baseFilename;
 
-    @Argument(fullName = LONG_NAME_UMI_LENGTH_OVERRIDE, optional = true)
-    public int umiLengthOverride;
+    @Argument(fullName = LONG_NAME_UMI_LENGTH, optional = true)
+    public int umiLength = 10;
+
+    @Argument(fullName = LONG_NAME_MIN_CDNA_LENGTH, optional = true)
+    public int minCdnaLength = 20;
+
+    @Argument(fullName = LONG_NAME_CDNA_FIRST_BASES_TO_CLIP, optional = true)
+    public int cdnaFirstBasesToClip = 0;
+
+    @Argument(fullName = LONG_NAME_CDNA_TRIMMING_LENGTH, optional = true)
+    public int cdnaTrimmingLength = 0;
+
+    @Argument(fullName = FULL_NAME_CBC_UMI_MASK_LAST_BYTES)
+    public int cbcUmiMaskLastBytes;
+
+    @Argument(fullName = LONG_NAME_RSQ_THRESHOLD)
+    public int rsqThreshold;
+
+
 
     @Argument(fullName = LONG_NAME_GUIDE, doc = "=is guide (true) or hash(false)", optional = true)
     public boolean guide;

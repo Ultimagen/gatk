@@ -28,6 +28,9 @@ import java.io.File;
 public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
 
     private static final Logger logger = LogManager.getLogger(TenXSingleCellReadsPreparePipeline.class);
+    public static final int CBC_LENGTH = 16;
+    public static final int CBC_UMI_MAX_LENGTH = 390;
+    public static final int CDNA_MAX_LENGTH = 315;
 
     // public argument
     @ArgumentCollection
@@ -47,6 +50,22 @@ public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
     private int inputReadsCount;
     private int outputReadsCount;
 
+    private int umiLengthOrig;
+    private int cbcUmiLength;
+    private int cbcUmiLengthOrig;
+
+    static class FoundAdapters {
+        AdapterUtils.FoundAdapter adapter5p;
+        AdapterUtils.FoundAdapter adapterMiddle;
+        AdapterUtils.FoundAdapter adapter3p;
+
+        FoundAdapters(final AdapterUtils.FoundAdapter adapter5p, final AdapterUtils.FoundAdapter adapterMiddle, final AdapterUtils.FoundAdapter adapter3p) {
+            this.adapter5p = adapter5p;
+            this.adapterMiddle = adapterMiddle;
+            this.adapter3p = adapter3p;
+        }
+    }
+
     @Override
     public void apply(GATKRead read, ReferenceContext referenceContext, FeatureContext featureContext) {
 
@@ -54,53 +73,98 @@ public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
         if ( args.bypassMode ) {
             read1Writer.write(new FastqRecord(read.getName(), read.getBasesNoCopy(), null, read.getBaseQualitiesNoCopy()));
         } else {
+            // rsq threshold?
+            if ( args.rsqThreshold > 0 && read.hasAttribute("RQ")
+                && read.getAttributeAsInteger("RQ") < args.rsqThreshold ) {
+                return;
+            }
+
             // access read
             final byte[] bases = read.getBasesNoCopy();
             final int basesTrimmedLength = findTrimmedLength(bases, read.getBaseQualitiesNoCopy(), args.qualityCutoff);
 
-            // temp! look for the adapters
-            AdapterUtils.FoundAdapter adapter5p = null;
-            AdapterUtils.FoundAdapter adapter3p = null;
-            final AdapterUtils.FoundAdapter adapterMiddle = AdapterUtils.findAdapter(bases, adapterMiddlePattern, 0, basesTrimmedLength);
-            if ( adapterMiddle != null ) {
-                adapter5p = AdapterUtils.findAdapter(bases, adapter5pPattern, 0, adapterMiddle.start);
-                if ( adapter5p != null ) {
-                    adapter3p = AdapterUtils.findAdapter(bases, adapter3pPattern, adapterMiddle.start + adapterMiddle.length, basesTrimmedLength);
+            // find adapters
+            FoundAdapters foundAdapters = findAdapters(read, bases, basesTrimmedLength);
+
+            if ( foundAdapters != null ) {
+
+                // find and limit read1 (cbc_umi)
+                final int read1Start = foundAdapters.adapter5p.start + foundAdapters.adapter5p.length;
+                final int read1Length = Math.min(foundAdapters.adapterMiddle.start - read1Start, cbcUmiLengthOrig);
+                final boolean read1Valid = read1Length == cbcUmiLengthOrig;
+
+                // find and limit read1 (cdna)
+                int read2Start = foundAdapters.adapterMiddle.start + foundAdapters.adapterMiddle.length;
+                int read2Length = Math.min(foundAdapters.adapter3p.start - read2Start, CDNA_MAX_LENGTH);
+                boolean read2Valid = read2Length >= args.minCdnaLength;
+                if ( args.cdnaFirstBasesToClip != 0 ) {
+                    read2Start += args.cdnaFirstBasesToClip;
+                    read2Length -= args.cdnaFirstBasesToClip;
                 }
-            }
+                if ( args.cdnaTrimmingLength != 0 ) {
+                    read2Length = Math.min(read2Length, args.cdnaTrimmingLength);
+                }
+                if ( read2Length <= 0 ) {
+                    read2Valid = false;
+                }
 
-            // log adapters?
-            if ( args.logAdapters == TenXSingleCellArgumentCollection.LogAdapters.Input ) {
-                logAdapters(read,
-                        new AdapterUtils.FoundAdapter[] {adapter5p, adapterMiddle, adapter3p});
-            }
+                // reads valid?
+                if (read1Valid && read2Valid && !args.noOutput) {
 
-            // all adapters found?
-            if ( adapter5p != null && adapterMiddle != null && adapter3p != null && !args.noOutput ) {
-                try {
-                    Utils.validate(adapter5p.start >= 0, "failed: adapter5p.start >= 0");
-                    Utils.validate(adapterMiddle.start >= (adapter5p.start + adapter5p.length), "failed: adapterMiddle.start >= (adapter5p.start + adapter5p.length)");
-                    Utils.validate(adapter3p.start >= (adapterMiddle.start + adapterMiddle.length), "failed: adapter3p.start >= (adapterMiddle.start + adapterMiddle.length)");
-                } catch (IllegalStateException e) {
-                    if ( args.logAdapters != TenXSingleCellArgumentCollection.LogAdapters.Input ) {
-                        logAdapters(read,
-                                new AdapterUtils.FoundAdapter[]{adapter5p, adapterMiddle, adapter3p});
+                    if (args.logAdapters == TenXSingleCellArgumentCollection.LogAdapters.Output) {
+                        logAdapters(read, foundAdapters);
                     }
-                    throw e;
+
+                    read1Writer.write(makeFastQRecord(read, read1Start, read1Start + read1Length, false, true));
+                    read2Writer.write(makeFastQRecord(read, read2Start, read2Start + read2Length, args.reverseComplementRead2, false));
+
+                    outputReadsCount++;
                 }
+            }
+        }
+    }
 
-                if ( args.logAdapters == TenXSingleCellArgumentCollection.LogAdapters.Output ) {
-                    logAdapters(read,
-                            new AdapterUtils.FoundAdapter[]{adapter5p, adapterMiddle, adapter3p});
+    private FoundAdapters findAdapters(GATKRead read, byte[] bases, int basesTrimmedLength) {
+
+        FoundAdapters result = null;
+
+        // temp! look for the adapters
+        AdapterUtils.FoundAdapter adapter5p = null;
+        AdapterUtils.FoundAdapter adapter3p = null;
+        final AdapterUtils.FoundAdapter adapterMiddle = AdapterUtils.findAdapter(bases, adapterMiddlePattern, 0, basesTrimmedLength);
+        if ( adapterMiddle != null ) {
+            adapter5p = AdapterUtils.findAdapter(bases, adapter5pPattern, 0, adapterMiddle.start);
+            if ( adapter5p != null ) {
+                adapter3p = AdapterUtils.findAdapter(bases, adapter3pPattern, adapterMiddle.start + adapterMiddle.length, basesTrimmedLength);
+                if ( adapter3p != null ) {
+                    result = new FoundAdapters(adapter5p, adapterMiddle, adapter3p);
                 }
+            }
+        }
 
-                read1Writer.write(makeFastQRecord(read, adapter5p.start + adapter5p.length, adapterMiddle.start, false));
-                read2Writer.write(makeFastQRecord(read, adapterMiddle.start + adapterMiddle.length, adapter3p.start, args.reverseComplementRead2));
+        // log adapters?
+        if ( args.logAdapters == TenXSingleCellArgumentCollection.LogAdapters.Input ) {
+            logAdapters(read,
+                    new AdapterUtils.FoundAdapter[] {adapter5p, adapterMiddle, adapter3p});
+        }
 
-                outputReadsCount++;
+        // validate
+        if ( result != null ) {
+            try {
+                Utils.validate(adapter5p.start >= 0, "failed: adapter5p.start >= 0");
+                Utils.validate(adapterMiddle.start >= (adapter5p.start + adapter5p.length), "failed: adapterMiddle.start >= (adapter5p.start + adapter5p.length)");
+                Utils.validate(adapter3p.start >= (adapterMiddle.start + adapterMiddle.length), "failed: adapter3p.start >= (adapterMiddle.start + adapterMiddle.length)");
+            } catch (IllegalStateException e) {
+                if ( args.logAdapters != TenXSingleCellArgumentCollection.LogAdapters.Input ) {
+                    logAdapters(read, result);
+                }
+                throw e;
             }
 
         }
+
+        return result;
+
     }
 
     private int findTrimmedLength(byte[] bases, byte[] quals, int qualityCutoff) {
@@ -113,17 +177,24 @@ public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
         return length;
     }
 
-    private FastqRecord makeFastQRecord(GATKRead read, int startOfs, int endOfs, boolean rc) {
+    private FastqRecord makeFastQRecord(GATKRead read, int startOfs, int endOfs, boolean rc, boolean maskLast) {
 
         final int length = endOfs - startOfs;
         byte[] bases = new byte[length];
         final byte[] quals = new byte[length];
         read.copyBases(startOfs, bases, 0, length);
         read.copyBaseQualities(startOfs, quals, 0, length);
+        if ( maskLast && args.cbcUmiMaskLastBytes > 0 ) {
+            for ( int i = 0 ; i < args.cbcUmiMaskLastBytes ; i++ ) {
+                bases[bases.length - i - 1] = 'T';
+                quals[quals.length - i - 1] = 'I';
+            }
+        }
         if ( rc ) {
             ArrayUtils.reverse(quals);
             bases = BaseUtils.simpleReverseComplement(bases);
         }
+
 
         return new FastqRecord(read.getName(), bases, null, quals);
     }
@@ -184,7 +255,6 @@ public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
         }
         adapter5pPattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap, args.returnFirstFoundAdapter, false);
 
-        adapter = null;
         if ( args.no5p3pAdapters ) {
             adapter = "$";
         } else if ( args.adapter3pOverride != null ) {
@@ -200,7 +270,6 @@ public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
         }
         adapter3pPattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap, args.returnFirstFoundAdapter, true);
 
-        adapter = null;
         if ( args.adapterMiddleOverride != null ) {
             adapter = args.adapterMiddleOverride;
         } else {
@@ -213,8 +282,16 @@ public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
         }
         adapterMiddlePattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap, args.returnFirstFoundAdapter, false);
 
+        // other
+        umiLengthOrig = (args.chemistry == TenXSingleCellArgumentCollection.Chemistry.TenX_V3) ? 12 : 10;
+        cbcUmiLength = args.umiLength + CBC_LENGTH;
+        cbcUmiLengthOrig = umiLengthOrig + CBC_LENGTH;
 
         return super.instanceMainPostParseArgs();
+    }
+
+    private void logAdapters(final GATKRead read, FoundAdapters foundAdapters) {
+        logAdapters(read, new AdapterUtils.FoundAdapter[] {foundAdapters.adapter5p, foundAdapters.adapterMiddle, foundAdapters.adapter3p});
     }
 
     private void logAdapters(final GATKRead read, final AdapterUtils.FoundAdapter[] foundAdapters) {
