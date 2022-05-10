@@ -94,7 +94,7 @@ public class SingleCellPipelineTool extends PartialReadWalker {
 
                 // find and limit read1 (cbc_umi)
                 final int read1Start = foundAdapters.adapter5p.start + foundAdapters.adapter5p.length;
-                final int read1Length = Math.min(foundAdapters.adapterMiddle.start - read1Start, cbcUmiLengthOrig);
+                final int read1Length = Math.min(foundAdapters.adapter3p.start - read1Start, cbcUmiLengthOrig);
                 final boolean read1Valid = read1Length == cbcUmiLengthOrig;
                 stats.read1TooShortDropped += (read1Valid ? 0 : 1);
 
@@ -139,14 +139,17 @@ public class SingleCellPipelineTool extends PartialReadWalker {
         final AdapterUtils.FoundAdapter adapter5p = AdapterUtils.findAdapter(bases, adapter5pPattern, 0, basesTrimmedLength);
         final AdapterUtils.FoundAdapter adapter3p = AdapterUtils.findAdapter(bases, adapter3pPattern, 0, basesTrimmedLength);
         final AdapterUtils.FoundAdapter adapterMiddle = AdapterUtils.findAdapter(bases, adapterMiddlePattern, 0, basesTrimmedLength);
-        if ( adapter5p != null && adapter3p != null && adapterMiddle != null ) {
-            result = new FoundAdapters(adapter5p, adapterMiddle, adapter3p);
-        }
 
         // stats
         stats.adapter5p += (adapter5p != null ? 1 : 0);
         stats.adapterMiddle += (adapterMiddle != null ? 1 : 0);
         stats.adapter3p += (adapter3p != null ? 1 : 0);
+
+        // generate result. if adapter3p is not found, fallback on the end of the read
+        if ( adapter5p != null && adapterMiddle != null ) {
+            result = new FoundAdapters(adapter5p, adapterMiddle,
+                    adapter3p != null ? adapter3p : new AdapterUtils.FoundAdapter(basesTrimmedLength, 0));
+        }
 
         // log adapters?
         if ( args.logAdapters == SingleCellPipelineToolArgumentCollection.LogAdapters.Input ) {
