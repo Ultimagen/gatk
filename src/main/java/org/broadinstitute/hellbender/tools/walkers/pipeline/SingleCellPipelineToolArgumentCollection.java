@@ -7,7 +7,7 @@ import org.broadinstitute.hellbender.engine.GATKPath;
 import java.io.Serializable;
 import java.util.List;
 
-public class TenXSingleCellArgumentCollection implements Serializable {
+public class SingleCellPipelineToolArgumentCollection implements Serializable {
     private static final long serialVersionUID = 0;
     public static final String LONG_NAME_BASE_FILENAME = "base-filename";
     public static final String LONG_NAME_UMI_LENGTH = "umi-length";

@@ -25,16 +25,17 @@ import java.io.File;
         programGroup = FlowBasedProgramGroup.class
 )
 @ExperimentalFeature
-public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
+public class SingleCellPipelineTool extends PartialReadWalker {
 
-    private static final Logger logger = LogManager.getLogger(TenXSingleCellReadsPreparePipeline.class);
+    private static final Logger logger = LogManager.getLogger(SingleCellPipelineTool.class);
     public static final int CBC_LENGTH = 16;
     public static final int CBC_UMI_MAX_LENGTH = 390;
     public static final int CDNA_MAX_LENGTH = 315;
+    public static final String REPORT_JSON_FILEnAME_SUFFIX = "_report.json";
 
     // public argument
     @ArgumentCollection
-    public TenXSingleCellArgumentCollection args = new TenXSingleCellArgumentCollection();
+    public SingleCellPipelineToolArgumentCollection args = new SingleCellPipelineToolArgumentCollection();
 
     // adapters
     private AdapterUtils.AdapterPattern adapter5pPattern;
@@ -47,8 +48,7 @@ public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
     private FastqWriter read2Writer;
 
     // other locals
-    private int inputReadsCount;
-    private int outputReadsCount;
+    private SingleCellPipelineToolStatistics stats = new SingleCellPipelineToolStatistics();
 
     private int umiLengthOrig;
     private int cbcUmiLength;
@@ -69,19 +69,23 @@ public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
     @Override
     public void apply(GATKRead read, ReferenceContext referenceContext, FeatureContext featureContext) {
 
-        inputReadsCount++;
+        stats.readsIn++;
+        stats.bpIn += read.getLength();
+
         if ( args.bypassMode ) {
             read1Writer.write(new FastqRecord(read.getName(), read.getBasesNoCopy(), null, read.getBaseQualitiesNoCopy()));
         } else {
             // rsq threshold?
             if ( args.rsqThreshold > 0 && read.hasAttribute("RQ")
                 && read.getAttributeAsInteger("RQ") < args.rsqThreshold ) {
+                stats.rqDropped++;
                 return;
             }
 
             // access read
             final byte[] bases = read.getBasesNoCopy();
             final int basesTrimmedLength = findTrimmedLength(bases, read.getBaseQualitiesNoCopy(), args.qualityCutoff);
+            stats.bpCutoff += (bases.length - basesTrimmedLength);
 
             // find adapters
             FoundAdapters foundAdapters = findAdapters(read, bases, basesTrimmedLength);
@@ -92,6 +96,7 @@ public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
                 final int read1Start = foundAdapters.adapter5p.start + foundAdapters.adapter5p.length;
                 final int read1Length = Math.min(foundAdapters.adapterMiddle.start - read1Start, cbcUmiLengthOrig);
                 final boolean read1Valid = read1Length == cbcUmiLengthOrig;
+                stats.read1TooShortDropped += (read1Valid ? 0 : 1);
 
                 // find and limit read1 (cdna)
                 int read2Start = foundAdapters.adapterMiddle.start + foundAdapters.adapterMiddle.length;
@@ -107,18 +112,20 @@ public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
                 if ( read2Length <= 0 ) {
                     read2Valid = false;
                 }
+                stats.read2TooShortDropped += (read2Valid ? 0 : 1);
 
                 // reads valid?
                 if (read1Valid && read2Valid && !args.noOutput) {
 
-                    if (args.logAdapters == TenXSingleCellArgumentCollection.LogAdapters.Output) {
+                    if (args.logAdapters == SingleCellPipelineToolArgumentCollection.LogAdapters.Output) {
                         logAdapters(read, foundAdapters);
                     }
 
                     read1Writer.write(makeFastQRecord(read, read1Start, read1Start + read1Length, false, true));
                     read2Writer.write(makeFastQRecord(read, read2Start, read2Start + read2Length, args.reverseComplementRead2, false));
 
-                    outputReadsCount++;
+                    stats.readsOut++;
+                    stats.bpOut += (read1Length + read2Length);
                 }
             }
         }
@@ -142,8 +149,13 @@ public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
             }
         }
 
+        // stats
+        stats.adapter5p += (adapter5p != null ? 1 : 0);
+        stats.adapterMiddle += (adapterMiddle != null ? 1 : 0);
+        stats.adapter3p += (adapter3p != null ? 1 : 0);
+
         // log adapters?
-        if ( args.logAdapters == TenXSingleCellArgumentCollection.LogAdapters.Input ) {
+        if ( args.logAdapters == SingleCellPipelineToolArgumentCollection.LogAdapters.Input ) {
             logAdapters(read,
                     new AdapterUtils.FoundAdapter[] {adapter5p, adapterMiddle, adapter3p});
         }
@@ -155,7 +167,7 @@ public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
                 Utils.validate(adapterMiddle.start >= (adapter5p.start + adapter5p.length), "failed: adapterMiddle.start >= (adapter5p.start + adapter5p.length)");
                 Utils.validate(adapter3p.start >= (adapterMiddle.start + adapterMiddle.length), "failed: adapter3p.start >= (adapterMiddle.start + adapterMiddle.length)");
             } catch (IllegalStateException e) {
-                if ( args.logAdapters != TenXSingleCellArgumentCollection.LogAdapters.Input ) {
+                if ( args.logAdapters != SingleCellPipelineToolArgumentCollection.LogAdapters.Input ) {
                     logAdapters(read, result);
                 }
                 throw e;
@@ -234,6 +246,9 @@ public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
         if ( read2Writer != null ) {
             read2Writer.close();;
         }
+
+        // write stats
+        stats.writeJson(new File(args.baseFilename + REPORT_JSON_FILEnAME_SUFFIX));
     }
 
     // perform additional argument verification and adjustments, assign defaults
@@ -250,7 +265,7 @@ public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
         } else if ( args.adapter5pOverride != null ) {
             adapter = args.adapter5pOverride;
         } else {
-            adapter = (!args.guide || args.libraryDirection == TenXSingleCellArgumentCollection.LibraryDirection.FivePrime)
+            adapter = (!args.guide || args.libraryDirection == SingleCellPipelineToolArgumentCollection.LibraryDirection.FivePrime)
                     ? "CTACACGACGCTCTTCCGATCT" : "TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG";
         }
         adapter5pPattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap, args.returnFirstFoundAdapter, false);
@@ -260,7 +275,7 @@ public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
         } else if ( args.adapter3pOverride != null ) {
             adapter = args.adapter3pOverride;
         } else {
-            if ( args.libraryDirection == TenXSingleCellArgumentCollection.LibraryDirection.ThreePrime) {
+            if ( args.libraryDirection == SingleCellPipelineToolArgumentCollection.LibraryDirection.ThreePrime) {
                 adapter = args.guide
                         ? "AGATCGGAAGAGCACACGTCTG" : "CCCATGTACTCTGCGTTGATACCACTGCTT";
             } else {
@@ -273,7 +288,7 @@ public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
         if ( args.adapterMiddleOverride != null ) {
             adapter = args.adapterMiddleOverride;
         } else {
-            if ( args.libraryDirection == TenXSingleCellArgumentCollection.LibraryDirection.FivePrime ) {
+            if ( args.libraryDirection == SingleCellPipelineToolArgumentCollection.LibraryDirection.FivePrime ) {
                 adapter = "^TTTCTTATATGGG";
             } else {
                 adapter = args.guide
@@ -283,7 +298,7 @@ public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
         adapterMiddlePattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap, args.returnFirstFoundAdapter, false);
 
         // other
-        umiLengthOrig = (args.chemistry == TenXSingleCellArgumentCollection.Chemistry.TenX_V3) ? 12 : 10;
+        umiLengthOrig = (args.chemistry == SingleCellPipelineToolArgumentCollection.Chemistry.TenX_V3) ? 12 : 10;
         cbcUmiLength = args.umiLength + CBC_LENGTH;
         cbcUmiLengthOrig = umiLengthOrig + CBC_LENGTH;
 
@@ -324,7 +339,7 @@ public class TenXSingleCellReadsPreparePipeline extends PartialReadWalker {
     protected boolean shouldExitEarly(GATKRead read) {
 
         // limit number of input and output reads
-        return ((args.maxInputReads != 0) && (inputReadsCount >= args.maxInputReads))
-                || ((args.maxOutputReads != 0) && (outputReadsCount >= args.maxOutputReads));
+        return ((args.maxInputReads != 0) && (stats.readsIn >= args.maxInputReads))
+                || ((args.maxOutputReads != 0) && (stats.readsOut >= args.maxOutputReads));
     }
 }
