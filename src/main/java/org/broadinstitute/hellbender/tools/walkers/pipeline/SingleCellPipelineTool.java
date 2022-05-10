@@ -136,17 +136,11 @@ public class SingleCellPipelineTool extends PartialReadWalker {
         FoundAdapters result = null;
 
         // temp! look for the adapters
-        AdapterUtils.FoundAdapter adapter5p = null;
-        AdapterUtils.FoundAdapter adapter3p = null;
+        final AdapterUtils.FoundAdapter adapter5p = AdapterUtils.findAdapter(bases, adapter5pPattern, 0, basesTrimmedLength);
+        final AdapterUtils.FoundAdapter adapter3p = AdapterUtils.findAdapter(bases, adapter3pPattern, 0, basesTrimmedLength);
         final AdapterUtils.FoundAdapter adapterMiddle = AdapterUtils.findAdapter(bases, adapterMiddlePattern, 0, basesTrimmedLength);
-        if ( adapterMiddle != null ) {
-            adapter5p = AdapterUtils.findAdapter(bases, adapter5pPattern, 0, adapterMiddle.start);
-            if ( adapter5p != null ) {
-                adapter3p = AdapterUtils.findAdapter(bases, adapter3pPattern, adapterMiddle.start + adapterMiddle.length, basesTrimmedLength);
-                if ( adapter3p != null ) {
-                    result = new FoundAdapters(adapter5p, adapterMiddle, adapter3p);
-                }
-            }
+        if ( adapter5p != null && adapter3p != null && adapterMiddle != null ) {
+            result = new FoundAdapters(adapter5p, adapterMiddle, adapter3p);
         }
 
         // stats
@@ -158,21 +152,6 @@ public class SingleCellPipelineTool extends PartialReadWalker {
         if ( args.logAdapters == SingleCellPipelineToolArgumentCollection.LogAdapters.Input ) {
             logAdapters(read,
                     new AdapterUtils.FoundAdapter[] {adapter5p, adapterMiddle, adapter3p});
-        }
-
-        // validate
-        if ( result != null ) {
-            try {
-                Utils.validate(adapter5p.start >= 0, "failed: adapter5p.start >= 0");
-                Utils.validate(adapterMiddle.start >= (adapter5p.start + adapter5p.length), "failed: adapterMiddle.start >= (adapter5p.start + adapter5p.length)");
-                Utils.validate(adapter3p.start >= (adapterMiddle.start + adapterMiddle.length), "failed: adapter3p.start >= (adapterMiddle.start + adapterMiddle.length)");
-            } catch (IllegalStateException e) {
-                if ( args.logAdapters != SingleCellPipelineToolArgumentCollection.LogAdapters.Input ) {
-                    logAdapters(read, result);
-                }
-                throw e;
-            }
-
         }
 
         return result;
