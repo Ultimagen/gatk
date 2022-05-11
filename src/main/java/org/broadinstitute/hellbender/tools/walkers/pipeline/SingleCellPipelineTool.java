@@ -14,7 +14,6 @@ import org.broadinstitute.hellbender.engine.FeatureContext;
 import org.broadinstitute.hellbender.engine.PartialReadWalker;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.utils.BaseUtils;
-import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
 import java.io.File;
@@ -32,6 +31,8 @@ public class SingleCellPipelineTool extends PartialReadWalker {
     public static final int CBC_UMI_MAX_LENGTH = 390;
     public static final int CDNA_MAX_LENGTH = 315;
     public static final String REPORT_JSON_FILEnAME_SUFFIX = "_report.json";
+    public static final char CBC_UMI_MASK_BASE = 'T';
+    public static final char CBC_UMI_MASK_QUAL = 'I';
 
     // public argument
     @ArgumentCollection
@@ -72,60 +73,58 @@ public class SingleCellPipelineTool extends PartialReadWalker {
         stats.readsIn++;
         stats.bpIn += read.getLength();
 
-        if ( args.bypassMode ) {
-            read1Writer.write(new FastqRecord(read.getName(), read.getBasesNoCopy(), null, read.getBaseQualitiesNoCopy()));
-        } else {
-            // rsq threshold?
-            if ( args.rsqThreshold > 0 && read.hasAttribute("RQ")
-                && read.getAttributeAsInteger("RQ") < args.rsqThreshold ) {
-                stats.rqDropped++;
-                return;
+        // rsq threshold?
+        if ( args.rsqThreshold > 0 && read.hasAttribute("RQ")
+            && read.getAttributeAsInteger("RQ") < args.rsqThreshold ) {
+            stats.rqDropped++;
+            return;
+        }
+
+        // access read
+        final byte[] bases = read.getBasesNoCopy();
+        final int basesTrimmedLength = findTrimmedLength(bases, read.getBaseQualitiesNoCopy(), args.qualityCutoff);
+        stats.bpCutoff += (bases.length - basesTrimmedLength);
+
+        // find adapters
+        FoundAdapters foundAdapters = findAdapters(read, bases, basesTrimmedLength);
+
+        if ( foundAdapters != null ) {
+
+            // find and limit read1 (cbc_umi)
+            final int read1Start = foundAdapters.adapter5p.start + foundAdapters.adapter5p.length;
+            final int read1Length = Math.min(foundAdapters.adapter3p.start - read1Start, cbcUmiLengthOrig);
+            final boolean read1Valid = read1Length == cbcUmiLengthOrig;
+            stats.read1TooShortDropped += (read1Valid ? 0 : 1);
+
+            // find and limit read1 (cdna)
+            int read2Start = foundAdapters.adapterMiddle.start + foundAdapters.adapterMiddle.length;
+            int read2Length = Math.min(foundAdapters.adapter3p.start - read2Start, CDNA_MAX_LENGTH);
+            boolean read2Valid = read2Length >= args.minCdnaLength;
+            if ( args.cdnaFirstBasesToClip != 0 ) {
+                read2Start += args.cdnaFirstBasesToClip;
+                read2Length -= args.cdnaFirstBasesToClip;
             }
+            if ( args.cdnaTrimmingLength != 0 ) {
+                read2Length = Math.min(read2Length, args.cdnaTrimmingLength);
+            }
+            if ( read2Length <= 0 ) {
+                read2Valid = false;
+            }
+            stats.read2TooShortDropped += (read2Valid ? 0 : 1);
 
-            // access read
-            final byte[] bases = read.getBasesNoCopy();
-            final int basesTrimmedLength = findTrimmedLength(bases, read.getBaseQualitiesNoCopy(), args.qualityCutoff);
-            stats.bpCutoff += (bases.length - basesTrimmedLength);
+            // reads valid?
+            if ( read1Valid && read2Valid ) {
 
-            // find adapters
-            FoundAdapters foundAdapters = findAdapters(read, bases, basesTrimmedLength);
+                stats.readsOut++;
+                stats.bpOut += (read1Length + read2Length);
 
-            if ( foundAdapters != null ) {
-
-                // find and limit read1 (cbc_umi)
-                final int read1Start = foundAdapters.adapter5p.start + foundAdapters.adapter5p.length;
-                final int read1Length = Math.min(foundAdapters.adapter3p.start - read1Start, cbcUmiLengthOrig);
-                final boolean read1Valid = read1Length == cbcUmiLengthOrig;
-                stats.read1TooShortDropped += (read1Valid ? 0 : 1);
-
-                // find and limit read1 (cdna)
-                int read2Start = foundAdapters.adapterMiddle.start + foundAdapters.adapterMiddle.length;
-                int read2Length = Math.min(foundAdapters.adapter3p.start - read2Start, CDNA_MAX_LENGTH);
-                boolean read2Valid = read2Length >= args.minCdnaLength;
-                if ( args.cdnaFirstBasesToClip != 0 ) {
-                    read2Start += args.cdnaFirstBasesToClip;
-                    read2Length -= args.cdnaFirstBasesToClip;
+                if (args.logAdapters == SingleCellPipelineToolArgumentCollection.LogAdapters.Output) {
+                    logAdapters(read, foundAdapters);
                 }
-                if ( args.cdnaTrimmingLength != 0 ) {
-                    read2Length = Math.min(read2Length, args.cdnaTrimmingLength);
-                }
-                if ( read2Length <= 0 ) {
-                    read2Valid = false;
-                }
-                stats.read2TooShortDropped += (read2Valid ? 0 : 1);
 
-                // reads valid?
-                if (read1Valid && read2Valid && !args.noOutput) {
-
-                    if (args.logAdapters == SingleCellPipelineToolArgumentCollection.LogAdapters.Output) {
-                        logAdapters(read, foundAdapters);
-                    }
-
+                if ( !args.noOutput ) {
                     read1Writer.write(makeFastQRecord(read, read1Start, read1Start + read1Length, false, true));
                     read2Writer.write(makeFastQRecord(read, read2Start, read2Start + read2Length, args.reverseComplementRead2, false));
-
-                    stats.readsOut++;
-                    stats.bpOut += (read1Length + read2Length);
                 }
             }
         }
@@ -180,8 +179,8 @@ public class SingleCellPipelineTool extends PartialReadWalker {
         read.copyBaseQualities(startOfs, quals, 0, length);
         if ( maskLast && args.cbcUmiMaskLastBytes > 0 ) {
             for ( int i = 0 ; i < args.cbcUmiMaskLastBytes ; i++ ) {
-                bases[bases.length - i - 1] = 'T';
-                quals[quals.length - i - 1] = 'I';
+                bases[bases.length - i - 1] = CBC_UMI_MASK_BASE;
+                quals[quals.length - i - 1] = CBC_UMI_MASK_QUAL;
             }
         }
         if ( rc ) {
@@ -197,15 +196,47 @@ public class SingleCellPipelineTool extends PartialReadWalker {
     public void onTraversalStart() {
         super.onTraversalStart();
 
-        // log adapters
+        // log adapters & other key parameters
+        logger.info("args.baseFilename: " + args.baseFilename);
+        logger.info("args.guide: " + args.guide);
+        logger.info("args.libraryDirection: " + args.libraryDirection);
+        logger.info("args.chemistry: " + args.chemistry);
+
+        logger.info("args.illumina: " + args.illumina);
+
+        logger.info("args.umiLength: " + args.umiLength);
+        logger.info("umiLengthOrig: " + umiLengthOrig);
+        logger.info("cbcUmiLength: " + cbcUmiLength);
+        logger.info("cbcUmiLengthOrig: " + cbcUmiLengthOrig);
+        logger.info("args.cbcUmiMaskLastBytes: " + args.cbcUmiMaskLastBytes);
+
+        logger.info("args.minCdnaLength: " + args.minCdnaLength);
+        logger.info("args.cdnaFirstBasesToClip: " + args.cdnaFirstBasesToClip);
+        logger.info("args.cdnaTrimmingLength: " + args.cdnaTrimmingLength);
+
+        logger.info("args.rsqThreshold: " + args.rsqThreshold);
+        logger.info("args.illuminaRead1List: " + args.illuminaRead1List);
+        logger.info("args.illuminaRead2List: " + args.illuminaRead2List);
+
+        logger.info("args.adapterMinErrorRate: " + args.adapterMinErrorRate);
+        logger.info("args.adapterMinOverlap: " + args.adapterMinOverlap);
+        logger.info("args.qualityCutoff: " + args.qualityCutoff);
+        logger.info("args.reverseComplementRead2: " + args.reverseComplementRead2);
+
+        logger.info("args.no5p3pAdapters: " + args.no5p3pAdapters);
         logger.info("adapter5p: " + adapter5pPattern.getDescription());
         logger.info("adapter3p: " + adapter3pPattern.getDescription());
         logger.info("adapterMiddle: " + adapterMiddlePattern.getDescription());
 
+        logger.info("args.noOutput: " + args.noOutput);
+        logger.info("args.returnFirstFoundAdapter" + args.returnFirstFoundAdapter);
+        logger.info("args.logAdapters: " + args.logAdapters);
+        logger.info("args.maxInputReads: " + args.maxInputReads);
+        logger.info("args.maxOutputReads: " + args.maxOutputReads);
+
         // open writers
         File f;
         fastqWriterFactory.setCreateMd5(false);
-        fastqWriterFactory.setUseAsyncIo(args.fastqAsyncIO);
         read1Writer = fastqWriterFactory.newWriter(f = buildFastQReedsOutputFile(1));
         logger.info("read1 output: " + f);
         read2Writer = fastqWriterFactory.newWriter(f = buildFastQReedsOutputFile(2));
@@ -280,7 +311,7 @@ public class SingleCellPipelineTool extends PartialReadWalker {
         adapterMiddlePattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap, args.returnFirstFoundAdapter, false);
 
         // other
-        umiLengthOrig = (args.chemistry == SingleCellPipelineToolArgumentCollection.Chemistry.TenX_V3) ? 12 : 10;
+        umiLengthOrig = (args.chemistry == SingleCellPipelineToolArgumentCollection.Chemistry.V3) ? 12 : 10;
         cbcUmiLength = args.umiLength + CBC_LENGTH;
         cbcUmiLengthOrig = umiLengthOrig + CBC_LENGTH;
 

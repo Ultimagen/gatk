@@ -21,28 +21,47 @@ public class SingleCellPipelineToolStatistics {
     long    read2TooShortDropped;
     long    bpCutoff;
 
+    long    startedAt = System.currentTimeMillis();
+
     public void writeJson(final File f) {
 
         final JSONObject  obj = new JSONObject();
 
+        // insert fields
         obj.put("readsIn", readsIn);
-        obj.put("readsOut", readsOut);
         obj.put("bpIn", bpIn);
-        obj.put("bpOut", bpOut);
+        putPercentage(obj, "readsOut", readsOut, readsIn);
+        putPercentage(obj, "bpOut", bpOut, bpIn);
 
-        obj.put("adapter5p", adapter5p);
-        obj.put("adapterMiddle", adapterMiddle);
-        obj.put("adapter3p", adapter3p);
+        putPercentage(obj, "adapter5p", adapter5p, readsIn);
+        putPercentage(obj, "adapterMiddle", adapterMiddle, readsIn);
+        putPercentage(obj, "adapter3p", adapter3p, readsIn);
 
-        obj.put("rqDropped", rqDropped);
-        obj.put("read1TooShortDropped", read1TooShortDropped);
-        obj.put("read2TooShortDropped", read2TooShortDropped);
-        obj.put("bpCutoff", bpCutoff);
+        putPercentage(obj, "rqDropped", rqDropped, readsIn);
+        putPercentage(obj, "read1TooShortDropped", read1TooShortDropped, readsIn);
+        putPercentage(obj, "read2TooShortDropped", read2TooShortDropped, readsIn);
+        putPercentage(obj, "bpCutoff", bpCutoff, bpIn);
 
+        // performance
+        long elapsedMillis = System.currentTimeMillis() - startedAt;
+        if ( readsIn != 0 ) {
+            obj.put("readsInPerMinute", readsIn / (elapsedMillis / 60000.0f));
+        }
+
+        // write
         try (final Writer writer = new PrintWriter(new FileOutputStream(f))) {
             obj.write(writer, 1, 1);
         } catch (IOException e) {
             throw new GATKException("failed to open for writing: " + f, e);
         }
+    }
+
+    private void putPercentage(JSONObject obj, String name, long value, long total) {
+        StringBuilder       sb = new StringBuilder();
+        sb.append(value);
+        if ( total != 0 ) {
+            sb.append(String.format(" (%.2f%%)", 100.0f * value / total));
+        }
+        obj.put(name, sb.toString());
     }
 }
