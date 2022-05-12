@@ -20,6 +20,7 @@ public class SingleCellPipelineToolStatistics {
     long    read1TooShortDropped;
     long    read2TooShortDropped;
     long    bpCutoff;
+    long    umiQualityDropped;
 
     long    startedAt = System.currentTimeMillis();
 
@@ -41,6 +42,7 @@ public class SingleCellPipelineToolStatistics {
         putPercentage(obj, "read1TooShortDropped", read1TooShortDropped, readsIn);
         putPercentage(obj, "read2TooShortDropped", read2TooShortDropped, readsIn);
         putPercentage(obj, "bpCutoff", bpCutoff, bpIn);
+        putPercentage(obj, "umiQualityDropped", umiQualityDropped, readsIn);
 
         // performance
         long elapsedMillis = System.currentTimeMillis() - startedAt;

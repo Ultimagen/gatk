@@ -100,6 +100,9 @@ public class SingleCellPipelineToolArgumentCollection implements Serializable {
     @Argument(fullName = LONG_NAME_QUALITY_CUTOFF, doc = "quality cutoff value", optional = true)
     public int qualityCutoff = 30;
 
+    @Argument(fullName = "umi-quality-threshold", doc = "umi quality threshold value", optional = true)
+    public int umiQualityThreshold = 10;
+
     @Argument(fullName = LONG_NAME_NO_OUTPUT, doc = "generate no output files (read1/read2)", optional = true)
     public boolean noOutput;
 

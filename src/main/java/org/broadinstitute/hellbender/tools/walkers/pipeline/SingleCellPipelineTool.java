@@ -93,7 +93,7 @@ public class SingleCellPipelineTool extends PartialReadWalker {
             // find and limit read1 (cbc_umi)
             final int read1Start = foundAdapters.adapter5p.start + foundAdapters.adapter5p.length;
             final int read1Length = Math.min(foundAdapters.adapter3p.start - read1Start, cbcUmiLengthOrig);
-            final boolean read1Valid = read1Length == cbcUmiLengthOrig;
+            boolean read1Valid = read1Length == cbcUmiLengthOrig;
             stats.read1TooShortDropped += (read1Valid ? 0 : 1);
 
             // find and limit read1 (cdna)
@@ -111,6 +111,14 @@ public class SingleCellPipelineTool extends PartialReadWalker {
                 read2Valid = false;
             }
             stats.read2TooShortDropped += (read2Valid ? 0 : 1);
+
+            // filter for umi quality
+            if ( args.umiQualityThreshold > 0 ) {
+                if ( anyQualBelowThreshold(read, read1Start + read1Length - umiLengthOrig, umiLengthOrig, args.umiQualityThreshold) ) {
+                    stats.umiQualityDropped++;
+                    read1Valid = false;
+                }
+            }
 
             // reads valid?
             if ( read1Valid && read2Valid ) {
@@ -170,6 +178,17 @@ public class SingleCellPipelineTool extends PartialReadWalker {
         return length;
     }
 
+    private boolean anyQualBelowThreshold(GATKRead read, final int start, final int length, final int threshold) {
+        final byte[] quals = read.getBaseQualitiesNoCopy();
+        for ( int i = 0 ; i < length ; i++ ) {
+            if ( quals[start + i] < threshold ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private FastqRecord makeFastQRecord(GATKRead read, int startOfs, int endOfs, boolean rc, boolean maskLast) {
 
         final int length = endOfs - startOfs;
@@ -221,6 +240,7 @@ public class SingleCellPipelineTool extends PartialReadWalker {
         logger.info("args.adapterMinErrorRate: " + args.adapterMinErrorRate);
         logger.info("args.adapterMinOverlap: " + args.adapterMinOverlap);
         logger.info("args.qualityCutoff: " + args.qualityCutoff);
+        logger.info("args.umiQualityThreshold: " + args.umiQualityThreshold);
         logger.info("args.reverseComplementRead2: " + args.reverseComplementRead2);
 
         logger.info("args.no5p3pAdapters: " + args.no5p3pAdapters);
