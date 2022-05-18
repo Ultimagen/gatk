@@ -7,7 +7,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.utils.BaseUtils;
-import org.broadinstitute.hellbender.utils.read.GATKRead;
+import org.broadinstitute.hellbender.utils.Utils;
 
 import java.io.File;
 import java.util.Arrays;
@@ -16,7 +16,6 @@ public class SingleCellPipeline {
 
     private static final Logger logger = LogManager.getLogger(SingleCellPipeline.class);
     public static final int CBC_LENGTH = 16;
-    public static final int CBC_UMI_MAX_LENGTH = 390;
     public static final int CDNA_MAX_LENGTH = 315;
     public static final String REPORT_JSON_FILEnAME_SUFFIX = "_report.json";
     public static final char CBC_UMI_MASK_BASE = 'T';
@@ -37,6 +36,7 @@ public class SingleCellPipeline {
 
     // other locals
     private SingleCellPipelineToolStatistics stats = new SingleCellPipelineToolStatistics();
+    private CbcWhitelist cbcWhitelist;
 
     private int umiLengthOrig;
     private int cbcUmiLength;
@@ -80,8 +80,8 @@ public class SingleCellPipeline {
         if ( foundAdapters != null ) {
 
             // find and limit read1 (cbc_umi)
-            final int read1Start = foundAdapters.adapter5p.start + foundAdapters.adapter5p.length;
-            final int read1Length = Math.min(foundAdapters.adapter3p.start - read1Start, cbcUmiLengthOrig);
+            int read1Start = foundAdapters.adapter5p.start + foundAdapters.adapter5p.length;
+            int read1Length = Math.min(foundAdapters.adapter3p.start - read1Start, cbcUmiLengthOrig);
             boolean read1Valid = read1Length == cbcUmiLengthOrig;
             stats.read1TooShortDropped += (read1Valid ? 0 : 1);
 
@@ -109,6 +109,38 @@ public class SingleCellPipeline {
                 }
             }
 
+            // match to whitelist or correct
+            byte[] read1bases = bases;
+            if ( cbcWhitelist != null ) {
+                CbcWhitelist.Result result = cbcWhitelist.matchOrCorrect(bases, read1Start, CBC_LENGTH);
+                switch (result.type) {
+                    case EXACT:
+                        stats.matchedCbcWhitelist++;
+                        break;
+                    case AMBIGUOUS:
+                        stats.ambiguousCbcWhitelist++;
+                        break;
+                    case DEL_CORRECTED:
+                        stats.delCorrectedCbcWhitelist++;
+                        read1bases = new byte[read1Length + 1];
+                        Utils.validate(result.correction.length() == CBC_LENGTH, "DEL correction same as CBC length");
+                        System.arraycopy(result.correction.getBytes(), 0, read1bases, 0, CBC_LENGTH);
+                        System.arraycopy(bases, read1Start + CBC_LENGTH - 1, read1bases, CBC_LENGTH,  read1Length - CBC_LENGTH + 1);
+                        read1Start = 0;
+                        read1Length++;
+                        break;
+                    case INS_CORRECTED:
+                        stats.insCorrectedCbcWhitelist++;
+                        read1bases = new byte[read1Length  - 1];
+                        Utils.validate(result.correction.length() == CBC_LENGTH, "INS correction same as CBC length");
+                        System.arraycopy(result.correction.getBytes(), 0, read1bases, 0, CBC_LENGTH);
+                        System.arraycopy(bases, read1Start + CBC_LENGTH + 1, read1bases, CBC_LENGTH,  read1Length - CBC_LENGTH - 1);
+                        read1Start = 0;
+                        read1Length--;
+                        break;
+                }
+            }
+
             // reads valid?
             if ( read1Valid && read2Valid ) {
 
@@ -120,7 +152,7 @@ public class SingleCellPipeline {
                 }
 
                 if ( !args.noOutput ) {
-                    read1Writer.write(makeFastQRecord(readName, bases, quals, read1Start, read1Start + read1Length, false, true));
+                    read1Writer.write(makeFastQRecord(readName, read1bases, quals, read1Start, read1Start + read1Length, false, true));
                     read2Writer.write(makeFastQRecord(readName, bases, quals, read2Start, read2Start + read2Length, args.reverseComplementRead2, false));
                 }
             }
@@ -232,6 +264,8 @@ public class SingleCellPipeline {
         logger.info("adapter3p: " + adapter3pPattern.getDescription());
         logger.info("adapterMiddle: " + adapterMiddlePattern.getDescription());
 
+        logger.info("args.cbcWhitelistPath: " + args.cbcWhitelistPath);
+
         logger.info("args.noOutput: " + args.noOutput);
         logger.info("args.returnFirstFoundAdapter" + args.returnFirstFoundAdapter);
         logger.info("args.logAdapters: " + args.logAdapters);
@@ -245,6 +279,11 @@ public class SingleCellPipeline {
         logger.info("read1 output: " + f);
         read2Writer = fastqWriterFactory.newWriter(f = buildFastQReedsOutputFile(2));
         logger.info("read2 output: " + f);
+
+        // read whitelist
+        if ( args.cbcWhitelistPath != null ) {
+            cbcWhitelist = new CbcWhitelist(args.cbcWhitelistPath);
+        }
 
     }
 
