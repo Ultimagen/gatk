@@ -30,7 +30,7 @@ public class SingleCellPipelineTool extends PartialReadWalker {
 
     @Override
     public void apply(final GATKRead read, final ReferenceContext referenceContext, final FeatureContext featureContext) {
-        pipeline.process(read.getName(), read.getBasesNoCopy(), read.getBaseQualitiesNoCopy(), new AttributeProvider() {
+        pipeline.process(read.getName(), read.isReverseStrand(), read.getBasesNoCopy(), read.getBaseQualitiesNoCopy(), new AttributeProvider() {
 
             @Override
             public boolean hasAttribute(String attributeName) {

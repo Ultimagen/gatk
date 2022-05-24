@@ -54,7 +54,7 @@ public class SingleCellPipelineFastqTool extends CommandLineProgram {
                 try (final FastqReader fastqReader = new FastqReader(reader)) {
 
                     for (FastqRecord rec : fastqReader) {
-                        pipeline.process(rec.getReadName(), rec.getReadBases(), rec.getBaseQualities(), new AttributeProvider() {
+                        pipeline.process(rec.getReadName(), false,  rec.getReadBases(), rec.getBaseQualities(), new AttributeProvider() {
                             @Override
                             public boolean hasAttribute(String attributeName) {
                                 return false;

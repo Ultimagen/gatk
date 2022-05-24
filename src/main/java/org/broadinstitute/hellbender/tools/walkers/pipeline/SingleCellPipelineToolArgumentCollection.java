@@ -35,7 +35,7 @@ public class SingleCellPipelineToolArgumentCollection implements Serializable {
     public static final String LONG_NAME_CDNA_FIRST_BASES_TO_CLIP = "cdna-first-bases-to-clip";
     public static final String LONG_NAME_CDNA_TRIMMING_LENGTH = "cdna-trimming-length";
     public static final String LONG_NAME_RSQ_THRESHOLD = "rsq-threshold";
-    public static final String FULL_NAME_CBC_UMI_MASK_LAST_BYTES = "cbc_umi_mask_last_bytes";
+    public static final String FULL_NAME_CBC_UMI_MASK_LAST_BYTES = "cbc-umi-mask-last-bytes";
     public static final String LONF_NAME_UMI_QUALITY_THRESHOLD = "umi-quality-threshold";
     public static final String LONG_NAME_CBC_WHITELIST_PATH = "cbc-whitelist-path";
     public static final String LONG_NAME_COMPRESSED_OUTPUT = "compressed-output";
@@ -67,7 +67,7 @@ public class SingleCellPipelineToolArgumentCollection implements Serializable {
     @Argument(fullName = LONG_NAME_CDNA_TRIMMING_LENGTH, doc = "length to trim cdna to", optional = true)
     public int cdnaTrimmingLength = 0;
 
-    @Argument(fullName = FULL_NAME_CBC_UMI_MASK_LAST_BYTES, doc = "numbr of bytes to mask at the end of the cbc_umi", optional = true)
+    @Argument(fullName = FULL_NAME_CBC_UMI_MASK_LAST_BYTES, doc = "number of bytes to mask at the end of the cbc_umi", optional = true)
     public int cbcUmiMaskLastBytes;
 
     @Argument(fullName = LONG_NAME_RSQ_THRESHOLD, doc = "RQ attribute value to filter on", optional = true)

@@ -19,7 +19,7 @@ public class SingleCellPipeline {
     public static final int CDNA_MAX_LENGTH = 315;
     public static final String REPORT_JSON_FILEnAME_SUFFIX = "_report.json";
     public static final char CBC_UMI_MASK_BASE = 'T';
-    public static final char CBC_UMI_MASK_QUAL = 'I';
+    public static final char CBC_UMI_MASK_QUAL = 40;
 
     // public arguments
     final public SingleCellPipelineToolArgumentCollection args;
@@ -58,7 +58,7 @@ public class SingleCellPipeline {
         this.args = args;
     }
 
-    public void process(final String readName, final byte[] bases, final byte[] quals, final AttributeProvider attributeProvider) {
+    public void process(final String readName, final boolean isReverseStrand, byte[] bases, byte[] quals, final AttributeProvider attributeProvider) {
 
         stats.readsIn++;
         stats.bpIn += bases.length;
@@ -68,6 +68,13 @@ public class SingleCellPipeline {
             && attributeProvider.getAttributeAsInteger("RQ") < args.rsqThreshold ) {
             stats.rqDropped++;
             return;
+        }
+
+        // reverse read?
+        if ( isReverseStrand ) {
+            bases = BaseUtils.simpleReverseComplement(bases);
+            quals = Arrays.copyOf(quals, quals.length);
+            ArrayUtils.reverse(quals);
         }
 
         // access read
