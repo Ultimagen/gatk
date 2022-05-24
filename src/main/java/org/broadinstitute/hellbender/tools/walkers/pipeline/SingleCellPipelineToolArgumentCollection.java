@@ -38,9 +38,13 @@ public class SingleCellPipelineToolArgumentCollection implements Serializable {
     public static final String FULL_NAME_CBC_UMI_MASK_LAST_BYTES = "cbc_umi_mask_last_bytes";
     public static final String LONF_NAME_UMI_QUALITY_THRESHOLD = "umi-quality-threshold";
     public static final String LONG_NAME_CBC_WHITELIST_PATH = "cbc-whitelist-path";
+    public static final String LONG_NAME_COMPRESSED_OUTPUT = "compressed-output";
 
     @Argument(fullName = LONG_NAME_BASE_FILENAME, doc = "output files base name (prefix)")
     public String baseFilename;
+
+    @Argument(fullName = LONG_NAME_COMPRESSED_OUTPUT, doc = "generate compressed output files", optional = true)
+    public boolean compressedOutput;
 
     @Argument(fullName = LONG_NAME_GUIDE, doc = "is guide (true) or hash (false)?", optional = true)
     public boolean guide;

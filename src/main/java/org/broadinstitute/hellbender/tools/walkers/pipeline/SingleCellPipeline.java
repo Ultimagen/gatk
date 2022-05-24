@@ -288,7 +288,7 @@ public class SingleCellPipeline {
     }
 
     private File buildFastQReedsOutputFile(int i) {
-        return new File(args.baseFilename + "_read" + i + ".fastq");
+        return new File(args.baseFilename + "_read" + i + ".fastq" + (args.compressedOutput ? ".gz" : ""));
     }
 
     public void onClose() {

@@ -1,5 +1,7 @@
 package org.broadinstitute.hellbender.tools.walkers.pipeline;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.engine.GATKPath;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.utils.BaseUtils;
@@ -12,6 +14,8 @@ import java.io.InputStreamReader;
 import java.util.*;
 
 public class CbcWhitelist {
+
+    private static final Logger logger = LogManager.getLogger(CbcWhitelist.class);
 
     enum ResultType {
         NOT_FOUND,
@@ -38,7 +42,8 @@ public class CbcWhitelist {
 
     final Set<String>  seqs = new LinkedHashSet<>();
     final Map<String, String> indelCorrections = new LinkedHashMap<>();
-    final Set<String> indelAmbiguous = new LinkedHashSet();
+    final Set<String> indelAmbiguous = new LinkedHashSet<>();
+    final Set<String> observedSeqs = new LinkedHashSet<>();
 
     static final Result notFoundResult = new Result(ResultType.NOT_FOUND);
     static final Result exactResult = new Result(ResultType.EXACT);
@@ -51,56 +56,51 @@ public class CbcWhitelist {
             String line;
             while ( (line = reader.readLine()) != null ) {
                 seqs.add(line);
+                if ( (seqs.size() % 1000000) == 0 ) {
+                    logger.info("read " + seqs.size() + " whitelist sequences");
+                }
             }
         } catch (IOException e) {
             throw new GATKException("failed to open whitelist file", e);
         }
-
-        // generation indel (flow) based corrections
-        for ( final String seq : seqs ) {
-            for ( final String indel : buildIndelPermutations(seq) ) {
-                // already ambiguous?
-                if ( indelAmbiguous.contains(indel) ) {
-                    // nothing more to do, it is already ambiguous
-                } else if ( indelCorrections.containsKey(indel) ) {
-                    // make it ambiguous
-                    indelCorrections.remove(indel);
-                    indelAmbiguous.add(indel);
-                } else {
-                    // otherwise insert
-                    indelCorrections.put(indel, seq);
-                }
-            }
-        }
+        logger.info("read " + seqs.size() + " whitelist sequences from " + path);
     }
 
-    private Set<String> buildIndelPermutations(String seq) {
+    private Set<String> buildIndelPermutations(final String seq, final boolean permutateInserts, final int resultSizeLimit) {
 
         // build hmers
         BaseUtils.HmerIterator      iter = new BaseUtils.HmerIterator(seq.getBytes());
         Set<String>                 indels = new LinkedHashSet<>();
         int                         hmerOfs = 0;
-        while ( iter.hasNext() ) {
+        while ( iter.hasNext() && (indels.size() < resultSizeLimit) ) {
             // get hmer
             final Pair<Byte, Integer> hmer = iter.next();
             final int hmerLength = hmer.getRight();
 
-            // del?
-            if ( hmerLength >= 2 ) {
+            if ( permutateInserts ) {
+                // ins?
+                if (hmerLength < FlowBasedRead.MAX_CLASS) {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append(seq, 0, hmerOfs + hmerLength);
+                    sb.append(seq, hmerOfs + hmerLength - 1, hmerOfs + hmerLength); // insert base
+                    sb.append(seq, hmerOfs + hmerLength, seq.length());
+                    final String indel = sb.toString();
+                    if ( seqs.contains(indel) ) {
+                        indels.add(sb.toString());
+                    }
+                }
+            } else {
+                // del?
+                if (hmerLength >= 2) {
 
-                StringBuilder sb = new StringBuilder();
-                sb.append(seq, 0, hmerOfs + hmerLength - 1); // delete base
-                sb.append(seq, hmerOfs + hmerLength, seq.length());
-                indels.add(sb.toString());
-            }
-
-            // ins?
-            if ( hmerLength < FlowBasedRead.MAX_CLASS ) {
-                StringBuilder sb = new StringBuilder();
-                sb.append(seq, 0, hmerOfs + hmerLength);
-                sb.append(seq, hmerOfs + hmerLength - 1, hmerOfs + hmerLength); // insert base
-                sb.append(seq, hmerOfs + hmerLength, seq.length());
-                indels.add(sb.toString());
+                    StringBuilder sb = new StringBuilder();
+                    sb.append(seq, 0, hmerOfs + hmerLength - 1); // delete base
+                    sb.append(seq, hmerOfs + hmerLength, seq.length());
+                    final String indel = sb.toString();
+                    if ( seqs.contains(indel) ) {
+                        indels.add(sb.toString());
+                    }
+                }
             }
 
             // update (next) hmer offset
@@ -108,6 +108,19 @@ public class CbcWhitelist {
         }
 
         return indels;
+    }
+
+    private void processObservedSequence(final String seq, final boolean permutateInserts) {
+
+        if ( !observedSeqs.contains(seq) ) {
+            Set<String>         permutations = buildIndelPermutations(seq, permutateInserts, 2);
+            if ( permutations.size() == 1 ) {
+                indelCorrections.put(seq, permutations.iterator().next());
+            } else if ( permutations.size() > 1 ) {
+                indelAmbiguous.add(seq);
+            }
+            observedSeqs.add(seq);
+        }
     }
 
     public Result matchOrCorrect(final byte[] bytes, final int start, final int length) {
@@ -119,6 +132,7 @@ public class CbcWhitelist {
 
         // check for del
         final String delSeq = new String(Arrays.copyOfRange(bytes, start, start + length - 1));
+        processObservedSequence(delSeq, true);
         final String delCorrection;
         if ( indelAmbiguous.contains(delSeq) ) {
             return ambiguousResult;
@@ -130,6 +144,7 @@ public class CbcWhitelist {
 
         // check for ins
         final String insSeq = new String(Arrays.copyOfRange(bytes, start, start + length + 1));
+        processObservedSequence(delSeq, false);
         final String insCorrection;
         if ( indelAmbiguous.contains(insSeq) ) {
             return ambiguousResult;
