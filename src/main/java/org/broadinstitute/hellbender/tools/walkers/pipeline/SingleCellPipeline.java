@@ -102,42 +102,46 @@ public class SingleCellPipeline {
             stats.read2TooShortDropped += (read2Valid ? 0 : 1);
 
             // filter for umi quality
-            if ( args.umiQualityThreshold > 0 ) {
-                if ( anyQualBelowThreshold(quals, read1Start + read1Length - umiLengthOrig, umiLengthOrig, args.umiQualityThreshold) ) {
-                    stats.umiQualityDropped++;
-                    read1Valid = false;
+            if ( read1Valid ) {
+                if (args.umiQualityThreshold > 0) {
+                    if (anyQualBelowThreshold(quals, read1Start + read1Length - umiLengthOrig, umiLengthOrig, args.umiQualityThreshold)) {
+                        stats.umiQualityDropped++;
+                        read1Valid = false;
+                    }
                 }
             }
 
             // match to whitelist or correct
             byte[] read1bases = bases;
-            if ( cbcWhitelist != null ) {
-                CbcWhitelist.Result result = cbcWhitelist.matchOrCorrect(bases, read1Start, CBC_LENGTH);
-                switch (result.type) {
-                    case EXACT:
-                        stats.matchedCbcWhitelist++;
-                        break;
-                    case AMBIGUOUS:
-                        stats.ambiguousCbcWhitelist++;
-                        break;
-                    case DEL_CORRECTED:
-                        stats.delCorrectedCbcWhitelist++;
-                        read1bases = new byte[read1Length + 1];
-                        Utils.validate(result.correction.length() == CBC_LENGTH, "DEL correction same as CBC length");
-                        System.arraycopy(result.correction.getBytes(), 0, read1bases, 0, CBC_LENGTH);
-                        System.arraycopy(bases, read1Start + CBC_LENGTH - 1, read1bases, CBC_LENGTH,  read1Length - CBC_LENGTH + 1);
-                        read1Start = 0;
-                        read1Length++;
-                        break;
-                    case INS_CORRECTED:
-                        stats.insCorrectedCbcWhitelist++;
-                        read1bases = new byte[read1Length  - 1];
-                        Utils.validate(result.correction.length() == CBC_LENGTH, "INS correction same as CBC length");
-                        System.arraycopy(result.correction.getBytes(), 0, read1bases, 0, CBC_LENGTH);
-                        System.arraycopy(bases, read1Start + CBC_LENGTH + 1, read1bases, CBC_LENGTH,  read1Length - CBC_LENGTH - 1);
-                        read1Start = 0;
-                        read1Length--;
-                        break;
+            if ( read1Valid ) {
+                if (cbcWhitelist != null) {
+                    CbcWhitelist.Result result = cbcWhitelist.matchOrCorrect(bases, read1Start, CBC_LENGTH);
+                    switch (result.type) {
+                        case EXACT:
+                            stats.matchedCbcWhitelist++;
+                            break;
+                        case AMBIGUOUS:
+                            stats.ambiguousCbcWhitelist++;
+                            break;
+                        case DEL_CORRECTED:
+                            stats.delCorrectedCbcWhitelist++;
+                            read1bases = new byte[read1Length + 1];
+                            Utils.validate(result.correction.length() == CBC_LENGTH, "DEL correction same as CBC length");
+                            System.arraycopy(result.correction.getBytes(), 0, read1bases, 0, CBC_LENGTH);
+                            System.arraycopy(bases, read1Start + CBC_LENGTH - 1, read1bases, CBC_LENGTH, read1Length - CBC_LENGTH + 1);
+                            read1Start = 0;
+                            read1Length++;
+                            break;
+                        case INS_CORRECTED:
+                            stats.insCorrectedCbcWhitelist++;
+                            read1bases = new byte[read1Length - 1];
+                            Utils.validate(result.correction.length() == CBC_LENGTH, "INS correction same as CBC length");
+                            System.arraycopy(result.correction.getBytes(), 0, read1bases, 0, CBC_LENGTH);
+                            System.arraycopy(bases, read1Start + CBC_LENGTH + 1, read1bases, CBC_LENGTH, read1Length - CBC_LENGTH - 1);
+                            read1Start = 0;
+                            read1Length--;
+                            break;
+                    }
                 }
             }
 
