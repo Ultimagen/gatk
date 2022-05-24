@@ -9,7 +9,12 @@ import org.broadinstitute.hellbender.cmdline.programgroups.FlowBasedProgramGroup
 import org.broadinstitute.hellbender.engine.FeatureContext;
 import org.broadinstitute.hellbender.engine.PartialReadWalker;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
+import org.broadinstitute.hellbender.engine.filters.ReadFilter;
+import org.broadinstitute.hellbender.engine.filters.WellformedReadFilter;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
+
+import java.util.Collections;
+import java.util.List;
 
 @CommandLineProgramProperties(
         summary = "Split reads file (normally a CRAM) into appropriate read files ready for 10X Cell Ranger invocation",
@@ -42,6 +47,11 @@ public class SingleCellPipelineTool extends PartialReadWalker {
                 return read.getAttributeAsInteger(attributeName);
             }
         });
+    }
+
+    @Override
+    public List<ReadFilter> getDefaultReadFilters() {
+        return Collections.emptyList();
     }
 
     @Override
