@@ -4,6 +4,7 @@ package org.broadinstitute.hellbender.utils.recalibration;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.broadinstitute.hellbender.engine.GATKPath;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.utils.QualityUtils;
@@ -361,6 +362,12 @@ public final class RecalibrationReport {
 
             else if (argument.equals("indels_context_size"))
                 RAC.INDELS_CONTEXT_SIZE = decodeInteger(value);
+
+            else if (argument.equals("extended_context_lookahead"))
+                RAC.EXTENDED_CONTEXT_LOOKAHEAD = decodeInteger(value);
+
+            else if (argument.equals("extended_context_reference"))
+                RAC.EXTENDED_CONTEXT_REFERENCE = new GATKPath((String)value);
 
             else if (argument.equals("mismatches_default_quality"))
                 RAC.MISMATCHES_DEFAULT_QUALITY = decodeByte(value);
