@@ -78,7 +78,7 @@ public class SingleCellPipeline {
         }
 
         // access read
-        final int basesTrimmedLength = findTrimmedLength(bases, quals, args.qualityCutoff);
+        final int basesTrimmedLength = findTrimmedLength(quals, args.qualityCutoff);
         stats.bpCutoff += (bases.length - basesTrimmedLength);
 
         // find adapters
@@ -96,15 +96,17 @@ public class SingleCellPipeline {
             int read2Start = foundAdapters.adapterMiddle.start + foundAdapters.adapterMiddle.length;
             int read2Length = Math.min(foundAdapters.adapter3p.start - read2Start, CDNA_MAX_LENGTH);
             boolean read2Valid = read2Length >= args.minCdnaLength;
-            if ( args.cdnaFirstBasesToClip != 0 ) {
-                read2Start += args.cdnaFirstBasesToClip;
-                read2Length -= args.cdnaFirstBasesToClip;
-            }
-            if ( args.cdnaTrimmingLength != 0 ) {
-                read2Length = Math.min(read2Length, args.cdnaTrimmingLength);
-            }
-            if ( read2Length <= 0 ) {
-                read2Valid = false;
+            if ( read2Valid ) {
+                if (args.cdnaFirstBasesToClip != 0) {
+                    read2Start += args.cdnaFirstBasesToClip;
+                    read2Length -= args.cdnaFirstBasesToClip;
+                }
+                if (args.cdnaTrimmingLength != 0) {
+                    read2Length = Math.min(read2Length, args.cdnaTrimmingLength);
+                }
+                if (read2Length <= 0) {
+                    read2Valid = false;
+                }
             }
             stats.read2TooShortDropped += (read2Valid ? 0 : 1);
 
@@ -200,14 +202,34 @@ public class SingleCellPipeline {
 
     }
 
-    private int findTrimmedLength(byte[] bases, byte[] quals, int qualityCutoff) {
-        int     length = bases.length;
-        if ( qualityCutoff != 0 ) {
-            while ( length > 0 && quals[length-1] < qualityCutoff ) {
-                length--;
+    /*
+     * implementation of a 3' cutoff similar to cutadapt
+     *
+     * see https://cutadapt.readthedocs.io/en/stable/algorithms.html for details
+     */
+    private int findTrimmedLength(final byte[] quals, int qualityCutoff) {
+
+        // create partial sums of quality values reduces by threshold. Stop when positive. stop if greater than zero
+        int sum = quals[quals.length - 1] - qualityCutoff;
+        int minIndex = quals.length - 1;
+        int minValue = sum;
+        for ( int i = quals.length - 2 ; i >= 0 ; i-- ) {
+            sum += (quals[i] - qualityCutoff);
+            if ( sum < minValue ) {
+                minIndex = i;
+                minValue = sum;
             }
+            if ( sum > 0 )
+                break;
         }
-        return length;
+
+        // trim?
+        if ( minValue < 0) {
+            return Math.max(0, minIndex - 1);
+        } else {
+            return quals.length;
+        }
+
     }
 
     private boolean anyQualBelowThreshold(final byte[] quals, final int start, final int length, final int threshold) {

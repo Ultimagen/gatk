@@ -102,11 +102,6 @@ public class AdapterUtils {
             // check if an adapter is at this offset
             int errors = 0;
             for ( int i = 0 ; (i < adapterLength) && (errors <= adapter.errorThreshold) ; i++ ) {
-                /*
-                if ( !iupacMatch(read[ofs+i], adapter.pattern[i]) ) {
-                    errors++;
-                }
-                 */
                 if ( (read[ofs+i] != adapter.pattern[i]) && (adapter.pattern[i] != 'X') ) {
                     errors++;
                 }
