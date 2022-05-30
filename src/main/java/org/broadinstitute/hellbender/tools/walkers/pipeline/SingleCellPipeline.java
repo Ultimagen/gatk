@@ -80,6 +80,10 @@ public class SingleCellPipeline {
         // access read
         final int basesTrimmedLength = findTrimmedLength(quals, args.qualityCutoff);
         stats.bpCutoff += (bases.length - basesTrimmedLength);
+        if ( basesTrimmedLength < (cbcUmiLength + args.minCdnaLength) ) {
+            stats.trimmedTooShort++;
+            return;
+        }
 
         // find adapters
         FoundAdapters foundAdapters = findAdapters(readName, bases, basesTrimmedLength);
@@ -176,7 +180,7 @@ public class SingleCellPipeline {
 
         FoundAdapters result = null;
 
-        // temp! look for the adapters
+        // look for the adapters
         final AdapterUtils.FoundAdapter adapter5p = AdapterUtils.findAdapter(bases, adapter5pPattern, 0, basesTrimmedLength);
         final AdapterUtils.FoundAdapter adapter3p = AdapterUtils.findAdapter(bases, adapter3pPattern, 0, basesTrimmedLength);
         final AdapterUtils.FoundAdapter adapterMiddle = AdapterUtils.findAdapter(bases, adapterMiddlePattern, 0, basesTrimmedLength);
@@ -408,7 +412,7 @@ public class SingleCellPipeline {
                 }
                 sb.append(">");
                 for (int i = 0; i < fa.length; i++) {
-                    sb.append(fa.adapter != null ? (char) fa.adapter.getPattern()[i] : '.');
+                    sb.append((fa.adapter != null) && (i < fa.adapter.getPattern().length) ? (char) fa.adapter.getPattern()[i] : '.');
                 }
                 sb.append("<");
             } else {

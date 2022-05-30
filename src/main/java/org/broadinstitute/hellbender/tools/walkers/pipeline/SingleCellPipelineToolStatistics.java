@@ -25,6 +25,7 @@ public class SingleCellPipelineToolStatistics {
     long    ambiguousCbcWhitelist;
     long    delCorrectedCbcWhitelist;
     long    insCorrectedCbcWhitelist;
+    long    trimmedTooShort;
 
     long    startedAt = System.currentTimeMillis();
 
@@ -51,6 +52,7 @@ public class SingleCellPipelineToolStatistics {
         putPercentage(obj, "ambiguousCbcWhitelist", ambiguousCbcWhitelist, readsOut);
         putPercentage(obj, "delCorrectedCbcWhitelist", delCorrectedCbcWhitelist, readsOut);
         putPercentage(obj, "insCorrectedCbcWhitelist", insCorrectedCbcWhitelist, readsOut);
+        putPercentage(obj, "trimmedTooShort", trimmedTooShort, readsIn);
 
         // performance
         long elapsedMillis = System.currentTimeMillis() - startedAt;
