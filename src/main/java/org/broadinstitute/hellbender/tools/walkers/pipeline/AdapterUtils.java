@@ -84,7 +84,7 @@ public class AdapterUtils {
 
         // find using simple SNP algorithm
         final FoundAdapter fa = findAdapterWithSNP(read, adapter, start, end);
-        if (fa != null) {
+        if (fa != null || adapter.scanFromEnd ) {
             return fa;
         }
 
@@ -105,7 +105,6 @@ public class AdapterUtils {
                 return null;
             }
         }
-
 
         // trivial implementation to begin with
         int foundOfs = ADAPTER_NOT_FOUND;
@@ -131,10 +130,12 @@ public class AdapterUtils {
         }
 
         // shortcut - a simple forward scan for an exact match
-        final String readString = new String(read, readScanStart, readScanEnd - readScanStart + adapterLength);
-        final int exactMatchOfs = readString.indexOf(adapter.patternString);
-        if (exactMatchOfs >= 0) {
-            return new FoundAdapter(exactMatchOfs, adapter);
+        if ( !adapter.scanFromEnd ) {
+            final String readString = new String(read, readScanStart, readScanEnd - readScanStart + adapterLength);
+            final int exactMatchOfs = readString.indexOf(adapter.patternString);
+            if (exactMatchOfs >= 0) {
+                return new FoundAdapter(exactMatchOfs, adapter);
+            }
         }
 
         // scan

@@ -54,6 +54,7 @@ public class SingleCellPipelineFastqTool extends CommandLineProgram {
                 try (final FastqReader fastqReader = new FastqReader(reader)) {
 
                     for (FastqRecord rec : fastqReader) {
+                        pipeline.lastReason = null;
                         pipeline.process(rec.getReadName(), false,  rec.getReadBases(), rec.getBaseQualities(), new AttributeProvider() {
                             @Override
                             public boolean hasAttribute(String attributeName) {
@@ -65,6 +66,9 @@ public class SingleCellPipelineFastqTool extends CommandLineProgram {
                                 return 0;
                             }
                         });
+                        if ( pipeline.lastReason != null) {
+                            logger.debug(rec.getReadName() +  "," + pipeline.lastReason);
+                        }
 
                         progressMeter.update(null);
                     }

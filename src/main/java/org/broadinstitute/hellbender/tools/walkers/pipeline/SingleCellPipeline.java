@@ -42,6 +42,9 @@ public class SingleCellPipeline {
     private int cbcUmiLength;
     private int cbcUmiLengthOrig;
 
+    public String lastReason;
+    public String debugTrimmingFor = "150416-BC21-0000006901";
+
     static class FoundAdapters {
         AdapterUtils.FoundAdapter adapter5p;
         AdapterUtils.FoundAdapter adapterMiddle;
@@ -60,6 +63,7 @@ public class SingleCellPipeline {
 
     public void process(final String readName, final boolean isReverseStrand, byte[] bases, byte[] quals, final AttributeProvider attributeProvider) {
 
+        final boolean debug = readName.equals(debugTrimmingFor);
         stats.readsIn++;
         stats.bpIn += bases.length;
 
@@ -67,6 +71,7 @@ public class SingleCellPipeline {
         if ( args.rsqThreshold > 0 && attributeProvider.hasAttribute("RQ")
             && attributeProvider.getAttributeAsInteger("RQ") < args.rsqThreshold ) {
             stats.rqDropped++;
+            lastReason = "rsq threshold";
             return;
         }
 
@@ -78,15 +83,17 @@ public class SingleCellPipeline {
         }
 
         // access read
-        final int basesTrimmedLength = findTrimmedLength(quals, args.qualityCutoff);
+        final int basesTrimmedLength;
+        basesTrimmedLength = findTrimmingPoint(readName, bases, quals, 0, quals.length, args.qualityCutoff);
         stats.bpCutoff += (bases.length - basesTrimmedLength);
-        if ( basesTrimmedLength < (cbcUmiLength + args.minCdnaLength) ) {
+        if (basesTrimmedLength < (cbcUmiLength + args.minCdnaLength)) {
             stats.trimmedTooShort++;
+            lastReason = "too short after trimming";
             return;
         }
 
         // find adapters
-        FoundAdapters foundAdapters = findAdapters(readName, bases, basesTrimmedLength);
+        FoundAdapters foundAdapters = findAdapters(readName, bases, quals, basesTrimmedLength, debug);
 
         if ( foundAdapters != null ) {
 
@@ -95,11 +102,17 @@ public class SingleCellPipeline {
             int read1Length = Math.min(foundAdapters.adapter3p.start - read1Start, cbcUmiLengthOrig);
             boolean read1Valid = read1Length == cbcUmiLengthOrig;
             stats.read1TooShortDropped += (read1Valid ? 0 : 1);
+            if ( !read1Valid ) {
+                lastReason = "read1 too short";
+            }
 
             // find and limit read1 (cdna)
             int read2Start = foundAdapters.adapterMiddle.start + foundAdapters.adapterMiddle.length;
             int read2Length = Math.min(foundAdapters.adapter3p.start - read2Start, CDNA_MAX_LENGTH);
             boolean read2Valid = read2Length >= args.minCdnaLength;
+            if ( !read2Valid ) {
+                lastReason = "read2 too short: " + read2Length  + " vs " + args.minCdnaLength;
+            }
             if ( read2Valid ) {
                 if (args.cdnaFirstBasesToClip != 0) {
                     read2Start += args.cdnaFirstBasesToClip;
@@ -110,9 +123,15 @@ public class SingleCellPipeline {
                 }
                 if (read2Length <= 0) {
                     read2Valid = false;
+                    if ( !read2Valid ) {
+                        lastReason = "read2 too short after cdnaTrimmingLength";
+                    }
                 }
             }
             stats.read2TooShortDropped += (read2Valid ? 0 : 1);
+            if ( debug ) {
+                logger.info("read2start: " + read2Start + ", read2Length: " + read2Length + ", read2Valid: " + read2Valid + ", reason:" + lastReason);
+            }
 
             // filter for umi quality
             if ( read1Valid ) {
@@ -120,6 +139,7 @@ public class SingleCellPipeline {
                     if (anyQualBelowThreshold(quals, read1Start + read1Length - umiLengthOrig, umiLengthOrig, args.umiQualityThreshold)) {
                         stats.umiQualityDropped++;
                         read1Valid = false;
+                        lastReason = "read1Valid turned false because umiQualityThreshold";
                     }
                 }
             }
@@ -165,25 +185,35 @@ public class SingleCellPipeline {
                 stats.bpOut += (read1Length + read2Length);
 
                 if (args.logAdapters == SingleCellPipelineToolArgumentCollection.LogAdapters.Output) {
-                    logAdapters(readName, bases, foundAdapters);
+                    logAdapters(readName, bases, quals, foundAdapters);
                 }
 
                 if ( !args.noOutput ) {
                     read1Writer.write(makeFastQRecord(readName, read1bases, quals, read1Start, read1Start + read1Length, false, true));
                     read2Writer.write(makeFastQRecord(readName, bases, quals, read2Start, read2Start + read2Length, args.reverseComplementRead2, false));
                 }
+            } else {
+                if ( lastReason == null ) {
+                    lastReason = "no output (general)";
+                }
             }
         }
     }
 
-    private FoundAdapters findAdapters(String readName, byte[] bases, int basesTrimmedLength) {
+    private FoundAdapters findAdapters(String readName, byte[] bases, byte[] quals, int length, boolean debug) {
 
         FoundAdapters result = null;
 
         // look for the adapters
-        final AdapterUtils.FoundAdapter adapter5p = AdapterUtils.findAdapter(bases, adapter5pPattern, 0, basesTrimmedLength);
-        final AdapterUtils.FoundAdapter adapter3p = AdapterUtils.findAdapter(bases, adapter3pPattern, 0, basesTrimmedLength);
-        final AdapterUtils.FoundAdapter adapterMiddle = AdapterUtils.findAdapter(bases, adapterMiddlePattern, 0, basesTrimmedLength);
+        final AdapterUtils.FoundAdapter adapter5p = AdapterUtils.findAdapter(bases, adapter5pPattern, 0, length);
+        final AdapterUtils.FoundAdapter adapterMiddle = AdapterUtils.findAdapter(bases, adapterMiddlePattern, 0, length);
+        final AdapterUtils.FoundAdapter adapter3p;
+        if ( adapterMiddle != null ) {
+            adapter3p = AdapterUtils.findAdapter(bases, adapter3pPattern,
+                    adapterMiddle.start + adapterMiddle.length, length - adapterMiddle.start - adapterMiddle.length);
+        } else {
+            adapter3p = AdapterUtils.findAdapter(bases, adapter3pPattern, 0, length);
+        }
 
         // stats
         stats.adapter5p += (adapter5p != null ? 1 : 0);
@@ -193,12 +223,12 @@ public class SingleCellPipeline {
         // generate result. if adapter3p is not found, fallback on the end of the read
         if ( adapter5p != null && adapterMiddle != null ) {
             result = new FoundAdapters(adapter5p, adapterMiddle,
-                    adapter3p != null ? adapter3p : new AdapterUtils.FoundAdapter(basesTrimmedLength, 0));
+                    adapter3p != null ? adapter3p : new AdapterUtils.FoundAdapter(length, 0));
         }
 
         // log adapters?
-        if ( args.logAdapters == SingleCellPipelineToolArgumentCollection.LogAdapters.Input ) {
-            logAdapters(readName, bases,
+        if ( debug || args.logAdapters == SingleCellPipelineToolArgumentCollection.LogAdapters.Input ) {
+            logAdapters(readName, bases, quals,
                     new AdapterUtils.FoundAdapter[] {adapter5p, adapterMiddle, adapter3p});
         }
 
@@ -211,14 +241,40 @@ public class SingleCellPipeline {
      *
      * see https://cutadapt.readthedocs.io/en/stable/algorithms.html for details
      */
-    private int findTrimmedLength(final byte[] quals, int qualityCutoff) {
+    private int findTrimmingPoint(String readName, final byte[] bases, final byte[] quals, final int start, final int end, int qualityCutoff) {
+
+        final boolean debug = readName.equals(debugTrimmingFor);
+        final boolean nextGen = false;
+
+        // debugging trimming for this read?
+        if ( debug ) {
+            logger.info("Trimming debug for: " + readName + " quals.length: " + quals.length
+                                                            + ", start: " + start + ", end: " + end);
+        }
+
+        // sanity
+        Utils.validate(end >= start, "end can't be before start");
+        if ( end == start ) {
+            if ( debug ) {
+                logger.info("end same as start");
+            }
+            return start;
+        }
 
         // create partial sums of quality values reduces by threshold. Stop when positive. stop if greater than zero
-        int sum = quals[quals.length - 1] - qualityCutoff;
-        int minIndex = quals.length - 1;
+        int q = (nextGen && bases[end-1] == 'G') ? (qualityCutoff - 1) : quals[end - 1];
+        int sum = q - qualityCutoff;
+        int minIndex = end - 1;
         int minValue = sum;
-        for ( int i = quals.length - 2 ; i >= 0 ; i-- ) {
-            sum += (quals[i] - qualityCutoff);
+        if ( debug ) {
+            logger.info("" + (end - 1) + ": " + quals[end-1] + " sum: " + sum);
+        }
+        for ( int i = end - 2 ; i >= start ; i-- ) {
+            q = (nextGen && bases[i] == 'G') ? (qualityCutoff - 1) : quals[i];
+            sum += (q - qualityCutoff);
+            if ( debug ) {
+                logger.info("" + i + ": " + quals[i] + " sum: " + sum);
+            }
             if ( sum < minValue ) {
                 minIndex = i;
                 minValue = sum;
@@ -229,9 +285,15 @@ public class SingleCellPipeline {
 
         // trim?
         if ( minValue < 0) {
-            return Math.max(0, minIndex - 1);
+            if ( debug ) {
+                logger.info("trimmed at minIndex of: " + minIndex + ", length will be: " + (minIndex - start));
+            }
+            return Math.max(0, minIndex);
         } else {
-            return quals.length;
+            if ( debug ) {
+                logger.info("trimmed at end (not trimmed): " + end + ", length will be: " + (minIndex - start));
+            }
+            return end;
         }
 
     }
@@ -249,6 +311,8 @@ public class SingleCellPipeline {
     private FastqRecord makeFastQRecord(String readName, byte[] readBases, byte[] readQuals, int startOfs, int endOfs, boolean rc, boolean maskLast) {
 
         final int length = endOfs - startOfs;
+        Utils.validIndex(startOfs, readBases.length, "startOfs: out of range");
+        Utils.validate(startOfs + length <= readBases.length, "startOfs + length: out of range");
         byte[] bases = Arrays.copyOfRange(readBases, startOfs, startOfs + length);
         final byte[] quals = Arrays.copyOfRange(readQuals, startOfs, startOfs + length);
         if ( maskLast && args.cbcUmiMaskLastBytes > 0 ) {
@@ -392,14 +456,15 @@ public class SingleCellPipeline {
         cbcUmiLengthOrig = umiLengthOrig + CBC_LENGTH;
     }
 
-    private void logAdapters(final String readName, final byte[] bases, final FoundAdapters foundAdapters) {
-        logAdapters(readName, bases, new AdapterUtils.FoundAdapter[] {foundAdapters.adapter5p, foundAdapters.adapterMiddle, foundAdapters.adapter3p});
+    private void logAdapters(final String readName, final byte[] bases, final byte[] quals, final FoundAdapters foundAdapters) {
+        logAdapters(readName, bases, quals, new AdapterUtils.FoundAdapter[] {foundAdapters.adapter5p, foundAdapters.adapterMiddle, foundAdapters.adapter3p});
     }
 
-    private void logAdapters(final String readName, final byte[] bases, final AdapterUtils.FoundAdapter[] foundAdapters) {
+    private void logAdapters(final String readName, final byte[] bases, final byte[] quals, final AdapterUtils.FoundAdapter[] foundAdapters) {
 
         // log read lines
         logger.info("N " + readName);
+        logger.info("Q " + quals2String(quals));
         logger.info("R " + new String(bases));
 
         // log adapters
@@ -420,6 +485,14 @@ public class SingleCellPipeline {
             }
             logger.info(sb);
         }
+    }
+
+    private String quals2String(byte[] quals) {
+        StringBuilder   sb = new StringBuilder();
+        for ( byte q : quals ) {
+            sb.append((char)(q + '!'));
+        }
+        return sb.toString();
     }
 
     public boolean shouldExitEarly() {
