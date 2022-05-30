@@ -300,7 +300,6 @@ public class SingleCellPipeline {
         logger.info("args.cbcWhitelistPath: " + args.cbcWhitelistPath);
 
         logger.info("args.noOutput: " + args.noOutput);
-        logger.info("args.returnFirstFoundAdapter" + args.returnFirstFoundAdapter);
         logger.info("args.logAdapters: " + args.logAdapters);
         logger.info("args.maxInputReads: " + args.maxInputReads);
         logger.info("args.maxOutputReads: " + args.maxOutputReads);
@@ -328,10 +327,10 @@ public class SingleCellPipeline {
 
         // close writers
         if ( read1Writer != null ) {
-            read1Writer.close();;
+            read1Writer.close();
         }
         if ( read2Writer != null ) {
-            read2Writer.close();;
+            read2Writer.close();
         }
 
         // write stats
@@ -354,7 +353,7 @@ public class SingleCellPipeline {
             adapter = (!args.guide || args.libraryDirection == SingleCellPipelineToolArgumentCollection.LibraryDirection.FivePrime)
                     ? "CTACACGACGCTCTTCCGATCT" : "TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG";
         }
-        adapter5pPattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap, args.returnFirstFoundAdapter, false);
+        adapter5pPattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap, true, false);
 
         if ( args.no5p3pAdapters ) {
             adapter = "$";
@@ -369,7 +368,7 @@ public class SingleCellPipeline {
                         ? "CTGTCTCTTATACACATCT" : "AGATCGGAAGAGCACACGTCTG";
             }
         }
-        adapter3pPattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap, args.returnFirstFoundAdapter, true);
+        adapter3pPattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap, true, true);
 
         if ( args.adapterMiddleOverride != null ) {
             adapter = args.adapterMiddleOverride;
@@ -381,7 +380,7 @@ public class SingleCellPipeline {
                         ? "GCTGTTTCCAGCTTAGCTCTTAAAC" : "XTTTTTTTTTTTTTTTTTTTTTTTTT";
             }
         }
-        adapterMiddlePattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap, args.returnFirstFoundAdapter, false);
+        adapterMiddlePattern = new AdapterUtils.AdapterPattern(adapter, args.adapterMinErrorRate, args.adapterMinOverlap, false, false);
 
         // other
         umiLengthOrig = (args.chemistry == SingleCellPipelineToolArgumentCollection.Chemistry.V3) ? 12 : 10;

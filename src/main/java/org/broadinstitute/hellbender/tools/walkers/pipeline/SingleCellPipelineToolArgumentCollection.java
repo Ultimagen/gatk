@@ -26,7 +26,6 @@ public class SingleCellPipelineToolArgumentCollection implements Serializable {
     public static final String LONG_NAME_NO_5_P_3_P_ADAPTERS = "no-5p-3p-adapters";
     public static final String LONG_NAME_REVERSE_COMPLEMENT_READ_2 = "reverse-complement-read2";
     public static final String LONG_NAME_NO_OUTPUT = "no-output";
-    public static final String LONG_NAME_RETURN_FIRST_FOUND_ADAPTER = "return-first-found-adapter";
     public static final String LONG_NAME_QUALITY_CUTOFF = "quality-cutoff";
     public static final String FULL_NAME_LOG_ADAPTERS = "log-adapters";
     public static final String FULL_NAME_MAX_OUTPUT_READS = "max-output-reads";
@@ -116,9 +115,6 @@ public class SingleCellPipelineToolArgumentCollection implements Serializable {
     // debugging aids
     @Argument(fullName = LONG_NAME_NO_OUTPUT, doc = "generate no output files (read1/read2)", optional = true)
     public boolean noOutput;
-
-    @Argument(fullName = LONG_NAME_RETURN_FIRST_FOUND_ADAPTER, doc = "use first adapter found (rather than best)", optional = true)
-    public boolean returnFirstFoundAdapter = true;
 
     @Argument(fullName = FULL_NAME_LOG_ADAPTERS, doc = "log adapters found on input or output reads", optional = true)
     public LogAdapters logAdapters = LogAdapters.None;
