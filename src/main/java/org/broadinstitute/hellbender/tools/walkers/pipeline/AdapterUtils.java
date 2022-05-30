@@ -1,5 +1,7 @@
 package org.broadinstitute.hellbender.tools.walkers.pipeline;
 
+import org.apache.commons.lang3.ArrayUtils;
+
 import java.util.Arrays;
 
 public class AdapterUtils {
@@ -15,6 +17,7 @@ public class AdapterUtils {
         final private boolean returnFirstFound;
         final private boolean scanFromEnd;
         final private String description;
+        final private String patternString;
 
         public AdapterPattern(final String pattern, final double errorRate, final int minOverlap,
                               final boolean returnFirstFound, final boolean scanFromEnd) {
@@ -26,6 +29,7 @@ public class AdapterUtils {
             this.returnFirstFound = returnFirstFound;
             this.scanFromEnd = scanFromEnd;
             this.description = String.format("%s;max_error_rate=%f;min_overlap=%d", pattern, errorRate, minOverlap);
+            this.patternString = pattern;
         }
 
         public int length() {
@@ -70,7 +74,7 @@ public class AdapterUtils {
             } else {
                 return null;
             }
-    }
+        }
 
 
         // trivial implementation to begin with
@@ -94,6 +98,13 @@ public class AdapterUtils {
             scanIncr = -1;
             scanStart = readScanEnd;
             scanEnd = readScanStart;
+        }
+
+        // shortcut - a simple forward scan for an exact match
+        final String readString = new String(read, readScanStart, readScanEnd - readScanStart + adapterLength);
+        final int exactMatchOfs = readString.indexOf(adapter.patternString);
+        if ( exactMatchOfs >= 0 ) {
+            return new FoundAdapter(exactMatchOfs, adapter);
         }
 
         // scan
