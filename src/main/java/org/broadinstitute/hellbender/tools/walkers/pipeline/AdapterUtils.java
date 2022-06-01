@@ -83,13 +83,12 @@ public class AdapterUtils {
     static public FoundAdapter findAdapter(final byte[] read, final AdapterPattern adapter, final int start, final int end) {
 
         // find using simple SNP algorithm
-        final FoundAdapter fa = findAdapterWithSNP(read, adapter, start, end);
-        if (fa != null || adapter.scanFromEnd ) {
-            return fa;
+        if ( adapter.scanFromEnd ) {
+            return findAdapterWithSNP(read, adapter, start, end);
+        } else {
+            // if not found, try using alignment
+            return findAdapterUsingAligner(read, adapter, start, end);
         }
-
-        // if not found, try using alignment
-        return findAdapterUsingAligner(read, adapter, start, end);
     }
 
     static public FoundAdapter findAdapterWithSNP(final byte[] read, final AdapterPattern adapter, final int start, final int end) {

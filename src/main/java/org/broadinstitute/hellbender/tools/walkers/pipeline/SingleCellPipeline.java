@@ -43,7 +43,6 @@ public class SingleCellPipeline {
     private int cbcUmiLengthOrig;
 
     public String lastReason;
-    public String debugTrimmingFor = "150416-BC21-0000006901";
 
     static class FoundAdapters {
         AdapterUtils.FoundAdapter adapter5p;
@@ -63,7 +62,7 @@ public class SingleCellPipeline {
 
     public void process(final String readName, final boolean isReverseStrand, byte[] bases, byte[] quals, final AttributeProvider attributeProvider) {
 
-        final boolean debug = readName.equals(debugTrimmingFor);
+        final boolean debug = readName.equals(args.debugTrimmingFor);
         stats.readsIn++;
         stats.bpIn += bases.length;
 
@@ -243,7 +242,7 @@ public class SingleCellPipeline {
      */
     private int findTrimmingPoint(String readName, final byte[] bases, final byte[] quals, final int start, final int end, int qualityCutoff) {
 
-        final boolean debug = readName.equals(debugTrimmingFor);
+        final boolean debug = readName.equals(args.debugTrimmingFor);
         final boolean nextGen = false;
 
         // debugging trimming for this read?

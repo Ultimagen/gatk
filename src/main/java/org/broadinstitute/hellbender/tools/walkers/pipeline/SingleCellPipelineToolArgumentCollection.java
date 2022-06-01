@@ -125,6 +125,10 @@ public class SingleCellPipelineToolArgumentCollection implements Serializable {
     @Argument(fullName = FULL_NAME_MAX_OUTPUT_READS, doc = "limit numner of output reads generated", optional = true)
     public int maxOutputReads;
 
+    @Argument(fullName = "debug-adapters-for", doc="print additional debugging for this read")
+    public String debugTrimmingFor;
+
+
     enum LibraryDirection {
         ThreePrime,
         FivePrime
