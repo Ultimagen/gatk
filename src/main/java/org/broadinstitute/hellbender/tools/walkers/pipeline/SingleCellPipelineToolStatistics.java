@@ -21,6 +21,8 @@ public class SingleCellPipelineToolStatistics {
     long    read2TooShortDropped;
     long    bpCutoff;
     long    umiQualityDropped;
+    long    processedCbcWhitelist;
+    long    notFoundCbcWhitelist;
     long    matchedCbcWhitelist;
     long    ambiguousCbcWhitelist;
     long    delCorrectedCbcWhitelist;
@@ -48,10 +50,12 @@ public class SingleCellPipelineToolStatistics {
         putPercentage(obj, "read2TooShortDropped", read2TooShortDropped, readsIn);
         putPercentage(obj, "bpCutoff", bpCutoff, bpIn);
         putPercentage(obj, "umiQualityDropped", umiQualityDropped, readsIn);
-        putPercentage(obj, "matchedCbcWhitelist", matchedCbcWhitelist, readsOut);
-        putPercentage(obj, "ambiguousCbcWhitelist", ambiguousCbcWhitelist, readsOut);
-        putPercentage(obj, "delCorrectedCbcWhitelist", delCorrectedCbcWhitelist, readsOut);
-        putPercentage(obj, "insCorrectedCbcWhitelist", insCorrectedCbcWhitelist, readsOut);
+        putPercentage(obj, "processedCbcWhitelist", processedCbcWhitelist, readsIn);
+        putPercentage(obj, "notFoundCbcWhitelist", notFoundCbcWhitelist, processedCbcWhitelist);
+        putPercentage(obj, "matchedCbcWhitelist", matchedCbcWhitelist, processedCbcWhitelist);
+        putPercentage(obj, "ambiguousCbcWhitelist", ambiguousCbcWhitelist, processedCbcWhitelist);
+        putPercentage(obj, "delCorrectedCbcWhitelist", delCorrectedCbcWhitelist, processedCbcWhitelist);
+        putPercentage(obj, "insCorrectedCbcWhitelist", insCorrectedCbcWhitelist, processedCbcWhitelist);
         putPercentage(obj, "trimmedTooShort", trimmedTooShort, readsIn);
 
         // performance

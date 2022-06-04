@@ -154,8 +154,12 @@ public class SingleCellPipeline {
             byte[] read1bases = bases;
             if ( read1Valid ) {
                 if (cbcWhitelist != null) {
+                    stats.processedCbcWhitelist++;
                     CbcWhitelist.Result result = cbcWhitelist.matchOrCorrect(bases, read1Start, CBC_LENGTH);
                     switch (result.type) {
+                        case NOT_FOUND:
+                            stats.notFoundCbcWhitelist++;
+                            break;
                         case EXACT:
                             stats.matchedCbcWhitelist++;
                             break;
