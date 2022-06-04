@@ -35,12 +35,13 @@ public class SingleCellPipelineToolArgumentCollection implements Serializable {
     public static final String LONG_NAME_CDNA_TRIMMING_LENGTH = "cdna-trimming-length";
     public static final String LONG_NAME_RSQ_THRESHOLD = "rsq-threshold";
     public static final String FULL_NAME_CBC_UMI_MASK_LAST_BYTES = "cbc-umi-mask-last-bytes";
-    public static final String LONF_NAME_UMI_QUALITY_THRESHOLD = "umi-quality-threshold";
+    public static final String LONG_NAME_UMI_QUALITY_THRESHOLD = "umi-quality-threshold";
     public static final String LONG_NAME_CBC_WHITELIST_PATH = "cbc-whitelist-path";
     public static final String LONG_NAME_COMPRESSED_OUTPUT = "compressed-output";
     public static final String FULL_NAME_DEBUG_ADAPTERS_FOR = "debug-adapters-for";
     public static final String FULL_NAME_MULTIPROC = "multiproc";
     public static final String FULL_NAMAE_QUEUE_CAPACITY = "queue-capacity";
+    public static final String LONG_NAME_CBC_WHITELIST_SUPPORTS_SNP = "cbc-whitelist-supports-snp";
 
     @Argument(fullName = LONG_NAME_BASE_FILENAME, doc = "output files base name (prefix)")
     public String baseFilename;
@@ -108,12 +109,14 @@ public class SingleCellPipelineToolArgumentCollection implements Serializable {
     @Argument(fullName = LONG_NAME_QUALITY_CUTOFF, doc = "quality cutoff value", optional = true)
     public int qualityCutoff = 30;
 
-    @Argument(fullName = LONF_NAME_UMI_QUALITY_THRESHOLD, doc = "umi quality threshold value", optional = true)
+    @Argument(fullName = LONG_NAME_UMI_QUALITY_THRESHOLD, doc = "umi quality threshold value", optional = true)
     public int umiQualityThreshold = 10;
 
     @Argument(fullName = LONG_NAME_CBC_WHITELIST_PATH, doc = "whitelist of cell barcodes", optional = true)
     public GATKPath cbcWhitelistPath;
 
+    @Argument(fullName = LONG_NAME_CBC_WHITELIST_SUPPORTS_SNP, doc = "whitelist supports snp corrections", optional = true)
+    public boolean cbcWhitelistSupportsSnp;
 
     // debugging aids
     @Argument(fullName = LONG_NAME_NO_OUTPUT, doc = "generate no output files (read1/read2)", optional = true)

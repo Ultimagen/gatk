@@ -184,6 +184,14 @@ public class SingleCellPipeline {
                             read1Start = 0;
                             read1Length--;
                             break;
+                        case SNP_CORRECTED:
+                            stats.snpCorrectedCbcWhitelist++;
+                            read1bases = new byte[read1Length];
+                            Utils.validate(result.correction.length() == CBC_LENGTH, "INS correction same as CBC length");
+                            System.arraycopy(result.correction.getBytes(), 0, read1bases, 0, CBC_LENGTH);
+                            System.arraycopy(bases, read1Start + CBC_LENGTH, read1bases, CBC_LENGTH, read1Length - CBC_LENGTH - 1);
+                            read1Start = 0;
+                            break;
                     }
                 }
             }
@@ -399,7 +407,7 @@ public class SingleCellPipeline {
 
         // read whitelist
         if ( args.cbcWhitelistPath != null ) {
-            cbcWhitelist = new CbcWhitelist(args.cbcWhitelistPath);
+            cbcWhitelist = new CbcWhitelist(args.cbcWhitelistPath, args.cbcWhitelistSupportsSnp);
         }
 
         // create queue
@@ -452,7 +460,7 @@ public class SingleCellPipeline {
         }
 
         // write stats
-        stats.writeJson(new File(args.baseFilename + REPORT_JSON_FILEnAME_SUFFIX));
+        stats.writeJson(new File(args.baseFilename + REPORT_JSON_FILEnAME_SUFFIX), args);
     }
 
     // perform additional argument verification and adjustments, assign defaults

@@ -27,11 +27,12 @@ public class SingleCellPipelineToolStatistics {
     long    ambiguousCbcWhitelist;
     long    delCorrectedCbcWhitelist;
     long    insCorrectedCbcWhitelist;
+    long    snpCorrectedCbcWhitelist;
     long    trimmedTooShort;
 
     long    startedAt = System.currentTimeMillis();
 
-    public void writeJson(final File f) {
+    public void writeJson(final File f, final SingleCellPipelineToolArgumentCollection args) {
 
         final JSONObject  obj = new JSONObject();
 
@@ -56,6 +57,9 @@ public class SingleCellPipelineToolStatistics {
         putPercentage(obj, "ambiguousCbcWhitelist", ambiguousCbcWhitelist, processedCbcWhitelist);
         putPercentage(obj, "delCorrectedCbcWhitelist", delCorrectedCbcWhitelist, processedCbcWhitelist);
         putPercentage(obj, "insCorrectedCbcWhitelist", insCorrectedCbcWhitelist, processedCbcWhitelist);
+        if ( args.cbcWhitelistSupportsSnp ) {
+            putPercentage(obj, "snpCorrectedCbcWhitelist", snpCorrectedCbcWhitelist, processedCbcWhitelist);
+        }
         putPercentage(obj, "trimmedTooShort", trimmedTooShort, readsIn);
 
         // performance

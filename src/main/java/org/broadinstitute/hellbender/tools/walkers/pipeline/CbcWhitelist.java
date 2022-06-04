@@ -22,6 +22,7 @@ public class CbcWhitelist {
         EXACT,
         DEL_CORRECTED,
         INS_CORRECTED,
+        SNP_CORRECTED,
         AMBIGUOUS
     }
 
@@ -40,6 +41,7 @@ public class CbcWhitelist {
 
     }
 
+    final boolean supportsSnp;
     final Set<String>  seqs = new LinkedHashSet<>();
     final Map<String, String> indelCorrections = new LinkedHashMap<>();
     final Set<String> indelAmbiguous = new LinkedHashSet<>();
@@ -49,7 +51,9 @@ public class CbcWhitelist {
     static final Result exactResult = new Result(ResultType.EXACT);
     static final Result ambiguousResult = new Result(ResultType.AMBIGUOUS);
 
-    public CbcWhitelist(final GATKPath path) {
+    public CbcWhitelist(final GATKPath path, final boolean supportsSnp) {
+
+        this.supportsSnp = supportsSnp;
 
         // read the file
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(path.getInputStream())) ) {
@@ -110,10 +114,50 @@ public class CbcWhitelist {
         return indels;
     }
 
+    private Set<String> buildSnpPermutations(final String seq, final int resultSizeLimit) {
+
+        final byte[] allBases = {'A', 'G', 'C', 'T'};
+        final Set<String> snps = new LinkedHashSet<>();
+
+        // build hmers
+        for ( int ofs = 0 ; ofs < seq.length() ; ofs++ ) {
+            final byte base = (byte)seq.charAt(ofs);
+            for ( byte snp : allBases ) {
+                if ( snp != base ) {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append(seq, 0, ofs);
+                    sb.append((char)snp);
+                    sb.append(seq, ofs + 1, seq.length());
+                    final String snpSeq = sb.toString();
+                    if ( seqs.contains(snpSeq) ) {
+                        snps.add(sb.toString());
+                        if ( snps.size() >= resultSizeLimit )
+                            return snps;
+                    }
+                }
+            }
+        }
+
+        return snps;
+    }
+
     private void processObservedSequence(final String seq, final boolean permutateInserts) {
 
         if ( !observedSeqs.contains(seq) ) {
             Set<String>         permutations = buildIndelPermutations(seq, permutateInserts, 2);
+            if ( permutations.size() == 1 ) {
+                indelCorrections.put(seq, permutations.iterator().next());
+            } else if ( permutations.size() > 1 ) {
+                indelAmbiguous.add(seq);
+            }
+            observedSeqs.add(seq);
+        }
+    }
+
+    private void processObservedSequence(final String seq) {
+
+        if ( !observedSeqs.contains(seq) ) {
+            Set<String>         permutations = buildSnpPermutations(seq, 2);
             if ( permutations.size() == 1 ) {
                 indelCorrections.put(seq, permutations.iterator().next());
             } else if ( permutations.size() > 1 ) {
@@ -131,34 +175,67 @@ public class CbcWhitelist {
         }
 
         // check for del
-        final String delSeq = new String(Arrays.copyOfRange(bytes, start, start + length - 1));
-        processObservedSequence(delSeq, true);
         final String delCorrection;
-        if ( indelAmbiguous.contains(delSeq) ) {
-            return ambiguousResult;
-        } else if (indelCorrections.containsKey(delSeq) ) {
-            delCorrection = indelCorrections.get(delSeq);
-        } else {
-            delCorrection = null;
+        {
+            final String seq = new String(Arrays.copyOfRange(bytes, start, start + length - 1));
+            processObservedSequence(seq, true);
+            if (indelAmbiguous.contains(seq)) {
+                return ambiguousResult;
+            } else if (indelCorrections.containsKey(seq)) {
+                delCorrection = indelCorrections.get(seq);
+            } else {
+                delCorrection = null;
+            }
         }
 
         // check for ins
-        final String insSeq = new String(Arrays.copyOfRange(bytes, start, start + length + 1));
-        processObservedSequence(delSeq, false);
         final String insCorrection;
-        if ( indelAmbiguous.contains(insSeq) ) {
+        {
+            final String seq = new String(Arrays.copyOfRange(bytes, start, start + length + 1));
+            processObservedSequence(seq, false);
+            if (indelAmbiguous.contains(seq)) {
+                return ambiguousResult;
+            } else if (indelCorrections.containsKey(seq)) {
+                insCorrection = indelCorrections.get(seq);
+            } else {
+                insCorrection = null;
+            }
+        }
+
+        // already ambig?
+        if ( delCorrection != null && insCorrection != null ) {
             return ambiguousResult;
-        } else if (indelCorrections.containsKey(insSeq) ) {
-            insCorrection = indelCorrections.get(insSeq);
+        }
+
+        // look for snp
+        final String snpCorrection;
+        if ( supportsSnp ) {
+            final String seq = new String(Arrays.copyOfRange(bytes, start, start + length));
+            processObservedSequence(seq);
+            if (indelAmbiguous.contains(seq)) {
+                return ambiguousResult;
+            } else if (indelCorrections.containsKey(seq)) {
+                snpCorrection = indelCorrections.get(seq);
+            } else {
+                snpCorrection = null;
+            }
         } else {
-            insCorrection = null;
+            snpCorrection = null;
         }
 
         // build result
         if ( delCorrection != null ) {
-            return (insCorrection != null) ? ambiguousResult :  new Result(ResultType.DEL_CORRECTED, delCorrection);
+            if ( insCorrection != null ) {
+                return ambiguousResult;
+            } else {
+                return (snpCorrection != null) ? ambiguousResult : new Result(ResultType.DEL_CORRECTED, delCorrection);
+            }
         } else {
-            return (insCorrection != null) ? new Result(ResultType.INS_CORRECTED, insCorrection) : notFoundResult;
+            if ( insCorrection == null ) {
+                return (snpCorrection == null) ? notFoundResult : new Result(ResultType.SNP_CORRECTED, snpCorrection);
+            } else {
+                return (snpCorrection != null) ? ambiguousResult : new Result(ResultType.INS_CORRECTED, insCorrection);
+            }
         }
     }
 
