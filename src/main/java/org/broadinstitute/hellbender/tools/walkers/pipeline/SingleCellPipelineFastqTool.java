@@ -13,12 +13,11 @@ import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.programgroups.FlowBasedProgramGroup;
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.exceptions.GATKException;
-import org.broadinstitute.hellbender.tools.spark.sv.utils.SVFastqUtils;
-import org.broadinstitute.hellbender.utils.read.GATKRead;
 
 import java.io.*;
 import java.util.List;
-import java.util.Optional;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.zip.GZIPInputStream;
 
 @CommandLineProgramProperties(
@@ -41,8 +40,9 @@ public class SingleCellPipelineFastqTool extends CommandLineProgram {
 
     // locals
     private SingleCellPipeline pipeline;
-    protected ProgressMeter progressMeter;
-
+    private ProgressMeter progressMeter;
+    private BlockingQueue<FastqRecord> fastqRecordQueue;
+    private Thread fastqRecordThread;
 
     @Override
     protected Object doWork() {
@@ -54,23 +54,11 @@ public class SingleCellPipelineFastqTool extends CommandLineProgram {
                 try (final FastqReader fastqReader = new FastqReader(reader)) {
 
                     for (FastqRecord rec : fastqReader) {
-                        pipeline.lastReason = null;
-                        pipeline.process(rec.getReadName(), false,  rec.getReadBases(), rec.getBaseQualities(), new AttributeProvider() {
-                            @Override
-                            public boolean hasAttribute(String attributeName) {
-                                return false;
-                            }
-
-                            @Override
-                            public int getAttributeAsInteger(String attributeName) {
-                                return 0;
-                            }
-                        });
-                        if ( pipeline.lastReason != null) {
-                            logger.debug(rec.getReadName() +  "," + pipeline.lastReason);
+                        if ( args.multiproc ) {
+                            fastqRecordQueue.offer(rec);
+                        } else {
+                            process(rec);
                         }
-
-                        progressMeter.update(null);
                     }
                 }
             } catch (IOException e) {
@@ -78,7 +66,37 @@ public class SingleCellPipelineFastqTool extends CommandLineProgram {
             }
         }
 
+        // offer end offile and wait for end of processing
+        if ( args.multiproc ) {
+            fastqRecordQueue.offer(new FastqRecord(null, "", null, ""));
+            try {
+                fastqRecordThread.join();
+            } catch (InterruptedException e) {
+                logger.warn("", e);
+            }
+        }
+
         return null;
+    }
+
+    private void process(final FastqRecord rec) {
+        pipeline.lastReason = null;
+        pipeline.process(rec.getReadName(), false,  rec.getReadBases(), rec.getBaseQualities(), new AttributeProvider() {
+            @Override
+            public boolean hasAttribute(String attributeName) {
+                return false;
+            }
+
+            @Override
+            public int getAttributeAsInteger(String attributeName) {
+                return 0;
+            }
+        });
+        if ( pipeline.lastReason != null) {
+            logger.debug(() -> rec.getReadName() +  "," + pipeline.lastReason);
+        }
+
+        progressMeter.update(null);
     }
 
     private InputStream getInputStream(GATKPath path) throws IOException {
@@ -101,6 +119,25 @@ public class SingleCellPipelineFastqTool extends CommandLineProgram {
         pipeline = new SingleCellPipeline(args);
         pipeline.onArgsReady();
         pipeline.onStart();
+
+        // create queue
+        if ( args.multiproc ) {
+            fastqRecordQueue = new LinkedBlockingQueue<>(args.queueCapacity);
+            (fastqRecordThread = new Thread(() -> {
+                try {
+                    while (true) {
+                        final FastqRecord rec = fastqRecordQueue.take();
+                        if (rec.getReadName() == null) {
+                            break;
+                        } else {
+                            process(rec);
+                        }
+                    }
+                } catch (InterruptedException e) {
+                    logger.warn("", e);
+                }
+            })).start();
+        }
     }
 
     @Override

@@ -3,6 +3,7 @@ package org.broadinstitute.hellbender.tools.walkers.pipeline;
 import htsjdk.samtools.fastq.FastqRecord;
 import htsjdk.samtools.fastq.FastqWriter;
 import htsjdk.samtools.fastq.FastqWriterFactory;
+import htsjdk.samtools.util.Tuple;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -11,6 +12,8 @@ import org.broadinstitute.hellbender.utils.Utils;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class SingleCellPipeline {
 
@@ -41,6 +44,10 @@ public class SingleCellPipeline {
     private int umiLengthOrig;
     private int cbcUmiLength;
     private int cbcUmiLengthOrig;
+
+    private BlockingQueue<Tuple<FastqRecord, FastqRecord>> outputQueue;
+    private Thread outputThread;
+
 
     public String lastReason;
 
@@ -188,8 +195,15 @@ public class SingleCellPipeline {
                 }
 
                 if ( !args.noOutput ) {
-                    read1Writer.write(makeFastQRecord(readName, read1bases, quals, read1Start, read1Start + read1Length, false, true));
-                    read2Writer.write(makeFastQRecord(readName, bases, quals, read2Start, read2Start + read2Length, args.reverseComplementRead2, false));
+                    final FastqRecord rec1 = makeFastQRecord(readName, read1bases, quals, read1Start, read1Start + read1Length, false, true);
+                    final FastqRecord rec2 = makeFastQRecord(readName, bases, quals, read2Start, read2Start + read2Length, args.reverseComplementRead2, false);
+
+                    if ( args.multiproc ) {
+                        outputQueue.offer(new Tuple<>(rec1, rec2));
+                    } else {
+                        read1Writer.write(rec1);
+                        read2Writer.write(rec2);
+                    }
                 }
             } else {
                 if ( lastReason == null ) {
@@ -384,6 +398,28 @@ public class SingleCellPipeline {
             cbcWhitelist = new CbcWhitelist(args.cbcWhitelistPath);
         }
 
+        // create queue
+        if ( args.multiproc ) {
+            outputQueue = new LinkedBlockingQueue<>(args.queueCapacity);
+            (outputThread = new Thread(() -> {
+                try {
+                    while (true) {
+                        final Tuple<FastqRecord,FastqRecord> tuple = outputQueue.take();
+                        if (tuple.a == null) {
+                            break;
+                        } else {
+                            read1Writer.write(tuple.a);
+                            read2Writer.write(tuple.b);
+                        }
+                    }
+                } catch (InterruptedException e) {
+                    logger.warn("", e);
+                }
+            })).start();
+        }
+
+
+
     }
 
     private File buildFastQReedsOutputFile(int i) {
@@ -391,6 +427,17 @@ public class SingleCellPipeline {
     }
 
     public void onClose() {
+
+        // wait for writer
+        if ( args.multiproc ) {
+            outputQueue.offer(new Tuple<>(null, null));
+            try {
+                outputThread.join();
+            } catch (InterruptedException e) {
+                logger.warn("", e);
+            }
+            ;
+        }
 
         // close writers
         if ( read1Writer != null ) {

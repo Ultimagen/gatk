@@ -38,6 +38,9 @@ public class SingleCellPipelineToolArgumentCollection implements Serializable {
     public static final String LONF_NAME_UMI_QUALITY_THRESHOLD = "umi-quality-threshold";
     public static final String LONG_NAME_CBC_WHITELIST_PATH = "cbc-whitelist-path";
     public static final String LONG_NAME_COMPRESSED_OUTPUT = "compressed-output";
+    public static final String FULL_NAME_DEBUG_ADAPTERS_FOR = "debug-adapters-for";
+    public static final String FULL_NAME_MULTIPROC = "multiproc";
+    public static final String FULL_NAMAE_QUEUE_CAPACITY = "queue-capacity";
 
     @Argument(fullName = LONG_NAME_BASE_FILENAME, doc = "output files base name (prefix)")
     public String baseFilename;
@@ -125,9 +128,14 @@ public class SingleCellPipelineToolArgumentCollection implements Serializable {
     @Argument(fullName = FULL_NAME_MAX_OUTPUT_READS, doc = "limit numner of output reads generated", optional = true)
     public int maxOutputReads;
 
-    @Argument(fullName = "debug-adapters-for", doc="print additional debugging for this read", optional = true)
+    @Argument(fullName = FULL_NAME_DEBUG_ADAPTERS_FOR, doc="print additional debugging for this read", optional = true)
     public String debugTrimmingFor;
 
+    @Argument(fullName = FULL_NAME_MULTIPROC, doc="use several threads to form pipeline", optional = true)
+    public boolean multiproc;
+
+    @Argument(fullName = FULL_NAMAE_QUEUE_CAPACITY, doc="capacity of multiproc queues", optional = true)
+    public int queueCapacity = 1000000;
 
     enum LibraryDirection {
         ThreePrime,
