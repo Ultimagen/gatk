@@ -385,7 +385,12 @@ public class ContextCovariate implements Covariate {
         Utils.validate(readOfs == read.getLength(), "did not read end of read");
         Utils.validate(refOfs == refBases.length, "did not reach end of reference");
 
-        return readRefBases;
+        // reverse complement?
+        if ( read.isReverseStrand() ) {
+            return BaseUtils.simpleReverseComplement(readRefBases);
+        } else {
+            return readRefBases;
+        }
     }
 
     private static int keyFromContext(final byte[] dna, final int start, final int end, final int refIndex, final byte refBase) {
