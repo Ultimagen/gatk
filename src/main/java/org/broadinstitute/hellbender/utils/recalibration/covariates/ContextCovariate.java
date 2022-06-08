@@ -47,7 +47,7 @@ public class ContextCovariate implements Covariate {
      */
     private int lookaheadSize;
     private ReferenceDataSource referenceDataSource;
-
+    private boolean altEmbedded;
 
     public ContextCovariate(final RecalibrationArgumentCollection RAC){
         mismatchesContextSize = RAC.MISMATCHES_CONTEXT_SIZE;
@@ -77,6 +77,7 @@ public class ContextCovariate implements Covariate {
 
             this.lookaheadSize = RAC.EXTENDED_CONTEXT_LOOKAHEAD;
             this.referenceDataSource = ReferenceDataSource.of(RAC.EXTENDED_CONTEXT_REFERENCE.toPath());
+            this.altEmbedded = RAC.EXTENDED_CONTEXT_ALT_EMBEDDED;
         }
     }
 
@@ -304,7 +305,8 @@ public class ContextCovariate implements Covariate {
     @Override
     public int maximumKeyValue() {
         // the maximum value is T (11 in binary) for each base in the context
-        final int length = Math.max(mismatchesContextSize, indelsContextSize);  // the length of the context
+        final int length = Math.max(mismatchesContextSize, indelsContextSize)
+                + (altEmbedded ? 1 : 0);  // the length of the context
         int key = length;
         int bitOffset = LENGTH_BITS;
         for (int i = 0; i <length ; i++) {
@@ -393,9 +395,9 @@ public class ContextCovariate implements Covariate {
         }
     }
 
-    private static int keyFromContext(final byte[] dna, final int start, final int end, final int refIndex, final byte refBase) {
+    private int keyFromContext(final byte[] dna, final int start, final int end, final int refIndex, final byte refBase) {
 
-        int key = end - start;
+        int key = end - start + (altEmbedded ? 1 : 0);
         int bitOffset = LENGTH_BITS;
         for (int i = start; i < end; i++) {
             final int baseIndex = BaseUtils.simpleBaseToBaseIndex((i != refIndex) ? dna[i] : refBase);
@@ -404,6 +406,15 @@ public class ContextCovariate implements Covariate {
             }
             key |= (baseIndex << bitOffset);
             bitOffset += 2;
+
+            if ( altEmbedded && i == refIndex ) {
+                final int altBaseIndex = BaseUtils.simpleBaseToBaseIndex(dna[i]);
+                if (altBaseIndex == -1) { // ignore non-ACGT bases
+                    return -1;
+                }
+                key |= (altBaseIndex << bitOffset);
+                bitOffset += 2;
+            }
         }
         return key;
     }

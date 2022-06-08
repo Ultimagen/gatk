@@ -52,6 +52,9 @@ public final class RecalibrationArgumentCollection implements Serializable {
     @Argument(fullName = "extended-context-reference", shortName = "ecr", doc = "reference for assembling the extended context", optional = true)
     public GATKPath EXTENDED_CONTEXT_REFERENCE;
 
+    @Argument(fullName = "extended-context-alt-embedded", shortName = "ecae", doc = "alt base, when extending context, embedded in context", optional = true)
+    public boolean EXTENDED_CONTEXT_ALT_EMBEDDED;
+
     /**
      * The cycle covariate will generate an error if it encounters a cycle greater than this value.
      * This argument is ignored if the Cycle covariate is not used.
@@ -178,6 +181,8 @@ public final class RecalibrationArgumentCollection implements Serializable {
         argumentsTable.set("extended_context_lookahead", RecalUtils.ARGUMENT_VALUE_COLUMN_NAME, EXTENDED_CONTEXT_LOOKAHEAD);
         argumentsTable.addRowID("extended_context_reference", true);
         argumentsTable.set("extended_context_reference", RecalUtils.ARGUMENT_VALUE_COLUMN_NAME, EXTENDED_CONTEXT_REFERENCE);
+        argumentsTable.addRowID("extended_context_alt_embedded", true);
+        argumentsTable.set("extended_context_alt_embedded", RecalUtils.ARGUMENT_VALUE_COLUMN_NAME, EXTENDED_CONTEXT_ALT_EMBEDDED);
         argumentsTable.addRowID("mismatches_default_quality", true);
         argumentsTable.set("mismatches_default_quality", RecalUtils.ARGUMENT_VALUE_COLUMN_NAME, MISMATCHES_DEFAULT_QUALITY);
         argumentsTable.addRowID("deletions_default_quality", true);
