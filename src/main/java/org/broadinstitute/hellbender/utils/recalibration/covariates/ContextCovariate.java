@@ -328,6 +328,10 @@ public class ContextCovariate implements Covariate {
      */
     protected IntList contextWith(final byte[] bases, final int contextSize, final int mask, final byte[] refBases) {
 
+        if ( bases.length == 0 ) {
+            return new IntArrayList(0);
+        }
+
         Utils.validate(bases.length == refBases.length, "read and references bases array not same length");
 
         final int readLength = bases.length;
