@@ -340,6 +340,12 @@ public class ContextCovariate implements Covariate {
         final IntList keys = new IntArrayList(readLength);
 
         // determine where context will actually start and end in relationship to the base in question
+        if ( readLength < contextSize ) {
+            for ( int i = 0 ; i < readLength ; i++ ) {
+                keys.add(-1);
+            }
+            return keys;
+        }
         final int contextBefore =  contextSize - lookaheadSize;   // how many bases before current base are part of the context
         final int contextAfter = lookaheadSize - 1;              // how many bases after current base are part of the context
 
