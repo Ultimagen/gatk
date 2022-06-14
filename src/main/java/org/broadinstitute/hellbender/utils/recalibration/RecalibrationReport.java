@@ -342,6 +342,11 @@ public final class RecalibrationReport {
             else if (argument.equals("extended_context_alt_embedded"))
                 RAC.EXTENDED_CONTEXT_ALT_EMBEDDED = decodeBoolean(value);
 
+            else if (argument.equals("mismatches_context_size"))
+                RAC.MISMATCHES_CONTEXT_SIZE = decodeInteger(value);
+
+            else if (argument.equals("indels_context_size"))
+                RAC.INDELS_CONTEXT_SIZE = decodeInteger(value);
         }
 
 
@@ -376,12 +381,6 @@ public final class RecalibrationReport {
                     throw new UserException("Solid is not supported. Only " + RecalibrationArgumentCollection.SOLID_NOCALL_STRATEGY + " is allowed as value for solid_nocall_strategy");
                 }
             }
-            else if (argument.equals("mismatches_context_size"))
-                RAC.MISMATCHES_CONTEXT_SIZE = decodeInteger(value);
-
-            else if (argument.equals("indels_context_size"))
-                RAC.INDELS_CONTEXT_SIZE = decodeInteger(value);
-
             else if (argument.equals("mismatches_default_quality"))
                 RAC.MISMATCHES_DEFAULT_QUALITY = decodeByte(value);
 
