@@ -177,12 +177,14 @@ public final class RecalibrationArgumentCollection implements Serializable {
         argumentsTable.set("mismatches_context_size", RecalUtils.ARGUMENT_VALUE_COLUMN_NAME, MISMATCHES_CONTEXT_SIZE);
         argumentsTable.addRowID("indels_context_size", true);
         argumentsTable.set("indels_context_size", RecalUtils.ARGUMENT_VALUE_COLUMN_NAME, INDELS_CONTEXT_SIZE);
-        argumentsTable.addRowID("extended_context_lookahead", true);
-        argumentsTable.set("extended_context_lookahead", RecalUtils.ARGUMENT_VALUE_COLUMN_NAME, EXTENDED_CONTEXT_LOOKAHEAD);
-        argumentsTable.addRowID("extended_context_reference", true);
-        argumentsTable.set("extended_context_reference", RecalUtils.ARGUMENT_VALUE_COLUMN_NAME, EXTENDED_CONTEXT_REFERENCE);
-        argumentsTable.addRowID("extended_context_alt_embedded", true);
-        argumentsTable.set("extended_context_alt_embedded", RecalUtils.ARGUMENT_VALUE_COLUMN_NAME, EXTENDED_CONTEXT_ALT_EMBEDDED);
+        if ( EXTENDED_CONTEXT_LOOKAHEAD != 0 ) {
+            argumentsTable.addRowID("extended_context_lookahead", true);
+            argumentsTable.set("extended_context_lookahead", RecalUtils.ARGUMENT_VALUE_COLUMN_NAME, EXTENDED_CONTEXT_LOOKAHEAD);
+            argumentsTable.addRowID("extended_context_reference", true);
+            argumentsTable.set("extended_context_reference", RecalUtils.ARGUMENT_VALUE_COLUMN_NAME, EXTENDED_CONTEXT_REFERENCE);
+            argumentsTable.addRowID("extended_context_alt_embedded", true);
+            argumentsTable.set("extended_context_alt_embedded", RecalUtils.ARGUMENT_VALUE_COLUMN_NAME, EXTENDED_CONTEXT_ALT_EMBEDDED);
+        }
         argumentsTable.addRowID("mismatches_default_quality", true);
         argumentsTable.set("mismatches_default_quality", RecalUtils.ARGUMENT_VALUE_COLUMN_NAME, MISMATCHES_DEFAULT_QUALITY);
         argumentsTable.addRowID("deletions_default_quality", true);
