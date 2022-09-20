@@ -11,7 +11,7 @@ import java.io.File;
 import java.io.IOException;
 
 public class AlleleMappingReadFilterIntegrationTest extends CommandLineProgramTest {
-    public static final boolean UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS = false;
+    public static final boolean UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS = true;
 
     private static String testDir = publicTestDir + FlowTestConstants.READ_FILTER_DATA_DIR;
 
@@ -28,7 +28,7 @@ public class AlleleMappingReadFilterIntegrationTest extends CommandLineProgramTe
         final File expectedFile = new File(testDir + outputSuffix);
         final File outputFile = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expectedFile : new File(outputDir + outputSuffix);
         final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
-        final File alleleFile = new File(publicTestDir, "Homo_sapiens_assembly19.dbsnp135.chr1_1M.exome_intervals.vcf");
+        final File alleleFile = new File(largeFileTestDir, "input_jukebox_for_test_dbSNP.vcf");
 
         final String[] args = new String[]{
                 "-I", input.getAbsolutePath(),
