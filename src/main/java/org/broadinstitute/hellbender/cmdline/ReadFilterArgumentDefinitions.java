@@ -50,6 +50,7 @@ public final class ReadFilterArgumentDefinitions {
     public static final String SAMPLE_NAME = "sample";
 
     public static final String KEEP_INTERVAL_NAME = "keep-intervals";
+    public static final String ALLELE_FILE_NAME = "allele-file";
 
     public static final String SOFT_CLIPPED_RATIO_THRESHOLD = "soft-clipped-ratio-threshold";
     public static final String SOFT_CLIPPED_LEADING_TRAILING_RATIO_THRESHOLD = "soft-clipped-leading-trailing-ratio";
