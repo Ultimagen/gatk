@@ -50,10 +50,10 @@ public class SelectInformativeReads extends ReadWalker {
     public int haplotypeExpansionSize = 5;
 
     // ref/allele to read distance thresholds
-    @Argument(fullName = "min-ref-allele-distance", doc = "min ref allele distance", optional = true)
-    double minRefAlleleDistance = 0.2;
-    @Argument(fullName = "max-ref-distance", doc = "max ref distance", optional = true)
-    double maxRefDistance = 0.1;
+    @Argument(fullName = "min-ref-allele-distance", doc = "min ref allele distance")
+    Double minRefAlleleDistance;
+    @Argument(fullName = "max-abs-ref-score", doc = "max ref score (absolute value)")
+    Double maxAbsRefScore;
 
     @ArgumentCollection
     public FlowBasedArgumentCollection fbargs = new FlowBasedArgumentCollection();
@@ -162,7 +162,7 @@ public class SelectInformativeReads extends ReadWalker {
                         final Haplotype refHaplotpye = makeHaplotype(prefixBases, vc.getReference().getBases(), suffixBases, true, vc.getStart());
                         final Haplotype alleleHaplotpye = makeHaplotype(prefixBases, alleleBases, suffixBases, false, vc.getStart());
                         if ( debug ) { logger.info("   refHaplotpye:    " + refHaplotpye.getBaseString()); }
-                        if ( debug ) { logger.info(   "alleleHaplotpye: " + alleleHaplotpye.getBaseString()); }
+                        if ( debug ) { logger.info("   alleleHaplotpye: " + alleleHaplotpye.getBaseString()); }
 
                         // build flow haplotypes
                         final FlowBasedHaplotype refFlowHaplotpye = new FlowBasedHaplotype(refHaplotpye, rgInfo.flowOrder);
@@ -171,14 +171,16 @@ public class SelectInformativeReads extends ReadWalker {
                         // create flow read
                         final FlowBasedRead flowRead = new FlowBasedRead(read, rgInfo.flowOrder,
                                 rgInfo.maxClass, fbargs);
-                        final int diffLeft = vcStartOnRead;
-                        final int diffRight = flowRead.getEnd() - vcEndOnRead;
+                        final int diffLeft = leftExpIndex;
+                        final int diffRight = readBases.length - rightExpIndex;
+                        if ( debug ) { logger.info("   clipLeft/Right: " + diffLeft + "/" + diffRight); }
                         flowRead.applyBaseClipping(Math.max(0, diffLeft), Math.max(diffRight, 0), false);
 
                         if (!flowRead.isValid()) {
                             if ( debug ) { logger.info("   clipped flow read turned out invalid!"); }
                             return false;
                         }
+                        if ( debug ) { logger.info("   clippedRead:     " + debugFlowReadBases(flowRead)); }
 
                         // compute alternative score
                         final int hapKeyLength = Math.min(refFlowHaplotpye.getKeyLength(), alleleFlowHaplotpye.getKeyLength());
@@ -194,7 +196,7 @@ public class SelectInformativeReads extends ReadWalker {
                         }
 
                         // ref distance must not be too large
-                        if (refScore > maxRefDistance) {
+                        if (Math.abs(refScore) > maxAbsRefScore) {
                             if ( debug ) { logger.info("   failing because reference score is too weak"); }
                             testResult = false;
                         }
@@ -209,6 +211,23 @@ public class SelectInformativeReads extends ReadWalker {
         }
 
         return testResult != null ? testResult : true;
+    }
+
+    private String debugFlowReadBases(FlowBasedRead flowRead) {
+
+        final String flowOrder = flowRead.getFlowOrder();
+        final StringBuilder sb = new StringBuilder();
+        final int[] key = flowRead.getKey();
+
+        int flowIndex = 0;
+        for ( int hmer : key ) {
+            for ( int i = 0 ; i < hmer ; i++ )
+                sb.append(flowOrder.charAt(flowIndex));
+            if ( ++flowIndex >= flowOrder.length() )
+                flowIndex = 0;
+        }
+
+        return sb.toString();
     }
 
     private boolean isDebugRead(GATKRead read) {

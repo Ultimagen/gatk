@@ -11,7 +11,7 @@ import java.io.IOException;
 
 public class SelectInformativeReadsIntegrationTest extends CommandLineProgramTest {
 
-    public static final boolean UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS = true;
+    public static final boolean UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS = false;
 
     private static String testDir = publicTestDir + FlowTestConstants.FEATURE_MAPPING_DATA_DIR;
 
@@ -34,7 +34,9 @@ public class SelectInformativeReadsIntegrationTest extends CommandLineProgramTes
                 "-I", input.getAbsolutePath(),
                 "-O", outputFile.getAbsolutePath(),
                 "--intervals", "chr9:81149486-81177047",
-                "--allele-file", alleleFile.getAbsolutePath()
+                "--allele-file", alleleFile.getAbsolutePath(),
+                "--min-ref-allele-distance", "0.2",
+                "--max-abs-ref-score", "0.5"
         };
 
         // run the tool
@@ -45,7 +47,7 @@ public class SelectInformativeReadsIntegrationTest extends CommandLineProgramTes
 
         // walk the output and expected files, compare non-comment lines
         if ( !UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
-            IntegrationTestSpec.assertEqualTextFiles(outputFile, expectedFile, "#");
+            IntegrationTestSpec.assertEqualTextFiles(outputFile, expectedFile, "@");
         }
     }
 
