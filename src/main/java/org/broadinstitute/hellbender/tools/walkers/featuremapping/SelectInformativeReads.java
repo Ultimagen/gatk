@@ -1,33 +1,40 @@
-package org.broadinstitute.hellbender.engine.filters;
+package org.broadinstitute.hellbender.tools.walkers.featuremapping;
 
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.commons.text.similarity.LevenshteinDistance;
-import org.broadinstitute.barclay.argparser.Argument;
-import org.broadinstitute.barclay.argparser.ArgumentCollection;
+import org.broadinstitute.barclay.argparser.*;
 import org.broadinstitute.hellbender.cmdline.ReadFilterArgumentDefinitions;
-import org.broadinstitute.hellbender.engine.FeatureDataSource;
+import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
+import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
-import org.broadinstitute.hellbender.tools.walkers.featuremapping.FlowFeatureMapper;
-import org.broadinstitute.hellbender.tools.walkers.featuremapping.FlowFeatureMapperArgumentCollection;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.haplotype.FlowBasedHaplotype;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
-import org.broadinstitute.hellbender.utils.read.AlignmentUtils;
-import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
-import org.broadinstitute.hellbender.utils.read.FlowBasedReadUtils;
-import org.broadinstitute.hellbender.utils.read.GATKRead;
+import org.broadinstitute.hellbender.utils.read.*;
+import picard.cmdline.programgroups.ReadDataManipulationProgramGroup;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
 
-public class AlleleMappingReadFilter extends ReadFilter {
+@CommandLineProgramProperties(
+        summary = "Filters 'informative' reads from the input SAM/BAM/CRAM file to the SAM/BAM/CRAM file.",
+        oneLineSummary = "Filters 'informative' reads in the SAM/BAM/CRAM file",
+        programGroup = ReadDataManipulationProgramGroup.class
+)
+@ExperimentalFeature
+@WorkflowProperties
+public class SelectInformativeReads extends ReadWalker {
 
-    private static final long serialVersionUID = 1l;
+    @Argument(fullName = StandardArgumentDefinitions.OUTPUT_LONG_NAME,
+            shortName = StandardArgumentDefinitions.OUTPUT_SHORT_NAME,
+            doc="Write output to this file")
+    @WorkflowOutput(optionalCompanions={StandardArgumentDefinitions.OUTPUT_INDEX_COMPANION})
+    public GATKPath output;
+    private SAMFileGATKReadWriter outputWriter;
 
     // alleles are provided in vcf form
     @Argument(fullName = ReadFilterArgumentDefinitions.ALLELE_FILE_NAME, doc = "vcf file containing alleles")
@@ -47,7 +54,25 @@ public class AlleleMappingReadFilter extends ReadFilter {
     public FlowBasedArgumentCollection fbargs = new FlowBasedArgumentCollection();
 
     @Override
-    public boolean test(GATKRead read) {
+    public void onTraversalStart() {
+        outputWriter = createSAMWriter(output, true);
+    }
+
+    @Override
+    public void apply(GATKRead read, ReferenceContext referenceContext, FeatureContext featureContext ) {
+        if ( test(read) ) {
+            outputWriter.addRead(read);
+        }
+    }
+
+    @Override
+    public void closeTool() {
+        if ( outputWriter != null ) {
+            outputWriter.close();
+        }
+    }
+
+    private boolean test(GATKRead read) {
 
         // locate variant contexts that fall within this read
         Boolean testResult = null;
@@ -64,7 +89,7 @@ public class AlleleMappingReadFilter extends ReadFilter {
         cleanReadBases(readBases);
 
         // access read group
-        final FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(samHeader, read);
+        final FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read);
 
         while ( iterator.hasNext() && testResult == null ) {
             final VariantContext vc = iterator.next();
@@ -110,7 +135,7 @@ public class AlleleMappingReadFilter extends ReadFilter {
                     final Haplotype alleleHaplotpye = makeHaplotype(prefixBases, alleleBases, suffixBases, false, vc.getStart());
 
                     // build flow haplotypes
-                    final FlowBasedHaplotype    refFlowHaplotpye = new FlowBasedHaplotype(refHaplotpye, rgInfo.flowOrder);
+                    final FlowBasedHaplotype refFlowHaplotpye = new FlowBasedHaplotype(refHaplotpye, rgInfo.flowOrder);
                     final FlowBasedHaplotype    alleleFlowHaplotpye = new FlowBasedHaplotype(alleleHaplotpye, rgInfo.flowOrder);
 
                     // create flow read
