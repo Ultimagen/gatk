@@ -1,8 +1,11 @@
 package org.broadinstitute.hellbender.tools.walkers.featuremapping;
 
+import htsjdk.samtools.CigarElement;
+import htsjdk.samtools.CigarOperator;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
-import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.collections4.iterators.IteratorIterable;
+import org.apache.commons.collections4.iterators.ReverseListIterator;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.argparser.*;
@@ -20,6 +23,7 @@ import picard.cmdline.programgroups.ReadDataManipulationProgramGroup;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -64,6 +68,7 @@ public class SelectInformativeReads extends ReadWalker {
     @Override
     public void onTraversalStart() {
         outputWriter = createSAMWriter(output, true);
+        FlowBasedRead.setMinimalReadLength(0);
     }
 
     @Override
@@ -96,9 +101,13 @@ public class SelectInformativeReads extends ReadWalker {
         }
 
         // if has VCs, we'll need the read bases/qualities
+        /*
         final Pair<byte[], byte[]> readData = AlignmentUtils.getBasesAndBaseQualitiesAlignedOneToOne(read);
-        final byte[] readBases = readData.getLeft();
+        final byte[] readBases = trimSoftClippedReadBases(read, readData.getLeft());
         cleanReadBases(readBases);
+         */
+        final byte[] readBases = getAlignedReadBasesOneToOne(read);
+
         //if ( debug ) { logger.info("readBases: " + new String(readBases));}
 
         // access read group
@@ -145,6 +154,7 @@ public class SelectInformativeReads extends ReadWalker {
                         // not the same: generate haplotypes around the location
                         final int vcStartOnRead = vc.getStart() - read.getStart();
                         final int vcEndOnRead = vc.getEnd() - read.getStart();
+                        final int vcSize = vc.getEnd() - vc.getStart() + 1;
 
                         // find ends of haplotypes on the read - must be at least N bases and
                         // contain the last HMER in full
@@ -152,7 +162,7 @@ public class SelectInformativeReads extends ReadWalker {
                         while (leftExpIndex > 0 && readBases[leftExpIndex] == readBases[leftExpIndex - 1]) {
                             leftExpIndex--;
                         }
-                        int rightExpIndex = Math.min(readBases.length - 1, vcEndOnRead + 1 + haplotypeExpansionSize);
+                        int rightExpIndex = Math.min(readBases.length - 1, vcEndOnRead + vcSize + haplotypeExpansionSize);
                         while (rightExpIndex < (readBases.length - 1) && readBases[rightExpIndex] == readBases[rightExpIndex + 1]) {
                             rightExpIndex++;
                         }
@@ -171,8 +181,12 @@ public class SelectInformativeReads extends ReadWalker {
                         // create flow read
                         final FlowBasedRead flowRead = new FlowBasedRead(read, rgInfo.flowOrder,
                                 rgInfo.maxClass, fbargs);
-                        final int diffLeft = leftExpIndex;
-                        final int diffRight = readBases.length - rightExpIndex;
+                        int diffLeft = leftExpIndex;
+                        int diffRight = readBases.length - rightExpIndex;
+                        int adjustLeft = findReadDiffFromRefLeftOf(read, diffLeft);
+                        int adjustRight = findReadDiffFromRefRightOf(read, diffRight);
+                        diffLeft += adjustLeft;
+                        diffRight += adjustRight;
                         if ( debug ) { logger.info("   clipLeft/Right: " + diffLeft + "/" + diffRight); }
                         flowRead.applyBaseClipping(Math.max(0, diffLeft), Math.max(diffRight, 0), false);
 
@@ -213,6 +227,86 @@ public class SelectInformativeReads extends ReadWalker {
         return testResult != null ? testResult : true;
     }
 
+    private int findReadDiffFromRefLeftOf(GATKRead read, int fence) {
+
+        int refOfs = 0;
+        int diff = 0;
+
+        for ( final CigarElement e : read.getCigarElements() ) {
+            if ( refOfs >= fence )
+                break;
+            CigarOperator op = e.getOperator();
+
+            if ( op.consumesReferenceBases() ) {
+                // consumes ref but possibly not read (DEL?)
+                if ( !op.consumesReadBases() )
+                    diff -= Math.min(e.getLength(), fence - refOfs);
+                refOfs += e.getLength();
+            } else if (op.consumesReadBases() ) {
+                // consumes read but not ref (INS)
+                diff += e.getLength();
+            }
+        }
+
+        return diff;
+    }
+
+    private int findReadDiffFromRefRightOf(GATKRead read, int fence) {
+
+        int refOfs = 0;
+        int diff = 0;
+
+        // start with reference offset at tne end.
+        for ( final CigarElement e : read.getCigarElements() ) {
+            if ( e.getOperator().consumesReferenceBases() ) {
+                refOfs += e.getLength();
+            }
+        }
+
+        Iterable<CigarElement> reverse = new IteratorIterable<>(new ReverseListIterator<>(read.getCigarElements()));
+        for ( final CigarElement e : reverse ) {
+            if ( refOfs <= fence )
+                break;
+            CigarOperator op = e.getOperator();
+
+            if ( op.consumesReferenceBases() ) {
+                // consumes ref but possibly not read (DEL?)
+                if ( !op.consumesReadBases() )
+                    diff -= Math.min(e.getLength(), fence - refOfs);
+                refOfs -= e.getLength();
+            } else if (op.consumesReadBases() ) {
+                // consumes read but not ref (INS)
+                diff += e.getLength();
+            }
+        }
+
+        return diff;
+    }
+
+    private byte[] getAlignedReadBasesOneToOne(GATKRead read) {
+        final byte[] bases = read.getBasesNoCopy();
+        final ByteArrayOutputStream os = new ByteArrayOutputStream();
+        int basesOfs = 0;
+
+        for ( final CigarElement e : read.getCigarElements() ) {
+            final CigarOperator op = e.getOperator();
+            if ( op == CigarOperator.SOFT_CLIP ) {
+                basesOfs += e.getLength();
+            } else if ( op.consumesReadBases() ) {
+                if ( op.consumesReferenceBases() ) {
+                    os.write(bases, basesOfs, e.getLength());
+                }
+                basesOfs += e.getLength();
+            } else if ( op.consumesReferenceBases() ) {
+                for ( int n = 0 ; n < e.getLength() ; n++ ) {
+                    os.write('N');
+                }
+            }
+        }
+
+        return os.toByteArray();
+    }
+
     private String debugFlowReadBases(FlowBasedRead flowRead) {
 
         final String flowOrder = flowRead.getFlowOrder();
@@ -235,24 +329,6 @@ public class SelectInformativeReads extends ReadWalker {
             return false;
         } else {
             return debugReads.get(0).equalsIgnoreCase("All") || debugReads.contains(read.getName());
-        }
-    }
-
-    private void cleanReadBases(final byte[] array) {
-        for ( int i = 0 ; i < array.length ; i++ ) {
-            switch ( array[i] ) {
-                case 'A':
-                case 'T':
-                case 'C':
-                case 'G':
-                case 'a':
-                case 't':
-                case 'c':
-                case 'g':
-                    break;
-                default:
-                    array[i] = 'N';
-            }
         }
     }
 
