@@ -11,7 +11,6 @@ import org.broadinstitute.barclay.argparser.ArgumentCollection;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
 import org.broadinstitute.barclay.argparser.ExperimentalFeature;
 import org.broadinstitute.barclay.help.DocumentedFeature;
-import org.broadinstitute.barclay.utils.Utils;
 import org.broadinstitute.hellbender.cmdline.programgroups.FlowBasedProgramGroup;
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.exceptions.GATKException;
@@ -21,6 +20,7 @@ import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyBased
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.FlowBasedAlignmentLikelihoodEngine;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.LikelihoodEngineArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.ReadLikelihoodCalculationEngine;
+import org.broadinstitute.hellbender.utils.BaseUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.clipping.ReadClipper;
 import org.broadinstitute.hellbender.utils.haplotype.FlowBasedHaplotype;
@@ -50,9 +50,10 @@ public class GroundTruthScorer extends ReadWalker {
     public static final String GENOME_PRIOR_LONG_NAME = "genome-prior";
     public static final String FEATURES_FILE_LONG_NAME = "features-file";
     public static final String NORMALIZED_SCORE_THRESHOLD_LONG_NAME = "normalized-score-threshold";
+    public static final String ADD_MEAN_CALL_LONG_NAME = "add-mean-call";
 
     private static final int QUAL_VALUE_MAX = 60;
-    private static final int HMER_VALUE_MAX = FlowBasedRead.MAX_CLASS;
+    private static final int HMER_VALUE_MAX = 30; //TODO: This should become a parameter
     private static final int BASE_VALUE_MAX = FlowBasedRead.DEFAULT_FLOW_ORDER.length() - 1;
 
     private static final double NORMALIZED_SCORE_THRESHOLD_DEFAULT = -0.1;
@@ -70,14 +71,22 @@ public class GroundTruthScorer extends ReadWalker {
             }
         }
 
+        void add(final boolean b, final int bin) {
+            add(b);
+            if ( bins != null && bin >= 0 && bin < bins.length ) {
+                bins[bin].add(b);
+            }
+        }
         void add(final boolean b, final int bin, final int bin2) {
             add(b);
-            if ( bins != null && bin < bins.length ) {
-                if ( bin2 >= 0 ) {
-                    bins[bin].add(b, bin2, -1);
-                } else {
-                    bins[bin].add(b);
-                }
+            if ( bins != null && bin >= 0 && bin < bins.length ) {
+                bins[bin].add(b, bin2);
+            }
+        }
+        void add(final boolean b, final int bin, final int bin2, final int bin3) {
+            add(b);
+            if ( bins != null && bin >= 0 && bin < bins.length ) {
+                bins[bin].add(b, bin2, bin3);
             }
         }
 
@@ -89,7 +98,7 @@ public class GroundTruthScorer extends ReadWalker {
             return (getCount() == 0) ? 0.0 : ((double)falseCount / getCount());
         }
 
-        static BooleanAccumulator[] newReport(final int size, final int binCount, final int binCount2) {
+        static BooleanAccumulator[] newReport(final int size, final int binCount, final int binCount2, final int binCount3) {
             BooleanAccumulator[]   report = new BooleanAccumulator[size];
             for ( byte i = 0 ; i < report.length ; i++ ) {
                 report[i] = new BooleanAccumulator();
@@ -101,8 +110,13 @@ public class GroundTruthScorer extends ReadWalker {
                             report[i].bins[j].bins = new BooleanAccumulator[binCount2];
                             for ( int k = 0 ; k < report[i].bins[j].bins.length ; k++ ) {
                                 report[i].bins[j].bins[k] = new BooleanAccumulator();
+                                if (binCount3 != 0) {
+                                    report[i].bins[j].bins[k].bins = new BooleanAccumulator[binCount3];
+                                    for (int m = 0; m < report[i].bins[j].bins[k].bins.length; m++) {
+                                        report[i].bins[j].bins[k].bins[m] = new BooleanAccumulator();
+                                    }
+                                }
                             }
-
                         }
                     }
                 }
@@ -147,23 +161,27 @@ public class GroundTruthScorer extends ReadWalker {
             return table;
         }
 
-        static GATKReportTable newReportTable(final BooleanAccumulator[] report, final String name1, final String name2, final String name3) {
-            final GATKReportTable table = new GATKReportTable(name1 + "_" + name2 + "_" + name3 + "_Report", "error rate per " + name1 + " by " + name2 + " and " + name3, 5);
+        static GATKReportTable newReportTable(final BooleanAccumulator[] report, final String name1, final String name2, final String name3, final String name4) {
+            final GATKReportTable table = new GATKReportTable(name1 + "_" + name2 + "_" + name3 + "_" + name4 + "_Report", "error rate per " + name1 + " by " + name2 + " and " + name3, 5);
             table.addColumn(name1, "%d");
             table.addColumn(name2, "%d");
             table.addColumn(name3, "%s");
+            table.addColumn(name4, "%s");
             table.addColumn("count", "%d");
             table.addColumn("error", "%f");
             int rowIndex = 0;
             for (int i = 0; i < report.length; i++) {
                 for ( int j = 0; j < report[i].bins.length ; j++ ) {
                     for ( int k = 0; k < report[i].bins[j].bins.length ; k++ ) {
-                        table.set(rowIndex, 0, i);
-                        table.set(rowIndex, 1, j);
-                        table.set(rowIndex, 2, String.format("%c", binToBase(k)));
-                        table.set(rowIndex, 3, report[i].bins[j].bins[k].getCount());
-                        table.set(rowIndex, 4, report[i].bins[j].bins[k].getFalseRate());
-                        rowIndex++;
+                        for ( int m = 0; m < report[i].bins[j].bins[k].bins.length ; m++ ) {
+                            table.set(rowIndex, 0, i);
+                            table.set(rowIndex, 1, j);
+                            table.set(rowIndex, 2, binToDeviation(k));
+                            table.set(rowIndex, 3, String.format("%c", binToBase(m)));
+                            table.set(rowIndex, 4, report[i].bins[j].bins[k].bins[m].getCount());
+                            table.set(rowIndex, 5, report[i].bins[j].bins[k].bins[m].getFalseRate());
+                            rowIndex++;
+                        }
                     }
                 }
             }
@@ -196,6 +214,9 @@ public class GroundTruthScorer extends ReadWalker {
     @Argument(fullName = NORMALIZED_SCORE_THRESHOLD_LONG_NAME, doc="threshold for normalized score, below which reads are ignored", optional = true)
     public double normalizedScoreThreshold = NORMALIZED_SCORE_THRESHOLD_DEFAULT;
 
+    @Argument(fullName = ADD_MEAN_CALL_LONG_NAME, doc="Add ReadMeanCall and ReadProbs columns to output", optional = true)
+    public boolean addMeanCalll;
+
     @Argument(fullName = "gt-no-output", doc = "do not generate output records", optional = true)
     public boolean      noOutput = false;
 
@@ -206,17 +227,28 @@ public class GroundTruthScorer extends ReadWalker {
     private DecimalFormat                       doubleFormat = new DecimalFormat("0.0#####");
     private GenomePriorDB                       genomePriorDB;
     private BooleanAccumulator[]                qualReport;
+    private String[]                            csvFieldOrder;
 
     // static/const
-    static final private String[]       CSV_FIELD_ORDER = {
+    static final private String[]       CSV_FIELD_ORDER_BASIC = {
             "ReadName", "ReadKey", "ReadIsReversed", "ReadMQ", "ReadRQ", "GroundTruthKey", "ReadSequence",
             "Score", "NormalizedScore", "ErrorProbability",
-            "ReadKeyLength", "GroundTruthKeyLength", "CycleSkipStatus", "Cigar"
+            "ReadKeyLength", "GroundTruthKeyLength", "CycleSkipStatus", "Cigar", "LowestQBaseTP"
+    };
+    static final private String[]       CSV_FIELD_ORDER_MEAN_CALL = {
+            "ReadProbs", "ReadMeanCall"
     };
 
     @Override
     public void onTraversalStart() {
         super.onTraversalStart();
+
+        // establish csv fields
+        List<String>        order = new LinkedList<>(Arrays.asList(CSV_FIELD_ORDER_BASIC));
+        if ( addMeanCalll ) {
+            order.addAll(Arrays.asList(CSV_FIELD_ORDER_MEAN_CALL));
+        }
+        csvFieldOrder = order.toArray(new String[0]);
 
         // create likelihood engine
         final ReadLikelihoodCalculationEngine engine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(likelihoodArgs, false);
@@ -249,7 +281,7 @@ public class GroundTruthScorer extends ReadWalker {
 
         // initialize reports
         if ( reportFilePath != null ) {
-            qualReport = BooleanAccumulator.newReport(QUAL_VALUE_MAX + 1, HMER_VALUE_MAX + 1, BASE_VALUE_MAX + 1);
+            qualReport = BooleanAccumulator.newReport(QUAL_VALUE_MAX + 1, HMER_VALUE_MAX + 1, deviationToBin(HMER_VALUE_MAX + 1), BASE_VALUE_MAX + 1);
         }
     }
 
@@ -266,7 +298,7 @@ public class GroundTruthScorer extends ReadWalker {
             final GATKReport report = new GATKReport(
                     BooleanAccumulator.newReportTable(qualReport, "qual", fbargs.probabilityRatioThreshold),
                     BooleanAccumulator.newReportTable(qualReport, "qual", "hmer"),
-                    BooleanAccumulator.newReportTable(qualReport, "qual", "hmer", "base"));
+                    BooleanAccumulator.newReportTable(qualReport, "qual", "hmer", "deviation", "base"));
             try ( final PrintStream ps = new PrintStream(reportFilePath.getOutputStream()) ) {
                 report.print(ps);
             }
@@ -373,7 +405,8 @@ public class GroundTruthScorer extends ReadWalker {
 
         final int[] key = flowRead.getKey();
         final byte[] flowOrder = flowRead.getFlowOrderArray();
-        final double[] probCol = new double[FlowBasedRead.MAX_CLASS + 1];
+
+        final double[] probCol = new double[flowRead.getMaxHmer() + 1];
         double[] result = new double[key.length];
 
         for ( int i = 0 ; i < key.length ; i++ ) {
@@ -410,9 +443,59 @@ public class GroundTruthScorer extends ReadWalker {
         return result;
     }
 
+    /*
+     * compute lowest-quality-base-tp-value vector for a read
+     *
+     * The vector has one element for each flow key, representing the value of the tp for the hmer base
+     * which has the lowest quality value
+     *
+     * example:
+     * Bases:  TTTTT
+     * Qs:     ABCBA
+     * Tp:     -1 1 0 1 -1
+     * Output: -1
+     */
+    private byte[] computeLowestQBaseTP(final FlowBasedRead flowRead) {
+
+        final int[] key = flowRead.getKey();
+        byte[] result = new byte[key.length];
+        final byte[] tp = flowRead.getAttributeAsByteArray("tp");
+        final byte[] qual = flowRead.getBaseQualitiesNoCopy();
+
+        // loop om key
+        int seq_i = 0;
+        for ( int i = 0 ; i < key.length ; i++ ) {
+
+            // extract hmer length, zero is easy
+            int hmer = key[i];
+            if ( hmer == 0 ) {
+                result[i] = 0;
+                continue;
+            }
+
+            // scan qualities for the lowest value, start with first
+            // as qualities and tp are symetric, we can scan up to the middle
+            // when finding the middle (offset) account for even/odd hmers
+            result[i] = tp[seq_i];
+            byte lowestQ = qual[seq_i];
+            int hmer_scan_length = (hmer + 1) / 2;
+            for ( int j = 1 ; j < hmer_scan_length ; j++ ) {
+                if ( qual[seq_i + j] < lowestQ ) {
+                    result[i] = tp[seq_i + j];
+                    lowestQ = qual[seq_i + j];
+                }
+            }
+
+            // advance
+            seq_i += hmer;
+        }
+
+        return result;
+    }
+
     private void emitCsvHeaders() {
 
-        outputCsv.println(StringUtils.join(CSV_FIELD_ORDER, ","));
+        outputCsv.println(StringUtils.join(csvFieldOrder, ","));
     }
 
     private void emit(final FlowBasedRead flowRead, final FlowBasedHaplotype refHaplotype, double score, final double normalizedScore, final double[] errorProb,
@@ -445,10 +528,25 @@ public class GroundTruthScorer extends ReadWalker {
                 Arrays.stream(errorProb).mapToObj(v -> doubleFormat.format(v)).toArray(),
                 ',') + "\"");
 
+        // lowest q base tp
+        final byte[]    lowestQBaseTP = computeLowestQBaseTP(flowRead);
+        cols.put("LowestQBaseTP", "\"" + StringUtils.join(lowestQBaseTP, ',') + "\"");
+
+        // add read probabilities
+        if ( addMeanCalll ) {
+            double[][] readProbsAndMeanCall = collectReadProbs(flowRead);
+            cols.put("ReadProbs", "\"" + StringUtils.join(
+                    Arrays.stream(readProbsAndMeanCall[0]).mapToObj(v -> doubleFormat.format(v)).toArray(),
+                    ',') + "\"");
+            cols.put("ReadMeanCall", "\"" + StringUtils.join(
+                    Arrays.stream(readProbsAndMeanCall[1]).mapToObj(v -> doubleFormat.format(v)).toArray(),
+                    ',') + "\"");
+        }
+
         // construct line
         StringBuilder       sb = new StringBuilder();
         int                 colIndex = 0;
-        for ( String field : CSV_FIELD_ORDER ) {
+        for ( String field : csvFieldOrder ) {
             if ( colIndex++ > 0 ) {
                 sb.append(',');
             }
@@ -468,6 +566,30 @@ public class GroundTruthScorer extends ReadWalker {
         }
     }
 
+    private double[][] collectReadProbs(final FlowBasedRead read) {
+
+        final int keyLength = read.getKeyLength();
+        final int maxHmer = read.getMaxHmer();
+        final double[] probs = new double[keyLength * (maxHmer + 1)];
+        final double[] meanCall = new double[keyLength];
+
+        // retrieve probs
+        int pos = 0;
+        for ( int flow = 0 ; flow < keyLength ; flow++ ) {
+            double mc = 0;
+            int mc_sum = 0;
+            for ( int hmer = 0 ; hmer <= maxHmer ; hmer++ ) {
+                final double p = read.getProb(flow, hmer);
+                probs[pos++] = p;
+                mc += (p * hmer);
+                mc_sum += hmer;
+            }
+            meanCall[flow] = mc / mc_sum;
+        }
+
+        return new double[][] {probs, meanCall};
+    }
+
     static private class GenomePriorDB {
 
         final private Map<Byte, long[]>      db = new LinkedHashMap<>();
@@ -477,7 +599,7 @@ public class GroundTruthScorer extends ReadWalker {
             final CSVReader     csvReader = new CSVReader(new InputStreamReader(path.getInputStream()));
             String[]            line;
             while ( (line = csvReader.readNext()) != null ) {
-                long[]          prior = new long[FlowBasedRead.MAX_CLASS + 1];
+                long[]          prior = new long[HMER_VALUE_MAX + 1];
                 Byte            base = line[0].getBytes()[0];
                 for ( int i = 0 ; i < prior.length ; i++ ) {
                     if ( i == 0 ){
@@ -517,22 +639,43 @@ public class GroundTruthScorer extends ReadWalker {
             final int           qual = (int)Math.ceil(-10 * Math.log10(prob));
 
             // determine if matches reference
-            final boolean       same = readKey[flow] == hapKey[flow];
+            final int           deviation = readKey[flow] - hapKey[flow];
+            final boolean       same = (deviation == 0);
 
             // accumulate
             if ( qual < qualReport.length ) {
-                int         baseBin = baseToBin(flowOrder[flow % flowOrder.length]);
-                qualReport[qual].add(same, readKey[flow], baseBin);
+                int         baseBin = baseToBin(flowOrder[flow % flowOrder.length], flowRead.isReverseStrand());
+                qualReport[qual].add(same, readKey[flow], deviation, baseBin);
             }
         }
     }
 
-    static private int baseToBin(byte base) {
-        return FlowBasedRead.DEFAULT_FLOW_ORDER.indexOf(base);
+    static private int baseToBin(byte base, boolean isReverseStrand) {
+        final byte trueBase = !isReverseStrand ? base : BaseUtils.simpleComplement(base);
+        return FlowBasedRead.DEFAULT_FLOW_ORDER.indexOf(trueBase);
     }
 
     static private byte binToBase(int bin) {
         return (byte)FlowBasedRead.DEFAULT_FLOW_ORDER.charAt(bin);
     }
 
+    // 0,-1,1,-2,2... -> 0,1,2,3,4...
+    static private int deviationToBin(final int deviation) {
+        if ( deviation >= 0 ) {
+            return deviation * 2;
+        } else {
+            return (-deviation * 2) - 1;
+        }
+    }
+
+    // 0,1,2,3,4... -> 0,-1,1,-2,2...
+    static private String binToDeviation(final int bin) {
+        if ( bin == 0 ) {
+            return "0";
+        } else if ( (bin % 2) == 0 ) {
+            return String.format("+%d", bin / 2);
+        } else {
+            return String.format("%d", -((bin+1) / 2));
+        }
+    }
 }

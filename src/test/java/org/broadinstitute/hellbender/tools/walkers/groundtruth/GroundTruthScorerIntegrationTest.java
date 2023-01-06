@@ -14,6 +14,7 @@ public class GroundTruthScorerIntegrationTest extends CommandLineProgramTest {
 
     public static final boolean UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS = false;
     public static final String OUTPUT_FILENAME = "ground_truth_scorer_output.csv";
+    public static final String OUTPUT_FILENAME_MEANCALL = "ground_truth_scorer_output_meancall.csv";
     public static final String OUTPUT_FILENAME_UNCLIPPED = "ground_truth_scorer_output_unclipped.csv";
     public static final String OUTPUT_FILENAME_GENOME_PRIOR = "ground_truth_scorer_output_genome_prior.csv";
     public static final String OUTPUT_FILENAME_FILTER = "ground_truth_scorer_output_filter.csv";
@@ -39,6 +40,27 @@ public class GroundTruthScorerIntegrationTest extends CommandLineProgramTest {
 
         final String[] args = buildCommonArgs(outputFile, GT_SCORER_INPUT_BAM, true);
 
+        runCommandLine(args);  // no assert, just make sure we don't throw
+
+        // make sure we've generated the output file
+        Assert.assertTrue(outputFile.exists());
+
+        // walk the output and expected files, compare non-comment lines
+        if ( !UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
+            IntegrationTestSpec.assertEqualTextFiles(outputFile, expectedFile);
+        }
+    }
+
+    @Test
+    public void testMeanCall() throws IOException {
+
+        final File outputDir = createTempDir("testGroundTruthTest");
+        final File expectedFile = new File(testDir + "/" + OUTPUT_FILENAME_MEANCALL);
+        final File outputFile = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expectedFile : new File(outputDir + "/" + OUTPUT_FILENAME_MEANCALL);
+
+        final String[] args = ArrayUtils.addAll(buildCommonArgs(outputFile, GT_SCORER_INPUT_BAM, true),
+                "--add-mean-call"
+        );
         runCommandLine(args);  // no assert, just make sure we don't throw
 
         // make sure we've generated the output file
