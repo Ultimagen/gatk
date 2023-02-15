@@ -694,6 +694,7 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                     activeRegionDetectionHackishSamplePloidy,
                     sample.getValue().getBasePileup(), ref.getBase(),
                     hcArgs.minBaseQualityScore,
+                    hcArgs.assemblerArgs.minMappingQualityInAssemblyPileup,
                     averageHQSoftClips, false)).genotypeLikelihoods;
             genotypes.add(new GenotypeBuilder(sample.getKey()).alleles(noCall).PL(genotypeLikelihoods).make());
         }

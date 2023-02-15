@@ -61,6 +61,7 @@ public class SomaticReferenceConfidenceModel extends ReferenceConfidenceModel {
                                                                        final ReadPileup pileup,
                                                                        final byte refBase,
                                                                        final byte minBaseQual,
+                                                                       final int minMapQual,
                                                                        final MathUtils.RunningAverage hqSoftClips,
                                                                        final boolean readsWereRealigned) {
 
@@ -72,6 +73,9 @@ public class SomaticReferenceConfidenceModel extends ReferenceConfidenceModel {
 
         for (final PileupElement element : pileup) {
             if (!element.isDeletion() && element.getQual() <= minBaseQual) {
+                continue;
+            }
+            if (element.getMappingQual() >= minMapQual){
                 continue;
             }
 
