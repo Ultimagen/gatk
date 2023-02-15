@@ -85,6 +85,7 @@ public class ReferenceConfidenceModel {
      */
     private static final byte BASE_QUAL_THRESHOLD = 6;
 
+    private static final int MAP_QUAL_THRESHOLD = -1;
     /**
      * Only base calls with quality strictly greater than this constant,
      * will be considered high quality if they are part of a soft-clip.
@@ -265,18 +266,18 @@ public class ReferenceConfidenceModel {
 
 
    public VariantContext makeReferenceConfidenceVariantContext(final int ploidy,
-                                                                 final byte[] ref,
-                                                                 final String sampleName,
-                                                                 final int globalRefOffset,
-                                                                 final ReadPileup pileup,
-                                                                 final Locatable curPos,
-                                                                 final int offset,
-                                                                 final boolean applyPriors,
-                                                                 final List<VariantContext> VCpriors) {
+                                                               final byte[] ref,
+                                                               final String sampleName,
+                                                               final int globalRefOffset,
+                                                               final ReadPileup pileup,
+                                                               final Locatable curPos,
+                                                               final int offset,
+                                                               final boolean applyPriors,
+                                                               final List<VariantContext> VCpriors) {
         // Assume infinite population on a single sample.
         final int refOffset = offset + globalRefOffset;
         final byte refBase = ref[refOffset];
-        final ReferenceConfidenceResult homRefCalc = calcGenotypeLikelihoodsOfRefVsAny(ploidy, pileup, refBase, BASE_QUAL_THRESHOLD, null, true);
+        final ReferenceConfidenceResult homRefCalc = calcGenotypeLikelihoodsOfRefVsAny(ploidy, pileup, refBase, BASE_QUAL_THRESHOLD, -1, null, true);
 
         final Allele refAllele = Allele.create(refBase, true);
         final List<Allele> refSiteAlleles = Arrays.asList(refAllele, Allele.NON_REF_ALLELE);
@@ -399,6 +400,7 @@ public class ReferenceConfidenceModel {
                                                                        final ReadPileup pileup,
                                                                        final byte refBase,
                                                                        final byte minBaseQual,
+                                                                       final int minMappingQual,
                                                                        final MathUtils.RunningAverage hqSoftClips,
                                                                        final boolean readsWereRealigned) {
 
@@ -413,7 +415,8 @@ public class ReferenceConfidenceModel {
             //active region detection we for now use more sensitive reference confidence model where any deletion is
             //a strong evidence against reference.
             final byte qual = p.isDeletion() ? getDeletionQuality(p, refBase, readsWereRealigned) : p.getQual();
-            if ( (qual <= minBaseQual) && (flowBasedModel || !p.isDeletion())) {
+            final int  mapQual = p.getMappingQual();
+            if ( (qual <= minBaseQual) && (flowBasedModel || !p.isDeletion()) && ( mapQual >= minMappingQual )) {
                 continue;
             }
             if (!useSoftClippedBases && readsWereRealigned){
