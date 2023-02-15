@@ -145,11 +145,11 @@ public final class AssemblyBasedCallerUtils {
             final GATKRead read = (softClipLowQualityEnds ? ReadClipper.softClipLowQualEnds(readTemp, minTailQualityToUse) :
                     ReadClipper.hardClipLowQualEnds(readTemp, minTailQualityToUse));
 
+
             HardClipAndPossiblyAddToCollection(region, readsToUse, originalRead, read);
 
             if (trackHardclippedReads) {
                 final GATKRead hardClippedRead = ReadClipper.hardClipLowQualEnds(ReadClipper.hardClipSoftClippedBases(originalRead), minTailQualityToUse);
-
                 HardClipAndPossiblyAddToCollection(region, hardClippedReadsToUse, originalRead, hardClippedRead);
             }
         }
