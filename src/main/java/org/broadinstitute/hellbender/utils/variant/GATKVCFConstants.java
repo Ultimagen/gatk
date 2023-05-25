@@ -48,8 +48,8 @@ public final class GATKVCFConstants {
     public static final String AS_FISHER_STRAND_KEY =               "AS_FS";
     public static final String AS_SB_TABLE_KEY =                    "AS_SB_TABLE";
     public static final String AS_SBP_TABLE_KEY =                   "AS_SBP_TABLE";
-    public static final String SCL_COUNT_KEY =                           "SCL";
-    public static final String SCR_COUNT_KEY =                           "SCR";
+    public static final String SOFT_CLIP_LEFT_COUNT_KEY =           "SCL";
+    public static final String SOFT_CLIP_RIGHT_COUNT_KEY =          "SCR";
 
     public static final String POSSIBLE_FP_ADJACENT_TP_KEY =        "SUSP_NOISY_ADJACENT_TP_VARIANT";
     public static final String SB_TABLE_KEY =                       "SB_TABLE";
