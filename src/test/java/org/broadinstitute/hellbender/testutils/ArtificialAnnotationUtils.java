@@ -32,6 +32,18 @@ public class ArtificialAnnotationUtils {
         read.setBaseQualities(Utils.dupBytes((byte) qual, 10));
         return read;
     }
+    public static GATKRead makeSoftClippedRead(final int qual, final int mappingQuality, boolean leftClip) {
+        final String cigarString = leftClip ? "5S10M":"10M5S";
+        final GATKRead read = ArtificialReadUtils.createArtificialRead(TextCigarCodec.decode(cigarString));
+        read.setMappingQuality(mappingQuality);
+        read.setBaseQualities(Utils.dupBytes((byte) qual, 15));
+        return read;
+    }
+
+
+
+
+
 
     public static VariantContext makeVC() {
         final GenotypesContext testGC = GenotypesContext.create(2);
