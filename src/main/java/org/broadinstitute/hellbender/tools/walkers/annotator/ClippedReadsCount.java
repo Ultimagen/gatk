@@ -1,5 +1,6 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator;
 
+import htsjdk.samtools.CigarOperator;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.GenotypeBuilder;
@@ -12,8 +13,12 @@ import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.tools.walkers.annotator.allelespecific.AlleleSpecificAnnotationData;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.ReferenceConfidenceModel;
 import org.broadinstitute.hellbender.utils.Utils;
+import org.broadinstitute.hellbender.utils.clipping.ReadClipper;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.help.HelpConstants;
+import org.broadinstitute.hellbender.utils.pileup.PileupBasedAlleles;
+import org.broadinstitute.hellbender.utils.pileup.PileupElement;
+import org.broadinstitute.hellbender.utils.pileup.ReadPileup;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 
@@ -50,8 +55,52 @@ public class ClippedReadsCount implements GenotypeAnnotation {
     public void annotate(ReferenceContext ref, VariantContext vc, Genotype g, GenotypeBuilder gb, AlleleLikelihoods<GATKRead, Allele> likelihoods) {
 
         List<GATKRead> allReads = likelihoods.sampleEvidence(likelihoods.indexOfSample(g.getSampleName())).stream().collect(Collectors.toList());
+        allReads.addAll(likelihoods.filteredSampleEvidence(likelihoods.indexOfSample(g.getSampleName())).stream().collect(Collectors.toList()));
+        List<GATKRead> leftClippedReads = allReads.stream().filter( rd -> rd.overlaps(vc) && wasReadClipped(rd, false )).collect(Collectors.toList());
+        List<GATKRead> rightClippedReads = allReads.stream().filter( rd -> rd.overlaps(vc) && wasReadClipped(rd, true )).collect(Collectors.toList());
+        ReadPileup leftClippedPileup = new ReadPileup(ref.getInterval(),leftClippedReads);
+        Map<Allele, Integer> leftClippedCounts = PileupBasedAlleles.getPileupAlleleCounts(vc, leftClippedPileup);
+        final int[] counts = new int[vc.getNAlleles()];
+        counts[0] = leftClippedCounts.get(vc.getReference()); //first one in AD is always ref
+        for (int i = 0; i < vc.getNAlleles() -1; i++) {
+            counts[i + 1] = leftClippedCounts.get(vc.getAlternateAllele(i));
+        }
+        gb.attribute(getKeyNames().get(0), counts.clone());
 
-        List<GATKRead> leftClipped = allReads.stream().filter( rd -> rd.hasAttribute(ReferenceConfidenceModel.ORIGINAL_SOFTCLIP_START_TAG)).collect(Collectors.toList());
-        List<GATKRead> rightClipped = allReads.stream().filter( rd -> rd.hasAttribute(ReferenceConfidenceModel.ORIGINAL_SOFTCLIP_END_TAG)).collect(Collectors.toList());
+        ReadPileup rightClippedPileup = new ReadPileup(ref.getInterval(),rightClippedReads);
+        Map<Allele, Integer> rightClippedCounts = PileupBasedAlleles.getPileupAlleleCounts(vc, rightClippedPileup);
+        for (int i = 0 ; i < counts.length; i++){
+            counts[i] = 0;
+        }
+        counts[0] = rightClippedCounts.get(vc.getReference()); //first one in AD is always ref
+        for (int i = 0; i < vc.getNAlleles() -1; i++) {
+            counts[i + 1] = rightClippedCounts.get(vc.getAlternateAllele(i));
+        }
+
+        gb.attribute(getKeyNames().get(1), counts);
+    }
+
+    //collect reads that are now softclipped or were softclipped before reversion of the softclipping or were softclipped before hardclipping
+    //softclipped bases
+    private boolean wasReadClipped(final GATKRead read, boolean rightClipping){
+
+        if ((!rightClipping) &&
+                read.hasAttribute(ReadClipper.ORIGINAL_SOFTCLIP_TAG) &&
+                read.getAttributeAsString(ReadClipper.ORIGINAL_SOFTCLIP_TAG).contains(ReadClipper.LEFT_SOFTCLIPPING_MARK)) {
+            return true;
+        }
+        if ((!rightClipping) && (!read.isUnmapped()) && (read.getCigar().getFirstCigarElement().getOperator()== CigarOperator.SOFT_CLIP)){
+            return true;
+        }
+
+        if ((rightClipping) &&
+                read.hasAttribute(ReadClipper.ORIGINAL_SOFTCLIP_TAG) &&
+                read.getAttributeAsString(ReadClipper.ORIGINAL_SOFTCLIP_TAG).contains(ReadClipper.RIGHT_SOFTCLIPPING_MARK)) {
+            return true;
+        }
+        if ((rightClipping) && (!read.isUnmapped()) && (read.getCigar().getLastCigarElement().getOperator()== CigarOperator.SOFT_CLIP)){
+            return true;
+        }
+        return false;
     }
 }
