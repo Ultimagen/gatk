@@ -22,6 +22,7 @@ import org.broadinstitute.hellbender.utils.IndexRange;
 import org.broadinstitute.hellbender.utils.QualityUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
+import org.broadinstitute.hellbender.utils.clipping.ClippingRepresentation;
 import org.broadinstitute.hellbender.utils.clipping.ReadClipper;
 import org.broadinstitute.hellbender.utils.dragstr.DragstrParamUtils;
 import org.broadinstitute.hellbender.utils.fragments.FragmentCollection;
@@ -1029,6 +1030,14 @@ public final class AssemblyBasedCallerUtils {
         GATKRead result = ReadClipper.revertSoftClippedBases(inputRead);
         result.setAttribute(ReferenceConfidenceModel.ORIGINAL_SOFTCLIP_START_TAG, softStart);
         result.setAttribute(ReferenceConfidenceModel.ORIGINAL_SOFTCLIP_END_TAG, softEnd);
+
+        boolean clippedLeft = (softStart > result.getStart());
+        boolean clippedRight = (softEnd < result.getEnd());
+        String clippingString = clippedLeft ? ReadClipper.LEFT_SOFTCLIPPING_MARK:"" + (clippedRight ? ReadClipper.RIGHT_SOFTCLIPPING_MARK:"");
+        if (clippedLeft || clippedRight) {
+            result.setAttribute(ReadClipper.ORIGINAL_SOFTCLIP_TAG, clippingString);
+        }
+
         return result;
     }
 
