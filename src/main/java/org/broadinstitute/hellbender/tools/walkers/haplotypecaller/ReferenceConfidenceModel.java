@@ -58,7 +58,6 @@ public class ReferenceConfidenceModel {
     // these are filled only when the softclipping is being reversed
     public static final String ORIGINAL_SOFTCLIP_START_TAG = "os";
     public static final String ORIGINAL_SOFTCLIP_END_TAG = "oe";
-
     private final SampleList samples;
     private final int indelInformativeDepthIndelSize;
     private final int numRefSamplesForPrior;
