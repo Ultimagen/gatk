@@ -12,6 +12,7 @@ import org.broadinstitute.hellbender.engine.ReferenceDataSource;
 import org.broadinstitute.hellbender.engine.ReferenceFileSource;
 import org.broadinstitute.hellbender.testutils.ArtificialAnnotationUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
+import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleList;
 import org.broadinstitute.hellbender.utils.genotyper.IndexedAlleleList;
@@ -37,10 +38,13 @@ public class ClippedReadsCountTest extends GATKBaseTest {
     private static final List<Allele> ALLELES = Arrays.asList(REF, ALT);
     private static final String SAMPLE = "sample1";
 
-    private GATKRead makeRead() {
-        return ArtificialAnnotationUtils.makeRead(30, 50);
+    private GATKRead makeRead(final byte readBase) {
+        final int readLength = 10;
+        return ArtificialAnnotationUtils.makeRead(readBase, (byte)30, 50);
     }
-    private GATKRead makeSoftClippedRead(final boolean leftClip){ return ArtificialAnnotationUtils.makeSoftClippedRead(10, 50, leftClip);}
+    private GATKRead makeSoftClippedRead(final byte readBase, final boolean leftClip){
+        return ArtificialAnnotationUtils.makeSoftClippedRead(readBase,(byte)10, 50, leftClip);
+    }
 
     @Test
     public void testDescription(){
@@ -70,24 +74,22 @@ public class ClippedReadsCountTest extends GATKBaseTest {
 
         final double log10PError = -5;
 
-        final List<GATKRead> refReads = IntStream.range(0, dpDepth - expectedLeftCount[0] - expectedRightCount[0]).mapToObj(i -> makeRead()).collect(Collectors.toList());
-        final List<GATKRead> refClippedReads = IntStream.range(0, expectedLeftCount[0]).mapToObj(i -> makeSoftClippedRead(true)).collect(Collectors.toList());
-        final List<GATKRead> altClippedReads = IntStream.range(0, expectedRightCount[1]).mapToObj(i -> makeSoftClippedRead(false)).collect(Collectors.toList());
+        final List<GATKRead> refReads = IntStream.range(0, dpDepth - expectedLeftCount[0] - expectedRightCount[0]).mapToObj(i -> makeRead(REF.getBases()[0])).collect(Collectors.toList());
+        final List<GATKRead> refClippedReads = IntStream.range(0, expectedLeftCount[0]).mapToObj(i -> makeSoftClippedRead(REF.getBases()[0], true)).collect(Collectors.toList());
+        final List<GATKRead> altClippedReads = IntStream.range(0, expectedRightCount[1]).mapToObj(i -> makeSoftClippedRead(ALT.getBases()[0], false)).collect(Collectors.toList());
         refReads.addAll(refClippedReads);
         final AlleleLikelihoods<GATKRead, Allele> likelihoods =
                 ArtificialAnnotationUtils.makeLikelihoods(SAMPLE, refReads, altClippedReads, -100.0, -100.0, REF, ALT);
 
-        final VariantContext vc = new VariantContextBuilder("test", "20", 10, 10, ALLELES).log10PError(log10PError).genotypes(Arrays.asList(gAC)).make();
+        final VariantContext vc = new VariantContextBuilder("test", "1", 10005, 10005, ALLELES).log10PError(log10PError).genotypes(Arrays.asList(gAC)).make();
 
         final GenotypeBuilder gb = new GenotypeBuilder(gAC);
         new ClippedReadsCount().annotate(new ReferenceContext(new ReferenceFileSource(Path.of(b37_reference_20_21)),
-                new SimpleInterval("20", 10, 11)), vc, gAC, gb, likelihoods);
-        final int[] ad = gb.make().getAD();
-        Assert.assertEquals(ad, new int[]{refReads.size(), altClippedReads.size()});
+                new SimpleInterval("20", 10005, 10005)), vc, gAC, gb, likelihoods);
+        final int[] scl = (int [])gb.make().getExtendedAttribute("SCL");
+        final int[] scr = (int [])gb.make().getExtendedAttribute("SCR");
+        Assert.assertEquals(scl, expectedLeftCount);
+        Assert.assertEquals(scr, expectedRightCount);
 
-        //now test a no-op
-        final GenotypeBuilder gb1 = new GenotypeBuilder(gAC);
-        new ClippedReadsCount().annotate(null, vc, null, gb1, likelihoods);  //null genotype
-        Assert.assertFalse(gb1.make().hasAD());
     }
 }
