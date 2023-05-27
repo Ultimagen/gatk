@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
  * the soft clipping is reverted during the flow
  */
 
-@DocumentedFeature(groupName= HelpConstants.DOC_CAT_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_ANNOTATORS_SUMMARY, summary="Number of soft clipped reads ")
+@DocumentedFeature(groupName= HelpConstants.DOC_CAT_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_ANNOTATORS_SUMMARY, summary="Number of soft clipped reads per allele")
 
 public class ClippedReadsCount implements GenotypeAnnotation {
     private final static Logger logger = LogManager.getLogger(ClippedReadsCount.class);
