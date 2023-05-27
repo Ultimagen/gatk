@@ -1,6 +1,5 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator;
 
-import htsjdk.samtools.CigarOperator;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.GenotypeBuilder;
@@ -10,7 +9,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
-import org.broadinstitute.hellbender.utils.clipping.ReadClipper;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.help.HelpConstants;
 import org.broadinstitute.hellbender.utils.pileup.PileupBasedAlleles;
@@ -24,7 +22,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @DocumentedFeature(groupName= HelpConstants.DOC_CAT_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_ANNOTATORS_SUMMARY, summary="Number of MQ0 reads per allele")
-public class MappingQuality0Counts implements GenotypeAnnotation{
+public class MappingQuality0Count implements GenotypeAnnotation{
     private final static Logger logger = LogManager.getLogger(ClippedReadsCount.class);
 
     public List<String> getKeyNames() {
