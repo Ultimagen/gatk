@@ -56,8 +56,8 @@ public class ClippedReadsCount implements GenotypeAnnotation {
 
         List<GATKRead> allReads = likelihoods.sampleEvidence(likelihoods.indexOfSample(g.getSampleName())).stream().collect(Collectors.toList());
         allReads.addAll(likelihoods.filteredSampleEvidence(likelihoods.indexOfSample(g.getSampleName())).stream().collect(Collectors.toList()));
-        List<GATKRead> leftClippedReads = allReads.stream().filter( rd -> rd.overlaps(vc) && wasReadClipped(rd, false )).collect(Collectors.toList());
-        List<GATKRead> rightClippedReads = allReads.stream().filter( rd -> rd.overlaps(vc) && wasReadClipped(rd, true )).collect(Collectors.toList());
+        List<GATKRead> leftClippedReads = allReads.stream().filter( rd -> (rd.getStart() <= rd.getEnd()) && rd.overlaps(vc) && wasReadClipped(rd, false )).collect(Collectors.toList());
+        List<GATKRead> rightClippedReads = allReads.stream().filter( rd -> (rd.getStart() <= rd.getEnd()) && rd.overlaps(vc) && wasReadClipped(rd, true )).collect(Collectors.toList());
         ReadPileup leftClippedPileup = new ReadPileup(ref.getInterval(),leftClippedReads);
         Map<Allele, Integer> leftClippedCounts = PileupBasedAlleles.getPileupAlleleCounts(vc, leftClippedPileup);
         final int[] counts = new int[vc.getNAlleles()];
