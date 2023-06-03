@@ -44,7 +44,7 @@ public class MappingQuality0Count implements GenotypeAnnotation{
 
         List<GATKRead> allReads = likelihoods.sampleEvidence(likelihoods.indexOfSample(g.getSampleName())).stream().collect(Collectors.toList());
         allReads.addAll(likelihoods.filteredSampleEvidence(likelihoods.indexOfSample(g.getSampleName())).stream().collect(Collectors.toList()));
-        List<GATKRead> mq0Reads = allReads.stream().filter( rd -> rd.overlaps(vc) && (rd.getMappingQuality() == 0)).collect(Collectors.toList());
+        List<GATKRead> mq0Reads = allReads.stream().filter( rd -> (rd.getStart() <= rd.getEnd()) && rd.overlaps(vc) && (rd.getMappingQuality() == 0)).collect(Collectors.toList());
         ReadPileup mq0Pileup = new ReadPileup(ref.getInterval(),mq0Reads);
         Map<Allele, Integer> mq0Counts = PileupBasedAlleles.getPileupAlleleCounts(vc, mq0Pileup);
         final int[] counts = new int[vc.getNAlleles()];
