@@ -1,6 +1,8 @@
 package org.broadinstitute.hellbender.tools.walkers.groundtruth;
 
 import com.google.common.annotations.VisibleForTesting;
+import htsjdk.samtools.SAMUtils;
+import org.apache.logging.log4j.core.util.Assert;
 import org.broadinstitute.barclay.argparser.*;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.programgroups.FlowBasedProgramGroup;
@@ -15,6 +17,7 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.SAMFileGATKReadWriter;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -52,6 +55,9 @@ public final class AddFlowBaseQuality extends ReadWalker {
     public static final String MINIMAL_ERROR_RATE_LONG_NAME = "minimal-error-rate";
     public static final String MAXIMAL_QUALITY_SCORE_LONG_NAME = "maximal-quality-score";
     public static final String REPLACE_QUALITY_MODE_LONG_NAME = "replace-quality-mode";
+    public static final String BASE_QUALITY_AS_MIN_INDEL_QUALITY_LONG_NAME = "base-quality-as-min-indel-quality";
+    public static final String MIN_QUALITY_WINDOW_LONG_NAME = "min-quality-window-size";
+
     public static final String BASE_QUALITY_ATTRIBUTE_NAME = "XQ";
     public static final String OLD_QUALITY_ATTRIBUTE_NAME = "OQ";
     public static final char PHRED_ASCII_BASE = '!';
@@ -60,6 +66,7 @@ public final class AddFlowBaseQuality extends ReadWalker {
     public static final int ERROR_PROB_BAND_KEY = 1;
     public static final int ERROR_PROB_BAND_1MORE = 2;
     public static final int ERROR_PROB_BANDS = 3;
+
 
     @Argument(fullName = StandardArgumentDefinitions.OUTPUT_LONG_NAME,
             shortName = StandardArgumentDefinitions.OUTPUT_SHORT_NAME,
@@ -77,6 +84,12 @@ public final class AddFlowBaseQuality extends ReadWalker {
     @Argument(fullName = REPLACE_QUALITY_MODE_LONG_NAME, doc = "replace existing base qualities while saving previous qualities to OQ (when true) or simply write to BQ (when false) ")
     public boolean replaceQualityMode = false;
 
+    @Argument(fullName = BASE_QUALITY_AS_MIN_INDEL_QUALITY_LONG_NAME, doc = "Place quality as the minimal indel quality in a window - to mark locations prone to be indel errors")
+    public boolean useMinIndelQuality = false;
+
+    @Argument(fullName = MIN_QUALITY_WINDOW_LONG_NAME, doc = "Replace original quality with the minimal quality in the window of this size around the base, 5 means that the minimum of i-2,i-1,i,i+1,i+2 will be calculated")
+    public int minQualityWindow = 3;
+
     @ArgumentCollection
     public FlowBasedArgumentCollection fbargs = new FlowBasedArgumentCollection();
 
@@ -90,7 +103,11 @@ public final class AddFlowBaseQuality extends ReadWalker {
 
     @Override
     public void apply(final GATKRead read, final ReferenceContext referenceContext, final FeatureContext featureContext) {
-        outputWriter.addRead(addBaseQuality(read));
+        if (useMinIndelQuality) {
+            outputWriter.addRead(addBaseQualityAsMinIndelQuality(read, minQualityWindow));
+        } else {
+            outputWriter.addRead(addBaseQuality(read));
+        }
     }
 
     @Override
@@ -124,6 +141,47 @@ public final class AddFlowBaseQuality extends ReadWalker {
 
         // return reused read
         return read;
+    }
+
+    private GATKRead addBaseQualityAsMinIndelQuality(final GATKRead read, final int windowSize){
+        // generate base quality
+        final byte[]      quals = read.getBaseQualities();
+        final byte[]      t0 = SAMUtils.fastqToPhred(read.getAttributeAsString(FlowBasedRead.FLOW_MATRIX_T0_TAG_NAME));
+
+        final byte[]      phred = applyMinWindowToQualAndT0(quals, t0, windowSize);
+
+        // install in read
+        if ( !replaceQualityMode ) {
+            read.setAttribute(BASE_QUALITY_ATTRIBUTE_NAME, convertPhredToString(phred));
+        } else {
+            read.setAttribute(OLD_QUALITY_ATTRIBUTE_NAME, convertPhredToString(read.getBaseQualitiesNoCopy()));
+            read.setBaseQualities(phred);
+        }
+        return read;
+    }
+
+    @VisibleForTesting
+    protected static byte[] applyMinWindowToQualAndT0(final byte[] quals, final byte[] t0, final int windowSize) {
+        if (windowSize % 2 != 1){
+            throw new RuntimeException("Window size should be odd: " + windowSize + " given");
+        }
+        final byte[] result = new byte[quals.length];
+        final Byte[] temp = new Byte[quals.length];
+        if (t0!=null) {
+            for (int i = 0; i < quals.length; i++) {
+                temp[i] = quals[i] < t0[i] ? quals[i] : t0[i];
+            }
+        } else {
+            for (int i = 0; i < quals.length; i++){
+                temp[i] = quals[i];
+            }
+        }
+        final List<Byte> tempList = Arrays.asList(temp);
+        final int gap = (windowSize-1)/2;
+        for (int i = 0; i < quals.length; i++){
+            result[i] = Collections.min(tempList.subList(Math.max(i-gap,0),Math.min(i+gap+1,quals.length)));
+        }
+        return result;
     }
 
     private byte[] convertErrorProbToPhred(double[] errorProb) {

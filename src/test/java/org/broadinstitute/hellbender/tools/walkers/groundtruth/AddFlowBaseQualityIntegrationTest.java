@@ -27,11 +27,16 @@ public class AddFlowBaseQualityIntegrationTest extends CommandLineProgramTest {
     @Test
     public void testBasic() throws IOException {
 
-        final File outputDir = createTempDir("testGroundTruthTest");
+        final File outputDir = createTempDir("testAddFlowBaseQuality");
         final File expectedFile = new File(testDir + "/" + OUTPUT_FILENAME);
         final File outputFile = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expectedFile : new File(outputDir + "/" + OUTPUT_FILENAME);
 
-        final String[] args = buildCommonArgs(outputFile);
+        final String[] args =  new String[] {
+                "-R", largeFileTestDir + "/Homo_sapiens_assembly38.fasta.gz",
+                "-I", testDir + "/gt_scorer_input.bam",
+                "--output", outputFile.getAbsolutePath(),
+                "--intervals", "chr9:71000-74000",
+        };
 
         runCommandLine(args);  // no assert, just make sure we don't throw
 
@@ -42,16 +47,6 @@ public class AddFlowBaseQualityIntegrationTest extends CommandLineProgramTest {
         if ( !UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
             IntegrationTestSpec.assertEqualTextFiles(outputFile, expectedFile, "@");
         }
-    }
-
-    private String[] buildCommonArgs(final File outputFile) {
-
-        return new String[] {
-                "-R", largeFileTestDir + "/Homo_sapiens_assembly38.fasta.gz",
-                "-I", testDir + "/gt_scorer_input.bam",
-                "--output", outputFile.getAbsolutePath(),
-                "--intervals", "chr9:71000-74000",
-        };
     }
 
     @DataProvider(name = "generateHmerBaseErrorProbabilities")
@@ -91,4 +86,71 @@ public class AddFlowBaseQualityIntegrationTest extends CommandLineProgramTest {
 
         Assert.assertEquals(Arrays.stream(errorProbs).map(v -> Precision.round(v, resultPrecision)).toArray(), result);
     }
+
+    @DataProvider(name = "generateT0AndQualForMinWindow")
+    public Object[][] getT0AndQualForTesting() {
+        return new Object[][] {
+                {
+                        new byte[]{10, 20, 20, 10, 0, 5, 5}, // qual
+                        new byte[]{40, 40, 40, 40, 40, 40, 40}, //t0,
+                        3,
+                        new byte[]{10,10,10,0,0,0,5}  // result
+                },
+
+                {
+                        new byte[]{40, 40, 40, 40, 40, 40, 40}, //qual
+                        new byte[]{10, 20, 20, 10, 0, 5, 5}, // t0
+                        3,
+                        new byte[]{10,10,10,0,0,0,5}  // result
+                },
+                {
+                        new byte[]{40, 40, 40, 40, 40, 40, 40}, //qual
+                        new byte[]{40, 40, 40, 40, 40, 40, 40}, // t0
+                        3,
+                        new byte[]{40,40,40,40,40,40,40}  // result
+                },
+                {
+                        new byte[]{10, 20, 10, 20, 10, 20, 10}, //qual
+                        new byte[]{40, 40, 40, 40, 40, 40, 40}, // t0
+                        1,
+                        new byte[]{10, 20, 10, 20, 10, 20, 10}  // result
+                }
+        };
+    }
+
+    @Test(dataProvider = "generateT0AndQualForMinWindow")
+    public void testApplyMinWindowToQualAndT0(final byte[] qual, final byte[] t0, final int windowSize, final byte[] result) {
+
+        final byte[]        smoothedQuals = AddFlowBaseQuality.applyMinWindowToQualAndT0(qual, t0,windowSize);
+
+        Assert.assertEquals(smoothedQuals, result);
+    }
+    @Test
+    public void testSmoothing() throws IOException {
+
+        final File outputDir = createTempDir("testAddFlowBaseQuality");
+        final File expectedFile = new File(testDir + "/" + "add_flow_base_quality_smooth_output.sam");
+        final File outputFile = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expectedFile : new File(outputDir + "/" + OUTPUT_FILENAME);
+
+        final String[] args = new String[] {
+                "-R", largeFileTestDir + "/Homo_sapiens_assembly38.fasta.gz",
+                "-I", testDir + "/gt_scorer_input.bam",
+                "--output", outputFile.getAbsolutePath(),
+                "--intervals", "chr9:71000-74000",
+                "--"+AddFlowBaseQuality.BASE_QUALITY_AS_MIN_INDEL_QUALITY_LONG_NAME
+        };
+
+        runCommandLine(args);  // no assert, just make sure we don't throw
+
+        // make sure we've generated the otuput file
+        Assert.assertTrue(outputFile.exists());
+
+        // walk the output and expected files, compare non-comment lines
+        if ( !UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
+            IntegrationTestSpec.assertEqualTextFiles(outputFile, expectedFile, "@");
+        }
+    }
+
+
+
 }
