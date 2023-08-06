@@ -3,6 +3,7 @@ package org.broadinstitute.hellbender.tools.walkers.annotator;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.variant.variantcontext.*;
 import htsjdk.variant.vcf.VCFFormatHeaderLine;
+import ngs.Read;
 import org.broadinstitute.hellbender.GATKBaseTest;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.engine.ReferenceDataSource;
@@ -13,6 +14,7 @@ import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.read.ArtificialReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
+import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 import org.testng.Assert;
@@ -49,6 +51,7 @@ public class MismatchCountTest extends GATKBaseTest {
         String cigar = String.format("%dM", READ_LENGTH);
         GATKRead read =  ArtificialReadUtils.createArtificialRead(readBases, qual, cigar);
         read.setMappingQuality(20);
+        read.setAttribute(ReadUtils.NUM_MISMATCH_TAG, nMismatches);
         return read;
     }
 
