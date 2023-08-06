@@ -19,6 +19,7 @@ import org.broadinstitute.hellbender.utils.pileup.PileupBasedAlleles;
 import org.broadinstitute.hellbender.utils.pileup.ReadPileup;
 import org.broadinstitute.hellbender.utils.read.AlignmentUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
+import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 
 import java.util.*;
@@ -80,7 +81,7 @@ public class MismatchCount implements GenotypeAnnotation {
         }
     }
     protected Integer getElementForRead(final GATKRead read, final VariantContext vc, final ReferenceContext ref){
-        return AlignmentUtils.getMismatchCount(read, ref.getBases(), read.getStart()).numMismatches;
+        return read.getAttributeAsInteger(ReadUtils.NUM_MISMATCH_TAG);
     }
     /**
      * Can the read be used in comparative tests between ref / alt bases?
