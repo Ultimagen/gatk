@@ -131,6 +131,8 @@ public class GATKVCFHeaderLines {
                 "Per allele counts of soft-clipped reads with right soft-clipping"));
         addFormatLine(new VCFFormatHeaderLine(MQ0_COUNT_KEY, VCFHeaderLineCount.R,VCFHeaderLineType.Integer,
                 "Per allele counts of mq0 reads"));
+        addFormatLine(new VCFFormatHeaderLine(NM_COUNT_KEY, VCFHeaderLineCount.R,VCFHeaderLineType.Integer,
+                "Per allele median number of mismatches in reads supporting each allele"));
         addFormatLine(new VCFFormatHeaderLine(STRAND_COUNT_BY_SAMPLE_KEY, VCFHeaderLineCount.UNBOUNDED, VCFHeaderLineType.Integer, "Number of reads on the forward and reverse strand supporting each allele (including reference)"));
         addFormatLine(new VCFFormatHeaderLine(STRAND_BIAS_BY_SAMPLE_KEY, 4, VCFHeaderLineType.Integer, "Per-sample component statistics which comprise the Fisher's Exact Test to detect strand bias."));
         addFormatLine(new VCFFormatHeaderLine(HAPLOTYPE_CALLER_PHASING_ID_KEY, 1, VCFHeaderLineType.String, "Physical phasing ID information, where each unique ID within a given sample (but not across samples) connects records within a phasing group"));
