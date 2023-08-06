@@ -10,6 +10,8 @@ import htsjdk.samtools.util.Locatable;
 import htsjdk.variant.variantcontext.*;
 import htsjdk.variant.vcf.VCFConstants;
 import org.apache.commons.lang3.mutable.MutableInt;
+import org.apache.arrow.memory.util.AssertionUtil;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.gatk.nativebindings.smithwaterman.SWParameters;
@@ -128,7 +130,8 @@ public final class AssemblyBasedCallerUtils {
                                       final boolean correctOverlappingBaseQualities,
                                       final boolean softClipLowQualityEnds,
                                       final boolean overrideSoftclipFragmentCheck,
-                                      final boolean trackHardclippedReads) {
+                                      final boolean trackHardclippedReads,
+                                      final ReferenceSequenceFile ref) {
         if ( region.isFinalized() ) {
             return;
         }
@@ -144,12 +147,12 @@ public final class AssemblyBasedCallerUtils {
 
             final GATKRead read = (softClipLowQualityEnds ? ReadClipper.softClipLowQualEnds(readTemp, minTailQualityToUse) :
                     ReadClipper.hardClipLowQualEnds(readTemp, minTailQualityToUse));
+            addMismatchCountToRead(read, ref);
 
             HardClipAndPossiblyAddToCollection(region, readsToUse, originalRead, read);
-
+            read.clearAttribute(ReadUtils.NUM_MISMATCH_TAG);
             if (trackHardclippedReads) {
                 final GATKRead hardClippedRead = ReadClipper.hardClipLowQualEnds(ReadClipper.hardClipSoftClippedBases(originalRead), minTailQualityToUse);
-
                 HardClipAndPossiblyAddToCollection(region, hardClippedReadsToUse, originalRead, hardClippedRead);
             }
         }
@@ -172,11 +175,18 @@ public final class AssemblyBasedCallerUtils {
         region.setFinalized(true);
     }
 
+    private static void addMismatchCountToRead(GATKRead read, ReferenceSequenceFile ref) {
+        byte[] refBases = ref.getSubsequenceAt(read.getContig(), read.getStart(), read.getEnd()).getBases();
+        Integer mc = AlignmentUtils.getMismatchCount(read, refBases, 0).numMismatches;
+        read.setAttribute(ReadUtils.NUM_MISMATCH_TAG, mc);
+    }
+
     private static void HardClipAndPossiblyAddToCollection(final AssemblyRegion region, final List<GATKRead> readsToUse, final GATKRead originalRead, final GATKRead read) {
         if (read.getStart() <= read.getEnd() && !read.isUnmapped()) {
             final GATKRead adaptorClippedRead = ReadClipper.hardClipAdaptorSequence(read);
 
             if (!adaptorClippedRead.isEmpty() && adaptorClippedRead.getCigar().getReadLength() > 0) {
+
                 final GATKRead adaptorAndRegionClippedRead = ReadClipper.hardClipToRegion(adaptorClippedRead, region.getPaddedSpan().getStart(), region.getPaddedSpan().getEnd());
 
                 if (adaptorAndRegionClippedRead.getStart() <= adaptorAndRegionClippedRead.getEnd() && adaptorAndRegionClippedRead.getLength() > 0 && adaptorClippedRead.overlaps(region.getPaddedSpan())) {
@@ -344,7 +354,7 @@ public final class AssemblyBasedCallerUtils {
                 correctOverlappingBaseQualities,
                 argumentCollection.softClipLowQualityEnds,
                 argumentCollection.overrideSoftclipFragmentCheck,
-                true);
+                true, referenceReader);
 
 
         if( argumentCollection.assemblerArgs.debugAssembly) {
