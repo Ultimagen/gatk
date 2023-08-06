@@ -1085,7 +1085,8 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                         ! hcArgs.doNotCorrectOverlappingBaseQualities,
                         hcArgs.softClipLowQualityEnds,
                         hcArgs.overrideSoftclipFragmentCheck,
-                        hcArgs.pileupDetectionArgs.usePileupDetection);
+                        hcArgs.pileupDetectionArgs.usePileupDetection,
+                        referenceReader);
             }
 
             filterNonPassingReads(region);
