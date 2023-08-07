@@ -78,7 +78,7 @@ public class AssemblyBasedCallerUtilsUnitTest extends GATKBaseTest {
         Byte minbq = 9;
         // NOTE: this test MUST be run with correctOverlappingBaseQualities enabled otherwise this test can succeed even with unsafe code
         AssemblyBasedCallerUtils.finalizeRegion(activeRegion, false, false, minbq, header, sampleList,
-                true, false, false, false,
+                true, false, false, false, false,
                 new CachingIndexedFastaSequenceFile(Path.of(b37Reference)));
 
         // make sure that the original reads are not changed due to finalizeRegion()
