@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.tools.funcotator.FilterFuncotations;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyBasedCallerArgumentCollection;
 import org.broadinstitute.hellbender.utils.MathUtils;
 import org.broadinstitute.hellbender.utils.QualityUtils;
 import org.broadinstitute.hellbender.utils.Utils;
@@ -51,6 +52,12 @@ public class MismatchCount implements GenotypeAnnotation {
             mismatchCounts.put(al, new ArrayList<>());
         }
 
+        if (!validateInputs(likelihoods)){
+            logger.warn(String.format("%s tag is missing. MismatchCount annotation not calculated. Perhaps the code ran without %s flag?",
+                    ReadUtils.NUM_MISMATCH_TAG,
+                    AssemblyBasedCallerArgumentCollection.ADD_MISMATCH_COUNT_ANNOTATION_LONG_NAME));
+            return;
+        }
         fillMDFromLikelihoods(vc, ref, likelihoods, mismatchCounts);
         final int[] counts = new int[vc.getNAlleles()];
 
@@ -74,13 +81,25 @@ public class MismatchCount implements GenotypeAnnotation {
         for (final AlleleLikelihoods<GATKRead, Allele>.BestAllele bestAllele : likelihoods.bestAllelesBreakingTies()) {
             final GATKRead read = bestAllele.evidence;
             final Allele allele = bestAllele.allele;
-            if (bestAllele.isInformative() && isUsableRead(read, vc)) {
+            if (bestAllele.isInformative() && isUsableRead(read, vc) && vc.hasAllele(allele)) {
                 final Integer value = getElementForRead(read, vc, ref);
                 mismatchCounts.get(allele).add(value);
             }
         }
     }
-    protected Integer getElementForRead(final GATKRead read, final VariantContext vc, final ReferenceContext ref){
+
+    private boolean validateInputs(final AlleleLikelihoods<GATKRead, Allele> likelihoods) {
+
+        for (int sampleId = 0; sampleId < likelihoods.numberOfSamples(); sampleId++ ){
+            for (GATKRead read : likelihoods.sampleEvidence(sampleId)){
+                if (!read.hasAttribute(ReadUtils.NUM_MISMATCH_TAG)){
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+    private Integer getElementForRead(final GATKRead read, final VariantContext vc, final ReferenceContext ref){
         return read.getAttributeAsInteger(ReadUtils.NUM_MISMATCH_TAG);
     }
     /**
@@ -90,7 +109,7 @@ public class MismatchCount implements GenotypeAnnotation {
      * @param vc    the variant to be annotated
      * @return true if this read is meaningful for comparison, false otherwise
      */
-    protected boolean isUsableRead(final GATKRead read, final VariantContext vc) {
+    private boolean isUsableRead(final GATKRead read, final VariantContext vc) {
         Utils.nonNull(read);
         return read.getMappingQuality() != 0 && read.getMappingQuality() != QualityUtils.MAPPING_QUALITY_UNAVAILABLE;
     }
