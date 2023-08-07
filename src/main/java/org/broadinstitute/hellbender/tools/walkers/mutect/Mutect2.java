@@ -288,7 +288,9 @@ public final class Mutect2 extends AssemblyRegionWalker {
         if (MTAC.mitochondria) {
             annotations.add(new OriginalAlignment());
         }
-
+        if (MTAC.addMismatchCountAnnotation) {
+            annotations.add(new MismatchCount());
+        }
         return annotations;
     }
 
