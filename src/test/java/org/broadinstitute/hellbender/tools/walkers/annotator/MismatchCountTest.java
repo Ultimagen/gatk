@@ -1,12 +1,9 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator;
 
-import htsjdk.samtools.SAMFileHeader;
 import htsjdk.variant.variantcontext.*;
 import htsjdk.variant.vcf.VCFFormatHeaderLine;
-import ngs.Read;
 import org.broadinstitute.hellbender.GATKBaseTest;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
-import org.broadinstitute.hellbender.engine.ReferenceDataSource;
 import org.broadinstitute.hellbender.engine.ReferenceFileSource;
 import org.broadinstitute.hellbender.testutils.ArtificialAnnotationUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
