@@ -1086,6 +1086,7 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                         hcArgs.softClipLowQualityEnds,
                         hcArgs.overrideSoftclipFragmentCheck,
                         hcArgs.pileupDetectionArgs.usePileupDetection,
+                        hcArgs.addMismatchCountAnnotation,
                         referenceReader);
             }
 

@@ -131,6 +131,7 @@ public final class AssemblyBasedCallerUtils {
                                       final boolean softClipLowQualityEnds,
                                       final boolean overrideSoftclipFragmentCheck,
                                       final boolean trackHardclippedReads,
+                                      final boolean addMismatchCountAnnotation,
                                       final ReferenceSequenceFile ref) {
         if ( region.isFinalized() ) {
             return;
@@ -147,10 +148,11 @@ public final class AssemblyBasedCallerUtils {
 
             final GATKRead read = (softClipLowQualityEnds ? ReadClipper.softClipLowQualEnds(readTemp, minTailQualityToUse) :
                     ReadClipper.hardClipLowQualEnds(readTemp, minTailQualityToUse));
-            addMismatchCountToRead(read, ref);
-
+            if (addMismatchCountAnnotation) {
+                addMismatchCountToRead(read, ref);
+            }
             HardClipAndPossiblyAddToCollection(region, readsToUse, originalRead, read);
-            read.clearAttribute(ReadUtils.NUM_MISMATCH_TAG);
+
             if (trackHardclippedReads) {
                 final GATKRead hardClippedRead = ReadClipper.hardClipLowQualEnds(ReadClipper.hardClipSoftClippedBases(originalRead), minTailQualityToUse);
                 HardClipAndPossiblyAddToCollection(region, hardClippedReadsToUse, originalRead, hardClippedRead);
@@ -363,7 +365,10 @@ public final class AssemblyBasedCallerUtils {
                 correctOverlappingBaseQualities,
                 argumentCollection.softClipLowQualityEnds,
                 argumentCollection.overrideSoftclipFragmentCheck,
-                true, referenceReader);
+                true,
+                argumentCollection.addMismatchCountAnnotation,
+                referenceReader
+                );
 
 
         if( argumentCollection.assemblerArgs.debugAssembly) {
