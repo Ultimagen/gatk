@@ -404,8 +404,10 @@ public class MarkDuplicatesSparkUtils {
                     subGroupMinEnd = end - endUncert;
                     subGroupMaxEnd = end + endUncert;
                 }
-            } else if ( end == FlowBasedReadUtils.FLOW_BASED_INSIGNIFICANT_END)  {
-                // insignificant end, simply accumulate
+                subGroupMinStart = start - startUncert;
+                subGroupMaxStart = start + startUncert;
+            } else if ( (end == FlowBasedReadUtils.FLOW_BASED_INSIGNIFICANT_END))  {
+                // insignificant end and start, simply accumulate
                 subGroup.add(fragment);
             } else if ( subGroupMinEnd == 0 ) {
                 // first significant, make it dominate end range

@@ -589,7 +589,6 @@ public class MarkDuplicatesSparkIntegrationTest extends AbstractMarkDuplicatesCo
         args.addRaw(MarkDuplicatesSparkArgumentCollection.FLOW_DUPLICATE_SELECTION_STRATEGY.FLOW_QUALITY_SUM_STRATEGY);
         args.addRaw("--" +MarkDuplicatesSparkArgumentCollection.FLOW_END_POS_UNCERTAINTY_LONG_NAME);
         args.addRaw(1);
-        args.addRaw("--" + MarkDuplicatesSparkArgumentCollection.)
 
         runCommandLine(args);
 
