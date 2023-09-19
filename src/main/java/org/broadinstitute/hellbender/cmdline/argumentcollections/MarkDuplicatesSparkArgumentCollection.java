@@ -53,7 +53,8 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
 
     public enum FLOW_DUPLICATE_SELECTION_STRATEGY {
         FLOW_QUALITY_SUM_STRATEGY,
-        FLOW_END_QUALITY_MIN_STRATEGY
+        FLOW_END_QUALITY_MIN_STRATEGY,
+        NONE
     }
 
     @Advanced
@@ -102,7 +103,7 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
                 MarkDuplicatesSparkArgumentCollection.SINGLE_END_READS_END_POSITION_SIGNIFICANT, "true",
                 MarkDuplicatesSparkArgumentCollection.SINGLE_END_READS_CLIPPING_IS_END_LONG_NAME, "true",
                 MarkDuplicatesSparkArgumentCollection.FLOW_END_POS_UNCERTAINTY_LONG_NAME, "1",
-                MarkDuplicatesSparkArgumentCollection.FLOW_START_POS_UNCERTAINTY_LONG_NAME, "1",
+                MarkDuplicatesSparkArgumentCollection.FLOW_START_POS_UNCERTAINTY_LONG_NAME, "0",
                 MarkDuplicatesSparkArgumentCollection.FLOW_SKIP_START_HOMOPOLYMERS_LONG_NAME, "0",
                 MarkDuplicatesSparkArgumentCollection.FLOW_QUALITY_STRATEGY_LONG_NAME, FLOW_DUPLICATE_SELECTION_STRATEGY.FLOW_QUALITY_SUM_STRATEGY.name()
         };

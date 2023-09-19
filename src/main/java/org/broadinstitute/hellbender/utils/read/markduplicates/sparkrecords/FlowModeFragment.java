@@ -48,7 +48,8 @@ public class FlowModeFragment extends TransientFieldPhysicalLocation {
 
 
         short score = -1;
-        if (mdArgs.useFlowFragments){
+
+        if (this.end != FlowBasedReadUtils.FLOW_BASED_INSIGNIFICANT_END && mdArgs.useFlowFragments){
             if (mdArgs.FLOW_QUALITY_STRATEGY == MarkDuplicatesSparkArgumentCollection.FLOW_DUPLICATE_SELECTION_STRATEGY.FLOW_QUALITY_SUM_STRATEGY){
                 score = computeFlowDuplicateScore(first, start, end);
             } else if (mdArgs.FLOW_QUALITY_STRATEGY == MarkDuplicatesSparkArgumentCollection.FLOW_DUPLICATE_SELECTION_STRATEGY.FLOW_END_QUALITY_MIN_STRATEGY){
