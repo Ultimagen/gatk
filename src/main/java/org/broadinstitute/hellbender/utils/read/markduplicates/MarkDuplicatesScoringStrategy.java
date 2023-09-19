@@ -16,8 +16,10 @@ import java.util.function.ToIntFunction;
 public enum MarkDuplicatesScoringStrategy {
 
     SUM_OF_BASE_QUALITIES(MarkDuplicatesScoringStrategy::sumOfBaseQualities),
-    TOTAL_MAPPED_REFERENCE_LENGTH(MarkDuplicatesScoringStrategy::totalMappedReferenceLength),
-    FLOW_SUM_OF_BASE_QUALITIES(FlowBasedReadUtils::flowSumOfBaseQualities);
+    TOTAL_MAPPED_REFERENCE_LENGTH(MarkDuplicatesScoringStrategy::totalMappedReferenceLength);
+//    FLOW_SUM_OF_BASE_QUALITIES(FlowBasedReadUtils::flowSumOfBaseQualities),
+//    FLOW_SUM_OF_END_BASE_QUALITIES(FlowBasedReadUtils::flowSumOfEndBaseQualities);
+
 
     private final ToIntFunction<GATKRead> scoring;
 

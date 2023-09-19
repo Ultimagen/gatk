@@ -30,6 +30,7 @@ public class FlowBasedReadUtils {
     public static final int FLOW_SUM_OF_BASE_QUALITY_THRESHOLD = 15;
     public static final FlowBasedArgumentCollection DEFAULT_FLOW_BASED_ARGUMENT_COLLECTION = new FlowBasedArgumentCollection();
     static final public int FLOW_BASED_INSIGNIFICANT_END = 0;
+    static final public int FLOW_BASED_INSIGNIFICANT_START = 0;
 
     private static final Map<String, ReadGroupInfo> readGroupInfo = new LinkedHashMap<>();
 
@@ -120,32 +121,60 @@ public class FlowBasedReadUtils {
     /**
      * Computes the sum of base qualities of the given flow read.
      */
-    public static int flowSumOfBaseQualities(final GATKRead read) {
-        if (read == null) {
-            return 0;
-        } else {
-            int sum = 0;
+//    public static int flowSumOfBaseQualities(final GATKRead read) {
+//        if (read == null) {
+//            return 0;
+//        } else {
+//            int sum = 0;
+//
+//            // access qualities and bases
+//            byte[]      quals = read.getBaseQualitiesNoCopy();
+//            byte[]      bases = read.getBasesNoCopy();
+//
+//            // loop on bases, extract qual related to homopolymer from start of homopolymer
+//            int         i = 0;
+//            byte        lastBase = 0;
+//            byte        effectiveQual = 0;
+//            for (final byte base : bases ) {
+//                if ( base != lastBase )
+//                    effectiveQual = quals[i];
+//                if ( effectiveQual >= FLOW_SUM_OF_BASE_QUALITY_THRESHOLD )
+//                    sum += effectiveQual;
+//                lastBase = base;
+//                i++;
+//            }
+//
+//            return sum;
+//        }
+//    }
 
-            // access qualities and bases
-            byte[]      quals = read.getBaseQualitiesNoCopy();
-            byte[]      bases = read.getBasesNoCopy();
-
-            // loop on bases, extract qual related to homopolymer from start of homopolymer
-            int         i = 0;
-            byte        lastBase = 0;
-            byte        effectiveQual = 0;
-            for (final byte base : bases ) {
-                if ( base != lastBase )
-                    effectiveQual = quals[i];
-                if ( effectiveQual >= FLOW_SUM_OF_BASE_QUALITY_THRESHOLD )
-                    sum += effectiveQual;
-                lastBase = base;
-                i++;
-            }
-
-            return sum;
-        }
-    }
+//    public static int flowSumOfEndBaseQualities(final GATKRead read) {
+//        int dist = 10;
+//        if (read == null) {
+//            return 0;
+//        } else {
+//            int sum = 0;
+//
+//            // access qualities and bases
+//            byte[]      quals = read.getBaseQualitiesNoCopy();
+//            byte[]      bases = read.getBasesNoCopy();
+//
+//            // loop on bases, extract qual related to homopolymer from start of homopolymer
+//            int         i = 0;
+//            byte        lastBase = 0;
+//            byte        effectiveQual = 0;
+//            for (final byte base : bases ) {
+//                if ( base != lastBase )
+//                    effectiveQual = quals[i];
+//                if ( effectiveQual >= FLOW_SUM_OF_BASE_QUALITY_THRESHOLD )
+//                    sum += effectiveQual;
+//                lastBase = base;
+//                i++;
+//            }
+//
+//            return sum;
+//        }
+//    }
 
     public static boolean hasFlowTags(final GATKRead rec) {
         return rec.hasAttribute(FlowBasedRead.FLOW_MATRIX_TAG_NAME)

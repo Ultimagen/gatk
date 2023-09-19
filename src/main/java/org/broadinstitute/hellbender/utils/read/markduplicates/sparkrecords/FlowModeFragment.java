@@ -25,6 +25,8 @@ public class FlowModeFragment extends TransientFieldPhysicalLocation {
 
     protected transient ReadsKey key;
     protected int end = FlowBasedReadUtils.FLOW_BASED_INSIGNIFICANT_END;
+    protected int start = FlowBasedReadUtils.FLOW_BASED_INSIGNIFICANT_START;
+    public static final int DIST_FROM_END = 10;
 
     private final boolean R1R;
 
@@ -44,9 +46,23 @@ public class FlowModeFragment extends TransientFieldPhysicalLocation {
                 (short)ReadUtils.getReferenceIndex(first, header),
                 headerLibraryMap.get(MarkDuplicatesSparkUtils.getLibraryForRead(first, header, LibraryIdGenerator.UNKNOWN_LIBRARY)));
 
-        this.score = (this.end != FlowBasedReadUtils.FLOW_BASED_INSIGNIFICANT_END)
-                ? ((mdArgs.FLOW_QUALITY_SUM_STRATEGY && FlowBasedReadUtils.hasFlowTags(first)) ? computeFlowDuplicateScore(first, start, end) : scoringStrategy.score(first))
-                : -1;
+
+        short score = -1;
+        if (mdArgs.useFlowFragments){
+            if (mdArgs.FLOW_QUALITY_STRATEGY == MarkDuplicatesSparkArgumentCollection.FLOW_DUPLICATE_SELECTION_STRATEGY.FLOW_QUALITY_SUM_STRATEGY){
+                score = computeFlowDuplicateScore(first, start, end);
+            } else if (mdArgs.FLOW_QUALITY_STRATEGY == MarkDuplicatesSparkArgumentCollection.FLOW_DUPLICATE_SELECTION_STRATEGY.FLOW_END_QUALITY_MIN_STRATEGY){
+                score = computeEndFlowDuplicateScore(first, start, end);
+            } else {
+                score = scoringStrategy.score(first);
+            }
+        }
+        this.score = score;
+
+//        this.score = (this.end != FlowBasedReadUtils.FLOW_BASED_INSIGNIFICANT_END)
+//                ? ((mdArgs.FLOW_QUALITY_STRATEGY && FlowBasedReadUtils.hasFlowTags(first)) ?
+//                computeFlowDuplicateScore(first, start, end) : scoringStrategy.score(first))
+//                : -1;
     }
 
     // compute fragment score using a flow-based specific method - cache in transient attribute
@@ -65,6 +81,22 @@ public class FlowModeFragment extends TransientFieldPhysicalLocation {
         return storedScore;
     }
 
+    // compute fragment score using a flow-based specific method - cache in transient attribute
+    private short computeEndFlowDuplicateScore(GATKRead rec, int start, int end) {
+
+        Short storedScore = (Short)rec.getTransientAttribute(FLOW_DUPLICATE_SCORE_ATTR_NAME);
+        if ( storedScore == null ) {
+            short score = 0;
+
+            score += (short) Math.min(getEndFlowMinOfBaseQualities(rec, start, end), Short.MAX_VALUE / 2);
+
+            storedScore = score;
+            rec.setTransientAttribute(FLOW_DUPLICATE_SCORE_ATTR_NAME, storedScore);
+        }
+
+        return storedScore;
+    }
+
     /**
      * A quality summing scoring strategy used for flow based reads.
      *
@@ -74,7 +106,6 @@ public class FlowModeFragment extends TransientFieldPhysicalLocation {
      */
     private int getFlowSumOfBaseQualities(GATKRead rec, int start, int end) {
         int score = 0;
-
         if ( rec.isReverseStrand() ) {
             int     tmp = start;
             start = end;
@@ -103,6 +134,54 @@ public class FlowModeFragment extends TransientFieldPhysicalLocation {
             lastBase = base;
         }
 
+        return score;
+    }
+
+
+    /**
+     * A quality summing scoring strategy used for flow based reads.
+     *
+     * The method walks on the bases of the read, in the synthesis direction. For each base, the effective
+     * quality value is defined as the value on the first base on the hmer to which the base belongs to. The score
+     * is defined to be the sum of all effective values above a given threshold.
+     */
+    private int getEndFlowMinOfBaseQualities(GATKRead rec, int start, int end) {
+        int score = 100;
+
+        // access qualities and bases
+        byte[]      quals = rec.getBaseQualitiesNoCopy();
+        byte[]      bases = rec.getBasesNoCopy();
+
+        boolean insideHpol = false;
+        int dist = DIST_FROM_END;
+        if (dist > bases.length){
+            dist = bases.length;
+        }
+        for ( int i = 0 ; (i < dist) || ( insideHpol ) ; i ++ ) {
+            final byte base = bases[i];
+            if ( (i == bases.length - 1) || ( base != bases[i+1] )) {
+                insideHpol = false;
+            } else {
+                insideHpol = true;
+            }
+
+            if ( quals[i] < score) {
+                score = quals[i];
+            }
+        }
+
+        for ( int i = bases.length-1 ; (i > bases.length - 1 - dist) || ( insideHpol ) ; i -- ) {
+            final byte base = bases[i];
+            if ( (i == 0) || ( base != bases[i - 1] )) {
+                insideHpol = false;
+            } else {
+                insideHpol = true;
+            }
+
+            if ( quals[i] < score) {
+                score = quals[i];
+            }
+        }
         return score;
     }
 
@@ -139,5 +218,9 @@ public class FlowModeFragment extends TransientFieldPhysicalLocation {
 
     public int getEnd() {
         return end;
+    }
+
+    public int getStart() {
+        return start;
     }
 }

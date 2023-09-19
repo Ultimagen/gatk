@@ -23,9 +23,10 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
 
     public static final String FLOW_MD_MODE_LONG_NAME = "flowbased";
 
-    public static final String FLOW_QUALITY_SUM_STRATEGY_LONG_NAME = "flow-quality-sum-strategy";
+    public static final String FLOW_QUALITY_STRATEGY_LONG_NAME = "flow-quality-strategy";
     public static final String SINGLE_END_READS_END_POSITION_SIGNIFICANT = "single-end-reads-end-position-significant";
     public static final String FLOW_END_POS_UNCERTAINTY_LONG_NAME = "flow-end-pos-uncertainty";
+    public static final String FLOW_START_POS_UNCERTAINTY_LONG_NAME = "flow-start-pos-uncertainty";
     public static final String SINGLE_END_READS_CLIPPING_IS_END_LONG_NAME = "single-end-reads-clipping-is-end";
     public static final String FLOW_SKIP_START_HOMOPOLYMERS_LONG_NAME = "flow-skip-start-homopolymers";
     public static final String FLOW_Q_IS_KNOWN_END_LONG_NAME = "flow-q-is-known-end";
@@ -49,10 +50,17 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
             mutex = {MarkDuplicatesSparkArgumentCollection.DUPLICATE_TAGGING_POLICY_LONG_NAME, MarkDuplicatesSparkArgumentCollection.REMOVE_ALL_DUPLICATE_READS}, optional = true)
     public boolean removeSequencingDuplicates = false;
 
+
+    public enum FLOW_DUPLICATE_SELECTION_STRATEGY {
+        FLOW_QUALITY_SUM_STRATEGY,
+        FLOW_END_QUALITY_MIN_STRATEGY
+    }
+
     @Advanced
-    @Argument(fullName = FLOW_QUALITY_SUM_STRATEGY_LONG_NAME, doc = "Use specific quality summing strategy for flow based reads. The strategy ensures that the same " +
+    @Argument(fullName = FLOW_QUALITY_STRATEGY_LONG_NAME, doc = "Use specific quality strategy for flow based reads. The strategy ensures that the same " +
             "(and correct) quality value is used for all bases of the same homopolymer. Default false.", optional = true)
-    public boolean FLOW_QUALITY_SUM_STRATEGY = false;
+    public FLOW_DUPLICATE_SELECTION_STRATEGY FLOW_QUALITY_STRATEGY = FLOW_DUPLICATE_SELECTION_STRATEGY.FLOW_QUALITY_SUM_STRATEGY;
+
 
     @Advanced
     @Argument(fullName = SINGLE_END_READS_END_POSITION_SIGNIFICANT, doc = "Make end location of read (fragment) be significant when considering duplicates, " +
@@ -62,6 +70,10 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
     @Advanced
     @Argument(fullName = FLOW_END_POS_UNCERTAINTY_LONG_NAME, doc = "Maximal number of bases of reads (fragment) ends difference that is marked as match (should only be applied to flow based reads). Default 0.", optional = true)
     public int ENDS_READ_UNCERTAINTY = 0;
+
+    @Advanced
+    @Argument(fullName = FLOW_START_POS_UNCERTAINTY_LONG_NAME, doc = "Maximal number of bases of reads (fragment) starts difference that is marked as match (should only be applied to flow based reads). Default 0.", optional = true)
+    public int STARTS_READ_UNCERTAINTY = 0;
 
     @Advanced
     @Argument(fullName = SINGLE_END_READS_CLIPPING_IS_END_LONG_NAME, doc = "Use clipped, rather than unclipped, when considering duplicates (should only be applied to flow based reads). Default false.", optional = true)
@@ -80,15 +92,19 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
     public Boolean useFlowFragments = false;
 
     public boolean isFlowEnabled() {
-        return FLOW_QUALITY_SUM_STRATEGY || FLOW_END_LOCATION_SIGNIFICANT || FLOW_USE_CLIPPED_LOCATIONS || FLOW_SKIP_START_HOMOPOLYMERS != 0;
+        return FLOW_QUALITY_STRATEGY == FLOW_DUPLICATE_SELECTION_STRATEGY.FLOW_QUALITY_SUM_STRATEGY ||
+                FLOW_QUALITY_STRATEGY == FLOW_DUPLICATE_SELECTION_STRATEGY.FLOW_END_QUALITY_MIN_STRATEGY ||
+                FLOW_END_LOCATION_SIGNIFICANT || FLOW_USE_CLIPPED_LOCATIONS || FLOW_SKIP_START_HOMOPOLYMERS != 0;
     }
 
     public String[] getFlowModeArgValues() {
-        return new String[] {
+        return new String[]{
                 MarkDuplicatesSparkArgumentCollection.SINGLE_END_READS_END_POSITION_SIGNIFICANT, "true",
                 MarkDuplicatesSparkArgumentCollection.SINGLE_END_READS_CLIPPING_IS_END_LONG_NAME, "true",
                 MarkDuplicatesSparkArgumentCollection.FLOW_END_POS_UNCERTAINTY_LONG_NAME, "1",
-                MarkDuplicatesSparkArgumentCollection.FLOW_SKIP_START_HOMOPOLYMERS_LONG_NAME, "0"
+                MarkDuplicatesSparkArgumentCollection.FLOW_START_POS_UNCERTAINTY_LONG_NAME, "1",
+                MarkDuplicatesSparkArgumentCollection.FLOW_SKIP_START_HOMOPOLYMERS_LONG_NAME, "0",
+                MarkDuplicatesSparkArgumentCollection.FLOW_QUALITY_STRATEGY_LONG_NAME, FLOW_DUPLICATE_SELECTION_STRATEGY.FLOW_QUALITY_SUM_STRATEGY.name()
         };
 
     }

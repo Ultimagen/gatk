@@ -558,6 +558,8 @@ public class MarkDuplicatesSparkIntegrationTest extends AbstractMarkDuplicatesCo
         args.addInterval("chr9:81149486-81177047");
         args.addRaw("--" + StandardArgumentDefinitions.METRICS_FILE_LONG_NAME);
         args.addRaw(metricsFile.getAbsolutePath());
+        args.addRaw("--" + MarkDuplicatesSparkArgumentCollection.FLOW_QUALITY_STRATEGY_LONG_NAME);
+        args.addRaw(MarkDuplicatesSparkArgumentCollection.FLOW_DUPLICATE_SELECTION_STRATEGY.FLOW_QUALITY_SUM_STRATEGY);
         args.addFlag(MarkDuplicatesSparkArgumentCollection.FLOW_MD_MODE_LONG_NAME);
 
         runCommandLine(args);
