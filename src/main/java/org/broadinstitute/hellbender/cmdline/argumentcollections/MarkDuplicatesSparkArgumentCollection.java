@@ -73,10 +73,6 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
     public int ENDS_READ_UNCERTAINTY = 0;
 
     @Advanced
-    @Argument(fullName = FLOW_START_POS_UNCERTAINTY_LONG_NAME, doc = "Maximal number of bases of reads (fragment) starts difference that is marked as match (should only be applied to flow based reads). Default 0.", optional = true)
-    public int STARTS_READ_UNCERTAINTY = 0;
-
-    @Advanced
     @Argument(fullName = SINGLE_END_READS_CLIPPING_IS_END_LONG_NAME, doc = "Use clipped, rather than unclipped, when considering duplicates (should only be applied to flow based reads). Default false.", optional = true)
     public boolean FLOW_USE_CLIPPED_LOCATIONS = false;
 
@@ -103,7 +99,6 @@ public final class MarkDuplicatesSparkArgumentCollection implements Serializable
                 MarkDuplicatesSparkArgumentCollection.SINGLE_END_READS_END_POSITION_SIGNIFICANT, "true",
                 MarkDuplicatesSparkArgumentCollection.SINGLE_END_READS_CLIPPING_IS_END_LONG_NAME, "true",
                 MarkDuplicatesSparkArgumentCollection.FLOW_END_POS_UNCERTAINTY_LONG_NAME, "1",
-                MarkDuplicatesSparkArgumentCollection.FLOW_START_POS_UNCERTAINTY_LONG_NAME, "0",
                 MarkDuplicatesSparkArgumentCollection.FLOW_SKIP_START_HOMOPOLYMERS_LONG_NAME, "0",
                 MarkDuplicatesSparkArgumentCollection.FLOW_QUALITY_STRATEGY_LONG_NAME, FLOW_DUPLICATE_SELECTION_STRATEGY.FLOW_QUALITY_SUM_STRATEGY.name()
         };

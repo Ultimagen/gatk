@@ -545,7 +545,7 @@ public class MarkDuplicatesSparkIntegrationTest extends AbstractMarkDuplicatesCo
     }
 
     @Test
-    public void testFlowModeFlag() throws IOException {
+    public void testFlowModeFlagNoneStrategy() throws IOException {
         final File expectedOutput = new File(largeFileTestDir, "testFlowModeFlag_expected.bam");
         final File expectedMetricsFile = new File(largeFileTestDir, "testFlowModeFlag_expected.txt");
         final File output = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expectedOutput : createTempFile("testFlowModeFlag", "bam");
@@ -561,6 +561,64 @@ public class MarkDuplicatesSparkIntegrationTest extends AbstractMarkDuplicatesCo
         args.addFlag(MarkDuplicatesSparkArgumentCollection.FLOW_MD_MODE_LONG_NAME);
         args.addRaw("--" + MarkDuplicatesSparkArgumentCollection.FLOW_QUALITY_STRATEGY_LONG_NAME);
         args.addRaw(MarkDuplicatesSparkArgumentCollection.FLOW_DUPLICATE_SELECTION_STRATEGY.NONE);
+
+        runCommandLine(args);
+
+        if ( !UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
+            IntegrationTestSpec.assertEqualTextFiles(metricsFile, expectedMetricsFile, "#");
+            SamAssertionUtils.assertEqualBamFiles(output, expectedOutput, false, ValidationStringency.SILENT);
+        }
+    }
+
+    @Test
+    public void testModeFlagFLOW_QUALITY_SUM_STRATEGY() throws IOException {
+        final File expectedOutput = new File(largeFileTestDir, "testFlowSumQualityStrategy_expected.bam");
+        final File expectedMetricsFile = new File(largeFileTestDir, "testFlowModeFlag_expected.txt");
+        final File output = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expectedOutput : createTempFile("testFlowModeFlag", "bam");
+        final File metricsFile = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expectedMetricsFile : createTempFile("testFlowModeFlag", ".txt");
+        final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
+        final ArgumentsBuilder args = new ArgumentsBuilder();
+
+        args.addOutput(output);
+        args.addInput(input);
+        args.addInterval("chr9:81149486-81177047");
+        args.addRaw("--" + StandardArgumentDefinitions.METRICS_FILE_LONG_NAME);
+        args.addRaw(metricsFile.getAbsolutePath());
+        args.addFlag(MarkDuplicatesSparkArgumentCollection.FLOW_MD_MODE_LONG_NAME);
+        args.addRaw("--" + MarkDuplicatesSparkArgumentCollection.FLOW_QUALITY_STRATEGY_LONG_NAME);
+        args.addRaw(MarkDuplicatesSparkArgumentCollection.FLOW_DUPLICATE_SELECTION_STRATEGY.FLOW_QUALITY_SUM_STRATEGY);
+        args.addRaw("--" +MarkDuplicatesSparkArgumentCollection.FLOW_END_POS_UNCERTAINTY_LONG_NAME);
+        args.addRaw(1);
+        args.addRaw("--" + MarkDuplicatesSparkArgumentCollection.)
+
+        runCommandLine(args);
+
+        if ( !UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
+            IntegrationTestSpec.assertEqualTextFiles(metricsFile, expectedMetricsFile, "#");
+            SamAssertionUtils.assertEqualBamFiles(output, expectedOutput, false, ValidationStringency.SILENT);
+        }
+    }
+
+
+    @Test
+    public void testFlowModeFlagFLOW_END_QUALITY_MIN_STRATEGY() throws IOException {
+        final File expectedOutput = new File(largeFileTestDir, "testFlowEndQualityStrategy_expected.bam");
+        final File expectedMetricsFile = new File(largeFileTestDir, "testFlowModeFlag_expected.txt");
+        final File output = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expectedOutput : createTempFile("testFlowModeFlag", "bam");
+        final File metricsFile = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expectedMetricsFile : createTempFile("testFlowModeFlag", ".txt");
+        final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
+        final ArgumentsBuilder args = new ArgumentsBuilder();
+
+        args.addOutput(output);
+        args.addInput(input);
+        args.addInterval("chr9:81149486-81177047");
+        args.addRaw("--" + StandardArgumentDefinitions.METRICS_FILE_LONG_NAME);
+        args.addRaw(metricsFile.getAbsolutePath());
+        args.addFlag(MarkDuplicatesSparkArgumentCollection.FLOW_MD_MODE_LONG_NAME);
+        args.addRaw("--" + MarkDuplicatesSparkArgumentCollection.FLOW_QUALITY_STRATEGY_LONG_NAME);
+        args.addRaw(MarkDuplicatesSparkArgumentCollection.FLOW_DUPLICATE_SELECTION_STRATEGY.FLOW_END_QUALITY_MIN_STRATEGY);
+        args.addRaw("--" +MarkDuplicatesSparkArgumentCollection.FLOW_END_POS_UNCERTAINTY_LONG_NAME);
+        args.addRaw(1);
 
         runCommandLine(args);
 

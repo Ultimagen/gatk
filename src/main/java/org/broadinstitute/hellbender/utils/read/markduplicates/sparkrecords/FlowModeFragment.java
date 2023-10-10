@@ -25,7 +25,6 @@ public class FlowModeFragment extends TransientFieldPhysicalLocation {
 
     protected transient ReadsKey key;
     protected int end = FlowBasedReadUtils.FLOW_BASED_INSIGNIFICANT_END;
-    protected int start = FlowBasedReadUtils.FLOW_BASED_INSIGNIFICANT_START;
     public static final int DIST_FROM_END = 10;
 
     private final boolean R1R;
@@ -221,7 +220,4 @@ public class FlowModeFragment extends TransientFieldPhysicalLocation {
         return end;
     }
 
-    public int getStart() {
-        return start;
-    }
 }

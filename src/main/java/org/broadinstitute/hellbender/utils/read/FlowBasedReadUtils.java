@@ -30,7 +30,6 @@ public class FlowBasedReadUtils {
     public static final int FLOW_SUM_OF_BASE_QUALITY_THRESHOLD = 15;
     public static final FlowBasedArgumentCollection DEFAULT_FLOW_BASED_ARGUMENT_COLLECTION = new FlowBasedArgumentCollection();
     static final public int FLOW_BASED_INSIGNIFICANT_END = 0;
-    static final public int FLOW_BASED_INSIGNIFICANT_START = 0;
 
     private static final Map<String, ReadGroupInfo> readGroupInfo = new LinkedHashMap<>();
 
