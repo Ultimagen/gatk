@@ -37,6 +37,34 @@ import java.text.DecimalFormat;
 import java.util.*;
 import java.util.zip.GZIPOutputStream;
 
+/**
+ * GroundTruthScorer doc - to be filled in
+ *
+ * <h3> Input </h3>
+ * <ul>
+ *     <li> Coordinate-sorted and indexed SAM/BAM/CRAM </li>
+ * </ul>
+ *
+ * <h3> Output </h3>
+ * <ul>
+ *     <li> Ground truth scoring report, in GATK report format</li>
+ * </ul>
+ *
+ * <h3>Usage examples</h3>
+ * <pre>
+ * gatk GroundTruthScorer \
+ *   -I input.bam \
+ *   -R reference.fasta.gz
+ *   -L chr20 \
+ *   --output-csv output.csv \
+ *   --report-file report.txt \
+ *   --omit-zeros-from-report \ (optional)
+ *   --features-file dbsnp.chr9.vcf.gz \ (optional)
+ *   --genome-prior genome_prior.csv (optional)
+ * </pre>
+ *
+ * {@GATK.walkertype ReadWalker}
+ */
 @CommandLineProgramProperties(
         summary = "Ground Truth Scorer",
         oneLineSummary = "Score reads against a reference/ground truth",
