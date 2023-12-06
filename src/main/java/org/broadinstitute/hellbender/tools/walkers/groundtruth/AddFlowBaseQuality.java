@@ -57,7 +57,7 @@ public final class AddFlowBaseQuality extends ReadWalker {
     public static final String REPLACE_QUALITY_MODE_LONG_NAME = "replace-quality-mode";
     public static final String BASE_QUALITY_AS_MIN_INDEL_QUALITY_LONG_NAME = "base-quality-as-min-indel-quality";
     public static final String MIN_QUALITY_WINDOW_LONG_NAME = "min-quality-window-size";
-
+    public static final String COMBINE_BQ_AND_T0_LONG_NAME = "combine-qual-and-t0";
     public static final String BASE_QUALITY_ATTRIBUTE_NAME = "XQ";
     public static final String OLD_QUALITY_ATTRIBUTE_NAME = "OQ";
     public static final char PHRED_ASCII_BASE = '!';
@@ -87,6 +87,9 @@ public final class AddFlowBaseQuality extends ReadWalker {
     @Argument(fullName = BASE_QUALITY_AS_MIN_INDEL_QUALITY_LONG_NAME, doc = "Place quality as the minimal indel quality in a window - to mark locations prone to be indel errors")
     public boolean useMinIndelQuality = false;
 
+    @Argument(fullName = COMBINE_BQ_AND_T0_LONG_NAME, doc = "Should BQ and T0 be combined in applying min indel quality window")
+    public boolean combineBQAndT0 = false;
+
     @Argument(fullName = MIN_QUALITY_WINDOW_LONG_NAME, doc = "Replace original quality with the minimal quality in the window of this size around the base, 5 means that the minimum of i-2,i-1,i,i+1,i+2 will be calculated")
     public int minQualityWindow = 3;
 
@@ -104,7 +107,7 @@ public final class AddFlowBaseQuality extends ReadWalker {
     @Override
     public void apply(final GATKRead read, final ReferenceContext referenceContext, final FeatureContext featureContext) {
         if (useMinIndelQuality) {
-            outputWriter.addRead(addBaseQualityAsMinIndelQuality(read, minQualityWindow));
+            outputWriter.addRead(addBaseQualityAsMinIndelQuality(read, minQualityWindow, combineBQAndT0));
         } else {
             outputWriter.addRead(addBaseQuality(read));
         }
@@ -143,12 +146,11 @@ public final class AddFlowBaseQuality extends ReadWalker {
         return read;
     }
 
-    private GATKRead addBaseQualityAsMinIndelQuality(final GATKRead read, final int windowSize){
+    private GATKRead addBaseQualityAsMinIndelQuality(final GATKRead read, final int windowSize, final boolean combineBQAndT0){
         // generate base quality
         final byte[]      quals = read.getBaseQualities();
-        final byte[]      t0 = SAMUtils.fastqToPhred(read.getAttributeAsString(FlowBasedRead.FLOW_MATRIX_T0_TAG_NAME));
-
-        final byte[]      phred = applyMinWindowToQualAndT0(quals, t0, windowSize);
+        final byte[]      t0 = combineBQAndT0 ? SAMUtils.fastqToPhred(read.getAttributeAsString(FlowBasedRead.FLOW_MATRIX_T0_TAG_NAME)): null;
+        final byte[]      phred =  applyMinWindowToQualAndT0(quals, t0, windowSize);
 
         // install in read
         if ( !replaceQualityMode ) {
