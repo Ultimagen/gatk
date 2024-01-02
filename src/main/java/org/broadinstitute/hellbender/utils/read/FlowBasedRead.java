@@ -283,12 +283,11 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         flow2base = FlowBasedKeyCodec.getKeyToBase(key);
         flowOrder = FlowBasedKeyCodec.getFlowToBase(_flowOrder, key.length);
 
-        // initialize matrix
+        // initialize matrix. fill first line, copy subsequent lines from first
         flowMatrix = new double[maxHmer+1][key.length];
-        for (int i = 0 ; i < maxHmer+1; i++) {
-            for (int j = 0 ; j < key.length; j++ ){
-                flowMatrix[i][j] = fbargs.fillingValue;
-            }
+        Arrays.fill(flowMatrix[0], fbargs.fillingValue);
+        for (int i = 1 ; i < maxHmer+1; i++) {
+            System.arraycopy(flowMatrix[0], 0, flowMatrix[i], 0, key.length);
         }
 
         // access qual, convert to flow representation

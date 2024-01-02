@@ -1,5 +1,6 @@
 package org.broadinstitute.hellbender.tools.walkers.featuremapping;
 
+import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.text.similarity.LevenshteinDistance;
@@ -70,13 +71,15 @@ public class SNVMapper implements FeatureMapper {
         } else {
             basesString = new String(Arrays.copyOfRange(bases, startSoftClip, bases.length - endSoftClip));
         }
-        int               refEditDistance = levDistance.apply(basesString, new String(ref));
+        int               refEditDistance = calcEditDistance(basesString, new String(ref));
 
         // count bases delta on M cigar elements
         int         nonIdentMBases = 0;
         int         readOfs = 0;
         int         refOfs = 0;
-        for ( final CigarElement cigarElement : read.getCigarElements() ) {
+        int         cigarElementCount = read.getCigar().numCigarElements();
+        for ( int cigarElementIndex = 0 ; cigarElementIndex < cigarElementCount ; cigarElementIndex++ ) {
+            final CigarElement cigarElement = read.getCigar().getCigarElement(cigarElementIndex);
             final int     length = cigarElement.getLength();
             if ( cigarElement.getOperator().consumesReadBases() && cigarElement.getOperator().consumesReferenceBases() ) {
                 for ( int ofs = 0 ; ofs < length ; ofs++ ) {
@@ -97,8 +100,9 @@ public class SNVMapper implements FeatureMapper {
         // walk the cigar (again) looking for features
         readOfs = 0;
         refOfs = 0;
-        for ( final CigarElement cigarElement : read.getCigarElements() ) {
-
+        int numCigarElements = read.numCigarElements();
+        for ( int cigarElementIndex = 0 ; cigarElementIndex < numCigarElements ; cigarElementIndex++ ) {
+            final CigarElement cigarElement = read.getCigarElement(cigarElementIndex);
             final int     length = cigarElement.getLength();
 
             // worth looking into?
@@ -214,6 +218,40 @@ public class SNVMapper implements FeatureMapper {
         }
     }
 
+    private int calcEditDistance(String s1, String s2) {
+
+        // identical
+        if ( s1.length() == s2.length() && s1.equals(s2) ) {
+            return 0;
+        }
+
+        // find first difference & trim
+        int     minLength = Math.min(s1.length(), s2.length());
+        int     diffIndex = 0;
+        for ( ; diffIndex < minLength ; diffIndex++ ) {
+            if (s1.charAt(diffIndex) != s2.charAt(diffIndex)) {
+                break;
+            }
+        }
+        s1 = s1.substring(diffIndex);
+        s2 = s2.substring(diffIndex);
+        minLength = Math.min(s1.length(), s2.length());
+
+        // find last difference & trim
+        int diffLength1 = s1.length();
+        int diffLength2 = s2.length();
+        for ( ; diffLength1 > 0 && diffLength2 > 0 ; diffLength1--, diffLength2-- ) {
+            if (s1.charAt(diffLength1 - 1) != s2.charAt(diffLength2 - 1)) {
+                break;
+            }
+        }
+        s1 = s1.substring(0, diffLength1);
+        s2 = s2.substring(0, diffLength2);
+
+        // find edit distance on the shorter strings
+        return levDistance.apply(s1, s2);
+    }
+
     private int calcSmq(final byte[] quals, int from, int to, boolean median) {
 
         // limit from/to
@@ -257,7 +295,9 @@ public class SNVMapper implements FeatureMapper {
         // walk the cigar
         int         readOfs = 0;
         int         refOfs = 0;
-        for ( final CigarElement cigarElement : read.getCigarElements() ) {
+        int numCigarElements = read.numCigarElements();
+        for ( int cigarElementIndex = 0 ; cigarElementIndex < numCigarElements ; cigarElementIndex++ ) {
+            final CigarElement cigarElement = read.getCigarElement(cigarElementIndex);
 
             final int     length = cigarElement.getLength();
 
