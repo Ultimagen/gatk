@@ -176,6 +176,15 @@ public final class AssemblyBasedCallerUtils {
     }
 
     private static void addMismatchCountToRead(GATKRead read, ReferenceSequenceFile ref) {
+        // taking care of the edge cases when the reads are running off the reference sequence
+        if (read.getStart() < 0) {
+            read.setAttribute(ReadUtils.NUM_MISMATCH_TAG, 0);
+            return;
+        }
+        if (ref.getSequenceDictionary().getSequence(read.getContig()).getSequenceLength() < read.getEnd()){
+            read.setAttribute(ReadUtils.NUM_MISMATCH_TAG, 0);
+            return;
+        }
         byte[] refBases = ref.getSubsequenceAt(read.getContig(), read.getStart(), read.getEnd()).getBases();
         Integer mc = AlignmentUtils.getMismatchCount(read, refBases, 0).numMismatches;
         read.setAttribute(ReadUtils.NUM_MISMATCH_TAG, mc);
