@@ -11,6 +11,7 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.text.DecimalFormat;
 import java.util.List;
 import java.util.Map;
 
@@ -27,6 +28,7 @@ public class AlleleLikelihoodWriter implements AutoCloseable {
     final Path outputPath;
     final SimpleInterval outputInterval;
     final FileWriter output;
+    final DecimalFormat doubleFormat = new DecimalFormat("0.00000000");
 
     public AlleleLikelihoodWriter(final Path _outputPath, final SimpleInterval _interval) {
         this.outputPath = _outputPath;
@@ -69,7 +71,7 @@ public class AlleleLikelihoodWriter implements AutoCloseable {
                     output.write(">>> Matrix\n");
                     for (int allele = 0; allele < likelihoods.sampleMatrix(s).numberOfAlleles(); allele++) {
                         for (int read = 0; read < likelihoods.sampleMatrix(s).evidenceCount(); read++) {
-                            output.write(Double.toString(likelihoods.sampleMatrix(s).get(allele, read)));
+                            output.write(doubleFormat.format(likelihoods.sampleMatrix(s).get(allele, read)));
                             output.write(" ");
                         }
                         output.write("\n");
@@ -80,7 +82,7 @@ public class AlleleLikelihoodWriter implements AutoCloseable {
                         for (int read = 0; read < likelihoods.sampleMatrix(s).evidenceCount(); read++) {
                             output.write(String.format("%04d\t%s\t%s\t%04d\t%s\n",
                                     read, reads.get(read).getName(),
-                                    Double.toString(likelihoods.sampleMatrix(s).get(allele, read)),
+                                    doubleFormat.format(likelihoods.sampleMatrix(s).get(allele, read)),
                                     allele, haplotypes.get(allele).toString()));
                         }
                         output.write("\n");

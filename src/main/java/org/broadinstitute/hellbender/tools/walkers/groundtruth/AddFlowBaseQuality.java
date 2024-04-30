@@ -13,6 +13,7 @@ import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 import org.broadinstitute.hellbender.utils.read.FlowBasedReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.SAMFileGATKReadWriter;
+import picard.flow.FlowReadGroupInfo;
 
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -106,7 +107,7 @@ public final class AddFlowBaseQuality extends ReadWalker {
     private GATKRead addBaseQuality(final GATKRead read) {
 
         // convert to a flow base read
-        final FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read);
+        final FlowReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read);
         final FlowBasedRead   fbRead = new FlowBasedRead(read, rgInfo.flowOrder, rgInfo.maxClass, fbargs);
         final int flowOrderLength = calcFlowOrderLength(rgInfo.flowOrder);
 

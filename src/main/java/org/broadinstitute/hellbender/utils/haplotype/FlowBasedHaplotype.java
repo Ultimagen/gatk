@@ -2,11 +2,9 @@ package org.broadinstitute.hellbender.utils.haplotype;
 
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.util.Locatable;
-import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.SimpleAllele;
 import org.apache.commons.lang3.ArrayUtils;
-import org.broadinstitute.hellbender.utils.read.FlowBasedKeyCodec;
-import org.broadinstitute.hellbender.utils.read.FlowBasedReadUtils;
+import picard.flow.FlowBasedKeyCodec;
 
 /**
  * Haplotype that also keeps information on the flow space @see FlowBasedRead
@@ -61,11 +59,11 @@ public class FlowBasedHaplotype  extends SimpleAllele {
     }
 
     public int[] findLeftClipping(final int baseClipping) {
-        return FlowBasedReadUtils.findLeftClipping(baseClipping, flow2base, key);
+        return FlowBasedKeyCodec.findLeftClipping(baseClipping, flow2base, key);
     }
 
     public int[] findRightClipping(final int baseClipping) {
-        return FlowBasedReadUtils.findRightClipping(baseClipping, rFlow2Base, rKey);
+        return FlowBasedKeyCodec.findRightClipping(baseClipping, rFlow2Base, rKey);
     }
 
     public byte [] getFlowOrderArray() {

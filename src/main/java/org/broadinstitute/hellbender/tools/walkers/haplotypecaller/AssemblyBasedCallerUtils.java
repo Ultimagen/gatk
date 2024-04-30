@@ -41,6 +41,7 @@ import org.broadinstitute.hellbender.utils.read.*;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
+import picard.flow.FlowReadGroupInfo;
 
 import java.io.File;
 import java.util.*;
@@ -419,7 +420,7 @@ public final class AssemblyBasedCallerUtils {
         int result = 0;
         List<SAMReadGroupRecord> rgr = readsHeader.getReadGroups();
         for (SAMReadGroupRecord rg : rgr) {
-            FlowBasedReadUtils.ReadGroupInfo rgi = new FlowBasedReadUtils.ReadGroupInfo(rg);
+            FlowReadGroupInfo rgi = new FlowReadGroupInfo(rg);
             if (rgi.maxClass >= result) {
                 result = rgi.maxClass;
             }

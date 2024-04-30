@@ -8,8 +8,8 @@ import org.broadinstitute.hellbender.utils.genotyper.LikelihoodMatrix;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.haplotype.FlowBasedHaplotype;
-import org.broadinstitute.hellbender.utils.read.FlowBasedKeyCodec;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
+import picard.flow.FlowBasedKeyCodec;
 
 import java.util.List;
 

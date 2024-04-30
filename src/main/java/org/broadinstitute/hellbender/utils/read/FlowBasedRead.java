@@ -12,6 +12,7 @@ import org.broadinstitute.hellbender.utils.Tail;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 import org.broadinstitute.hellbender.utils.logging.OneShotLogger;
+import picard.flow.FlowBasedKeyCodec;
 
 import java.io.*;
 import java.text.DecimalFormat;
@@ -668,7 +669,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
 
     private int[] findLeftClipping(final int basesClipped){
-        return FlowBasedReadUtils.findLeftClipping(basesClipped, flow2base, key);
+        return FlowBasedKeyCodec.findLeftClipping(basesClipped, flow2base, key);
     }
 
     private int[] findRightClippingFromCigar() {
@@ -699,7 +700,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
         final int[] rflow2base = FlowBasedKeyCodec.getKeyToBase(rkey);
 
-        return FlowBasedReadUtils.findRightClipping(basesClipped, rflow2base, rkey);
+        return FlowBasedKeyCodec.findRightClipping(basesClipped, rflow2base, rkey);
     }
 
 

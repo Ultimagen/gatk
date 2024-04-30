@@ -31,6 +31,7 @@ import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.*;
 import org.broadinstitute.hellbender.utils.report.GATKReport;
 import org.broadinstitute.hellbender.utils.report.GATKReportTable;
+import picard.flow.FlowReadGroupInfo;
 
 import java.io.*;
 import java.text.DecimalFormat;
@@ -544,7 +545,7 @@ public class GroundTruthScorer extends ReadWalker {
         }
 
         // create flow read/haplotype
-        final FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), clippedRead);
+        final FlowReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), clippedRead);
         final FlowBasedRead flowRead = new FlowBasedRead(clippedRead, rgInfo.flowOrder, rgInfo.maxClass, fbargs);
         final Haplotype haplotype = new Haplotype(referenceContext.getBases(), true);
         final FlowBasedHaplotype flowHaplotype = new FlowBasedHaplotype(haplotype, rgInfo.flowOrder);

@@ -11,10 +11,10 @@ import org.broadinstitute.hellbender.tools.walkers.annotator.InfoFieldAnnotation
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.logging.OneShotLogger;
-import org.broadinstitute.hellbender.utils.read.FlowBasedKeyCodec;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
+import picard.flow.FlowBasedKeyCodec;
 
 import java.util.*;
 import java.util.stream.Collectors;

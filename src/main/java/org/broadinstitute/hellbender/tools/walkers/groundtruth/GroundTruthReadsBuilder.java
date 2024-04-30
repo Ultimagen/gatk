@@ -17,13 +17,14 @@ import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.*;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
+import org.broadinstitute.hellbender.utils.haplotype.FlowBasedHaplotype;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.CigarBuilder;
 import org.broadinstitute.hellbender.utils.read.FlowBasedReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.tools.walkers.featuremapping.FlowFeatureMapper;
-import org.broadinstitute.hellbender.utils.haplotype.FlowBasedHaplotype;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
+import picard.flow.FlowReadGroupInfo;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -472,7 +473,7 @@ public final class GroundTruthReadsBuilder extends PartialReadWalker {
 
     private FlowBasedRead buildFlowRead(final GATKRead read) {
 
-        FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read);
+        FlowReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read);
 
         return new FlowBasedRead(read, rgInfo.flowOrder, rgInfo.maxClass, fbargs);
     }
@@ -655,7 +656,7 @@ public final class GroundTruthReadsBuilder extends PartialReadWalker {
     private double scoreReadAgainstHaplotype(final GATKRead read, final ScoredHaplotype sh) {
 
         // build haplotypes
-        final FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read);
+        final FlowReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read);
         final FlowBasedHaplotype flowHaplotype = new FlowBasedHaplotype(sh.haplotype, rgInfo.flowOrder);
 
         // create flow read
@@ -679,7 +680,7 @@ public final class GroundTruthReadsBuilder extends PartialReadWalker {
     private double scoreReadAgainstReference(final GATKRead read, final ReferenceContext ref) {
 
         // build haplotypes
-        final FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read);
+        final FlowReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read);
         final FlowBasedHaplotype      flowHaplotype = new FlowBasedHaplotype(buildReferenceHaplotype(ref, read), rgInfo.flowOrder);
 
         // create flow read
@@ -709,7 +710,7 @@ public final class GroundTruthReadsBuilder extends PartialReadWalker {
         return score;
     }
 
-    private int[] buildHaplotypeKey(final String haplotypeSeq, final FlowBasedReadUtils.ReadGroupInfo rgInfo, final boolean isReversed) {
+    private int[] buildHaplotypeKey(final String haplotypeSeq, final FlowReadGroupInfo rgInfo, final boolean isReversed) {
 
         // create a haplotype to contain the sequence
         final byte[]              seq = reverseComplement(haplotypeSeq.getBytes(), isReversed);
@@ -743,7 +744,7 @@ public final class GroundTruthReadsBuilder extends PartialReadWalker {
 
     }
 
-    private int[] buildHaplotypeKeyForOutput(ScoredHaplotype scoredHaplotype, final FlowBasedReadUtils.ReadGroupInfo rgInfo, final int fillValue, final GATKRead read) {
+    private int[] buildHaplotypeKeyForOutput(ScoredHaplotype scoredHaplotype, final FlowReadGroupInfo rgInfo, final int fillValue, final GATKRead read) {
 
         boolean                   isReversed = read.isReverseStrand();
 
@@ -863,7 +864,7 @@ public final class GroundTruthReadsBuilder extends PartialReadWalker {
         cols.put("RefHaplotypeScore", String.format("%.6f", refScore));
 
         // build haplotype keys
-        final FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read);
+        final FlowReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read);
         final int[]           paternalHaplotypeKey = buildHaplotypeKeyForOutput(paternal, rgInfo,fillValue, read);
         final int[]           maternalHaplotypeKey = buildHaplotypeKeyForOutput(maternal, rgInfo,fillValue, read);
 

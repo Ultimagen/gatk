@@ -7,15 +7,16 @@ import org.broadinstitute.hellbender.utils.MathUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.dragstr.DragstrParams;
 import org.broadinstitute.hellbender.utils.genotyper.*;
+import org.broadinstitute.hellbender.utils.haplotype.FlowBasedHaplotype;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.pairhmm.FlowBasedPairHMM;
 import org.broadinstitute.hellbender.utils.pairhmm.PairHMMInputScoreImputation;
 import org.broadinstitute.hellbender.utils.pairhmm.PairHMMInputScoreImputator;
 import org.broadinstitute.hellbender.utils.read.FlowBasedReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
-import org.broadinstitute.hellbender.utils.haplotype.FlowBasedHaplotype;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
+import picard.flow.FlowReadGroupInfo;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -220,7 +221,7 @@ public class FlowBasedHMMEngine implements ReadLikelihoodCalculationEngine {
         final List<FlowBasedHaplotype> processedHaplotypes = new ArrayList<>(likelihoods.numberOfAlleles());
 
         // establish flow order based on the first evidence. Note that all reads belong to the same sample (group)
-        final FlowBasedReadUtils.ReadGroupInfo rgInfo = (likelihoods.evidenceCount() != 0)
+        final FlowReadGroupInfo rgInfo = (likelihoods.evidenceCount() != 0)
                 ? FlowBasedReadUtils.getReadGroupInfo(hdr, likelihoods.evidence().get(0))
                 : null;
         final String flowOrder = (rgInfo != null)

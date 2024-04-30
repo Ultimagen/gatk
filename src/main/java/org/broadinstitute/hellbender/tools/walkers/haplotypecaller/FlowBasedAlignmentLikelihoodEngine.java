@@ -7,9 +7,10 @@ import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.*;
+import org.broadinstitute.hellbender.utils.haplotype.FlowBasedHaplotype;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.*;
-import org.broadinstitute.hellbender.utils.haplotype.FlowBasedHaplotype;
+import picard.flow.FlowReadGroupInfo;
 
 import java.util.*;
 import java.util.concurrent.Callable;
@@ -156,7 +157,7 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
         final List<FlowBasedHaplotype> processedHaplotypes = new ArrayList<>(likelihoods.numberOfAlleles());
 
         // establish flow order based on the first evidence. Note that all reads belong to the same sample (group)
-        final FlowBasedReadUtils.ReadGroupInfo rgInfo = (likelihoods.evidenceCount() != 0)
+        final FlowReadGroupInfo rgInfo = (likelihoods.evidenceCount() != 0)
                 ? FlowBasedReadUtils.getReadGroupInfo(hdr, likelihoods.evidence().get(0))
                 : null;
         final String flowOrder = (rgInfo != null)

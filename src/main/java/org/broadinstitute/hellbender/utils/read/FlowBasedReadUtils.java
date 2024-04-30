@@ -1,16 +1,14 @@
 package org.broadinstitute.hellbender.utils.read;
 
-import gov.nih.nlm.ncbi.ngs.NGS;
 import htsjdk.samtools.*;
-import htsjdk.samtools.util.SequenceUtil;
 import org.apache.commons.lang3.ArrayUtils;
 import org.broadinstitute.hellbender.cmdline.argumentcollections.MarkDuplicatesSparkArgumentCollection;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
-import org.broadinstitute.hellbender.utils.NGSPlatform;
-import org.broadinstitute.hellbender.utils.SequencerFlowClass;
 import org.broadinstitute.hellbender.utils.Utils;
+import picard.flow.FlowBasedKeyCodec;
+import picard.flow.FlowReadGroupInfo;
 
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -32,7 +30,7 @@ public class FlowBasedReadUtils {
     public static final FlowBasedArgumentCollection DEFAULT_FLOW_BASED_ARGUMENT_COLLECTION = new FlowBasedArgumentCollection();
     static final public int FLOW_BASED_INSIGNIFICANT_END = 0;
 
-    private static final Map<String, ReadGroupInfo> readGroupInfo = new LinkedHashMap<>();
+    private static final Map<String, FlowReadGroupInfo> readGroupInfo = new LinkedHashMap<>();
 
     public enum CycleSkipStatus {
         NS(0),         // no skip
@@ -47,49 +45,6 @@ public class FlowBasedReadUtils {
 
         int getPriority() {
             return this.priority;
-        }
-
-    }
-
-    static public class ReadGroupInfo {
-        final public String  flowOrder;
-        final public int     maxClass;
-        final public boolean isFlowPlatform;
-        private String  reversedFlowOrder = null;
-
-        public ReadGroupInfo(final SAMReadGroupRecord readGroup) {
-            if (readGroup.getPlatform()==null){
-                isFlowPlatform = false;
-            } else if (NGSPlatform.fromReadGroupPL(readGroup.getPlatform())==NGSPlatform.UNKNOWN){
-                isFlowPlatform = false;
-            } else if (NGSPlatform.fromReadGroupPL(readGroup.getPlatform()) == NGSPlatform.LS454) {
-                //old Ultima data can have PLATFORM==LS454 and not have FO tag
-                isFlowPlatform = true;
-            } else if (NGSPlatform.fromReadGroupPL(readGroup.getPlatform()) == NGSPlatform.ULTIMA){
-                if (readGroup.getFlowOrder()!=null) {
-                    isFlowPlatform = true;
-                } else {
-                    throw new RuntimeException("Malformed Ultima read group identified, aborting: " + readGroup);
-                }
-            } else {
-                isFlowPlatform = false;
-            }
-
-            if (isFlowPlatform) {
-                this.flowOrder = readGroup.getFlowOrder();
-                String mc = readGroup.getAttribute(FlowBasedRead.MAX_CLASS_READ_GROUP_TAG);
-                this.maxClass = (mc == null) ? FlowBasedRead.MAX_CLASS : Integer.parseInt(mc);
-            } else { // not a flow platform
-                this.flowOrder = null;
-                this.maxClass = 0;
-            }
-        }
-
-        public synchronized String getReversedFlowOrder() {
-            if ( reversedFlowOrder == null ) {
-                reversedFlowOrder = SequenceUtil.reverseComplement(flowOrder);
-            }
-            return reversedFlowOrder;
         }
 
     }
@@ -192,7 +147,7 @@ public class FlowBasedReadUtils {
         }
         return getReadGroupInfo(hdr, read).isFlowPlatform;
     }
-    public static synchronized ReadGroupInfo getReadGroupInfo(final SAMFileHeader hdr, final GATKRead read) {
+    public static synchronized FlowReadGroupInfo getReadGroupInfo(final SAMFileHeader hdr, final GATKRead read) {
 
         if ( !hasFlowTags(read) ) {
             throw new IllegalArgumentException("read must be flow based: " + read);
@@ -200,9 +155,9 @@ public class FlowBasedReadUtils {
 
         String              name = read.getReadGroup();
         Utils.nonNull(name);
-        ReadGroupInfo info = readGroupInfo.get(name);
+        FlowReadGroupInfo info = readGroupInfo.get(name);
         if ( info == null ) {
-            readGroupInfo.put(name, info = new ReadGroupInfo(hdr.getReadGroup(name)));
+            readGroupInfo.put(name, info = new FlowReadGroupInfo(hdr.getReadGroup(name)));
         }
         return info;
     }
@@ -221,61 +176,11 @@ public class FlowBasedReadUtils {
         throw new GATKException("Unable to perform flow based operations without the flow order");
     }
 
-    /*
-     * clips flows from the left to clip the input number of bases
-     * Needed to trim the haplotype to the read
-     * Returns number of flows to remove and the change in the left most remaining flow if necessary
-     */
-    static public int[] findLeftClipping(final int baseClipping, final int[] flow2base, final int[] key) {
-        final int [] result = new int[2];
-        if (baseClipping == 0 ){
-            return result;
-        }
-
-        int stopClip = 0;
-        for (int i = 0 ; i < flow2base.length; i++ ) {
-
-            if (flow2base[i] + key[i] >= baseClipping) {
-                stopClip = i;
-                break;
-            }
-        }
-        final int hmerClipped = baseClipping - flow2base[stopClip] - 1;
-        result[0] = stopClip;
-        result[1] = hmerClipped;
-        return result;
-    }
-
-    /*
-     * clips flows from the right to trim the input number of bases
-     * Returns number of flows to remove and the change in the right most flow.
-     */
-    static public int[] findRightClipping(final int baseClipping, final int[] rFlow2Base, final int[] rKey) {
-        final int [] result = new int[2];
-        if (baseClipping == 0 ){
-            return result;
-        }
-
-        int stopClip = 0;
-
-        for (int i = 0; i < rFlow2Base.length; i++ ) {
-            if (rFlow2Base[i] + rKey[i] >= baseClipping) {
-                stopClip = i;
-                break;
-            }
-        }
-
-        final int hmerClipped = baseClipping - rFlow2Base[stopClip] - 1;
-        result[0] = stopClip;
-        result[1] = hmerClipped;
-        return result;
-    }
-
     /**
      * create a FlowBasedRead from a proper SAMRecord
      */
     static public FlowBasedRead convertToFlowBasedRead(GATKRead read, SAMFileHeader header) {
-        final ReadGroupInfo readGroupInfo = getReadGroupInfo(header, read);
+        final FlowReadGroupInfo readGroupInfo = getReadGroupInfo(header, read);
         return new FlowBasedRead(read, readGroupInfo.flowOrder, readGroupInfo.maxClass, DEFAULT_FLOW_BASED_ARGUMENT_COLLECTION);
     }
 

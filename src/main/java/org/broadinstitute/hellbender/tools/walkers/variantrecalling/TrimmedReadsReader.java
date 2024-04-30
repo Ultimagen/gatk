@@ -10,6 +10,7 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
+import picard.flow.FlowReadGroupInfo;
 
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Path;
@@ -74,7 +75,7 @@ public class TrimmedReadsReader {
                     continue;
 
                 // convert to a flow based read
-                FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(samReader.getFileHeader(), gatkRead);
+                FlowReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(samReader.getFileHeader(), gatkRead);
                 final FlowBasedRead fbr = new FlowBasedRead(gatkRead, rgInfo.flowOrder, rgInfo.maxClass, fbArgs);
                 fbr.applyAlignment();
 

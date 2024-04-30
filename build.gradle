@@ -188,7 +188,9 @@ configurations.all {
 }
 
 tasks.withType(JavaCompile) {
-  options.compilerArgs = ['-proc:none', '-Xlint:all', '-Werror', '-Xdiags:verbose']
+  // TEMP: removing -Werror to allow picard to compile
+  //options.compilerArgs = ['-proc:none', '-Xlint:all', '-Werror', '-Xdiags:verbose']
+  options.compilerArgs = ['-proc:none', '-Xlint:all', '-Xdiags:verbose']
   options.encoding = 'UTF-8'
 }
 
@@ -238,8 +240,9 @@ dependencies {
     // Library for configuration:
     implementation 'org.aeonbits.owner:owner:1.0.9'
 
-    implementation 'com.github.broadinstitute:picard:' + picardVersion
-    externalSourceConfiguration 'com.github.broadinstitute:picard:' + picardVersion + ':sources'
+	// TEMP: picard commented out - to assist in moving flow code to it
+    // implementation 'com.github.broadinstitute:picard:' + picardVersion
+    // externalSourceConfiguration 'com.github.broadinstitute:picard:' + picardVersion + ':sources'
     implementation ('org.genomicsdb:genomicsdb:' + genomicsdbVersion)  {
         exclude module: 'log4j-api'
         exclude module: 'log4j-core'

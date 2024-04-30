@@ -16,6 +16,7 @@ import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.groundtruth.SeriesStats;
 import org.broadinstitute.hellbender.utils.read.*;
+import picard.flow.FlowReadGroupInfo;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -149,7 +150,7 @@ public final class AddFlowSNVQuality extends ReadWalker {
                 outputBQStats.add(q);
             }
         }
-        final FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read);
+        final FlowReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read);
         final byte[] bases = read.getBasesNoCopy();
         final double[] sumP = new double[bases.length];
         for ( int i = 0 ; i < 4 ; i++ ) {
@@ -184,7 +185,7 @@ public final class AddFlowSNVQuality extends ReadWalker {
             // write header
             final StringBuilder hdr = new StringBuilder();
             hdr.append("pos,base,qual,tp,t0,bq");
-            final FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read);
+            final FlowReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(getHeaderForReads(), read);
             for (int i = 0; i < 4; i++) {
                 hdr.append(",");
                 hdr.append(attrNameForNonCalledBase(rgInfo.flowOrder.charAt(i)));
@@ -277,7 +278,7 @@ public final class AddFlowSNVQuality extends ReadWalker {
         }
 
         // convert to a flow base read
-        final FlowBasedReadUtils.ReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(hdr, read);
+        final FlowReadGroupInfo rgInfo = FlowBasedReadUtils.getReadGroupInfo(hdr, read);
         final FlowBasedRead fbRead = new FlowBasedRead(read, rgInfo.flowOrder, rgInfo.maxClass, fbargs);
         final int flowOrderLength = FlowBasedReadUtils.calcFlowOrderLength(rgInfo.flowOrder);
 
