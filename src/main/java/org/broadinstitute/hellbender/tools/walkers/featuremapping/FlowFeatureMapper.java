@@ -218,12 +218,17 @@ public final class FlowFeatureMapper extends ReadWalker {
             this.offsetDelta = offsetDelta;
         }
 
-        static MappedFeature makeSNV(GATKRead read, int offset, byte refBase, int start, int offsetDelta) {
+        static MappedFeature makeFeature(FlowFeatureMapperArgumentCollection.MappingFeatureEnum type, GATKRead read, int offset, byte refBase, int start, int offsetDelta) {
             byte[]      readBases = {read.getBasesNoCopy()[offset]};
             byte[]      refBases = {refBase};
+
+            return makeFeature(type, read, readBases, refBases, offset, start, offsetDelta);
+        }
+
+        static MappedFeature makeFeature(FlowFeatureMapperArgumentCollection.MappingFeatureEnum type, GATKRead read, byte[] readBases, byte[] refBases, int offset, int start, int offsetDelta) {
             return new MappedFeature(
                     read,
-                    FlowFeatureMapperArgumentCollection.MappingFeatureEnum.SNV,
+                    type,
                     readBases,
                     refBases,
                     offset,
@@ -337,7 +342,7 @@ public final class FlowFeatureMapper extends ReadWalker {
         headerInfo.add(new VCFInfoHeaderLine(VCF_MAPQ, 1, VCFHeaderLineType.Integer, "Read mapqe"));
         headerInfo.add(new VCFInfoHeaderLine(VCF_CIGAR, 1, VCFHeaderLineType.String, "Read CIGAR"));
         headerInfo.add(new VCFInfoHeaderLine(VCF_READ_COUNT, 1, VCFHeaderLineType.Integer, "Number of reads containing this location"));
-        headerInfo.add(new VCFInfoHeaderLine(VCF_FILTERED_COUNT, 1, VCFHeaderLineType.Integer, "Number of reads containing this location that agree with reference according to fitler"));
+        headerInfo.add(new VCFInfoHeaderLine(VCF_FILTERED_COUNT, 1, VCFHeaderLineType.Integer, "Number of reads containing this location that agree with reference and pass the adjacent base filter"));
         headerInfo.add(new VCFInfoHeaderLine(VCF_FC1, 1, VCFHeaderLineType.Integer, "Number of M bases different on read from references"));
         headerInfo.add(new VCFInfoHeaderLine(VCF_FC2, 1, VCFHeaderLineType.Integer, "Number of features before score threshold filter"));
         headerInfo.add(new VCFInfoHeaderLine(VCF_LENGTH, 1, VCFHeaderLineType.Integer, "Read length"));
@@ -475,7 +480,8 @@ public final class FlowFeatureMapper extends ReadWalker {
         for ( ReadContext rc : readQueue ) {
             if ( rc.read.contains(loc) ) {
                 fr.readCount++;
-                if ( mapper.noFeatureButFilterAt(rc.read, rc.referenceContext, fr.start) == FeatureMapper.FilterStatus.Filtered ) {
+                FeatureMapper.FilterStatus fs = mapper.noFeatureButFilterAt(rc.read, rc.referenceContext, fr.start);
+                if ( fs == FeatureMapper.FilterStatus.NoFeatureAndFiltered ) {
                     fr.filteredCount++;
                 }
             }
@@ -754,6 +760,16 @@ public final class FlowFeatureMapper extends ReadWalker {
         // build appropriate mapper
         if ( fmArgs.mappingFeature == FlowFeatureMapperArgumentCollection.MappingFeatureEnum.SNV ) {
             return new SNVMapper(fmArgs);
+        } else if ( fmArgs.mappingFeature == FlowFeatureMapperArgumentCollection.MappingFeatureEnum.INDEL ) {
+            return new INDELMapper(fmArgs);
+        } else if ( fmArgs.mappingFeature == FlowFeatureMapperArgumentCollection.MappingFeatureEnum.MNP ) {
+            return new MNPMapper(fmArgs);
+        } else if ( fmArgs.mappingFeature == FlowFeatureMapperArgumentCollection.MappingFeatureEnum.ALL ) {
+            List<FeatureMapper> fmList = new LinkedList<>();
+            fmList.add(new SNVMapper(fmArgs));
+            fmList.add(new INDELMapper(fmArgs));
+            fmList.add(new MNPMapper(fmArgs));
+            return new JointMapper(fmList);
         } else {
             throw new GATKException("unsupported mappingFeature: " + fmArgs.mappingFeature);
         }

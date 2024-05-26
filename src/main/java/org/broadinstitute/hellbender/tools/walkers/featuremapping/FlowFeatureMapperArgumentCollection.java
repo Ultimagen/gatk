@@ -14,7 +14,10 @@ public class FlowFeatureMapperArgumentCollection implements Serializable{
     private static final long serialVersionUID = 1L;
 
     enum MappingFeatureEnum {
-        SNV
+        SNV,
+        INDEL,
+        MNP,
+        ALL
     };
 
     /**
