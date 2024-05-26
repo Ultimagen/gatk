@@ -218,12 +218,17 @@ public final class FlowFeatureMapper extends ReadWalker {
             this.offsetDelta = offsetDelta;
         }
 
-        static MappedFeature makeSNV(GATKRead read, int offset, byte refBase, int start, int offsetDelta) {
+        static MappedFeature makeFeature(FlowFeatureMapperArgumentCollection.MappingFeatureEnum type, GATKRead read, int offset, byte refBase, int start, int offsetDelta) {
             byte[]      readBases = {read.getBasesNoCopy()[offset]};
             byte[]      refBases = {refBase};
+
+            return makeFeature(type, read, readBases, refBases, offset, start, offsetDelta);
+        }
+
+        static MappedFeature makeFeature(FlowFeatureMapperArgumentCollection.MappingFeatureEnum type, GATKRead read, byte[] readBases, byte[] refBases, int offset, int start, int offsetDelta) {
             return new MappedFeature(
                     read,
-                    FlowFeatureMapperArgumentCollection.MappingFeatureEnum.SNV,
+                    type,
                     readBases,
                     refBases,
                     offset,
@@ -755,6 +760,16 @@ public final class FlowFeatureMapper extends ReadWalker {
         // build appropriate mapper
         if ( fmArgs.mappingFeature == FlowFeatureMapperArgumentCollection.MappingFeatureEnum.SNV ) {
             return new SNVMapper(fmArgs);
+        } else if ( fmArgs.mappingFeature == FlowFeatureMapperArgumentCollection.MappingFeatureEnum.INDEL ) {
+            return new INDELMapper(fmArgs);
+        } else if ( fmArgs.mappingFeature == FlowFeatureMapperArgumentCollection.MappingFeatureEnum.MNP ) {
+            return new MNPMapper(fmArgs);
+        } else if ( fmArgs.mappingFeature == FlowFeatureMapperArgumentCollection.MappingFeatureEnum.ALL ) {
+            List<FeatureMapper> fmList = new LinkedList<>();
+            fmList.add(new SNVMapper(fmArgs));
+            fmList.add(new INDELMapper(fmArgs));
+            fmList.add(new MNPMapper(fmArgs));
+            return new JointMapper(fmList);
         } else {
             throw new GATKException("unsupported mappingFeature: " + fmArgs.mappingFeature);
         }
