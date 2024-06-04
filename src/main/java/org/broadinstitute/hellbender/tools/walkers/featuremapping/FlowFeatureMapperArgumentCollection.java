@@ -23,7 +23,7 @@ public class FlowFeatureMapperArgumentCollection implements Serializable{
     /**
      *  kind of feature we are mapping (looking for)
      **/
-    @Argument(fullName = "mapping-feature", doc = "Kind of feaure being mapped", optional = true)
+    @Argument(fullName = "mapping-feature", doc = "Kind of feature being mapped", optional = true)
     public MappingFeatureEnum mappingFeature = MappingFeatureEnum.SNV;
 
     /**
@@ -91,6 +91,12 @@ public class FlowFeatureMapperArgumentCollection implements Serializable{
      **/
     @Argument(fullName = "keep-supplementary-alignments", doc = "keep supplementary alignments ?", optional = true)
     public boolean keepSupplementaryAlignments = false;
+
+    /**
+     * MNP, max distance between SNPs making up the feature
+     */
+    @Argument(fullName = "max-mnp-distance", doc = "max distance between SNPs making up the feature", optional = true)
+    public int maxMnpDistance = 2;
 
     /**
      *  debug negatives?
