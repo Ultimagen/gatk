@@ -1,5 +1,6 @@
 package org.broadinstitute.hellbender.tools.walkers.featuremapping;
 
+import htsjdk.samtools.SAMFileHeader;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
@@ -11,19 +12,17 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
 
 public class SNVMapper extends BaseFeatureMapper implements FeatureMapper {
 
-    public SNVMapper(FlowFeatureMapperArgumentCollection fmArgs) {
-        super(fmArgs);
+    public SNVMapper(FlowFeatureMapperArgumentCollection fmArgs, SAMFileHeader hdr) {
+        super(fmArgs, hdr);
     }
 
     @Override
-    protected FlowFeatureMapper.MappedFeature detectFeature(GATKRead read, ReferenceContext referenceContext, int readOfs, int refOfs) {
-        final byte[] bases = read.getBasesNoCopy();
-        final byte[] ref = referenceContext.getBases();
+    protected FlowFeatureMapper.MappedFeature detectFeature(GATKRead read, ReferenceContext referenceContext, final byte bases[], final byte ref[], int readOfs, int refOfs) {
 
         if ( ref[refOfs] != 'N' && (fmArgs.reportAllAlts || (bases[readOfs] != ref[refOfs])) ) {
 
             // check if surrounded
-            boolean surrounded = isSurrounded(read, referenceContext, readOfs, refOfs, 1);
+            boolean surrounded = isSurrounded(read, referenceContext, readOfs, refOfs, 1, 1);
             if ( ignoreBecauseNotSurrounded(surrounded) ) {
                 return null;
             }

@@ -758,18 +758,20 @@ public final class FlowFeatureMapper extends ReadWalker {
 
     private FeatureMapper buildMapper() {
 
+        SAMFileHeader hdr = getHeaderForReads();
+
         // build appropriate mapper
         if ( fmArgs.mappingFeature == FlowFeatureMapperArgumentCollection.MappingFeatureEnum.SNV ) {
-            return new SNVMapper(fmArgs);
+            return new SNVMapper(fmArgs, hdr);
         } else if ( fmArgs.mappingFeature == FlowFeatureMapperArgumentCollection.MappingFeatureEnum.INDEL ) {
-            return new INDELMapper(fmArgs);
+            return new INDELMapper(fmArgs, hdr);
         } else if ( fmArgs.mappingFeature == FlowFeatureMapperArgumentCollection.MappingFeatureEnum.MNP ) {
-            return new MNPMapper(fmArgs);
+            return new MNPMapper(fmArgs, hdr);
         } else if ( fmArgs.mappingFeature == FlowFeatureMapperArgumentCollection.MappingFeatureEnum.ALL ) {
             List<FeatureMapper> fmList = new LinkedList<>();
-            fmList.add(new SNVMapper(fmArgs));
-            fmList.add(new INDELMapper(fmArgs));
-            fmList.add(new MNPMapper(fmArgs));
+            fmList.add(new SNVMapper(fmArgs, hdr));
+            fmList.add(new INDELMapper(fmArgs, hdr));
+            fmList.add(new MNPMapper(fmArgs, hdr));
             return new JointMapper(fmList);
         } else {
             throw new GATKException("unsupported mappingFeature: " + fmArgs.mappingFeature);
