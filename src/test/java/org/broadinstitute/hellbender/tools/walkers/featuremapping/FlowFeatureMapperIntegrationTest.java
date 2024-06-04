@@ -3,6 +3,7 @@ package org.broadinstitute.hellbender.tools.walkers.featuremapping;
 import org.broadinstitute.hellbender.CommandLineProgramTest;
 import org.broadinstitute.hellbender.testutils.IntegrationTestSpec;
 import org.testng.Assert;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.broadinstitute.hellbender.tools.walkers.variantrecalling.FlowTestConstants;
 
@@ -220,41 +221,22 @@ public class FlowFeatureMapperIntegrationTest extends CommandLineProgramTest {
         }
     }
 
-    @Test
-    public void testMNP() throws IOException {
-
-        final File outputDir = createTempDir("testFlowFeatureMapperTest");
-        final File expectedFile = new File(testDir + "/snv_feature_mapper_mnp_output.vcf");
-        final File outputFile = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expectedFile : new File(outputDir + "/snv_feature_mapper_mnp_output.vcf");
-
-        final String[] args = new String[] {
-                "-R", largeFileTestDir + "/Homo_sapiens_assembly38.fasta.gz",
-                "-O", outputFile.getAbsolutePath(),
-                "-I", testDir + "/snv_feature_mapper_input.bam",
-                "--limit-score", "100",
-                "--min-score", "0",
-                "--snv-identical-bases", "10",
-                "--mapping-feature", "MNP"
+    @DataProvider(name = "new_feature_types")
+    public Object[][] getNewFeatureTypes() {
+        Object[][] data = {
+                { "MNP", "/snv_feature_mapper_mnp_output.vcf" },
+                { "INDEL", "/snv_feature_mapper_indel_output.vcf" },
+                { "ALL", "/snv_feature_mapper_all_output.vcf" }
         };
-
-        // run the tool
-        runCommandLine(args);  // no assert, just make sure we don't throw
-
-        // make sure we've generated the otuput file
-        Assert.assertTrue(outputFile.exists());
-
-        // walk the output and expected files, compare non-comment lines
-        if ( !UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
-            IntegrationTestSpec.assertEqualTextFiles(outputFile, expectedFile, "#");
-        }
+        return data;
     }
 
-    @Test
-    public void testINDEL() throws IOException {
+    @Test(dataProvider = "new_feature_types")
+    public void testNewFeatureTypes(String type, String filename) throws IOException {
 
         final File outputDir = createTempDir("testFlowFeatureMapperTest");
-        final File expectedFile = new File(testDir + "/snv_feature_mapper_indel_output.vcf");
-        final File outputFile = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expectedFile : new File(outputDir + "/snv_feature_mapper_indel_output.vcf");
+        final File expectedFile = new File(testDir + filename);
+        final File outputFile = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expectedFile : new File(outputDir + filename);
 
         final String[] args = new String[] {
                 "-R", largeFileTestDir + "/Homo_sapiens_assembly38.fasta.gz",
@@ -263,7 +245,7 @@ public class FlowFeatureMapperIntegrationTest extends CommandLineProgramTest {
                 "--limit-score", "100",
                 "--min-score", "0",
                 "--snv-identical-bases", "10",
-                "--mapping-feature", "INDEL"
+                "--mapping-feature", type
         };
 
         // run the tool
