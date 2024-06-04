@@ -20,6 +20,7 @@ import org.broadinstitute.hellbender.cmdline.programgroups.FlowBasedProgramGroup
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
+import org.broadinstitute.hellbender.tools.walkers.annotator.TandemRepeat;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.*;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
@@ -439,7 +440,7 @@ public final class FlowFeatureMapper extends ReadWalker {
             while ( featureQueue.size() != 0 ) {
                 final MappedFeature fr = featureQueue.poll();
                 enrichFeature(fr);
-                emitFeature(fr);
+                emitFeature(fr, referenceContext);
             }
         } else {
             // enter read into the queue
@@ -452,7 +453,7 @@ public final class FlowFeatureMapper extends ReadWalker {
                             || (fr.start < read.getStart()) ) {
                     fr = featureQueue.poll();
                     enrichFeature(fr);
-                    emitFeature(fr);
+                    emitFeature(fr, referenceContext);
                 }
                 else {
                     break;
@@ -679,7 +680,7 @@ public final class FlowFeatureMapper extends ReadWalker {
         return true;
     }
 
-    private void emitFeature(final MappedFeature fr) {
+    private void emitFeature(final MappedFeature fr, ReferenceContext referenceContext) {
 
         // create alleles
         final Collection<Allele>          alleles = new LinkedList<>();
@@ -751,6 +752,15 @@ public final class FlowFeatureMapper extends ReadWalker {
 
         // build it!
         final VariantContext      vc = vcb.make();
+
+        // annotate
+        if ( fmArgs.strAnnotate ) {
+            TandemRepeat strAnnotator = new TandemRepeat();
+            Map<String, Object> attrs = strAnnotator.annotate(referenceContext, vc, null);
+            for (Map.Entry<String, Object> entry : attrs.entrySet()) {
+                vc.getAttributes().put(entry.getKey(), entry.getValue());
+            }
+        }
 
         // write to file
         vcfWriter.add(vc);
