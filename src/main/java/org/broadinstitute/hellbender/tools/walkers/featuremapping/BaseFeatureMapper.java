@@ -1,6 +1,8 @@
 package org.broadinstitute.hellbender.tools.walkers.featuremapping;
 
 import htsjdk.samtools.CigarElement;
+import htsjdk.samtools.CigarOperator;
+import htsjdk.samtools.SAMFileHeader;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.text.similarity.LevenshteinDistance;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
@@ -27,13 +29,15 @@ public abstract class BaseFeatureMapper {
     final int         spanAfter;
 
     final FlowFeatureMapperArgumentCollection fmArgs;
+    final SAMFileHeader hdr;
 
-    BaseFeatureMapper(FlowFeatureMapperArgumentCollection fmArgs) {
+    BaseFeatureMapper(FlowFeatureMapperArgumentCollection fmArgs, SAMFileHeader hdr) {
         surroundBefore = fmArgs.snvIdenticalBases;
         surroundAfter = (fmArgs.snvIdenticalBasesAfter != 0) ?  fmArgs.snvIdenticalBasesAfter : surroundBefore;
         smqSize = fmArgs.surroundingMediaQualitySize;
         smqSizeMean = fmArgs.surroundingMeanQualitySize;
         this.fmArgs = fmArgs;
+        this.hdr = hdr;
 
         // ignore surround
         ignoreSurround = fmArgs.reportAllAlts || fmArgs.tagBasesWithAdjacentRefDiff;
@@ -251,7 +255,7 @@ public abstract class BaseFeatureMapper {
         return nonIdentMBases;
     }
 
-    protected boolean isSurrounded(GATKRead read, ReferenceContext referenceContext, final int readOfs, final int refOfs, int featureLength) {
+    protected boolean isSurrounded(GATKRead read, ReferenceContext referenceContext, final int readOfs, final int refOfs, int featureReadLength, int featureRefLength) {
 
         final byte[] bases = read.getBasesNoCopy();
         final byte[] ref = referenceContext.getBases();
@@ -270,8 +274,8 @@ public abstract class BaseFeatureMapper {
             }
         }
         for (int i = 0; i < surroundAfter && surrounded ; i++ ) {
-            final int bIndex = readOfs + featureLength + i;
-            final int rIndex = refOfs + featureLength + i;
+            final int bIndex = readOfs + featureReadLength + i;
+            final int rIndex = refOfs + featureRefLength + i;
             if ( bIndex < 0 || bIndex >= bases.length || rIndex < 0 || rIndex >= ref.length ) {
                 surrounded = false;
                 continue;
@@ -321,15 +325,29 @@ public abstract class BaseFeatureMapper {
                 refOfs += spanBefore;
                 for ( int ofs = spanBefore ; ofs < length - spanAfter ; ofs++, readOfs++, refOfs++ ) {
 
-                    FlowFeatureMapper.MappedFeature feature = detectFeature(read, referenceContext, readOfs, refOfs);
-                    if ( feature != null ) {
-                        features.add(feature);
+                    if ( readOfs < bases.length && refOfs < ref.length ) {
+                        FlowFeatureMapper.MappedFeature feature = detectFeature(read, referenceContext, bases, ref, readOfs, refOfs);
+                        if (feature != null) {
+                            features.add(feature);
+                        }
                     }
                 }
                 readOfs += spanAfter;
                 refOfs += spanAfter;
 
             } else {
+
+                if ( isIndelMapper() ) {
+                    FlowFeatureMapper.MappedFeature feature = null;
+                    if ( cigarElement.getOperator() == CigarOperator.D ) {
+                        feature = detectFeature(read, referenceContext, bases, ref, readOfs, refOfs, 0, length);
+                    } else if ( cigarElement.getOperator() == CigarOperator.I ) {
+                        feature = detectFeature(read, referenceContext, bases, ref, readOfs, refOfs, length, 0);
+                    }
+                    if ( feature != null ) {
+                        features.add(feature);
+                    }
+                }
 
                 // manual advance
                 if (cigarElement.getOperator().consumesReadBases()) {
@@ -345,7 +363,14 @@ public abstract class BaseFeatureMapper {
         reportFeatures(read, referenceContext, features, action);
     }
 
-    protected FlowFeatureMapper.MappedFeature detectFeature(GATKRead read, ReferenceContext referenceContext, int readOfs, int refOfs) {
+    protected FlowFeatureMapper.MappedFeature detectFeature(GATKRead read, ReferenceContext referenceContext, final byte bases[], final byte ref[], int readOfs, int refOfs) {
         return null;
+    }
+
+    protected FlowFeatureMapper.MappedFeature detectFeature(GATKRead read, ReferenceContext referenceContext, final byte bases[], final byte ref[], int readOfs, int refOfs, int readLength, int refLength) {
+        return null;
+    }
+    protected boolean isIndelMapper() {
+        return false;
     }
 }

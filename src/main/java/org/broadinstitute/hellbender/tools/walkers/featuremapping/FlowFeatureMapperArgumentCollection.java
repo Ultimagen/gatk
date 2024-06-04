@@ -99,6 +99,12 @@ public class FlowFeatureMapperArgumentCollection implements Serializable{
     public int maxMnpDistance = 2;
 
     /**
+     * MNP, max INDEL size SNPs making up the feature
+     */
+    @Argument(fullName = "max-indel-size", doc = "max size of INDEL for making up the feature", optional = true)
+    public int maxIndelSize = 20;
+
+    /**
      *  debug negatives?
      **/
     @Hidden

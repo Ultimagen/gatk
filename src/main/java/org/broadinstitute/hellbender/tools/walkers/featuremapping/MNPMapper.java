@@ -1,5 +1,6 @@
 package org.broadinstitute.hellbender.tools.walkers.featuremapping;
 
+import htsjdk.samtools.SAMFileHeader;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
@@ -13,14 +14,12 @@ import java.util.Arrays;
 
 public class MNPMapper extends BaseFeatureMapper implements FeatureMapper {
 
-    public MNPMapper(FlowFeatureMapperArgumentCollection fmArgs) {
-        super(fmArgs);
+    public MNPMapper(FlowFeatureMapperArgumentCollection fmArgs, SAMFileHeader hdr) {
+        super(fmArgs, hdr);
     }
 
     @Override
-    protected FlowFeatureMapper.MappedFeature detectFeature(GATKRead read, ReferenceContext referenceContext, int readOfs, int refOfs) {
-        final byte[] bases = read.getBasesNoCopy();
-        final byte[] ref = referenceContext.getBases();
+    protected FlowFeatureMapper.MappedFeature detectFeature(GATKRead read, ReferenceContext referenceContext, final byte bases[], final byte ref[], int readOfs, int refOfs) {
 
         if ( ref[refOfs] != 'N' && (bases[readOfs] != ref[refOfs]) ) {
 
@@ -50,7 +49,7 @@ public class MNPMapper extends BaseFeatureMapper implements FeatureMapper {
             }
 
             // check if surrounded
-            boolean surrounded = isSurrounded(read, referenceContext, readOfs, refOfs, featureSize);
+            boolean surrounded = isSurrounded(read, referenceContext, readOfs, refOfs, featureSize, featureSize);
             if ( ignoreBecauseNotSurrounded(surrounded) ) {
                 return null;
             }
@@ -60,7 +59,7 @@ public class MNPMapper extends BaseFeatureMapper implements FeatureMapper {
             byte[] refBases = Arrays.copyOfRange(ref, refOfs, refOfs + featureSize);
 
             FlowFeatureMapper.MappedFeature feature = FlowFeatureMapper.MappedFeature.makeFeature(
-                    FlowFeatureMapperArgumentCollection.MappingFeatureEnum.SNV,
+                    FlowFeatureMapperArgumentCollection.MappingFeatureEnum.MNP,
                     read, readBases, refBases, readOfs, referenceContext.getStart() + refOfs, readOfs - refOfs);
 
             return enrichFeature(feature, surrounded);
