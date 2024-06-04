@@ -218,7 +218,8 @@ public final class FlowFeatureMapper extends ReadWalker {
             this.offsetDelta = offsetDelta;
         }
 
-        static MappedFeature makeFeature(FlowFeatureMapperArgumentCollection.MappingFeatureEnum type, GATKRead read, int offset, byte refBase, int start, int offsetDelta) {
+        static MappedFeature makeFeature(FlowFeatureMapperArgumentCollection.MappingFeatureEnum type,
+                                         GATKRead read, int offset, byte refBase, int start, int offsetDelta) {
             byte[]      readBases = {read.getBasesNoCopy()[offset]};
             byte[]      refBases = {refBase};
 

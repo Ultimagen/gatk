@@ -23,14 +23,15 @@ public class SNVMapper extends BaseFeatureMapper implements FeatureMapper {
         if ( ref[refOfs] != 'N' && (fmArgs.reportAllAlts || (bases[readOfs] != ref[refOfs])) ) {
 
             // check if surrounded
-            boolean surrounded = isSurrounded(read, referenceContext, readOfs, refOfs);
+            boolean surrounded = isSurrounded(read, referenceContext, readOfs, refOfs, 1);
             if ( ignoreBecauseNotSurrounded(surrounded) ) {
                 return null;
             }
 
             // add this feature
             FlowFeatureMapper.MappedFeature feature = FlowFeatureMapper.MappedFeature.makeFeature(
-                    FlowFeatureMapperArgumentCollection.MappingFeatureEnum.SNV, read, readOfs, ref[refOfs], referenceContext.getStart() + refOfs, readOfs - refOfs);
+                    FlowFeatureMapperArgumentCollection.MappingFeatureEnum.SNV,
+                        read, readOfs, ref[refOfs], referenceContext.getStart() + refOfs, readOfs - refOfs);
 
             return enrichFeature(feature, surrounded);
         } else {

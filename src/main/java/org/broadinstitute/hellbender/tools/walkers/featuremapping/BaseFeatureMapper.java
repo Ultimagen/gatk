@@ -251,7 +251,7 @@ public abstract class BaseFeatureMapper {
         return nonIdentMBases;
     }
 
-    protected boolean isSurrounded(GATKRead read, ReferenceContext referenceContext, final int readOfs, final int refOfs) {
+    protected boolean isSurrounded(GATKRead read, ReferenceContext referenceContext, final int readOfs, final int refOfs, int featureLength) {
 
         final byte[] bases = read.getBasesNoCopy();
         final byte[] ref = referenceContext.getBases();
@@ -270,8 +270,8 @@ public abstract class BaseFeatureMapper {
             }
         }
         for (int i = 0; i < surroundAfter && surrounded ; i++ ) {
-            final int bIndex = readOfs+1+i;
-            final int rIndex = refOfs+1+i;
+            final int bIndex = readOfs + featureLength + i;
+            final int rIndex = refOfs + featureLength + i;
             if ( bIndex < 0 || bIndex >= bases.length || rIndex < 0 || rIndex >= ref.length ) {
                 surrounded = false;
                 continue;
