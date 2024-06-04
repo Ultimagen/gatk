@@ -20,6 +20,7 @@ import org.broadinstitute.hellbender.cmdline.programgroups.FlowBasedProgramGroup
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
+import org.broadinstitute.hellbender.tools.walkers.annotator.TandemRepeat;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.*;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
@@ -218,12 +219,18 @@ public final class FlowFeatureMapper extends ReadWalker {
             this.offsetDelta = offsetDelta;
         }
 
-        static MappedFeature makeSNV(GATKRead read, int offset, byte refBase, int start, int offsetDelta) {
+        static MappedFeature makeFeature(FlowFeatureMapperArgumentCollection.MappingFeatureEnum type,
+                                         GATKRead read, int offset, byte refBase, int start, int offsetDelta) {
             byte[]      readBases = {read.getBasesNoCopy()[offset]};
             byte[]      refBases = {refBase};
+
+            return makeFeature(type, read, readBases, refBases, offset, start, offsetDelta);
+        }
+
+        static MappedFeature makeFeature(FlowFeatureMapperArgumentCollection.MappingFeatureEnum type, GATKRead read, byte[] readBases, byte[] refBases, int offset, int start, int offsetDelta) {
             return new MappedFeature(
                     read,
-                    FlowFeatureMapperArgumentCollection.MappingFeatureEnum.SNV,
+                    type,
                     readBases,
                     refBases,
                     offset,
@@ -337,7 +344,7 @@ public final class FlowFeatureMapper extends ReadWalker {
         headerInfo.add(new VCFInfoHeaderLine(VCF_MAPQ, 1, VCFHeaderLineType.Integer, "Read mapqe"));
         headerInfo.add(new VCFInfoHeaderLine(VCF_CIGAR, 1, VCFHeaderLineType.String, "Read CIGAR"));
         headerInfo.add(new VCFInfoHeaderLine(VCF_READ_COUNT, 1, VCFHeaderLineType.Integer, "Number of reads containing this location"));
-        headerInfo.add(new VCFInfoHeaderLine(VCF_FILTERED_COUNT, 1, VCFHeaderLineType.Integer, "Number of reads containing this location that agree with reference according to fitler"));
+        headerInfo.add(new VCFInfoHeaderLine(VCF_FILTERED_COUNT, 1, VCFHeaderLineType.Integer, "Number of reads containing this location that agree with reference and pass the adjacent base filter"));
         headerInfo.add(new VCFInfoHeaderLine(VCF_FC1, 1, VCFHeaderLineType.Integer, "Number of M bases different on read from references"));
         headerInfo.add(new VCFInfoHeaderLine(VCF_FC2, 1, VCFHeaderLineType.Integer, "Number of features before score threshold filter"));
         headerInfo.add(new VCFInfoHeaderLine(VCF_LENGTH, 1, VCFHeaderLineType.Integer, "Read length"));
@@ -433,7 +440,7 @@ public final class FlowFeatureMapper extends ReadWalker {
             while ( featureQueue.size() != 0 ) {
                 final MappedFeature fr = featureQueue.poll();
                 enrichFeature(fr);
-                emitFeature(fr);
+                emitFeature(fr, referenceContext);
             }
         } else {
             // enter read into the queue
@@ -446,7 +453,7 @@ public final class FlowFeatureMapper extends ReadWalker {
                             || (fr.start < read.getStart()) ) {
                     fr = featureQueue.poll();
                     enrichFeature(fr);
-                    emitFeature(fr);
+                    emitFeature(fr, referenceContext);
                 }
                 else {
                     break;
@@ -475,7 +482,8 @@ public final class FlowFeatureMapper extends ReadWalker {
         for ( ReadContext rc : readQueue ) {
             if ( rc.read.contains(loc) ) {
                 fr.readCount++;
-                if ( mapper.noFeatureButFilterAt(rc.read, rc.referenceContext, fr.start) == FeatureMapper.FilterStatus.Filtered ) {
+                FeatureMapper.FilterStatus fs = mapper.noFeatureButFilterAt(rc.read, rc.referenceContext, fr.start);
+                if ( fs == FeatureMapper.FilterStatus.NoFeatureAndFiltered ) {
                     fr.filteredCount++;
                 }
             }
@@ -672,7 +680,7 @@ public final class FlowFeatureMapper extends ReadWalker {
         return true;
     }
 
-    private void emitFeature(final MappedFeature fr) {
+    private void emitFeature(final MappedFeature fr, ReferenceContext referenceContext) {
 
         // create alleles
         final Collection<Allele>          alleles = new LinkedList<>();
@@ -745,15 +753,36 @@ public final class FlowFeatureMapper extends ReadWalker {
         // build it!
         final VariantContext      vc = vcb.make();
 
+        // annotate
+        if ( fmArgs.strAnnotate ) {
+            TandemRepeat strAnnotator = new TandemRepeat();
+            Map<String, Object> attrs = strAnnotator.annotate(referenceContext, vc, null);
+            for (Map.Entry<String, Object> entry : attrs.entrySet()) {
+                vc.getAttributes().put(entry.getKey(), entry.getValue());
+            }
+        }
+
         // write to file
         vcfWriter.add(vc);
     }
 
     private FeatureMapper buildMapper() {
 
+        SAMFileHeader hdr = getHeaderForReads();
+
         // build appropriate mapper
         if ( fmArgs.mappingFeature == FlowFeatureMapperArgumentCollection.MappingFeatureEnum.SNV ) {
-            return new SNVMapper(fmArgs);
+            return new SNVMapper(fmArgs, hdr);
+        } else if ( fmArgs.mappingFeature == FlowFeatureMapperArgumentCollection.MappingFeatureEnum.INDEL ) {
+            return new INDELMapper(fmArgs, hdr);
+        } else if ( fmArgs.mappingFeature == FlowFeatureMapperArgumentCollection.MappingFeatureEnum.MNP ) {
+            return new MNPMapper(fmArgs, hdr);
+        } else if ( fmArgs.mappingFeature == FlowFeatureMapperArgumentCollection.MappingFeatureEnum.ALL ) {
+            List<FeatureMapper> fmList = new LinkedList<>();
+            fmList.add(new SNVMapper(fmArgs, hdr));
+            fmList.add(new INDELMapper(fmArgs, hdr));
+            fmList.add(new MNPMapper(fmArgs, hdr));
+            return new JointMapper(fmList);
         } else {
             throw new GATKException("unsupported mappingFeature: " + fmArgs.mappingFeature);
         }

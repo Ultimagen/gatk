@@ -14,13 +14,16 @@ public class FlowFeatureMapperArgumentCollection implements Serializable{
     private static final long serialVersionUID = 1L;
 
     enum MappingFeatureEnum {
-        SNV
+        SNV,
+        INDEL,
+        MNP,
+        ALL
     };
 
     /**
      *  kind of feature we are mapping (looking for)
      **/
-    @Argument(fullName = "mapping-feature", doc = "Kind of feaure being mapped", optional = true)
+    @Argument(fullName = "mapping-feature", doc = "Kind of feature being mapped", optional = true)
     public MappingFeatureEnum mappingFeature = MappingFeatureEnum.SNV;
 
     /**
@@ -90,6 +93,18 @@ public class FlowFeatureMapperArgumentCollection implements Serializable{
     public boolean keepSupplementaryAlignments = false;
 
     /**
+     * MNP, max distance between SNPs making up the feature
+     */
+    @Argument(fullName = "max-mnp-distance", doc = "max distance between SNPs making up the feature", optional = true)
+    public int maxMnpDistance = 2;
+
+    /**
+     * MNP, max INDEL size SNPs making up the feature
+     */
+    @Argument(fullName = "max-indel-size", doc = "max size of INDEL for making up the feature", optional = true)
+    public int maxIndelSize = 20;
+
+    /**
      *  debug negatives?
      **/
     @Hidden
@@ -130,4 +145,12 @@ public class FlowFeatureMapperArgumentCollection implements Serializable{
     @Hidden
     @Argument(fullName = "tag-bases-with-adjacent-ref-diff", doc = "In this mode bases that have an adjacent difference from the reference on the same read are not discarded, and tagged with X_ADJACENT_REF_DIFFm", optional = true)
     public boolean tagBasesWithAdjacentRefDiff = false;
+
+    /**
+     *  adjacent-ref-diff mode - if not specified, this feature is off
+     **/
+    @Hidden
+    @Argument(fullName = "str-annotate", doc = "annotate for STR", optional = true)
+    public boolean strAnnotate = false;
+
 }
