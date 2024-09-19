@@ -17,23 +17,30 @@ import org.broadinstitute.barclay.argparser.*;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.programgroups.FlowBasedProgramGroup;
-import org.broadinstitute.hellbender.engine.*;
+import org.broadinstitute.hellbender.engine.FeatureContext;
+import org.broadinstitute.hellbender.engine.GATKPath;
+import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
-import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.*;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyBasedCallerArgumentCollection;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerArgumentCollection;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.ReferenceConfidenceMode;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
+import org.broadinstitute.hellbender.utils.fasta.CachingIndexedFastaSequenceFile;
+import org.broadinstitute.hellbender.utils.haplotype.FlowBasedHaplotype;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
+import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 import org.broadinstitute.hellbender.utils.read.FlowBasedReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 import org.broadinstitute.hellbender.utils.variant.writers.GVCFWriter;
-import org.broadinstitute.hellbender.utils.haplotype.FlowBasedHaplotype;
-import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 
 import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.Supplier;
 
 
 /**
@@ -81,7 +88,10 @@ import java.util.*;
 
 @DocumentedFeature
 @ExperimentalFeature
-public final class FlowFeatureMapper extends ReadWalker {
+public final class FlowFeatureMapper extends ThreadedReadWalker {
+
+    public static final int CAPACITY1 = 5000;
+    private static final long CACHE_SIZE_FACTOR = 5;
 
     static class CopyAttrInfo {
         public final String name;
@@ -163,6 +173,15 @@ public final class FlowFeatureMapper extends ReadWalker {
     @ArgumentCollection
     public FlowBasedArgumentCollection fbargs = new FlowBasedArgumentCollection();
 
+    // emit() message and queue
+    static class WriterMessage {
+        MappedFeature mappedFeature;
+    }
+    private LinkedBlockingQueue<WriterMessage> writerQueue;
+    private Thread  writerWorker;
+    @Argument(fullName = "threaded-writer", doc = "turn threaded writer on?", optional = true)
+    public boolean threadedWriter = false;
+
     protected static class ReadContext implements Comparable<ReadContext> {
         final GATKRead         read;
         final ReferenceContext referenceContext;
@@ -186,6 +205,7 @@ public final class FlowFeatureMapper extends ReadWalker {
     protected static class MappedFeature implements Comparable<MappedFeature> {
 
         GATKRead    read;
+        ReferenceContext referenceContext;
         FlowFeatureMapperArgumentCollection.MappingFeatureEnum  type;
         byte[]      readBases;
         byte[]      refBases;
@@ -197,7 +217,7 @@ public final class FlowFeatureMapper extends ReadWalker {
         int         filteredCount;
         int         nonIdentMBasesOnRead;
         int         featuresOnRead;
-        int         refEditDistance;
+        Supplier<Integer> refEditDistance;
         int         index;
         int         smqLeft;
         int         smqRight;
@@ -207,9 +227,10 @@ public final class FlowFeatureMapper extends ReadWalker {
         double      scoreForBase[];
         boolean     adjacentRefDiff;
 
-        public MappedFeature(GATKRead read, FlowFeatureMapperArgumentCollection.MappingFeatureEnum  type, byte[] readBases,
+        public MappedFeature(GATKRead read, ReferenceContext referenceContext, FlowFeatureMapperArgumentCollection.MappingFeatureEnum  type, byte[] readBases,
                              byte[] refBases, int readBasesOffset, int start, int offsetDelta) {
             this.read = read;
+            this.referenceContext = referenceContext;
             this.type = type;
             this.readBases = readBases;
             this.refBases = refBases;
@@ -218,11 +239,12 @@ public final class FlowFeatureMapper extends ReadWalker {
             this.offsetDelta = offsetDelta;
         }
 
-        static MappedFeature makeSNV(GATKRead read, int offset, byte refBase, int start, int offsetDelta) {
+        static MappedFeature makeSNV(GATKRead read, int offset, byte refBase, int start, int offsetDelta, ReferenceContext referenceContext) {
             byte[]      readBases = {read.getBasesNoCopy()[offset]};
             byte[]      refBases = {refBase};
             return new MappedFeature(
                     read,
+                    referenceContext,
                     FlowFeatureMapperArgumentCollection.MappingFeatureEnum.SNV,
                     readBases,
                     refBases,
@@ -276,12 +298,55 @@ public final class FlowFeatureMapper extends ReadWalker {
         final SAMSequenceDictionary sequenceDictionary = getHeaderForReads().getSequenceDictionary();
         vcfWriter = makeVCFWriter(outputVCF, sequenceDictionary, createOutputVariantIndex, createOutputVariantMD5, outputSitesOnlyVCFs);
         vcfWriter.writeHeader(makeVCFHeader(sequenceDictionary, getDefaultToolVCFHeaderLines()));
+
+        // threaded writer?
+        if ( threadedWriter ) {
+            writerQueue = new LinkedBlockingQueue<>(CAPACITY1);
+            writerWorker = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    WriterMessage message;
+                    while ( true ) {
+                        try {
+                            message = writerQueue.take();
+                            if ( message.mappedFeature == null ) {
+                                break;
+                            }
+                            emitFeature(message.mappedFeature);
+                        } catch (InterruptedException e) {
+                            throw new GATKException("", e);
+                        }
+                    }
+                }
+            });
+            writerWorker.setUncaughtExceptionHandler(getUncaughtExceptionHandler());
+            writerWorker.start();;
+        }
+
+        // if using threads, set handler for this thread as well
+        if ( threadedWalker || threadedWriter ) {
+            Thread.currentThread().setUncaughtExceptionHandler(getUncaughtExceptionHandler());
+        }
+
+        // if using threaded walker extend reference cache to avoid thrushing
+        if ( threadedWalker ) {
+            CachingIndexedFastaSequenceFile.requestedCacheSize = CachingIndexedFastaSequenceFile.DEFAULT_CACHE_SIZE * CACHE_SIZE_FACTOR;
+        }
+
     }
 
     @Override
     public void closeTool() {
-        flushQueue(null, null);
         super.closeTool();
+        flushQueue(null, null);
+        if ( threadedWriter ) {
+            try {
+                writerQueue.put(new WriterMessage());
+                writerWorker.join();
+            } catch (InterruptedException e) {
+                throw new GATKException("", e);
+            }
+        }
         if ( vcfWriter != null ) {
             vcfWriter.close();
         }
@@ -376,22 +441,29 @@ public final class FlowFeatureMapper extends ReadWalker {
     }
 
     @Override
-    public void apply(final GATKRead read, final ReferenceContext referenceContext, final FeatureContext featureContext) {
+    public boolean acceptRead(GATKRead read, ReferenceContext referenceContext, FeatureContext featureContext) {
 
         // include dups?
         if ( read.isDuplicate() && !fmArgs.includeDupReads ) {
-            return;
+            return false;
         }
 
         // include supplementary alignments?
         if ( read.isSupplementaryAlignment() && !fmArgs.keepSupplementaryAlignments ) {
-            return;
+            return false;
         }
 
         // include qc-failed reads?
         if ( ((read.getFlags() & VENDOR_QUALITY_CHECK_FLAG) != 0) && !includeQcFailedReads ) {
-            return;
+            return false;
         }
+
+        return true;
+    }
+
+
+    @Override
+    public void applyPossiblyThreaded(final GATKRead read, final ReferenceContext referenceContext, final FeatureContext featureContext) {
 
         // flush qeues up to this read
         flushQueue(read, referenceContext);
@@ -433,7 +505,17 @@ public final class FlowFeatureMapper extends ReadWalker {
             while ( featureQueue.size() != 0 ) {
                 final MappedFeature fr = featureQueue.poll();
                 enrichFeature(fr);
-                emitFeature(fr);
+                if ( !threadedWriter ) {
+                    emitFeature(fr);
+                } else {
+                    try {
+                        WriterMessage message = new WriterMessage();
+                        message.mappedFeature = fr;
+                        writerQueue.put(message);
+                    } catch (InterruptedException e) {
+                        throw new GATKException("", e);
+                    }
+                }
             }
         } else {
             // enter read into the queue
@@ -446,7 +528,17 @@ public final class FlowFeatureMapper extends ReadWalker {
                             || (fr.start < read.getStart()) ) {
                     fr = featureQueue.poll();
                     enrichFeature(fr);
-                    emitFeature(fr);
+                    if ( !threadedWriter ) {
+                        emitFeature(fr);
+                    } else {
+                        try {
+                            WriterMessage message = new WriterMessage();
+                            message.mappedFeature = fr;
+                            writerQueue.put(message);
+                        } catch (InterruptedException e) {
+                            throw new GATKException("", e);
+                        }
+                    }
                 }
                 else {
                     break;
@@ -703,7 +795,15 @@ public final class FlowFeatureMapper extends ReadWalker {
         vcb.attribute(VCF_FC1, fr.nonIdentMBasesOnRead);
         vcb.attribute(VCF_FC2, fr.featuresOnRead);
         vcb.attribute(VCF_LENGTH, fr.read.getLength());
-        vcb.attribute(VCF_EDIST, fr.refEditDistance);
+        if ( !fmArgs.noEditDistance) {
+            if (fmArgs.nmEditDistance) {
+                int nmScore = SequenceUtil.calculateSamNmTag(fr.read.convertToSAMRecord(getHeaderForReads()), fr.referenceContext.getBases(new SimpleInterval(fr.read)), fr.read.getStart() - 1);
+                vcb.attribute(VCF_EDIST, nmScore);
+            } else if (fr.refEditDistance != null) {
+                int editDisance = fr.refEditDistance.get(); // this actually computes the distance
+                vcb.attribute(VCF_EDIST, editDisance);
+            }
+        }
         vcb.attribute(VCF_INDEX, fr.index);
 
         // median/mean quality on?

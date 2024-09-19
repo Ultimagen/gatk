@@ -329,7 +329,7 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator, AutoCloseab
         Set<Integer> suspiciousLocations = new HashSet<>();
         if (MTAC.filterAlleles) {
             logger.debug("Filtering alleles");
-            AlleleFilteringMutect alleleFilter = new AlleleFilteringMutect(MTAC, null, genotypingEngine);
+            AlleleFilteringMutect alleleFilter = new AlleleFilteringMutect(MTAC, null, genotypingEngine, normalSamples, header);
             EventMap.buildEventMapsForHaplotypes(uncollapsedReadLikelihoods.alleles(),
                     assemblyResult.getFullReferenceWithPadding(),
                     assemblyResult.getPaddedReferenceLoc(),
@@ -581,7 +581,9 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator, AutoCloseab
                 false,
                 false,
                 false,
-                MTAC.pileupDetectionArgs.usePileupDetection);  //take off soft clips and low Q tails before we calculate likelihoods
+                MTAC.pileupDetectionArgs.usePileupDetection,
+                MTAC.addMismatchCountAnnotation,
+                referenceReader);  //take off soft clips and low Q tails before we calculate likelihoods
 
 
         final SimpleInterval paddedLoc = region.getPaddedSpan();

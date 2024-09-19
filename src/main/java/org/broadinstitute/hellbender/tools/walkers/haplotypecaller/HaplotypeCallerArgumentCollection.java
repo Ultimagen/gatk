@@ -47,6 +47,7 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
     public static final String STEPWISE_FITLERING_ARGUMENT = "use-flow-aligner-for-stepwise-hc-filtering";
     public static final String DISABLE_SPANNING_EVENT_GENOTYPING_LONG_NAME = "disable-spanning-event-genotyping";
     public static final String MAX_EFFECTIVE_DEPTH_ADJUSTMENT_FOR_FRD_LONG_NAME = "max-effective-depth-adjustment-for-frd";
+    public static final String MAX_FOREIGN_READ_FRACTION_LONG_NAME = "max-foreign-read-fraction-for-frd";
     public static final String KEEP_RG_LONG_NAME = "keep-rg";
     public static final String JUST_DETERMINE_ACTIVE_REGIONS_LONG_NAME = "just-determine-active-regions";
     public static final String DEBUG_ASSEMBLY_REGION_STATE_LONG_NAME = "debug-assembly-region-state";
@@ -202,6 +203,10 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
     @Advanced
     @Argument(fullName = MAX_EFFECTIVE_DEPTH_ADJUSTMENT_FOR_FRD_LONG_NAME, doc = "Set the maximum depth to modify FRD adjustment to in the event of high depth sites (0 to disable)", optional = false)
     public int maxEffectiveDepthAdjustment = 0;
+
+    @Advanced
+    @Argument(fullName = MAX_FOREIGN_READ_FRACTION_LONG_NAME, doc = "Maximal fraction of reads that can be excluded and considered foreign", optional = false)
+    public double maxForeignReadFraction = 0.35;
 
     @Hidden
     @Argument(fullName = KEEP_RG_LONG_NAME, doc = "Only use reads from this read group when making calls (but use all reads to build the assembly)", optional = true)
