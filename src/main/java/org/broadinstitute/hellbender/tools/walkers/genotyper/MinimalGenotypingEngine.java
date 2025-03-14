@@ -73,7 +73,7 @@ public final class MinimalGenotypingEngine extends GenotypingEngine<StandardCall
     public VariantContext calculateGenotypes(final VariantContext vc) {
         if (dragstrParams == null || getConfiguration().genotypeArgs.dontUseDragstrPriors || !GATKVariantContextUtils.containsInlineIndel(vc) || referenceContext == null) {
             final GenotypePriorCalculator gpc = GenotypePriorCalculator.assumingHW(configuration.genotypeArgs);
-            return calculateGenotypes(vc, gpc, Collections.emptyList());
+            return calculateGenotypes(vc, gpc, Collections.emptyList(), false);
         } else {
 
             final Locatable limits = referenceContext.hasBackingDataSource()
@@ -91,7 +91,7 @@ public final class MinimalGenotypingEngine extends GenotypingEngine<StandardCall
             final int repeats = analyzer.repeatLength(startOffset);
 
             final GenotypePriorCalculator gpc = GenotypePriorCalculator.givenDragstrParams(dragstrParams, period, repeats, Math.log10(getConfiguration().genotypeArgs.snpHeterozygosity), 2.0);
-            return  calculateGenotypes(vc, gpc, Collections.emptyList());
+            return  calculateGenotypes(vc, gpc, Collections.emptyList(), false);
         }
     }
 
