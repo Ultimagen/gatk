@@ -18,6 +18,7 @@ public final class GenotypeCalculationArgumentCollection implements Serializable
     public static final String NUM_REF_SAMPLES_LONG_NAME = "num-reference-samples-if-no-call";
     public static final String CALL_CONFIDENCE_LONG_NAME = "standard-min-confidence-threshold-for-calling";
     public static final String CALL_CONFIDENCE_SHORT_NAME = "stand-call-conf";
+    public static final String HPOL_INDEL_QUAL_LONG_NAME = "homopolymer-indel-qual-threshold";
     public static final String MAX_ALTERNATE_ALLELES_LONG_NAME = "max-alternate-alleles";
     public static final String MAX_GENOTYPE_COUNT_LONG_NAME = "max-genotype-count";
     public static final String SAMPLE_PLOIDY_SHORT_NAME = "ploidy";
@@ -131,6 +132,14 @@ public final class GenotypeCalculationArgumentCollection implements Serializable
     @Argument(fullName = CALL_CONFIDENCE_LONG_NAME, shortName = CALL_CONFIDENCE_SHORT_NAME, doc = "The minimum phred-scaled confidence threshold at which variants should be called", optional = true)
     public double standardConfidenceForCalling = DEFAULT_STANDARD_CONFIDENCE_FOR_CALLING;
 
+    /**
+     * The minimum phred-scaled confidence threshold at which homopolymer indels longer than certain length should be called.
+     * This is relevant for flow based platform where typical qualities of long homopolymer indels is low. Active only if
+     * --genotype-homopolymer-length-threshold is larger than zero
+     *
+      */
+    @Argument(fullName = HPOL_INDEL_QUAL_LONG_NAME, doc = "The minimum phred-scaled confidence threshold at which homopolymer indels longer than certain length should be called", optional = true)
+    public double homopolymerIndelQualThreshold = standardConfidenceForCalling;
     /**
      * If there are more than this number of alternate alleles presented to the genotyper (either through discovery or GENOTYPE_GIVEN ALLELES),
      * then only this many alleles will be used.  Note that genotyping sites with many alternate alleles is both CPU and memory intensive and it

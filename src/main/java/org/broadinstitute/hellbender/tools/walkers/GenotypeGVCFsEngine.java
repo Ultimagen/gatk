@@ -245,7 +245,7 @@ public class GenotypeGVCFsEngine
     }
 
     private VariantContext calculateGenotypes(VariantContext vc, final boolean forceOutput) {
-        return (forceOutput ? forceOutputGenotypingEngine : genotypingEngine).calculateGenotypes(vc, null, Collections.emptyList());
+        return (forceOutput ? forceOutputGenotypingEngine : genotypingEngine).calculateGenotypes(vc, null, Collections.emptyList(), false);
     }
 
     /**
