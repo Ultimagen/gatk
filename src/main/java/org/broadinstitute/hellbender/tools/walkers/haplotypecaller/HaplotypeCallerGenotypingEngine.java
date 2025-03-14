@@ -51,7 +51,7 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
     private final ReferenceConfidenceMode referenceConfidenceMode;
     protected final double snpHeterozygosity;
     protected final double indelHeterozygosity;
-
+    protected final int hpolIndelThreshold;
     private final int maxGenotypeCountToEnumerate;
     private final Map<Integer, Integer> practicalAlleleCountForPloidy = new HashMap<>();
 
@@ -79,6 +79,7 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
                 new IndependentSampleGenotypesModel();
         maxGenotypeCountToEnumerate = configuration.standardArgs.genotypeArgs.maxGenotypeCount;
         referenceConfidenceMode = configuration.emitReferenceConfidence;
+        hpolIndelThreshold = configuration.homopolymerGenotypingThreshold;
         snpHeterozygosity = configuration.standardArgs.genotypeArgs.snpHeterozygosity;
         indelHeterozygosity = configuration.standardArgs.genotypeArgs.indelHeterozygosity;
     }
@@ -161,6 +162,15 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
 
         // null if there is no potential uses of DRAGstr in this region.
         final DragstrReferenceAnalyzer dragstrs = constructDragstrReferenceSTRAnalyzerIfNecessary(haplotypes, ref, refLoc, eventStarts);
+        DragstrReferenceAnalyzer dragstrsForHpolIndels; // for the analysis of long homopolymer indels we generate a degenerate version of the analyzer
+        boolean longHpolIndel = false;
+        if ((hpolIndelThreshold > 0) && (!eventStarts.isEmpty())){
+            final int offset = eventStarts.first() - refLoc.getStart();
+            final int to = eventStarts.last() - refLoc.getStart() + 2;
+            dragstrsForHpolIndels = DragstrReferenceAnalyzer.of(ref, offset, to, 1);
+        } else {
+            dragstrsForHpolIndels = null;
+        }
 
         final BiPredicate<GATKRead, SimpleInterval> readQualifiesForGenotypingPredicate = composeReadQualifiesForGenotypingPredicate(hcArgs);
 
@@ -174,6 +184,9 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
 
             final List<VariantContext> eventsAtThisLocWithSpanDelsReplaced = replaceSpanDels(eventsAtThisLoc,
                     Allele.create(ref[loc - refLoc.getStart()], true), loc);
+            if (hpolIndelThreshold > 0){
+                longHpolIndel = isEligibleHomopolymerIndel(eventsAtThisLocWithSpanDelsReplaced, loc - refLoc.getStart() + 1, dragstrsForHpolIndels, hpolIndelThreshold);
+            }
 
             VariantContext mergedVC = AssemblyBasedCallerUtils.makeMergedVariantContext(eventsAtThisLocWithSpanDelsReplaced);
 
@@ -261,7 +274,7 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
 
             final GenotypesContext genotypes = calculateGLsForThisEvent(readAlleleLikelihoods, mergedVC, noCallAlleles, ref, loc - refLoc.getStart(), dragstrs);
             final GenotypePriorCalculator gpc = resolveGenotypePriorCalculator(dragstrs, loc - refLoc.getStart() + 1, snpHeterozygosity, indelHeterozygosity);
-            final VariantContext call = calculateGenotypes(new VariantContextBuilder(mergedVC).genotypes(genotypes).make(), gpc, givenAlleles);
+            final VariantContext call = calculateGenotypes(new VariantContextBuilder(mergedVC).genotypes(genotypes).make(), gpc, givenAlleles, longHpolIndel);
             if( call != null ) {
                 readAlleleLikelihoods = prepareReadAlleleLikelihoodsForAnnotation(readLikelihoods, perSampleFilteredReadList,
                         emitReferenceConfidence, alleleMapper, readAlleleLikelihoods, call, variantCallingRelevantOverlap);
@@ -639,5 +652,34 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
             }
         }
         return overlappingFilteredReads;
+    }
+
+    private boolean isEligibleHomopolymerIndel(final List<VariantContext> eventsAtThisLoc, final int loc, final DragstrReferenceAnalyzer dragstrs, final int hpolIndelThreshold) {
+        if (eventsAtThisLoc.isEmpty()) {
+            return false;
+        }
+
+        final int period = dragstrs.period(loc);
+        final int repeats = dragstrs.repeatLength(loc);
+        final byte ru = dragstrs.repeatUnit(loc)[0];
+        if ((period == 1) && (repeats >= hpolIndelThreshold)){
+            for (final VariantContext vc : eventsAtThisLoc) {
+                if (!vc.isIndel() || !vc.getAlternateAlleles().stream().allMatch(a -> isHmerIndel(a,ru))) {
+                    return false;
+                }
+            }
+        } else {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean isHmerIndel(final Allele al, final byte hmer_base){
+        for (int i = 1; i< al.length(); i++){
+            if (al.getBases()[i] != hmer_base){
+                return false;
+            }
+        }
+        return true;
     }
 }
