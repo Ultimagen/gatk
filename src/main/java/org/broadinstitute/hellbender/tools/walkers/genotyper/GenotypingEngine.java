@@ -7,6 +7,7 @@ import htsjdk.variant.vcf.VCFConstants;
 import htsjdk.variant.vcf.VCFInfoHeaderLine;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.broadinstitute.hellbender.utils.dragstr.DragstrReferenceAnalyzer;
 import org.broadinstitute.hellbender.utils.genotyper.GenotypePriorCalculator;
 import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.afcalc.*;
@@ -494,4 +495,36 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
         Utils.nonNull(log10GenotypeLikelihoods, "the input likelihoods cannot be null");
         return alleleFrequencyCalculator.calculateSingleSampleBiallelicNonRefPosterior(log10GenotypeLikelihoods, true);
     }
+
+    static public boolean isEligibleHomopolymerIndel(final List<VariantContext> eventsAtThisLoc, final int loc,
+                                                     final DragstrReferenceAnalyzer dragstrs, final int hpolIndelThreshold,
+                                                     final boolean ignoreNonRef) {
+        if (eventsAtThisLoc.isEmpty()) {
+            return false;
+        }
+
+        final int period = dragstrs.period(loc);
+        final int repeats = dragstrs.repeatLength(loc);
+        final byte ru = dragstrs.repeatUnit(loc)[0];
+        if ((period == 1) && (repeats >= hpolIndelThreshold)){
+            for (final VariantContext vc : eventsAtThisLoc) {
+                if (!vc.isIndel() || !vc.getAlternateAlleles().stream().allMatch(a -> isHmerIndel(a,ru, ignoreNonRef))) {
+                    return false;
+                }
+            }
+        } else {
+            return false;
+        }
+        return true;
+    }
+
+    static protected boolean isHmerIndel(final Allele al, final byte hmer_base, final boolean ignoreNonRef){
+        for (int i = 1; i< al.length(); i++){
+            if ((al.equals(Allele.NON_REF_ALLELE) && ignoreNonRef ) || (al.getBases()[i] != hmer_base)){
+                return false;
+            }
+        }
+        return true;
+    }
+
 }
