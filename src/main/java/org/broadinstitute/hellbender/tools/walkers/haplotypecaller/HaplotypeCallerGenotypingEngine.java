@@ -184,9 +184,6 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
 
             final List<VariantContext> eventsAtThisLocWithSpanDelsReplaced = replaceSpanDels(eventsAtThisLoc,
                     Allele.create(ref[loc - refLoc.getStart()], true), loc);
-            if (hpolIndelThreshold > 0){
-                longHpolIndel = isEligibleHomopolymerIndel(eventsAtThisLocWithSpanDelsReplaced, loc - refLoc.getStart() + 1, dragstrsForHpolIndels, hpolIndelThreshold, false);
-            }
 
             VariantContext mergedVC = AssemblyBasedCallerUtils.makeMergedVariantContext(eventsAtThisLocWithSpanDelsReplaced);
 
@@ -195,6 +192,11 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
             }
             
             int mergedAllelesListSizeBeforePossibleTrimming = mergedVC.getAlleles().size();
+
+            if (hpolIndelThreshold > 0){
+                longHpolIndel = isEligibleHomopolymerIndel(mergedVC, loc - refLoc.getStart() + 1, dragstrsForHpolIndels, hpolIndelThreshold);
+            }
+
             final Map<Allele, List<Haplotype>> alleleMapper = AssemblyBasedCallerUtils.createAlleleMapper(mergedVC, loc, haplotypes, !hcArgs.disableSpanningEventGenotyping);
 
             if( hcArgs.assemblerArgs.debugAssembly && logger != null ) {
