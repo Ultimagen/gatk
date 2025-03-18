@@ -496,10 +496,9 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
         return alleleFrequencyCalculator.calculateSingleSampleBiallelicNonRefPosterior(log10GenotypeLikelihoods, true);
     }
 
-    static public boolean isEligibleHomopolymerIndel(final List<VariantContext> eventsAtThisLoc, final int loc,
-                                                     final DragstrReferenceAnalyzer dragstrs, final int hpolIndelThreshold,
-                                                     final boolean ignoreNonRef) {
-        if (eventsAtThisLoc.isEmpty()) {
+    static public boolean isEligibleHomopolymerIndel(final VariantContext vc, final int loc,
+                                                     final DragstrReferenceAnalyzer dragstrs, final int hpolIndelThreshold) {
+        if (vc==null) {
             return false;
         }
 
@@ -507,10 +506,8 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
         final int repeats = dragstrs.repeatLength(loc);
         final byte ru = dragstrs.repeatUnit(loc)[0];
         if ((period == 1) && (repeats >= hpolIndelThreshold)){
-            for (final VariantContext vc : eventsAtThisLoc) {
-                if (!vc.isIndel() || !vc.getAlternateAlleles().stream().allMatch(a -> isHmerIndel(a,ru, ignoreNonRef))) {
-                    return false;
-                }
+            if (!vc.isIndel() || !vc.getAlleles().stream().allMatch(a -> isHmerIndel(a,ru))) {
+                return false;
             }
         } else {
             return false;
@@ -518,9 +515,9 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
         return true;
     }
 
-    static protected boolean isHmerIndel(final Allele al, final byte hmer_base, final boolean ignoreNonRef){
+    static protected boolean isHmerIndel(final Allele al, final byte hmer_base){
         for (int i = 1; i< al.length(); i++){
-            if ((al.equals(Allele.NON_REF_ALLELE) && ignoreNonRef ) || (al.getBases()[i] != hmer_base)){
+            if (al.getBases()[i] != hmer_base){
                 return false;
             }
         }

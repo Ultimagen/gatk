@@ -144,7 +144,7 @@ public class GenotypeGVCFsEngine
 
         if (homopolymerLengthThreshold > 0){
             DragstrReferenceAnalyzer dragStrForHpolIndels = DragstrReferenceAnalyzer.of(ref.getBases(), 0, ref.getBases().length, 1);
-            longHpolIndel = GenotypingEngine.isEligibleHomopolymerIndel(Arrays.asList(mergedVC), offset, dragStrForHpolIndels, homopolymerLengthThreshold, true);
+            longHpolIndel = GenotypingEngine.isEligibleHomopolymerIndel(mergedVC, offset, dragStrForHpolIndels, homopolymerLengthThreshold);
         }
 
         final VariantContext regenotypedVC = somaticInput ? regenotypeSomaticVC(mergedVC, ref, features, outputNonVariants, tlodThreshold, sqThreshold, afTolerance) :
