@@ -506,6 +506,22 @@ public final class FlowFeatureMapper extends ReadWalker {
         final int diffRight = flowRead.getEnd() - haplotypes[0].getEnd();
         flowRead.applyBaseClipping(Math.max(0, diffLeft), Math.max(diffRight, 0), false);
 
+        // check maxhmer?
+        if ( fmArgs.debugReadName != null && fmArgs.debugReadName.contains(fr.read.getName()) ) {
+            if (hasHmerLongerThen(flowRead.getKey(), rgInfo.maxClass)) {
+                logger.warn("read sequence contains an hmer longer than maxClass of " + rgInfo.maxClass + " : " + Arrays.toString(flowRead.getKey()));
+                ;
+            }
+            if (hasHmerLongerThen(haplotypes[0].getKey(), rgInfo.maxClass)) {
+                logger.warn("read haplotype contains an hmer longer than maxClass of " + rgInfo.maxClass + " : " + Arrays.toString(haplotypes[0].getKey()));
+                ;
+            }
+            if (hasHmerLongerThen(haplotypes[1].getKey(), rgInfo.maxClass)) {
+                logger.warn("reference haplotype contains an hmer longer than maxClass of " + rgInfo.maxClass + " : " + Arrays.toString(haplotypes[1].getKey()));
+                ;
+            }
+        }
+
         if ( !flowRead.isValid() ) {
             return -1;
         }
@@ -554,6 +570,15 @@ public final class FlowFeatureMapper extends ReadWalker {
         }
 
         return score;
+    }
+
+    private boolean hasHmerLongerThen(int[] key, int maxClass) {
+        for ( int v : key ) {
+            if ( v > maxClass ) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static double computeLikelihoodLocal(final FlowBasedRead read, final FlowBasedHaplotype haplotype, final int hapKeyLength, final boolean debug) {
@@ -610,7 +635,6 @@ public final class FlowFeatureMapper extends ReadWalker {
         // build bases for flow haplotypes
         // NOTE!!!: this code assumes length of feature on read and reference is the same
         // this is true for SNP but not for INDELs - it will have to be re-written!
-        // TODO: write for INDEL
         byte[] bases = fr.read.getBasesNoCopy();
         int         offset = fr.readBasesOffset;
         int         refStart = fr.start;
@@ -637,20 +661,33 @@ public final class FlowFeatureMapper extends ReadWalker {
                 refStart--;
             }
         }
-        final byte[]      sAltBases = Arrays.copyOfRange(bases, offset, bases.length);
-        final byte[]      sRefBases = Arrays.copyOf(sAltBases, sAltBases.length);
-        System.arraycopy(fr.refBases, 0, sRefBases, refModOfs, fr.refBases.length);
+
+        // build bases. allow for change in length
+        byte[]      sAltBases = Arrays.copyOfRange(bases, offset, bases.length);
+        byte[]      sRefBases;
+        if ( fr.refBases.length == fr.readBases.length ) {
+            sRefBases = Arrays.copyOf(sAltBases, sAltBases.length);
+            System.arraycopy(fr.refBases, 0, sRefBases, refModOfs, fr.refBases.length);
+        } else {
+            final String alt = new String(sAltBases);
+            final String prefix = alt.substring(0, refModOfs);
+            final String suffix = alt.substring(refModOfs + fr.readBases.length);
+            sRefBases = (prefix + (new String(fr.refBases)) + suffix).getBytes();
+        }
 
         // construct haplotypes
-        final SimpleInterval genomeLoc = new SimpleInterval(fr.read.getContig(), refStart, refStart + sAltBases.length - 1);
-        final Cigar          cigar = new Cigar();
-        cigar.add(new CigarElement(sAltBases.length, CigarOperator.M));
+        final SimpleInterval genomeLoc0 = new SimpleInterval(fr.read.getContig(), refStart, refStart + sAltBases.length - 1);
+        final SimpleInterval genomeLoc1 = new SimpleInterval(fr.read.getContig(), refStart, refStart + sRefBases.length - 1);
+        final Cigar          cigar0 = new Cigar();
+        final Cigar          cigar1 = new Cigar();
+        cigar0.add(new CigarElement(sAltBases.length, CigarOperator.M));
+        cigar1.add(new CigarElement(sRefBases.length, CigarOperator.M));
         final Haplotype      altHaplotype = new Haplotype(sAltBases, false);
         final Haplotype      refHaplotype = new Haplotype(sRefBases, true);
-        altHaplotype.setGenomeLocation(genomeLoc);
-        refHaplotype.setGenomeLocation(genomeLoc);
-        altHaplotype.setCigar(cigar);
-        refHaplotype.setCigar(cigar);
+        altHaplotype.setGenomeLocation(genomeLoc0);
+        refHaplotype.setGenomeLocation(genomeLoc1);
+        altHaplotype.setCigar(cigar0);
+        refHaplotype.setCigar(cigar1);
 
         // prepare flow based haplotypes
         final FlowBasedHaplotype[] result = {

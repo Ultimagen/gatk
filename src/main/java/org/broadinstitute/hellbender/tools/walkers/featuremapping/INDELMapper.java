@@ -69,7 +69,7 @@ public class INDELMapper extends BaseFeatureMapper implements FeatureMapper {
         if ( readKey.length != refKey.length ) {
             // this is probably a cycle skip
             // TODO: verify
-            return true;
+            return false;
         }
 
         int changeCount = 0;
