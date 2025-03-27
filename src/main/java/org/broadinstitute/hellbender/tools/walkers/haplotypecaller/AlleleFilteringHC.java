@@ -31,8 +31,8 @@ public class AlleleFilteringHC extends AlleleFiltering {
     private AlleleFrequencyCalculator afCalc;
 
     public AlleleFilteringHC(HaplotypeCallerArgumentCollection _hcargs, OutputStreamWriter assemblyDebugStream,
-                             HaplotypeCallerGenotypingEngine _genotypingEngine, final SAMFileHeader header){
-        super(_hcargs, assemblyDebugStream, header);
+                             HaplotypeCallerGenotypingEngine _genotypingEngine, final SAMFileHeader header, final int biasedIndelThreshold){
+        super(_hcargs, assemblyDebugStream, header, biasedIndelThreshold);
         genotypingEngine = _genotypingEngine;
         GenotypeCalculationArgumentCollection config = genotypingEngine.getConfiguration().genotypeArgs;
          afCalc = AlleleFrequencyCalculator.makeCalculator(config);
@@ -50,7 +50,7 @@ public class AlleleFilteringHC extends AlleleFiltering {
      * @return likelihood, expressed as phred-scaled confidence
      */
     @Override
-    int getAlleleLikelihoodVsInverse(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele) {
+    int getAlleleLikelihoodVsInverse(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele, final boolean isRefBiasExpected) {
         final Allele notAllele = InverseAllele.of(allele, true);
 
         // iterate over contigs and see what their qual is.
@@ -58,11 +58,14 @@ public class AlleleFilteringHC extends AlleleFiltering {
         GenotypingData<Allele> genotypingData = new GenotypingData<>(genotypingEngine.getPloidyModel(), alleleLikelihoods);
 
         IndependentSampleGenotypesModel genotypesModel = new IndependentSampleGenotypesModel();
+        IndependentSampleGenotypesModelWithRefBias genotypesModelWithBias = new IndependentSampleGenotypesModelWithRefBias();
+
 
         AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(notAllele, allele));
 
         final GenotypingLikelihoods<Allele> genotypingLikelihoods = genotypesModel.calculateLikelihoods(alleleList,
                 genotypingData, null, 0, null);
+
 
         List<Integer> perSamplePLs = new ArrayList<>();
         for (int i = 0; i < genotypingLikelihoods.numberOfSamples(); i++) {

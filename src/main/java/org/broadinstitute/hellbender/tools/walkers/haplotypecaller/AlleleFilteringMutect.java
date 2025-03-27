@@ -37,7 +37,7 @@ public class AlleleFilteringMutect extends AlleleFiltering {
                                  SomaticGenotypingEngine _genotypingEngine,
                                  Set<String> _normalSamples,
                                  final SAMFileHeader header){
-        super(_m2args, assemblyDebugStream, header);
+        super(_m2args, assemblyDebugStream, header, Integer.MAX_VALUE);
         genotypingEngine = _genotypingEngine;
         normalSamples = _normalSamples;
     }
@@ -58,7 +58,7 @@ public class AlleleFilteringMutect extends AlleleFiltering {
      */
 
     @Override
-    int getAlleleLikelihoodVsInverse(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele) {
+    int getAlleleLikelihoodVsInverse(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele, final boolean isRefBiasExpected) {
 
         final List<LikelihoodMatrix<GATKRead, Allele>> allMatrices = IntStream.range(0, alleleLikelihoods.numberOfSamples())
                 .filter(i -> !normalSamples.contains(alleleLikelihoods.getSample(i)))
