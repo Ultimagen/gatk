@@ -1,5 +1,6 @@
 package org.broadinstitute.hellbender.utils;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.broadinstitute.hellbender.GATKBaseTest;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
@@ -243,6 +244,23 @@ public final class BaseUtilsUnitTest extends GATKBaseTest {
     @Test(dataProvider = "hmerModificationProvider")
     public void testEqualUpToHmerChange(byte[] bases1, byte[] bases2, boolean answer) {
         Assert.assertEquals(BaseUtils.equalUpToHmerChange(bases1, bases2),answer);
+    }
+
+    @DataProvider(name="hmerChangeLengthProvider")
+    public Object[][] hmerChangeLengthProvider() {
+        return new Object[][] {
+                { "AAAABBBCCD".getBytes(), "AAAABBBCCD".getBytes(), new ImmutablePair<>(0,0) },
+                { "AAAABBBCCD".getBytes(), "AAAABBBCCDD".getBytes(), new ImmutablePair<>(1,2)},
+                { "AAAABBBCCD".getBytes(), "AAAABBBCC".getBytes(), new ImmutablePair<>(0,0) },
+                { "AAAABBBCCD".getBytes(), "AAAABBBCCDDDD".getBytes(), new ImmutablePair<>(1,4) },
+                { "AAAABBBCCD".getBytes(), "AAAABBBCCDE".getBytes(), new ImmutablePair<>(0,0) },
+                { "AAAABBBCCD".getBytes(), "AAAABBBCCDEEE".getBytes(), new ImmutablePair<>(0,0) },
+        };
+    }
+
+    @Test(dataProvider = "hmerChangeLengthProvider")
+    public void equalUpToHmerChangeGetLength(byte[] bases1, byte[] bases2, ImmutablePair<Integer,Integer> expectedLength) {
+        Assert.assertEquals(BaseUtils.equalUpToHmerChangeGetLength(bases1, bases2), expectedLength);
     }
 
     @DataProvider(name="HmerIteratorDataProvider")
