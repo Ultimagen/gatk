@@ -426,4 +426,55 @@ public final class BaseUtils {
         // In any case, bother haplotypes should be out of hmers by now
         return i1.hasNext() == i2.hasNext();
     }
+
+    // are haplotypes different only in a single hmer's length? If so, return the length of the hmer
+    // otherwise - return (0,0)
+    static public Pair<Integer,Integer> equalUpToHmerChangeGetLength(final byte[] bases1, final byte[] bases2) {
+
+        final BaseUtils.HmerIterator  i1 = new BaseUtils.HmerIterator(bases1);
+        final BaseUtils.HmerIterator  i2 = new BaseUtils.HmerIterator(bases2);
+
+        // walk the haplotype hmers, look for differences
+        int         diffAlreadyFound = 0;
+        int         insertionOrDeletion = 0;
+        while ( i1.hasNext() && i2.hasNext() ) {
+
+            // get hmers
+            final Pair<Byte,Integer> p1 = i1.next();
+            final Pair<Byte,Integer>      p2 = i2.next();
+
+            // base must be the same
+            if ( p1.getLeft() != p2.getLeft() ) {
+                return new ImmutablePair<>(0,0);
+            }
+
+            // if length the same, continue to next hmer
+            if ( p1.getRight() == p2.getRight() ) {
+                continue;
+            }
+
+            // hmers are of the same base but of different length.
+            // make sure we only allow one such hmer
+            if ( diffAlreadyFound != 0) {
+                return new ImmutablePair<>(0,0);
+            } else {
+                diffAlreadyFound = Math.max(p1.getRight(), p2.getRight());
+
+                if (p1.getRight() > p2.getRight()) {
+                    insertionOrDeletion = -1;
+                } else {
+                    insertionOrDeletion = 1;
+                }
+            }
+        }
+
+        // if here, hmers are the same or only a single one is different.
+        // In any case, bother haplotypes should be out of hmers by now
+        if (i1.hasNext() == i2.hasNext()){
+            return new ImmutablePair<>(insertionOrDeletion, diffAlreadyFound);
+        } else {
+            return new ImmutablePair<>(0,0);
+        }
+    }
+
 }

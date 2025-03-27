@@ -445,8 +445,8 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
                 else
                     log10 = Math.log10(prob);
                 result += log10;
-                if (logger.isDebugEnabled())
-                    logger.debug("prob:" + read.getName() + " " + i + " " + locationsToFetch[i] + " " + prob);
+//                if (logger.isDebugEnabled())
+//                    logger.debug("prob:" + read.getName() + " " + i + " " + locationsToFetch[i] + " " + prob);
 
                 // shortcut - result will never rise
                 if ( result < bestAlignment )
