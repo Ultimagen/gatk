@@ -66,9 +66,6 @@ public class DRAGENGenotypesModel implements GenotypingModel {
         this.maxForeignReadFraction = maxForeignReadFraction;
         this.dragstrParams = dragstrParams;
 
-        if (!(computeBQD || computeFRD)) {
-            throw new GATKException("DRAGENGenotypesModel is intended for computing BQD/FRD adjustments but both BQD and FRD are disabled, use IndependentSamplesGenotypesModel instead");
-        }
     }
 
     public <A extends Allele> GenotypingLikelihoods<A> calculateLikelihoods(final AlleleList<A> genotypingAlleles, final GenotypingData<A> data,
@@ -167,7 +164,7 @@ public class DRAGENGenotypesModel implements GenotypingModel {
         return new GenotypingLikelihoods<>(genotypingAlleles, ploidyModel, genotypeLikelihoods);
     }
 
-    private void applyLikelihoodsAdjusmentToBaseline(final double[] initialLikelihoods, final String name, final double[] adjustmentLikelihoods) {
+    protected void applyLikelihoodsAdjusmentToBaseline(final double[] initialLikelihoods, final String name, final double[] adjustmentLikelihoods) {
         if (HaplotypeCallerGenotypingDebugger.isEnabled()) {
             HaplotypeCallerGenotypingDebugger.println(name + " adjusted likelihoods:");
             HaplotypeCallerGenotypingDebugger.println(Arrays.toString(adjustmentLikelihoods));
