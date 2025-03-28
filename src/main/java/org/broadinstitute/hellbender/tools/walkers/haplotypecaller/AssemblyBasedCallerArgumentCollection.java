@@ -38,8 +38,6 @@ public abstract class AssemblyBasedCallerArgumentCollection {
     public static final String EMIT_REF_CONFIDENCE_SHORT_NAME = "ERC";
     public static final String ALLELE_EXTENSION_LONG_NAME = "allele-informative-reads-overlap-margin";
 
-    public static final String PILEUP_DETECTION_LONG_NAME = "pileup-detection";
-
     public static final String SMITH_WATERMAN_DANGLING_END_MATCH_VALUE_LONG_NAME = "smith-waterman-dangling-end-match-value";
     public static final String SMITH_WATERMAN_DANGLING_END_MISMATCH_PENALTY_LONG_NAME = "smith-waterman-dangling-end-mismatch-penalty";
     public static final String SMITH_WATERMAN_DANGLING_END_GAP_OPEN_PENALTY_LONG_NAME = "smith-waterman-dangling-end-gap-open-penalty";

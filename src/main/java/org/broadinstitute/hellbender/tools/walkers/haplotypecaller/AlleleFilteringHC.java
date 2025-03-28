@@ -2,13 +2,17 @@ package org.broadinstitute.hellbender.tools.walkers.haplotypecaller;
 
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.variant.variantcontext.Allele;
+import org.apache.commons.lang3.tuple.Pair;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.*;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.afcalc.AFCalculationResult;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.afcalc.AlleleFrequencyCalculator;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.InverseAllele;
+import org.broadinstitute.hellbender.utils.BaseUtils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleList;
 import org.broadinstitute.hellbender.utils.genotyper.IndexedAlleleList;
+import org.broadinstitute.hellbender.utils.haplotype.Event;
+import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
 import java.io.OutputStreamWriter;
@@ -29,13 +33,14 @@ import java.util.List;
 public class AlleleFilteringHC extends AlleleFiltering {
     private HaplotypeCallerGenotypingEngine genotypingEngine;
     private AlleleFrequencyCalculator afCalc;
-
+    final double insertionRefBias;
     public AlleleFilteringHC(HaplotypeCallerArgumentCollection _hcargs, OutputStreamWriter assemblyDebugStream,
-                             HaplotypeCallerGenotypingEngine _genotypingEngine, final SAMFileHeader header, final int biasedIndelThreshold){
-        super(_hcargs, assemblyDebugStream, header, biasedIndelThreshold);
+                             HaplotypeCallerGenotypingEngine _genotypingEngine, final SAMFileHeader header) {
+        super(_hcargs, assemblyDebugStream, header, _hcargs.homopolymerGenotypingThreshold);
         genotypingEngine = _genotypingEngine;
         GenotypeCalculationArgumentCollection config = genotypingEngine.getConfiguration().genotypeArgs;
          afCalc = AlleleFrequencyCalculator.makeCalculator(config);
+         this.insertionRefBias = _hcargs.insertionRefBias;
     }
 
     protected double getStringentQuality() { return 1; }
@@ -57,14 +62,18 @@ public class AlleleFilteringHC extends AlleleFiltering {
 
         GenotypingData<Allele> genotypingData = new GenotypingData<>(genotypingEngine.getPloidyModel(), alleleLikelihoods);
 
-        IndependentSampleGenotypesModel genotypesModel = new IndependentSampleGenotypesModel();
-        IndependentSampleGenotypesModelWithRefBias genotypesModelWithBias = new IndependentSampleGenotypesModelWithRefBias();
+        final IndependentSampleGenotypesModel genotypesModel = new IndependentSampleGenotypesModel();
+        final IndependentSampleGenotypesModelWithRefBias genotypesModelWithBias = new IndependentSampleGenotypesModelWithRefBias();
 
 
         AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(notAllele, allele));
 
         final GenotypingLikelihoods<Allele> genotypingLikelihoods = genotypesModel.calculateLikelihoods(alleleList,
                 genotypingData, null, 0, null);
+        GenotypingLikelihoods<Allele> genotypingLikelihoodsWithBias;
+        if (isRefBiasExpected){
+            genotypingLikelihoodsWithBias = genotypesModelWithBias.calculateLikelihoods(alleleList, genotypingData, null, 0, insertionRefBias);
+        }
 
 
         List<Integer> perSamplePLs = new ArrayList<>();
@@ -77,5 +86,4 @@ public class AlleleFilteringHC extends AlleleFiltering {
         }
         return Collections.min(perSamplePLs);
     }
-
 }

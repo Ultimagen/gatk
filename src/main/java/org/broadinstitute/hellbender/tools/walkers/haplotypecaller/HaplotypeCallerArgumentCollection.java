@@ -2,7 +2,6 @@ package org.broadinstitute.hellbender.tools.walkers.haplotypecaller;
 
 import htsjdk.tribble.NamedFeature;
 import htsjdk.variant.variantcontext.VariantContext;
-import org.apache.arrow.util.VisibleForTesting;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.SerializationUtils;
 import org.broadinstitute.barclay.argparser.Advanced;
@@ -12,7 +11,6 @@ import org.broadinstitute.barclay.argparser.Hidden;
 import org.broadinstitute.hellbender.cmdline.ReadFilterArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.argumentcollections.DbsnpArgumentCollection;
-import org.broadinstitute.hellbender.engine.FeatureDataSource;
 import org.broadinstitute.hellbender.engine.FeatureInput;
 import org.broadinstitute.hellbender.engine.GATKPath;
 import org.broadinstitute.hellbender.engine.spark.AssemblyRegionArgumentCollection;
@@ -40,7 +38,8 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
     public static final String DRAGEN_378_GATK_MODE_LONG_NAME = "dragen-378-concordance-mode";
     public static final String APPLY_BQD_LONG_NAME = "apply-bqd";
     public static final String APPLY_FRD_LONG_NAME = "apply-frd";
-    public static final String APPLY_HPOLGT_THRESHOLD_LONG_NAME = "genotype-homopolymer-length-threshold";
+    public static final String HPOLGT_THRESHOLD_LONG_NAME = "genotype-homopolymer-length-threshold";
+    public static final String HPOL_REF_BIAS_LONG_NAME = "homopolymer-insertion-ref-bias";
     public static final String TRANSFORM_DRAGEN_MAPPING_QUALITY_LONG_NAME = "transform-dragen-mapping-quality";
     public static final String MAPPING_QUALITY_THRESHOLD_FOR_GENOTYPING_LONG_NAME = "mapping-quality-threshold-for-genotyping";
 
@@ -186,8 +185,12 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
     public boolean applyFRD = false;
 
     @Advanced
-    @Argument(fullName = APPLY_HPOLGT_THRESHOLD_LONG_NAME, doc = "If larger than zero, special genotyping algorithm would be applied for homopolymers longer than this threshold", optional = true)
+    @Argument(fullName = HPOLGT_THRESHOLD_LONG_NAME, doc = "If larger than zero, special genotyping algorithm would be applied for homopolymers longer than this threshold", optional = true)
     public int homopolymerGenotypingThreshold = 0;
+
+    @Advanced
+    @Argument(fullName = HPOL_REF_BIAS_LONG_NAME, doc = "Expected reference bias for homopolymer insertions longer than homopolymerGenotypingThreshold (0.5 - no bias)", optional = true)
+    public double insertionRefBias = 0.5;
 
     @Advanced
     @Argument(fullName = DISABLE_SPANNING_EVENT_GENOTYPING_LONG_NAME, doc = "If enabled this argument will disable inclusion of the '*' spanning event when genotyping events that overlap deletions", optional = true)

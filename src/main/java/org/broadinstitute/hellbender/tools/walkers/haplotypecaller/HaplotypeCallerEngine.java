@@ -927,7 +927,7 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         if (hcArgs.filterAlleles) {
             logger.debug("Filtering alleles");
 
-            AlleleFilteringHC alleleFilter = new AlleleFilteringHC(hcArgs, assemblyDebugOutStream, localGenotypingEngine, readsHeader, hcArgs.homopolymerGenotypingThreshold);
+            AlleleFilteringHC alleleFilter = new AlleleFilteringHC(hcArgs, assemblyDebugOutStream, localGenotypingEngine, readsHeader);
             //need to update haplotypes to find the alleles
             EventMap.buildEventMapsForHaplotypes(readLikelihoods.alleles(),
                     assemblyResult.getFullReferenceWithPadding(),

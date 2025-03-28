@@ -194,7 +194,7 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
             int mergedAllelesListSizeBeforePossibleTrimming = mergedVC.getAlleles().size();
 
             if (hpolIndelThreshold > 0){
-                longHpolIndel = isEligibleHomopolymerIndel(mergedVC, loc - refLoc.getStart() + 1, dragstrsForHpolIndels, hpolIndelThreshold);
+                longHpolIndel = HmerGenotypesModel.isEligibleHomopolymerIndel(mergedVC, loc - refLoc.getStart() + 1, dragstrsForHpolIndels, hpolIndelThreshold);
             }
 
             final Map<Allele, List<Haplotype>> alleleMapper = AssemblyBasedCallerUtils.createAlleleMapper(mergedVC, loc, haplotypes, !hcArgs.disableSpanningEventGenotyping);
