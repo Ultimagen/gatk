@@ -70,7 +70,7 @@ public class AlleleFilteringHC extends AlleleFiltering {
 
         final GenotypingLikelihoods<Allele> genotypingLikelihoods = genotypesModel.calculateLikelihoods(alleleList,
                 genotypingData, null, 0, null);
-        GenotypingLikelihoods<Allele> genotypingLikelihoodsWithBias;
+        GenotypingLikelihoods<Allele> genotypingLikelihoodsWithBias = null;
         if (isRefBiasExpected){
             genotypingLikelihoodsWithBias = genotypesModelWithBias.calculateLikelihoods(alleleList, genotypingData, null, 0, insertionRefBias);
         }
@@ -79,7 +79,18 @@ public class AlleleFilteringHC extends AlleleFiltering {
         List<Integer> perSamplePLs = new ArrayList<>();
         for (int i = 0; i < genotypingLikelihoods.numberOfSamples(); i++) {
             final int[] pls = genotypingLikelihoods.sampleLikelihoods(i).getAsPLs();
+            if (isRefBiasExpected) {
+                final int[] plsWithBias = genotypingLikelihoodsWithBias.sampleLikelihoods(i).getAsPLs();
+                int tmp1 = Math.min(pls[1] - pls[0], pls[2] - pls[0]);
+                int tmp2 = Math.min(plsWithBias[1] - plsWithBias[0], plsWithBias[2] - plsWithBias[0]);
+                if (tmp1 > tmp2) {
+                    for (int j = 0; j < pls.length; j++) {
+                        pls[j] = plsWithBias[j];
+                    }
+                }
+            }
             perSamplePLs.add(Math.min(pls[1] - pls[0], pls[2] - pls[0]));
+
             final int finalI = i;
             logger.debug(() -> String.format("GAL (%s):: %s: %d %d %d",
                     genotypingLikelihoods.getSample(finalI), allele.toString(), pls[0], pls[1], pls[2]));
