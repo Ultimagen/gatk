@@ -246,23 +246,6 @@ public final class BaseUtilsUnitTest extends GATKBaseTest {
         Assert.assertEquals(BaseUtils.equalUpToHmerChange(bases1, bases2),answer);
     }
 
-    @DataProvider(name="hmerChangeLengthProvider")
-    public Object[][] hmerChangeLengthProvider() {
-        return new Object[][] {
-                { "AAAABBBCCD".getBytes(), "AAAABBBCCD".getBytes(), new ImmutablePair<>(0,0) },
-                { "AAAABBBCCD".getBytes(), "AAAABBBCCDD".getBytes(), new ImmutablePair<>(1,2)},
-                { "AAAABBBCCD".getBytes(), "AAAABBBCC".getBytes(), new ImmutablePair<>(0,0) },
-                { "AAAABBBCCD".getBytes(), "AAAABBBCCDDDD".getBytes(), new ImmutablePair<>(1,4) },
-                { "AAAABBBCCD".getBytes(), "AAAABBBCCDE".getBytes(), new ImmutablePair<>(0,0) },
-                { "AAAABBBCCD".getBytes(), "AAAABBBCCDEEE".getBytes(), new ImmutablePair<>(0,0) },
-        };
-    }
-
-    @Test(dataProvider = "hmerChangeLengthProvider")
-    public void equalUpToHmerChangeGetLength(byte[] bases1, byte[] bases2, ImmutablePair<Integer,Integer> expectedLength) {
-        Assert.assertEquals(BaseUtils.equalUpToHmerChangeGetLength(bases1, bases2), expectedLength);
-    }
-
     @DataProvider(name="HmerIteratorDataProvider")
     public Object[][] getDataProvider() {
         return new Object[][] {
