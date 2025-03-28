@@ -55,6 +55,9 @@ public class HmerGenotypesModel implements GenotypingModel {
     }
 
     public static boolean isRefBiasExpected(final Event allele, final Haplotype refHaplotype, final int biasedIndelThreshold) {
+        if (biasedIndelThreshold == 0){
+            return false;
+        }
         Haplotype altHaplotype = refHaplotype.insertAllele(
                 allele.refAllele(),
                 allele.altAllele(),
