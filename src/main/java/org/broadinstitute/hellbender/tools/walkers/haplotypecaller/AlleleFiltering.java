@@ -11,6 +11,7 @@ import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.walkers.annotator.StrandOddsRatio;
+import org.broadinstitute.hellbender.tools.walkers.genotyper.HmerGenotypesModel;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.InverseAllele;
 import org.broadinstitute.hellbender.utils.BaseUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
@@ -47,15 +48,15 @@ public abstract class AlleleFiltering {
     final protected AssemblyBasedCallerArgumentCollection assemblyArgs;
     final private OutputStreamWriter assemblyDebugOutStream;
     final private SAMSequenceDictionary sequenceDictionary;
-    final int biasedIndelThreshold;
+    final int biasIndelThreshold;
     AlleleFiltering(final AssemblyBasedCallerArgumentCollection assemblyArgs,
                     final OutputStreamWriter assemblyDebugOutStream,
                     final SAMFileHeader header,
-                    final int biasedIndelThreshold){
+                    final int biasIndelThreshold){
         this.assemblyArgs = assemblyArgs;
         this.assemblyDebugOutStream = assemblyDebugOutStream;
         this.sequenceDictionary = header.getSequenceDictionary();
-        this.biasedIndelThreshold = biasedIndelThreshold;
+        this.biasIndelThreshold = biasIndelThreshold;
     }
     protected abstract double getStringentQuality();
 
@@ -187,7 +188,7 @@ public abstract class AlleleFiltering {
                 }
                 logger.debug("AHM::printout end");
                 final Haplotype refHaplotype = findReferenceHaplotype(readLikelihoods.alleles());
-                final List<Boolean> isRefBiasExpected = activeAlleles.stream().map(al -> getRefBiasExpected(al, refHaplotype)).collect(Collectors.toList());
+                final List<Boolean> isRefBiasExpected = activeAlleles.stream().map(al -> HmerGenotypesModel.isRefBiasExpected(al, refHaplotype, biasIndelThreshold)).collect(Collectors.toList());
                 final List<AlleleLikelihoods<GATKRead, Allele>> alleleLikelihoods =
                         activeAlleles.stream().map(al -> getAlleleLikelihoodMatrix(readLikelihoods, al,
                                 haplotypeAlleleMap, activeHaplotypes)).collect(Collectors.toList());
@@ -411,7 +412,6 @@ public abstract class AlleleFiltering {
         return result;
     }
 
-
     // find (the) reference haplotype within a list of haplotypes
     static Haplotype findReferenceHaplotype(final List<Haplotype> haplotypeList) {
         for (final Haplotype h: haplotypeList ) {
@@ -476,22 +476,6 @@ public abstract class AlleleFiltering {
 
     }
 
-    //reference bias only expected for
-    private boolean getRefBiasExpected(final Event allele, final Haplotype refHaplotype) {
-        Haplotype altHaplotype = refHaplotype.insertAllele(
-                allele.refAllele(),
-                allele.altAllele(),
-                allele.getStart());
-        Pair<Integer, Integer> indel_length_and_type = BaseUtils.equalUpToHmerChangeGetLength(refHaplotype.getBases(), altHaplotype.getBases());
-        if (indel_length_and_type.getLeft() == 0) {
-            return false;
-        } else if (indel_length_and_type.getLeft() == -1) {
-            return false;
-        } else if (indel_length_and_type.getRight() > biasedIndelThreshold){
-            return true;
-        }
-        return false;
-    }
     // function to calculate interactions matrix between the alleles
     private Map<Event, Map<Event, Integer>> getInteractionMatrix(
             final List<Event> alleles,
@@ -510,7 +494,7 @@ public abstract class AlleleFiltering {
         final List<AlleleLikelihoods<GATKRead, Allele>> initialAlleleLikelihoods =
                 allAlleles.stream().map(c -> getAlleleLikelihoodMatrix(readLikelihoods, c, haplotypeAlleleMap, haplotypes)).collect(Collectors.toList());
         final Haplotype refHaplotype = findReferenceHaplotype(readLikelihoods.alleles());
-        final List<Boolean> isRefBiasExpected = allAlleles.stream().map(al -> getRefBiasExpected(al, refHaplotype)).collect(Collectors.toList());
+        final List<Boolean> isRefBiasExpected = allAlleles.stream().map(al -> HmerGenotypesModel.isRefBiasExpected(al, refHaplotype, biasIndelThreshold)).collect(Collectors.toList());
         final List<Integer> initialRPLs = IntStream.range(0, allAlleles.size()).mapToObj(i -> getAlleleLikelihoodVsInverse(initialAlleleLikelihoods.get(i),
                 allAlleles.get(i).altAllele(), isRefBiasExpected.get(i))).collect(Collectors.toList());
 
@@ -544,7 +528,7 @@ public abstract class AlleleFiltering {
         final List<AlleleLikelihoods<GATKRead, Allele>> disabledAlleleLikelihood =
                 allelesWithoutDisabledAllele.stream().map(c -> getAlleleLikelihoodMatrix(readLikelihoods, c, haplotypeAlleleMap, haplotypesWithoutDisabledAllele)).collect(Collectors.toList());
         final Haplotype refHaplotype = findReferenceHaplotype(readLikelihoods.alleles());
-        final List<Boolean> isRefBiasExpected = allelesWithoutDisabledAllele.stream().map(al -> getRefBiasExpected(al, refHaplotype)).collect(Collectors.toList());
+        final List<Boolean> isRefBiasExpected = allelesWithoutDisabledAllele.stream().map(al -> HmerGenotypesModel.isRefBiasExpected(al, refHaplotype, biasIndelThreshold)).collect(Collectors.toList());
 
         final List<Integer> rplsWithoutAllele = IntStream.range(0, allelesWithoutDisabledAllele.size()).mapToObj(i -> getAlleleLikelihoodVsInverse(disabledAlleleLikelihood.get(i),
                 allelesWithoutDisabledAllele.get(i).altAllele(), isRefBiasExpected.get(i))).collect(Collectors.toList());
