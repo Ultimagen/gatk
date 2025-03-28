@@ -125,7 +125,7 @@ public class FlowBasedGenotypesModel extends DRAGENGenotypesModel {
     }
 
 
-    static protected boolean isHmerIndel(final Allele al, final byte hmer_base){
+    protected static boolean isHmerIndel(final Allele al, final byte hmer_base){
         for (int i = 1; i< al.length(); i++){
             if (al.getBases()[i] != hmer_base){
                 return false;
