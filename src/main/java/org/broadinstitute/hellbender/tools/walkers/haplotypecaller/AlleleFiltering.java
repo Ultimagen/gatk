@@ -535,7 +535,8 @@ public abstract class AlleleFiltering {
         final List<AlleleLikelihoods<GATKRead, Allele>> disabledAlleleLikelihood =
                 allelesWithoutDisabledAllele.stream().map(c -> getAlleleLikelihoodMatrix(readLikelihoods, c, haplotypeAlleleMap, haplotypesWithoutDisabledAllele)).collect(Collectors.toList());
         final Haplotype refHaplotype = findReferenceHaplotype(readLikelihoods.alleles());
-        final List<Boolean> isRefBiasExpected = allelesWithoutDisabledAllele.stream().map(al -> FlowBasedGenotypesModel.isRefBiasExpected(al, dragstrReferenceAnalyzer, al.getStart()-refHaplotype.getStart(), biasIndelThreshold)).collect(Collectors.toList());
+        final List<Boolean> isRefBiasExpected = allelesWithoutDisabledAllele.stream().map(al -> FlowBasedGenotypesModel.isRefBiasExpected(al, dragstrReferenceAnalyzer,
+                al.getStart()-refHaplotype.getStart(), biasIndelThreshold)).collect(Collectors.toList());
 
         final List<Integer> rplsWithoutAllele = IntStream.range(0, allelesWithoutDisabledAllele.size()).mapToObj(i -> getAlleleLikelihoodVsInverse(disabledAlleleLikelihood.get(i),
                 allelesWithoutDisabledAllele.get(i).altAllele(), isRefBiasExpected.get(i))).collect(Collectors.toList());
