@@ -36,11 +36,15 @@ public class AlleleFilteringHC extends AlleleFiltering {
     final double insertionRefBias;
     public AlleleFilteringHC(HaplotypeCallerArgumentCollection _hcargs, OutputStreamWriter assemblyDebugStream,
                              HaplotypeCallerGenotypingEngine _genotypingEngine, final SAMFileHeader header) {
-        super(_hcargs, assemblyDebugStream, header, _hcargs.homopolymerGenotypingThreshold);
+        super(_hcargs, assemblyDebugStream, header, _hcargs == null ? 0:_hcargs.homopolymerGenotypingThreshold);
         genotypingEngine = _genotypingEngine;
         GenotypeCalculationArgumentCollection config = genotypingEngine.getConfiguration().genotypeArgs;
          afCalc = AlleleFrequencyCalculator.makeCalculator(config);
-         this.insertionRefBias = _hcargs.insertionRefBias;
+         if (_hcargs==null){
+             this.insertionRefBias = 0.5;
+         } else {
+             this.insertionRefBias = _hcargs.insertionRefBias;
+         }
     }
 
     protected double getStringentQuality() { return 1; }
@@ -55,40 +59,25 @@ public class AlleleFilteringHC extends AlleleFiltering {
      * @return likelihood, expressed as phred-scaled confidence
      */
     @Override
-    int getAlleleLikelihoodVsInverse(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele, final boolean isRefBiasExpected) {
+    int getAlleleLikelihoodVsInverse(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, final Allele allele, final boolean isRefBiasExpected) {
         final Allele notAllele = InverseAllele.of(allele, true);
 
         // iterate over contigs and see what their qual is.
 
         GenotypingData<Allele> genotypingData = new GenotypingData<>(genotypingEngine.getPloidyModel(), alleleLikelihoods);
 
-        final IndependentSampleGenotypesModel genotypesModel = new IndependentSampleGenotypesModel();
-        final IndependentSampleGenotypesModelWithRefBias genotypesModelWithBias = new IndependentSampleGenotypesModelWithRefBias();
-
+        final FlowBasedGenotypesModel genotypesModel = new FlowBasedGenotypesModel(false, false,
+                assemblyArgs.informativeReadOverlapMargin, 0,
+                1, null, insertionRefBias );
 
         AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(notAllele, allele));
 
         final GenotypingLikelihoods<Allele> genotypingLikelihoods = genotypesModel.calculateLikelihoods(alleleList,
-                genotypingData, null, 0, null);
-        GenotypingLikelihoods<Allele> genotypingLikelihoodsWithBias = null;
-        if (isRefBiasExpected){
-            genotypingLikelihoodsWithBias = genotypesModelWithBias.calculateLikelihoods(alleleList, genotypingData, null, 0, insertionRefBias);
-        }
-
+                genotypingData, null, 0, null, isRefBiasExpected);
 
         List<Integer> perSamplePLs = new ArrayList<>();
         for (int i = 0; i < genotypingLikelihoods.numberOfSamples(); i++) {
             final int[] pls = genotypingLikelihoods.sampleLikelihoods(i).getAsPLs();
-            if (isRefBiasExpected) {
-                final int[] plsWithBias = genotypingLikelihoodsWithBias.sampleLikelihoods(i).getAsPLs();
-                int tmp1 = Math.min(pls[1] - pls[0], pls[2] - pls[0]);
-                int tmp2 = Math.min(plsWithBias[1] - plsWithBias[0], plsWithBias[2] - plsWithBias[0]);
-                if (tmp1 > tmp2) {
-                    for (int j = 0; j < pls.length; j++) {
-                        pls[j] = plsWithBias[j];
-                    }
-                }
-            }
             perSamplePLs.add(Math.min(pls[1] - pls[0], pls[2] - pls[0]));
 
             final int finalI = i;
