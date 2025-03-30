@@ -194,7 +194,7 @@ public abstract class AlleleFiltering {
                 logger.debug("AHM::printout end");
                 final Haplotype refHaplotype = findReferenceHaplotype(readLikelihoods.alleles());
                 final List<Boolean> isRefBiasExpected = activeAlleles.stream().map(al -> FlowBasedGenotypesModel.isRefBiasExpected(al, dragstrReferenceAnalyzer,
-                        al.getStart()-refHaplotype.getStart(),
+                        al.getStart()-refHaplotype.getStart()+1,
                         biasIndelThreshold)).collect(Collectors.toList());
                 final List<AlleleLikelihoods<GATKRead, Allele>> alleleLikelihoods =
                         activeAlleles.stream().map(al -> getAlleleLikelihoodMatrix(readLikelihoods, al,
