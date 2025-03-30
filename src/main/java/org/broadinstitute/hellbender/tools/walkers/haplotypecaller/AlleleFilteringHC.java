@@ -34,12 +34,14 @@ public class AlleleFilteringHC extends AlleleFiltering {
     private HaplotypeCallerGenotypingEngine genotypingEngine;
     private AlleleFrequencyCalculator afCalc;
     final double insertionRefBias;
+    FlowBasedGenotypesModel genotypingModel = null;
     public AlleleFilteringHC(HaplotypeCallerArgumentCollection _hcargs, OutputStreamWriter assemblyDebugStream,
                              HaplotypeCallerGenotypingEngine _genotypingEngine, final SAMFileHeader header) {
         super(_hcargs, assemblyDebugStream, header, _hcargs == null ? 0:_hcargs.homopolymerGenotypingThreshold);
         genotypingEngine = _genotypingEngine;
         GenotypeCalculationArgumentCollection config = genotypingEngine.getConfiguration().genotypeArgs;
          afCalc = AlleleFrequencyCalculator.makeCalculator(config);
+         genotypingModel = (FlowBasedGenotypesModel) _genotypingEngine.getGenotypingModel();
          if (_hcargs==null){
              this.insertionRefBias = 0.5;
          } else {
@@ -66,13 +68,9 @@ public class AlleleFilteringHC extends AlleleFiltering {
 
         GenotypingData<Allele> genotypingData = new GenotypingData<>(genotypingEngine.getPloidyModel(), alleleLikelihoods);
 
-        final FlowBasedGenotypesModel genotypesModel = new FlowBasedGenotypesModel(false, false,
-                assemblyArgs.informativeReadOverlapMargin, 0,
-                1, null, insertionRefBias );
-
         AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(notAllele, allele));
 
-        final GenotypingLikelihoods<Allele> genotypingLikelihoods = genotypesModel.calculateLikelihoods(alleleList,
+        final GenotypingLikelihoods<Allele> genotypingLikelihoods = genotypingModel.calculateLikelihoods(alleleList,
                 genotypingData, null, 0, null, isRefBiasExpected);
 
         List<Integer> perSamplePLs = new ArrayList<>();
