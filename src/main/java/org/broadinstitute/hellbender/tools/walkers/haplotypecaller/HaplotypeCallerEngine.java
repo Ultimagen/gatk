@@ -294,20 +294,21 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         minTailQuality = (byte)(hcArgs.minBaseQualityScore - 1);
 
         initializeActiveRegionEvaluationGenotyperEngine();
+        boolean isFlowBased = (hcArgs.likelihoodArgs.likelihoodEngineImplementation == ReadLikelihoodCalculationEngine.Implementation.FlowBased)
+                || (hcArgs.likelihoodArgs.likelihoodEngineImplementation == ReadLikelihoodCalculationEngine.Implementation.FlowBasedHMM);
 
-        defaultGenotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samplesList, ! hcArgs.doNotRunPhysicalPhasing, hcArgs.applyBQD);
+        defaultGenotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samplesList, ! hcArgs.doNotRunPhysicalPhasing, hcArgs.applyBQD, isFlowBased);
         defaultGenotypingEngine.setAnnotationEngine(annotationEngine);
 
         // Create other custom genotyping engines if user provided ploidyRegions
+
         for (final int ploidy : this.allCustomPloidies) {
             HaplotypeCallerArgumentCollection newPloidyHcArgs = hcArgs.copyWithNewPloidy(ploidy);
-            HaplotypeCallerGenotypingEngine newGenotypingEngine = new HaplotypeCallerGenotypingEngine(newPloidyHcArgs, samplesList, ! hcArgs.doNotRunPhysicalPhasing, hcArgs.applyBQD);
+            HaplotypeCallerGenotypingEngine newGenotypingEngine = new HaplotypeCallerGenotypingEngine(newPloidyHcArgs, samplesList, ! hcArgs.doNotRunPhysicalPhasing, hcArgs.applyBQD, isFlowBased);
             newGenotypingEngine.setAnnotationEngine(annotationEngine);
             this.ploidyToGenotyperMap.put(ploidy, newGenotypingEngine);
         }
 
-        boolean isFlowBased = (hcArgs.likelihoodArgs.likelihoodEngineImplementation == ReadLikelihoodCalculationEngine.Implementation.FlowBased)
-                || (hcArgs.likelihoodArgs.likelihoodEngineImplementation == ReadLikelihoodCalculationEngine.Implementation.FlowBasedHMM);
         referenceConfidenceModel = new ReferenceConfidenceModel(samplesList, readsHeader,
                 hcArgs.indelSizeToEliminateInRefModel,
                 hcArgs.standardArgs.genotypeArgs.numRefIfMissing,
