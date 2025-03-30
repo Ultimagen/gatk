@@ -67,7 +67,7 @@ public class AlleleFilteringUnitTest {
         }
 
         HaplotypeCallerArgumentCollection hcArgs = new HaplotypeCallerArgumentCollection();
-        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples, ! hcArgs.doNotRunPhysicalPhasing, false);
+        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples, ! hcArgs.doNotRunPhysicalPhasing, false, true);
 
 
         AlleleFiltering alleleFiltering = new AlleleFilteringHC(hcArgs, null, genotypingEngine, initReference());
@@ -135,7 +135,7 @@ public class AlleleFilteringUnitTest {
         }
 
         HaplotypeCallerArgumentCollection hcArgs = new HaplotypeCallerArgumentCollection();
-        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples, ! hcArgs.doNotRunPhysicalPhasing, false);
+        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples, ! hcArgs.doNotRunPhysicalPhasing, false, true);
 
 
         AlleleFiltering alleleFiltering = new AlleleFilteringHC(hcArgs, null, genotypingEngine, initReference());
@@ -195,7 +195,7 @@ public class AlleleFilteringUnitTest {
         }
 
         HaplotypeCallerArgumentCollection hcArgs = new HaplotypeCallerArgumentCollection();
-        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples, ! hcArgs.doNotRunPhysicalPhasing, false);
+        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples, ! hcArgs.doNotRunPhysicalPhasing, false, true);
 
 
         AlleleFiltering alleleFiltering = new AlleleFilteringHC(hcArgs, null, genotypingEngine, initReference());
@@ -253,7 +253,7 @@ public class AlleleFilteringUnitTest {
         }
 
         HaplotypeCallerArgumentCollection hcArgs = new HaplotypeCallerArgumentCollection();
-        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples, ! hcArgs.doNotRunPhysicalPhasing, false);
+        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples, ! hcArgs.doNotRunPhysicalPhasing, false, true);
 
 
         AlleleFiltering alleleFiltering = new AlleleFilteringHC(hcArgs, null, genotypingEngine, initReference());
@@ -311,7 +311,7 @@ public class AlleleFilteringUnitTest {
         }
 
         HaplotypeCallerArgumentCollection hcArgs = new HaplotypeCallerArgumentCollection();
-        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples, ! hcArgs.doNotRunPhysicalPhasing, false);
+        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples, ! hcArgs.doNotRunPhysicalPhasing, false, true);
 
 
         AlleleFiltering alleleFiltering = new AlleleFilteringHC(hcArgs, null, genotypingEngine,initReference());
@@ -361,7 +361,7 @@ public class AlleleFilteringUnitTest {
         }
 
         HaplotypeCallerArgumentCollection hcArgs = new HaplotypeCallerArgumentCollection();
-        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples, ! hcArgs.doNotRunPhysicalPhasing, false);
+        HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples, ! hcArgs.doNotRunPhysicalPhasing, false, true);
 
 
         AlleleFiltering alleleFiltering = new AlleleFilteringHC(hcArgs, null, genotypingEngine, initReference());
@@ -437,7 +437,7 @@ public class AlleleFilteringUnitTest {
 
         HaplotypeCallerArgumentCollection hcArgs = new HaplotypeCallerArgumentCollection();
         HaplotypeCallerGenotypingEngine genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samples,
-                !hcArgs.doNotRunPhysicalPhasing, false);
+                !hcArgs.doNotRunPhysicalPhasing, false, true);
 
         AlleleFiltering alleleFiltering = new AlleleFilteringHC(hcArgs, null, genotypingEngine, initReference());
         AlleleLikelihoods<GATKRead, Haplotype> filtered_lks = alleleFiltering.filterAlleles(lks, 0, new HashSet<>());
@@ -454,7 +454,7 @@ public class AlleleFilteringUnitTest {
         List<Integer> rpls = List.of(10,20,0);
         List<Double> sors = List.of(0.0,1.0,3.5);
         HaplotypeCallerGenotypingEngine ge = new HaplotypeCallerGenotypingEngine(new HaplotypeCallerArgumentCollection(),
-                SampleList.singletonSampleList("test"), false, false);
+                SampleList.singletonSampleList("test"), false, false, true);
         AlleleFiltering af = new AlleleFilteringHC(null, null,ge, initReference());
         List<Event> badAlleles = af.identifyBadAlleles(rpls, sors, events, 30, 3);
         Assert.assertEquals(badAlleles, List.of(b, a, c));
