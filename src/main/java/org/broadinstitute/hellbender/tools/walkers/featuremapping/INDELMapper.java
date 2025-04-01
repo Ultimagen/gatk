@@ -17,8 +17,6 @@ import java.util.Arrays;
 
 public class INDELMapper extends BaseFeatureMapper implements FeatureMapper {
 
-    boolean acceptAll = true;
-
     public INDELMapper(FlowFeatureMapperArgumentCollection fmArgs, SAMFileHeader hdr) {
         super(fmArgs, hdr);
     }
@@ -39,7 +37,7 @@ public class INDELMapper extends BaseFeatureMapper implements FeatureMapper {
         if (readHaplotype == null || refHaplotype == null) {
             return null;
         }
-        if (!acceptAll && !acceptIndel(read, readHaplotype, refHaplotype)) {
+        if ( !acceptIndel(read, readHaplotype, refHaplotype)) {
             return null;
         }
 
@@ -58,7 +56,7 @@ public class INDELMapper extends BaseFeatureMapper implements FeatureMapper {
     }
 
     private boolean acceptIndel(GATKRead read, byte[] bases, byte[] ref) {
-
+        
         // move to flow space
         String flowOrder = new String(FlowBasedReadUtils.getReadFlowOrder(hdr, read));
         FlowBasedHaplotype readHap  = new FlowBasedHaplotype(new Haplotype(bases, false), flowOrder);
@@ -69,9 +67,8 @@ public class INDELMapper extends BaseFeatureMapper implements FeatureMapper {
         int[] refKey = refHap.getKey();
 
         if ( readKey.length != refKey.length ) {
-            // this is probably a cycle skip
-            // TODO: verify
-            return false;
+            // too far - report
+            return true;
         }
 
         int changeCount = 0;
