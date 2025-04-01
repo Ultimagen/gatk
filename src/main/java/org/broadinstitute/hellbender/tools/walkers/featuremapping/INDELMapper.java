@@ -17,6 +17,8 @@ import java.util.Arrays;
 
 public class INDELMapper extends BaseFeatureMapper implements FeatureMapper {
 
+    boolean acceptAll = true;
+
     public INDELMapper(FlowFeatureMapperArgumentCollection fmArgs, SAMFileHeader hdr) {
         super(fmArgs, hdr);
     }
@@ -37,7 +39,7 @@ public class INDELMapper extends BaseFeatureMapper implements FeatureMapper {
         if (readHaplotype == null || refHaplotype == null) {
             return null;
         }
-        if (!acceptIndel(read, readHaplotype, refHaplotype)) {
+        if (!acceptAll && !acceptIndel(read, readHaplotype, refHaplotype)) {
             return null;
         }
 
