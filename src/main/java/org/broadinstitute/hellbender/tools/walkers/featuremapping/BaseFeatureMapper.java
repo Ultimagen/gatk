@@ -43,7 +43,11 @@ public abstract class BaseFeatureMapper {
         ignoreSurround = fmArgs.reportAllAlts || fmArgs.tagBasesWithAdjacentRefDiff;
         spanBefore = ignoreSurround ? 0 : surroundBefore;
         spanAfter = ignoreSurround ? 0 : surroundAfter;
-        minCigarElementLength = spanBefore + 1 + spanAfter;
+        if ( fmArgs.mappingFeature != FlowFeatureMapperArgumentCollection.MappingFeatureEnum.INDEL ) {
+            minCigarElementLength = spanBefore + 1 + spanAfter;
+        } else {
+            minCigarElementLength = Math.min(spanBefore, spanAfter);
+        }
 
         // adjust minimal read length
         FlowBasedRead.setMinimalReadLength(1 + 1 + spanAfter);
