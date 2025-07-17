@@ -190,11 +190,16 @@ public class FlowBasedReadUtils {
         if (!hasFlowTags(read)){
             return false;
         }
-        return getReadGroupInfo(hdr, read).isFlowPlatform;
+        return getReadGroupInfo(hdr, read, true).isFlowPlatform;
     }
-    public static synchronized ReadGroupInfo getReadGroupInfo(final SAMFileHeader hdr, final GATKRead read) {
 
-        if ( !hasFlowTags(read) ) {
+    public static  synchronized  ReadGroupInfo getReadGroupInfo(final SAMFileHeader hdr, final GATKRead read) {
+        return getReadGroupInfo(hdr, read, true);
+    }
+
+    public static synchronized ReadGroupInfo getReadGroupInfo(final SAMFileHeader hdr, final GATKRead read, boolean requireT0Tp) {
+
+        if ( !hasFlowTags(read) && requireT0Tp ) {
             throw new IllegalArgumentException("read must be flow based: " + read);
         }
 

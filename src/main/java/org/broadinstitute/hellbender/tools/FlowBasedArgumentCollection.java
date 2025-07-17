@@ -23,7 +23,7 @@ public class FlowBasedArgumentCollection implements Serializable {
     public static final String FLOW_ORDER_CYCLE_LENGTH_LONG_NAME = "flow-order-cycle-length";
     public static final String FLOW_MATRIX_MODS_LONG_NAME = "flow-matrix-mods";
     public static final String FLOW_KEEP_BOUNDARY_FLOWS_LONG_NAME = "keep-boundary-flows";
-
+    public static final String FLOW_IGNORE_TP_T0_TAGS_LONG_NAME = "flow-ignore-tp-t0-tags";
 
 
     public static final double DEFAULT_FILLING_VALUE = 0.001;
@@ -96,6 +96,10 @@ public class FlowBasedArgumentCollection implements Serializable {
     @Advanced
     @Argument(fullName=FLOW_KEEP_BOUNDARY_FLOWS_LONG_NAME, doc="prevent spreading of boundary flows.", optional = true)
     public boolean keepBoundaryFlows = false;
+
+    @Advanced
+    @Argument(fullName=FLOW_IGNORE_TP_T0_TAGS_LONG_NAME, doc="Ignore t0 and tp tags in the read", optional = true)
+    public boolean ignoreT0TpTags = false;
 
     public FlowBasedArgumentCollection() {}
 }
