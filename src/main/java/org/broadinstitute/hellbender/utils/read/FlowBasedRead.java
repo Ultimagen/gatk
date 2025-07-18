@@ -507,7 +507,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     }
 
     private boolean isBaseFormat() {
-       return samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_TI) || samRecord.hasAttribute(FLOW_MATRIX_TAG_NAME);
+       return samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_TI) || samRecord.hasAttribute(FLOW_MATRIX_TAG_NAME) || fbargs.ignoreT0TpTags;
     }
 
     private void fillFlowMatrix(final int [] kh, final int [] kf,
