@@ -304,10 +304,21 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         // access qual, convert to flow representation
         final byte[]      quals = samRecord.getBaseQualities();
-        final byte[]      tp = samRecord.getSignedByteArrayAttribute(FLOW_MATRIX_TAG_NAME);
-
+        byte [] tp;
+        if (fbargs.ignoreT0TpTags){
+            tp = generatedFakeTp(key);
+        } else {
+            tp = samRecord.getSignedByteArrayAttribute(FLOW_MATRIX_TAG_NAME);
+        }
         boolean specialTreatmentForZeroCalls = false;
-        final byte[]      t0 = SAMUtils.fastqToPhred(samRecord.getStringAttribute(FLOW_MATRIX_T0_TAG_NAME));
+        byte[]      t0;
+        if (fbargs.ignoreT0TpTags){
+            t0 = generateFakeT0(forwardSequence, totalMinErrorProb);
+        }
+        else {
+            t0 = SAMUtils.fastqToPhred(samRecord.getStringAttribute(FLOW_MATRIX_T0_TAG_NAME));
+        }
+
         final double[]     t0probs = new double[quals.length];
         if ((t0!=null) && fbargs.useT0Tag){
             specialTreatmentForZeroCalls = true;
@@ -798,6 +809,35 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     }
 
 
+    private byte [] generateFakeT0(final byte [] seq, final double minErrorProb) {
+        // this is a fake T0 tag that is used when the T0 tag is not present in the read
+        // We just simulate constant T0 tag with all maximal probabilities
+        final byte [] t0 = new byte[seq.length];
+        final byte qualValue = QualityUtils.errorProbToQual(minErrorProb);
+        //fill t0 with qualValue
+        Arrays.fill(t0, qualValue);
+        return t0;
+    }
+
+    private byte [] generatedFakeTp(final int [] key) {
+        // this is a fake TP tag that is used when the TP tag is not present in the read
+        // We just simulate constant TP tag with all maximal probabilities
+        final byte [] tp = new byte[Arrays.stream(key).sum()];
+        int tp_offset = 0;
+        for (int i = 0 ; i < key.length; i++){
+            byte assign_value = 1;
+            for (int j = 0 ; j < key[i]; j++) {
+                tp[tp_offset + j] = assign_value;
+                if (j+1 < (double)key[i]/2){
+                    assign_value++;
+                } else if (j+1 > (double)key[i]/2){
+                    assign_value--;
+                }
+            }
+            tp_offset += key[i];
+        }
+        return tp;
+    }
 
     //functions that take care of simulating base format
     //they perform modifications on the flow matrix that are defined in applyFilteringFlowMatrix
@@ -821,7 +861,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         }
         clipProbs();
 
-        if (fbargs.symmetricIndels) {
+        if (fbargs.symmetricIndels || fbargs.ignoreT0TpTags) {
             smoothIndels(key);
         }
         if (fbargs.onlyInsOrDel) {
