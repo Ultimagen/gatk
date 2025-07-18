@@ -213,7 +213,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         forwardSequence = getForwardSequence();
 
         // read flow matrix in. note that below code contains accomodates for old formats
-        if ( samRecord.hasAttribute(FLOW_MATRIX_TAG_NAME) ) {
+        if ( samRecord.hasAttribute(FLOW_MATRIX_TAG_NAME) || fbargs.ignoreT0TpTags ) {
             perHmerMinErrorProb = fbargs.fillingValue;
             totalMinErrorProb = perHmerMinErrorProb;
             // this path is the production path. A flow read should contain a FLOW_MATRIX_TAG_NAME tag
