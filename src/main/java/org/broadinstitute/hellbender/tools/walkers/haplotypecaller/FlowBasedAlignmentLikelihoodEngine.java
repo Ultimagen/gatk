@@ -157,7 +157,7 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
 
         // establish flow order based on the first evidence. Note that all reads belong to the same sample (group)
         final FlowBasedReadUtils.ReadGroupInfo rgInfo = (likelihoods.evidenceCount() != 0)
-                ? FlowBasedReadUtils.getReadGroupInfo(hdr, likelihoods.evidence().get(0))
+                ? FlowBasedReadUtils.getReadGroupInfo(hdr, likelihoods.evidence().get(0), !fbargs.ignoreT0TpTags)
                 : null;
         final String flowOrder = (rgInfo != null)
                 ? rgInfo.flowOrder.substring(0, fbargs.flowOrderCycleLength)
