@@ -1,4 +1,4 @@
-name: Build and Test GATK 4
+name: Test GATK 4 only tests, no WDL
 on:
   push:
     branches:
@@ -43,7 +43,7 @@ jobs:
         java: [ 17.0.6+10 ]
         experimental: [ false ]
         scalaVersion: [ 2.13 ]
-        testType: [ cloud, integration, unit ]
+        testType: [ integration, unit, variantcalling, conda ]
       fail-fast: false
     continue-on-error: ${{ matrix.experimental }}
     env:
