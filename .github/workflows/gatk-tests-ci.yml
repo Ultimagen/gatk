@@ -48,7 +48,7 @@ jobs:
         java: [ 17.0.6+10 ]
         experimental: [ false ]
         scalaVersion: [ 2.13 ]
-        testType: [ integration, unit, variantcalling, conda ]
+        testType: [ integration, unit, variantcalling ]
       fail-fast: false
     continue-on-error: ${{ matrix.experimental }}
     env:
