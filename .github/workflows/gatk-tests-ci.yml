@@ -1,4 +1,7 @@
 name: Test GATK 4 only tests, no WDL
+concurrency:
+  group: gatk-tests-ci-${{ github.ref }}
+  cancel-in-progress: true
 on:
   push:
     branches:
