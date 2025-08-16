@@ -79,6 +79,24 @@ public class FlowBasedKeyCodec {
     }
 
     /**
+     * For every base of the read output the index of the flow that was output for this base
+     */
+    static public int[] getBaseToFlow(final int[] key) {
+        int base_length = 0 ;
+        for (int i = 0; i < key.length; i++) {
+            base_length += key[i];
+        }
+        final int[] result = new int[base_length];
+        int base_index = 0;
+        for (int i = 0; i < key.length; i++) {
+            for (int j = 0; j < key[i]; j++) {
+                result[base_index++] = i;
+            }
+        }
+        return result;
+    }
+
+    /**
      * Prints the key as character-encoded string
      * @param ints (key array)
      * @return encoded string

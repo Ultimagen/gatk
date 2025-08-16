@@ -88,6 +88,12 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private int [] flow2base;
 
     /**
+     * The mapping of base positions to their flow key elements. Entry n contains the index of the flow key element corresponding
+     * to the base
+     */
+    private int [] base2flow;
+
+    /**
      * The maximal length of an hmer that can be encoded (normally in the 10-12 range)
      */
     private final int maxHmer;
@@ -608,6 +614,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         key = Arrays.copyOfRange(key, clipLeft, originalLength - clipRight);
         flow2base = FlowBasedKeyCodec.getKeyToBase(key);
+        base2flow = FlowBasedKeyCodec.getBaseToFlow(key);
         flowOrder = Arrays.copyOfRange(flowOrder, clipLeft, originalLength - clipRight);
 
         final double [][] newFlowMatrix = new double[flowMatrix.length][originalLength - clipLeft - clipRight] ;

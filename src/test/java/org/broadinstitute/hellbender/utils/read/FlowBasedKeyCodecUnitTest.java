@@ -7,6 +7,8 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class FlowBasedKeyCodecUnitTest extends GATKBaseTest {
@@ -17,26 +19,26 @@ public class FlowBasedKeyCodecUnitTest extends GATKBaseTest {
         final Object[][]        testData = {
 
                 // trivial cases
-                { "T", "TGCA", "1", false },
-                { "TT", "TGCA", "2", false },
-                { "TGCA", "TGCA", "1,1,1,1", false },
-                { "TA", "TGCA", "1,0,0,1", false },
-                { "TTAATG", "TGCA", "2,0,0,2,1,1", false },
+                { "T", "TGCA", "1", "0",false },
+                { "TT", "TGCA", "2", "0,0", false },
+                { "TGCA", "TGCA", "1,1,1,1", "0,1,2,3",false },
+                { "TA", "TGCA", "1,0,0,1", "0,3",false },
+                { "TTAATG", "TGCA", "2,0,0,2,1,1", "0,0,3,3,4,5", false },
 
                 // clipping
                 { "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT"
-                          , "TGCA", "130", false },
+                          , "TGCA", "130", String.join(",", Collections.nCopies(130, "0")), false },
 
                 // N processing
-                { "TNTA", "TGCA", "3,0,0,1", false},
-                { "TTNA", "TGCA", "3,0,0,1", false},
-                { "TTAN", "TGCA", "2,0,0,2", false},
-                { "TTAN", "TGCA", "2,0,0,2", false},
-                { "NTTA", "TGCA", "3,0,0,1", false},
-                { "NGGA", "TGCA", "1,2,0,1", false},
-                { "NTGGA", "TGCA", "2,2,0,1", false},
+                { "TNTA", "TGCA", "3,0,0,1", "0,0,0,3", false},
+                { "TTNA", "TGCA", "3,0,0,1", "0,0,0,3", false},
+                { "TTAN", "TGCA", "2,0,0,2", "0,0,3,3",false},
+                { "TTAN", "TGCA", "2,0,0,2", "0,0,3,3", false},
+                { "NTTA", "TGCA", "3,0,0,1", "0,0,0,3", false},
+                { "NGGA", "TGCA", "1,2,0,1", "0,1,1,3", false},
+                { "NTGGA", "TGCA", "2,2,0,1", "0,0,1,1,3", false},
 
-                { "NT*GGA", "TGCA", "2,2,0,1", true}
+                { "NT*GGA", "TGCA", "2,2,0,1", "0,0,1,1,3", true}
         };
 
         return testData;
@@ -44,7 +46,7 @@ public class FlowBasedKeyCodecUnitTest extends GATKBaseTest {
 
     @Test(dataProvider = "testData")
     public void testBase2Key(final String basesAsString, final String flowOrder,
-                                    final String expectedKeyAsString, final boolean expectException) {
+                                    final String expectedKeyAsString, final String unused, final boolean expectException) {
 
         // int version
         try {
@@ -52,6 +54,27 @@ public class FlowBasedKeyCodecUnitTest extends GATKBaseTest {
             Assert.assertNotNull(intKey);
             final String        intKeyAsString = StringUtils.join(intKey, ',');
             Assert.assertEquals(intKeyAsString, expectedKeyAsString);
+        } catch (Exception e) {
+            if ( !expectException )
+                throw e;
+        }
+    }
+
+    @Test(dataProvider = "testData")
+    public void testKey2Flow(final String basesAsString, final String flowOrder,
+                             final String key,
+                             final String expectedBase2Flow,
+                             boolean expectException) {
+
+        // int version
+        try {
+            final int[] intKey = Arrays.stream(StringUtils.split(key, ','))
+                    .mapToInt(Integer::parseInt).toArray();
+            final int[] baseToFlow = FlowBasedKeyCodec.getBaseToFlow(intKey);
+            final int[] expectedBase2FlowInt = Arrays.stream(StringUtils.split(expectedBase2Flow, ','))
+                    .mapToInt(Integer::parseInt).toArray();
+            Assert.assertEquals(baseToFlow.length, expectedBase2FlowInt.length);
+            Assert.assertEquals(baseToFlow, expectedBase2FlowInt);
         } catch (Exception e) {
             if ( !expectException )
                 throw e;
