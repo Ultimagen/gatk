@@ -162,6 +162,7 @@ public final class GATKVCFConstants {
     public static final String FRAGMENT_ALLELE_DEPTHS =             "FAD";
 
     // flow annotations
+    public static final String FLOW_HMER_INDEL_BIAS_KEY =           "X_HIB";
     public final static String FLOW_INDEL_CLASSIFY =                "X_IC";
     public final static String FLOW_INDEL_LENGTH =                  "X_IL";
     public final static String FLOW_HMER_INDEL_LENGTH =             "X_HIL";

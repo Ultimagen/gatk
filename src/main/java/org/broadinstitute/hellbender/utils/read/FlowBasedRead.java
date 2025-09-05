@@ -251,7 +251,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             logger.debug("     bases: " + new String(samRecord.getReadBases()));
             logger.debug("       key: " + FlowBasedKeyCodec.keyAsString(key));
         }
-
     }
 
     //since the last unclipped flow is uncertain (we give high probabilities to
