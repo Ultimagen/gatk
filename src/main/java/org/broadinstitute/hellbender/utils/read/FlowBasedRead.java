@@ -179,6 +179,14 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     private byte[] readDelQuals;
     private byte[] overallGCP;
 
+    public double[] getHmerProbs(final int flow) {
+        double [] result = new double[getMaxHmer()];
+        for (int i =0 ; i<getMaxHmer(); i++){
+            result[i] = flowMatrix[i][flow];
+        }
+        return result;
+    }
+
     public enum Direction {
         REFERENCE, SYNTHESIS
     }
@@ -284,6 +292,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         key = FlowBasedKeyCodec.baseArrayToKey(samRecord.getReadBases(), _flowOrder);
         flow2base = FlowBasedKeyCodec.getKeyToBase(key);
+        base2flow = FlowBasedKeyCodec.getBaseToFlow(key);
         flowOrder = FlowBasedKeyCodec.getFlowToBase(_flowOrder, key.length);
 
         if (perHmerMinErrorProb == 0){
@@ -406,6 +415,12 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         return direction;
     }
 
+    public int getBase2Flow(int base_id){
+        return base2flow[base_id];
+    }
+    public byte getNucForFlow(int flow) {
+        return flowOrder[flow];
+    }
 
     private int[] getAttributeAsIntArray(final String attributeName, final boolean isSigned) {
         ReadUtils.assertAttributeNameIsLegal(attributeName);

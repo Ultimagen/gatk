@@ -26,7 +26,7 @@ import java.util.stream.StreamSupport;
  */
 public class ReadPileup implements Iterable<PileupElement> {
     private final Locatable loc;
-    private final List<PileupElement> pileupElements;
+    protected final List<PileupElement> pileupElements;
 
     /** Constant used by samtools to downgrade a quality for overlapping reads that disagrees in their base. */
     public static final double SAMTOOLS_OVERLAP_LOW_CONFIDENCE = 0.8;
