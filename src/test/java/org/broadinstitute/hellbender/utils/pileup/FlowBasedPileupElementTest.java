@@ -1,8 +1,6 @@
 package org.broadinstitute.hellbender.utils.pileup;
 
 import org.broadinstitute.hellbender.GATKBaseTest;
-import org.broadinstitute.hellbender.utils.pileup.FlowBasedPileupElement;
-import org.broadinstitute.hellbender.utils.pileup.PileupElement;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 import org.mockito.Mockito;
 import org.testng.Assert;
