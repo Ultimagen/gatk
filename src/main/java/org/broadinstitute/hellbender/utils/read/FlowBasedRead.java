@@ -55,17 +55,11 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     final public static String FLOW_MATRIX_TAG_NAME = "tp";
     final public static String FLOW_MATRIX_T0_TAG_NAME = "t0";
-    final public static String FLOW_MATRiX_OLD_TAG_KR = "kr";
-    final public static String FLOW_MATRiX_OLD_TAG_TI = "ti";
-    public static final String FLOW_MATRiX_OLD_TAG_KH = "kh";
-    public static final String FLOW_MATRiX_OLD_TAG_KF = "kf";
-    public static final String FLOW_MATRiX_OLD_TAG_KD = "kd";
 
     final public static String MAX_CLASS_READ_GROUP_TAG = "mc";
 
     final public static String[] HARD_CLIPPED_TAGS = new String[] {
-            FLOW_MATRIX_TAG_NAME, FLOW_MATRiX_OLD_TAG_KR, FLOW_MATRiX_OLD_TAG_TI,
-            FLOW_MATRiX_OLD_TAG_KH, FLOW_MATRiX_OLD_TAG_KF, FLOW_MATRiX_OLD_TAG_KD,
+            FLOW_MATRIX_TAG_NAME,
             FLOW_MATRIX_T0_TAG_NAME
     };
 
@@ -225,16 +219,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             // this path is the production path. A flow read should contain a FLOW_MATRIX_TAG_NAME tag
             readFlowMatrix(flowOrder);
 
-        } else {
-
-            // NOTE: this path is vestigial and deals with old formats of the matrix
-            if ( samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_KR) ) {
-                readVestigialFlowMatrixFromKR(flowOrder);
-            } else if ( samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_TI) ) {
-                readVestigialFlowMatrixFromTI(flowOrder);
-            } else {
-                throw new GATKException("read missing flow matrix attribute: " + FLOW_MATRIX_TAG_NAME);
-            }
         }
 
         implementMatrixMods(FlowBasedReadUtils.getFlowMatrixModsInstructions(fbargs.flowMatrixMods, maxHmer));
@@ -496,7 +480,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     }
 
     private boolean isBaseFormat() {
-       return samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_TI) || samRecord.hasAttribute(FLOW_MATRIX_TAG_NAME);
+       return samRecord.hasAttribute(FLOW_MATRIX_TAG_NAME);
     }
 
     private void fillFlowMatrix(final int [] kh, final int [] kf,
@@ -712,55 +696,6 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
             oos.write(key[i]+"\n");
 
     }
-
-    /**
-     * Flow matrix logger
-     *
-     * This is used exclusively for testing
-     *
-     * @param oos
-     * @throws IOException
-     */
-    protected void writeMatrix(final OutputStreamWriter oos)
-            throws IOException {
-        final DecimalFormat formatter = new DecimalFormat("0.000000", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
-
-        final byte[]      bases = samRecord.getReadBases();
-        int         basesOfs = 0;
-        final byte[]      quals = samRecord.getBaseQualities();
-        final byte[]      ti = samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_TI) ? samRecord.getByteArrayAttribute(FLOW_MATRiX_OLD_TAG_TI) : (new byte[key.length*3]);
-        if ( isReverseStrand() )
-        {
-            ArrayUtils.reverse(quals);
-            ArrayUtils.reverse(ti);
-        }
-
-        for ( int col = 0 ; col < key.length ; col++ ) {
-            oos.write("C,R,F,B,Bi,Q,ti\n");
-            final byte base = (key[col] != 0) ? (basesOfs < bases.length ? bases[basesOfs] : (byte)'?') : (byte)'.';
-            final String bi = (key[col] != 0) ? Integer.toString(basesOfs) : ".";
-            final String q = (key[col] != 0) ? Integer.toString(quals[basesOfs]) : ".";
-            final String Ti = (key[col] != 0) ? Integer.toString(ti[basesOfs]) : ".";
-            for (int row = 0; row < flowMatrix.length; row++) {
-                final String s = formatter.format(flowMatrix[row][col]);
-                oos.write(""
-                        + col + ","
-                        + row + ","
-                        + key[col] + ","
-                        + (char)base + ","
-                        + bi + ","
-                        + q + ","
-                        + Ti + ","
-                        + (isReverseStrand() ? "r" : ".") + " "
-                        + s + "\n");
-            }
-            if ( key[col] != 0 )
-                basesOfs +=  key[col];
-            oos.write("\n");
-        }
-
-    }
-
 
     public byte [] getFlowOrderArray() {
         return flowOrder;
@@ -1016,113 +951,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         FlowBasedRead.minimalReadLength = minimalReadLength;
     }
 
-    // convert qualities and ti tag to flow matrix
-    private void readVestigialFlowMatrixFromTI(final String _flowOrder) {
 
-        vestigialOneShotLogger.warn("Vestigial read format detected: " + samRecord);
-
-        // generate key (base to flow space)
-        setDirection(Direction.REFERENCE);  // base is always in reference/alignment direction
-        key = FlowBasedKeyCodec.baseArrayToKey(samRecord.getReadBases(), _flowOrder);
-        flow2base = FlowBasedKeyCodec.getKeyToBase(key);
-        flowOrder = FlowBasedKeyCodec.getFlowToBase(_flowOrder, key.length);
-
-        // initialize matrix
-        flowMatrix = new double[maxHmer+1][key.length];
-        for (int i = 0 ; i < maxHmer+1; i++) {
-            for (int j = 0 ; j < key.length; j++ ){
-                flowMatrix[i][j] = perHmerMinErrorProb;
-            }
-        }
-
-        // access qual, convert to flow representation
-        final byte[]      quals = samRecord.getBaseQualities();
-        final byte[]      ti = samRecord.getByteArrayAttribute(FLOW_MATRiX_OLD_TAG_TI);
-        final double[]    probs = new double[quals.length];
-        for ( int i = 0 ; i < quals.length ; i++ ) {
-            final double q = quals[i];
-            final double p = QualityUtils.qualToErrorProb(q);
-            probs[i] = p*2;
-        }
-
-        // apply key and qual/ti to matrix
-        int     qualOfs = 0;
-        for ( int i = 0 ; i < key.length ; i++ ) {
-            final int        run = key[i];
-
-            // the probability is not divided by two for hmers of length 1
-            if ( run == 1 ) {
-                probs[qualOfs] = probs[qualOfs]/2;
-            }
-
-            //filling the probability for the called hmer (not reported by the quals
-            if ( run <= maxHmer ) {
-                flowMatrix[run][i] = (run > 0) ? (1 - probs[qualOfs]) : 1;
-                //require a prob. at least 0.1
-                flowMatrix[run][i] = Math.max(MINIMAL_CALL_PROB, flowMatrix[run][i]);
-
-            }
-
-            if ( run != 0 ) {
-                if ( quals[qualOfs] != 40 ) {
-                    final int     run1 = (ti[qualOfs] == 0) ? (run - 1) : (run + 1);
-                    if (( run1 <= maxHmer ) && (run <= maxHmer)){
-                        flowMatrix[run1][i] = probs[qualOfs] / flowMatrix[run][i];
-                    }
-                    if (run <= maxHmer) {
-                        flowMatrix[run][i] /= flowMatrix[run][i]; // for comparison to the flow space - probabilities are normalized by the key's probability
-                    }
-                }
-                qualOfs += run;
-            }
-
-        }
-
-        //this is just for tests of all kinds of
-        applyFilteringFlowMatrix();
-    }
-
-    // code for reading BAM format where the flow matrix is stored in sparse representation in kr,kf,kh and kd tags
-    // used for development of the new basecalling, but not in production code
-    private void readVestigialFlowMatrixFromKR(final String _flowOrder) {
-
-        vestigialOneShotLogger.warn("Vestigial read format detected: " + samRecord);
-
-        key = getAttributeAsIntArray(FLOW_MATRiX_OLD_TAG_KR, true);
-
-        // creates a translation from flow # to base #
-        flow2base = FlowBasedKeyCodec.getKeyToBase(key);
-
-        // create a translation from
-        flowOrder = FlowBasedKeyCodec.getFlowToBase(_flowOrder, key.length);
-
-        flowMatrix = new double[maxHmer+1][key.length];
-        for (int i = 0 ; i < maxHmer+1; i++) {
-            for (int j = 0 ; j < key.length; j++ ){
-                flowMatrix[i][j] = perHmerMinErrorProb;
-            }
-        }
-
-        int [] kh = getAttributeAsIntArray(FLOW_MATRiX_OLD_TAG_KH, true);
-        int [] kf = getAttributeAsIntArray(FLOW_MATRiX_OLD_TAG_KF, false);
-        int [] kd = getAttributeAsIntArray(FLOW_MATRiX_OLD_TAG_KD, true);
-
-        final int [] key_kh = key;
-        final int [] key_kf = new int[key.length];
-        for ( int i = 0 ; i < key_kf.length ; i++)
-            key_kf[i] = i;
-        final int [] key_kd = new int[key.length];
-
-        kh = ArrayUtils.addAll(kh, key_kh);
-        kf = ArrayUtils.addAll(kf, key_kf);
-        kd = ArrayUtils.addAll(kd, key_kd);
-
-        quantizeProbs(kd);
-
-        final double [] kdProbs = phredToProb(kd);
-        fillFlowMatrix( kh, kf, kdProbs);
-        applyFilteringFlowMatrix();
-    }
     //Finds the quality that is being set when the probability of error is very low
     private double estimateMinErrorProb(){
         final byte[] quals = samRecord.getBaseQualities();
