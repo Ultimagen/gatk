@@ -697,6 +697,54 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
     }
 
+    /**
+     * Flow matrix logger
+     *
+     * This is used exclusively for testing
+     *
+     * @param oos
+     * @throws IOException
+     */
+    protected void writeMatrix(final OutputStreamWriter oos)
+            throws IOException {
+        final DecimalFormat formatter = new DecimalFormat("0.000000", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
+
+        final byte[]      bases = samRecord.getReadBases();
+        int         basesOfs = 0;
+        final byte[]      quals = samRecord.getBaseQualities();
+        final byte[]      ti = (new byte[key.length*3]);
+        if ( isReverseStrand() )
+        {
+            ArrayUtils.reverse(quals);
+            ArrayUtils.reverse(ti);
+        }
+
+        for ( int col = 0 ; col < key.length ; col++ ) {
+            oos.write("C,R,F,B,Bi,Q,ti\n");
+            final byte base = (key[col] != 0) ? (basesOfs < bases.length ? bases[basesOfs] : (byte)'?') : (byte)'.';
+            final String bi = (key[col] != 0) ? Integer.toString(basesOfs) : ".";
+            final String q = (key[col] != 0) ? Integer.toString(quals[basesOfs]) : ".";
+            final String Ti = (key[col] != 0) ? Integer.toString(ti[basesOfs]) : ".";
+            for (int row = 0; row < flowMatrix.length; row++) {
+                final String s = formatter.format(flowMatrix[row][col]);
+                oos.write(""
+                        + col + ","
+                        + row + ","
+                        + key[col] + ","
+                        + (char)base + ","
+                        + bi + ","
+                        + q + ","
+                        + Ti + ","
+                        + (isReverseStrand() ? "r" : ".") + " "
+                        + s + "\n");
+            }
+            if ( key[col] != 0 )
+                basesOfs +=  key[col];
+            oos.write("\n");
+        }
+
+    }
+
     public byte [] getFlowOrderArray() {
         return flowOrder;
     }

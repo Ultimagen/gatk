@@ -105,8 +105,28 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
 
         final AlleleList<Haplotype> haplotypes = new IndexedAlleleList<>(haplotypeList);
 
+        // establish flow order based on the first evidence. Note that all reads belong to the same sample (group)
+
+        Map<String, List<GATKRead>> perSampleFlowReadList = new HashMap<>();
+        for (String k : perSampleReadList.keySet()) {
+            final FlowBasedReadUtils.ReadGroupInfo rgInfo = (perSampleReadList.get(k).size() != 0)
+                    ? FlowBasedReadUtils.getReadGroupInfo(hdr, perSampleReadList.get(k).get(0))
+                    : null;
+            final String flowOrder = (rgInfo != null)
+                    ? rgInfo.flowOrder.substring(0, fbargs.flowOrderCycleLength)
+                    : FlowBasedReadUtils.findFirstUsableFlowOrder(hdr, fbargs);
+
+            List<FlowBasedRead> fl = new ArrayList<>();
+            for ( GATKRead r : perSampleReadList.get(k)) {
+                final FlowBasedRead fbRead = new FlowBasedRead(r, flowOrder, rgInfo.maxClass, fbargs);
+                fbRead.applyAlignment();
+                fl.add(fbRead);
+            }
+            perSampleFlowReadList.put(k, new ArrayList<>(fl));
+        }
+
         // Add likelihoods for each sample's reads to our result
-        final AlleleLikelihoods<GATKRead, Haplotype> result = new AlleleLikelihoods<>(samples, haplotypes, perSampleReadList);
+        final AlleleLikelihoods<GATKRead, Haplotype> result = new AlleleLikelihoods<>(samples, haplotypes, perSampleFlowReadList);
         final int sampleCount = result.numberOfSamples();
         for (int i = 0; i < sampleCount; i++) {
             computeReadLikelihoods(result.sampleMatrix(i), hdr);
@@ -152,26 +172,8 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
     protected void computeReadLikelihoods(final LikelihoodMatrix<GATKRead, Haplotype> likelihoods,
                                         final SAMFileHeader hdr) {
 
-        final List<FlowBasedRead> processedReads = new ArrayList<>(likelihoods.evidenceCount());
         final List<FlowBasedHaplotype> processedHaplotypes = new ArrayList<>(likelihoods.numberOfAlleles());
 
-        // establish flow order based on the first evidence. Note that all reads belong to the same sample (group)
-        final FlowBasedReadUtils.ReadGroupInfo rgInfo = (likelihoods.evidenceCount() != 0)
-                ? FlowBasedReadUtils.getReadGroupInfo(hdr, likelihoods.evidence().get(0))
-                : null;
-        final String flowOrder = (rgInfo != null)
-                ? rgInfo.flowOrder.substring(0, fbargs.flowOrderCycleLength)
-                : FlowBasedReadUtils.findFirstUsableFlowOrder(hdr, fbargs);
-
-        //convert all reads to FlowBasedReads (i.e. parse the matrix of P(call | haplotype) for each read from the BAM)
-        for (int i = 0 ; i < likelihoods.evidenceCount(); i++) {
-            final GATKRead rd = likelihoods.evidence().get(i);
-
-            final FlowBasedRead fbRead = new FlowBasedRead(rd, flowOrder, rgInfo.maxClass, fbargs);
-            fbRead.applyAlignment();
-
-            processedReads.add(fbRead);
-        }
 
         for (int i = 0; i < likelihoods.numberOfAlleles(); i++){
             final FlowBasedHaplotype fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i), flowOrder);
@@ -182,8 +184,8 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
             //NOTE: we assume all haplotypes start and end on the same place!
             final int haplotypeStart = processedHaplotypes.get(0).getStart();
             final int haplotypeEnd = processedHaplotypes.get(0).getEnd();
-            for (int i = 0; i < processedReads.size(); i++) {
-                final FlowBasedRead fbr = processedReads.get(i);
+            for (int i = 0; i < likelihoods.evidenceCount(); i++) {
+                final FlowBasedRead fbr = (FlowBasedRead) likelihoods.evidence().get(i);
                 final int readStart = fbr.getStart();
                 final int readEnd = fbr.getEnd();
                 final int diffLeft = haplotypeStart - readStart;
@@ -200,7 +202,9 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
                 final int haplotypeIndex = i;
                 Callable<Void>  callable = () -> {
                     IntStream.range(0, likelihoods.evidenceCount()).parallel().forEach(j -> {
-                        final double likelihood = fbargs.exactMatching ? haplotypeReadMatchingExactLength(fbh, processedReads.get(j)) : haplotypeReadMatching(fbh, processedReads.get(j));
+                        final double likelihood = fbargs.exactMatching ?
+                                haplotypeReadMatchingExactLength(fbh, (FlowBasedRead) likelihoods.evidence().get(j)) :
+                                haplotypeReadMatching(fbh, ( FlowBasedRead )processedReads.get(j));
                         likelihoods.set(haplotypeIndex, j, likelihood);
                     });
                     return null;
