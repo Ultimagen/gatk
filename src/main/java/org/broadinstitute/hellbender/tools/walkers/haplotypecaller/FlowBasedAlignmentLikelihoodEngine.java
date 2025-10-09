@@ -82,6 +82,7 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
                                                                          final SAMFileHeader hdr,
                                                                          final SampleList samples,
                                                                          final Map<String, List<GATKRead>> perSampleReadList, final boolean filterPoorly) {
+
         return computeReadLikelihoods(haplotypeList, hdr, samples, perSampleReadList,filterPoorly, true);
     }
 
@@ -105,16 +106,50 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
 
         final AlleleList<Haplotype> haplotypes = new IndexedAlleleList<>(haplotypeList);
 
+        Map<String, List<FlowBasedRead>> perSampleFlowReadList = new HashMap<>(perSampleReadList.size());
+        String resultFlowOrder = null;
+        for (String sampleId : perSampleReadList.keySet()){
+            final FlowBasedReadUtils.ReadGroupInfo rgInfo = (perSampleReadList.get(sampleId).size() != 0)
+                    ? FlowBasedReadUtils.getReadGroupInfo(hdr, perSampleReadList.get(sampleId).get(0))
+                    : null;
+            final String flowOrder = (rgInfo != null)
+                    ? rgInfo.flowOrder.substring(0, fbargs.flowOrderCycleLength)
+                    : FlowBasedReadUtils.findFirstUsableFlowOrder(hdr, fbargs);
+            final int maxHmer = (rgInfo != null) ? rgInfo.maxClass : FlowBasedRead.MAX_CLASS;
+
+            final List<FlowBasedRead> processedReads = new ArrayList<>();
+            for (GATKRead rd : perSampleReadList.get(sampleId)){
+                final FlowBasedRead fbRead = new FlowBasedRead(rd, flowOrder, maxHmer, fbargs);
+                fbRead.applyAlignment();
+                processedReads.add(fbRead);
+            }
+            perSampleFlowReadList.put(sampleId,processedReads);
+            resultFlowOrder = flowOrder;
+        }
+        // Create a new map with GATKRead lists (polimorphism)
+        Map<String, List<GATKRead>> perSampleGATKReadList = new HashMap<>();
+        for (Map.Entry<String, List<FlowBasedRead>> entry : perSampleFlowReadList.entrySet()) {
+                List<GATKRead> gatkReads = new ArrayList<>();
+                for (FlowBasedRead fbRead : entry.getValue()) {
+                    gatkReads.add(fbRead); // upcast is safe
+                }
+                perSampleGATKReadList.put(entry.getKey(), gatkReads);
+            }
+
+        // Create new AlleleLikelihoods<GATKRead, Haplotype>
+        AlleleLikelihoods<GATKRead, Haplotype> result = new AlleleLikelihoods<>(samples, haplotypes, perSampleGATKReadList);
+
+
         // Add likelihoods for each sample's reads to our result
-        final AlleleLikelihoods<GATKRead, Haplotype> result = new AlleleLikelihoods<>(samples, haplotypes, perSampleReadList);
         final int sampleCount = result.numberOfSamples();
         for (int i = 0; i < sampleCount; i++) {
-            computeReadLikelihoods(result.sampleMatrix(i), hdr);
+            computeReadLikelihoods(result.sampleMatrix(i), resultFlowOrder);
         }
         if (normalizeLikelihoods) {
             result.normalizeLikelihoods(log10globalReadMismappingRate, symmetricallyNormalizeAllelesToReference);
         }
         if (filterPoorly) {
+
             filterPoorlyModeledEvidence(result, dynamicReadDisqualification, expectedErrorRatePerBase, readDisqualificationScale);
         }
         return result;
@@ -147,31 +182,12 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
     /**
      * Compute read likelihoods for a single sample
      * @param likelihoods Single sample likelihood matrix
-     * @param hdr SAM header that corresponds to the sample
+     * @param flowOrder Flow order to use in calculating likelihood
      */
     protected void computeReadLikelihoods(final LikelihoodMatrix<GATKRead, Haplotype> likelihoods,
-                                        final SAMFileHeader hdr) {
+                                        final String flowOrder) {
 
-        final List<FlowBasedRead> processedReads = new ArrayList<>(likelihoods.evidenceCount());
         final List<FlowBasedHaplotype> processedHaplotypes = new ArrayList<>(likelihoods.numberOfAlleles());
-
-        // establish flow order based on the first evidence. Note that all reads belong to the same sample (group)
-        final FlowBasedReadUtils.ReadGroupInfo rgInfo = (likelihoods.evidenceCount() != 0)
-                ? FlowBasedReadUtils.getReadGroupInfo(hdr, likelihoods.evidence().get(0))
-                : null;
-        final String flowOrder = (rgInfo != null)
-                ? rgInfo.flowOrder.substring(0, fbargs.flowOrderCycleLength)
-                : FlowBasedReadUtils.findFirstUsableFlowOrder(hdr, fbargs);
-
-        //convert all reads to FlowBasedReads (i.e. parse the matrix of P(call | haplotype) for each read from the BAM)
-        for (int i = 0 ; i < likelihoods.evidenceCount(); i++) {
-            final GATKRead rd = likelihoods.evidence().get(i);
-
-            final FlowBasedRead fbRead = new FlowBasedRead(rd, flowOrder, rgInfo.maxClass, fbargs);
-            fbRead.applyAlignment();
-
-            processedReads.add(fbRead);
-        }
 
         for (int i = 0; i < likelihoods.numberOfAlleles(); i++){
             final FlowBasedHaplotype fbh = new FlowBasedHaplotype(likelihoods.alleles().get(i), flowOrder);
@@ -182,8 +198,8 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
             //NOTE: we assume all haplotypes start and end on the same place!
             final int haplotypeStart = processedHaplotypes.get(0).getStart();
             final int haplotypeEnd = processedHaplotypes.get(0).getEnd();
-            for (int i = 0; i < processedReads.size(); i++) {
-                final FlowBasedRead fbr = processedReads.get(i);
+            for (int i = 0; i < likelihoods.evidenceCount(); i++) {
+                final FlowBasedRead fbr = (FlowBasedRead) likelihoods.evidence().get(i);
                 final int readStart = fbr.getStart();
                 final int readEnd = fbr.getEnd();
                 final int diffLeft = haplotypeStart - readStart;
@@ -200,7 +216,9 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
                 final int haplotypeIndex = i;
                 Callable<Void>  callable = () -> {
                     IntStream.range(0, likelihoods.evidenceCount()).parallel().forEach(j -> {
-                        final double likelihood = fbargs.exactMatching ? haplotypeReadMatchingExactLength(fbh, processedReads.get(j)) : haplotypeReadMatching(fbh, processedReads.get(j));
+                        final double likelihood = fbargs.exactMatching ?
+                        haplotypeReadMatchingExactLength(fbh, (FlowBasedRead) likelihoods.evidence().get(j)) :
+                                haplotypeReadMatching(fbh, (FlowBasedRead) likelihoods.evidence().get(j));
                         likelihoods.set(haplotypeIndex, j, likelihood);
                     });
                     return null;
@@ -212,7 +230,9 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
                 }
             } else {
                 for (int j = 0; j < likelihoods.evidenceCount(); j++) {
-                    final double likelihood = fbargs.exactMatching ? haplotypeReadMatchingExactLength(fbh, processedReads.get(j)) : haplotypeReadMatching(fbh, processedReads.get(j));
+                    final double likelihood = fbargs.exactMatching ?
+                            haplotypeReadMatchingExactLength(fbh, (FlowBasedRead) likelihoods.evidence().get(j)) :
+                            haplotypeReadMatching(fbh, (FlowBasedRead) likelihoods.evidence().get(j));
                     likelihoods.set(i, j, likelihood);
                 }
             }
@@ -240,7 +260,7 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
      *         normally, scores will be negative.
      * @throws GATKException
      */
-    public double haplotypeReadMatching(final FlowBasedHaplotype haplotype, final FlowBasedRead read) throws GATKException {
+    private double haplotypeReadMatching(final FlowBasedHaplotype haplotype, final FlowBasedRead read) throws GATKException {
 
         if (read.getDirection() != FlowBasedRead.Direction.REFERENCE ) {
             throw new GATKException.ShouldNeverReachHereException("Read should be aligned with the reference");
@@ -322,7 +342,7 @@ public class FlowBasedAlignmentLikelihoodEngine implements ReadLikelihoodCalcula
      *         normally, scores will be negative.
      * @throws GATKException
      */
-    public double haplotypeReadMatchingExactLength(final FlowBasedHaplotype haplotype, final FlowBasedRead read) throws GATKException {
+    private double haplotypeReadMatchingExactLength(final FlowBasedHaplotype haplotype, final FlowBasedRead read) throws GATKException {
 
         if (read.getDirection() != FlowBasedRead.Direction.REFERENCE ) {
             throw new GATKException.ShouldNeverReachHereException("Read should be aligned with the reference");
