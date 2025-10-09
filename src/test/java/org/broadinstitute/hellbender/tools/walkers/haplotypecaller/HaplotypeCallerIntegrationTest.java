@@ -1730,6 +1730,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
                 .add("flow-likelihood-optimized-comp", true)
                 .add("ERC", "GVCF")
                 .add("flow-filter-lone-alleles", true)
+                .add("A", "HmerIndelBiasAnnotation")
                 .add(StandardArgumentDefinitions.ADD_OUTPUT_VCF_COMMANDLINE, false);
 
         runCommandLine(args);
@@ -1956,6 +1957,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
                 .add("GQB","10").add("GQB","20").add("GQB","30").add("GQB","40").add("GQB","50").add("GQB","60").add("GQB","70").add("GQB","80").add("GQB","90")
                 .add("likelihood-calculation-engine","FlowBased")
                 .add("A", "AssemblyComplexity")
+                .add("A", "HmerIndelBiasAnnotation")
                 .addFlag("assembly-complexity-reference-mode")
                 .add("verbosity","INFO")
                 .add(StandardArgumentDefinitions.ADD_OUTPUT_VCF_COMMANDLINE, false);

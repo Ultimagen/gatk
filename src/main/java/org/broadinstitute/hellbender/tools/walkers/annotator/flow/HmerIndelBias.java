@@ -18,9 +18,9 @@ import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class HmerIndelBiasAnnotation extends FlowAnnotatorBase implements GenotypeAnnotation {
+public class HmerIndelBias extends FlowAnnotatorBase implements GenotypeAnnotation {
 
-    private static final OneShotLogger oneShotLogger = new OneShotLogger(HmerIndelBiasAnnotation.class);
+    private static final OneShotLogger oneShotLogger = new OneShotLogger(HmerIndelBias.class);
 
     @Override
     public List<String> getKeyNames() {

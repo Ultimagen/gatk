@@ -29,7 +29,7 @@ import java.util.List;
  * focusing on interface compliance and basic properties that can be tested without
  * complex mocking of flow-based reads and reference contexts.
  */
-public class HmerIndelBiasAnnotationTest extends GATKBaseTest {
+public class HmerIndelBiasTest extends GATKBaseTest {
     private static final Allele REF = Allele.create("C", true);
     private static final Allele ALT = Allele.create("G");
     private static final Allele REF2 = Allele.create("T", true);
@@ -43,8 +43,8 @@ public class HmerIndelBiasAnnotationTest extends GATKBaseTest {
     public void testDescription(){
         String[] constants = {GATKVCFConstants.FLOW_HMER_INDEL_BIAS_KEY};
         VCFFormatHeaderLine[] hlines    = {GATKVCFHeaderLines.getFormatLine(GATKVCFConstants.FLOW_HMER_INDEL_BIAS_KEY)};
-        Assert.assertEquals(new HmerIndelBiasAnnotation().getKeyNames(), new ArrayList<>(Arrays.asList(constants)));
-        Assert.assertEquals(new HmerIndelBiasAnnotation().getDescriptions(), new ArrayList<>(Arrays.asList(hlines)));
+        Assert.assertEquals(new HmerIndelBias().getKeyNames(), new ArrayList<>(Arrays.asList(constants)));
+        Assert.assertEquals(new HmerIndelBias().getDescriptions(), new ArrayList<>(Arrays.asList(hlines)));
     }
 
     @Test
@@ -69,7 +69,7 @@ public class HmerIndelBiasAnnotationTest extends GATKBaseTest {
         }
         
         // Test the annotation with the created reads
-        HmerIndelBiasAnnotation annotator = new HmerIndelBiasAnnotation();
+        HmerIndelBias annotator = new HmerIndelBias();
 
         final int dpDepth = 50; //Note: using a different value on purpose so that we can check that reads are preferred over DP
         final Genotype gAC = new GenotypeBuilder(SAMPLE, ALLELES).DP(dpDepth).make();
@@ -115,7 +115,7 @@ public class HmerIndelBiasAnnotationTest extends GATKBaseTest {
         }
 
         // Test the annotation with the created reads
-        HmerIndelBiasAnnotation annotator = new HmerIndelBiasAnnotation();
+        HmerIndelBias annotator = new HmerIndelBias();
 
         final int dpDepth = 50; //Note: using a different value on purpose so that we can check that reads are preferred over DP
         final Genotype gAC = new GenotypeBuilder(SAMPLE, ALLELES2).DP(dpDepth).make();
