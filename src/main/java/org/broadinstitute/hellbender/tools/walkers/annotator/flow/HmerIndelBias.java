@@ -112,15 +112,23 @@ public class HmerIndelBias extends FlowAnnotatorBase implements GenotypeAnnotati
             return;
         }
 
-        // Create FlowBasedReadPileup
+        // Create FlowBasedReadPileup. Note - off by 1 because variants for indels are based on one base to the left
         SimpleInterval loc = new SimpleInterval(vc.getContig(), vc.getStart()+1, vc.getStart()+1);
-        FlowBasedReadPileup flowPileup = new FlowBasedReadPileup(loc, flowBasedReads);
+        FlowBasedReadPileup flowPileup = new FlowBasedReadPileup(loc, flowBasedReads, true);
         
         // Get homopolymer information using FlowAnnotatorBase
         final LocalContext localContext = new LocalContext(ref, vc, likelihoods, true);
         indelClassify(vc, localContext);
         isHmerIndel(vc, localContext);
-        
+
+        char hmerBase;
+        Object attr = localContext.attributes.get(GATKVCFConstants.FLOW_HMER_INDEL_NUC);
+        if (attr instanceof List) {
+            List<?> attrList = (List<?>) attr;
+            hmerBase = ((String) attrList.get(0)).charAt(0);
+        } else {
+            hmerBase = 'N';
+        }
         // Get best alleles for each read using likelihoods
         Collection<AlleleLikelihoods<GATKRead, Allele>.BestAllele> bestAlleles = likelihoods.bestAllelesBreakingTies(sampleName);
         
@@ -141,7 +149,7 @@ public class HmerIndelBias extends FlowAnnotatorBase implements GenotypeAnnotati
         for (PileupElement pileupElement : flowPileup) {
             FlowBasedRead flowRead = (FlowBasedRead) pileupElement.getRead();
             FlowBasedPileupElement element =
-                new FlowBasedPileupElement(flowRead, pileupElement);
+                new FlowBasedPileupElement(flowRead, pileupElement, true);
             
             // Get the read for this element
             GATKRead read = pileupElement.getRead();
@@ -151,7 +159,9 @@ public class HmerIndelBias extends FlowAnnotatorBase implements GenotypeAnnotati
             if (bestAllele == null) {
                 continue; // Skip if no best allele
             }
-            
+            if (element.getFlowNuc()!=hmerBase){
+                continue;
+            }
             // Get call probabilities and determine bias direction
             double[] callProbs = element.getCallProbs();
             if (callProbs == null || callProbs.length == 0) {
