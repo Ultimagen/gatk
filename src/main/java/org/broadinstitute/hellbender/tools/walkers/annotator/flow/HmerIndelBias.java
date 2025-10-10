@@ -4,8 +4,10 @@ import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.GenotypeBuilder;
 import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.vcf.VCFCompoundHeaderLine;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.tools.walkers.annotator.GenotypeAnnotation;
+import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.logging.OneShotLogger;
 import org.broadinstitute.hellbender.utils.pileup.FlowBasedPileupElement;
@@ -28,8 +30,8 @@ public class HmerIndelBias extends FlowAnnotatorBase implements GenotypeAnnotati
     }
 
     @Override
-    public htsjdk.variant.vcf.VCFCompoundHeaderLine.SupportedHeaderLineType annotationType() {
-        return htsjdk.variant.vcf.VCFCompoundHeaderLine.SupportedHeaderLineType.FORMAT;
+    public VCFCompoundHeaderLine.SupportedHeaderLineType annotationType() {
+        return VCFCompoundHeaderLine.SupportedHeaderLineType.FORMAT;
     }
 
     /**
@@ -111,7 +113,8 @@ public class HmerIndelBias extends FlowAnnotatorBase implements GenotypeAnnotati
         }
 
         // Create FlowBasedReadPileup
-        FlowBasedReadPileup flowPileup = new FlowBasedReadPileup(ref.getInterval(), flowBasedReads);
+        SimpleInterval loc = new SimpleInterval(vc.getContig(), vc.getStart()+1, vc.getStart()+1);
+        FlowBasedReadPileup flowPileup = new FlowBasedReadPileup(loc, flowBasedReads);
         
         // Get homopolymer information using FlowAnnotatorBase
         final LocalContext localContext = new LocalContext(ref, vc, likelihoods, true);
@@ -129,7 +132,7 @@ public class HmerIndelBias extends FlowAnnotatorBase implements GenotypeAnnotati
         
         // Initialize bias counters for each alternate allele
         Map<Allele, int[]> biasCounts = new HashMap<>();
-        for (Allele allele : vc.getAlternateAlleles()) {
+        for (Allele allele : vc.getAlleles()) {
             biasCounts.put(allele, new int[]{0, 0}); // [down, up]
         }
         
@@ -145,8 +148,8 @@ public class HmerIndelBias extends FlowAnnotatorBase implements GenotypeAnnotati
             
             // Get best allele for this read
             Allele bestAllele = readToBestAllele.get(read);
-            if (bestAllele == null || bestAllele.isReference()) {
-                continue; // Skip if no best allele or reference
+            if (bestAllele == null) {
+                continue; // Skip if no best allele
             }
             
             // Get call probabilities and determine bias direction
@@ -185,8 +188,8 @@ public class HmerIndelBias extends FlowAnnotatorBase implements GenotypeAnnotati
         
         // Format output as "|" separated tuples
         List<String> alleleBiasStrings = new ArrayList<>();
-        for (Allele altAllele : vc.getAlternateAlleles()) {
-            int[] counts = biasCounts.get(altAllele);
+        for (Allele allele : vc.getAlleles()) {
+            int[] counts = biasCounts.get(allele);
             alleleBiasStrings.add(counts[0] + "," + counts[1]);
         }
         
