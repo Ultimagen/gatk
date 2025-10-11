@@ -61,7 +61,7 @@ public class HmerIndelBiasTest extends GATKBaseTest {
                         TEST_FILES_DIR + "hmer_ins_122.bam",
                         new SimpleInterval("ref", 122, 122),
                         true,
-                        "8,16|0,0",
+                        "0,24|0,0",
                         "HmerInsVariant"
                 },
                 {
@@ -70,7 +70,7 @@ public class HmerIndelBiasTest extends GATKBaseTest {
                         TEST_FILES_DIR + "hmer_del_122.bam",
                         new SimpleInterval("ref", 122, 123),
                         true,
-                        "8,12|0,0",
+                        "20,0|0,0",
                         "HmerDelVariant"
                 },
 

@@ -11,8 +11,8 @@ import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.logging.OneShotLogger;
 import org.broadinstitute.hellbender.utils.pileup.FlowBasedPileupElement;
-import org.broadinstitute.hellbender.utils.pileup.FlowBasedReadPileup;
 import org.broadinstitute.hellbender.utils.pileup.PileupElement;
+import org.broadinstitute.hellbender.utils.pileup.ReadPileup;
 import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
@@ -111,22 +111,75 @@ public class HmerIndelBias extends FlowAnnotatorBase implements GenotypeAnnotati
             return;
         }
 
-        // Create FlowBasedReadPileup. Note - off by 1 because variants for indels are based on one base to the left
+        // Create pileup. Note - off by 1 because variants for indels are based on one base to the left
         SimpleInterval loc = new SimpleInterval(vc.getContig(), vc.getStart()+1, vc.getStart()+1);
-        FlowBasedReadPileup flowPileup = new FlowBasedReadPileup(loc, flowBasedReads, true);
+        ReadPileup flowPileup = new ReadPileup(loc, flowBasedReads.stream()
+                .map(read -> (GATKRead) read)
+                .filter( read -> read.contains(loc)).collect(Collectors.toList()));
         
         // Get homopolymer information using FlowAnnotatorBase
         final LocalContext localContext = new LocalContext(ref, vc, likelihoods, true);
         indelClassify(vc, localContext);
         isHmerIndel(vc, localContext);
 
-        char hmerBase;
-        Object attr = localContext.attributes.get(GATKVCFConstants.FLOW_HMER_INDEL_NUC);
-        if (attr instanceof List) {
-            List<?> attrList = (List<?>) attr;
-            hmerBase = ((String) attrList.get(0)).charAt(0);
-        } else {
-            hmerBase = 'N';
+        // Create maps for allele-to-homopolymer information
+        Map<Allele, Integer> alleleToHmerLength = new HashMap<>();
+        Map<Allele, Character> alleleToHmerBase = new HashMap<>();
+        
+        // Extract homopolymer information for all alternate alleles
+        Object attrN = localContext.attributes.get(GATKVCFConstants.FLOW_HMER_INDEL_NUC);
+        Object attrL = localContext.attributes.get(GATKVCFConstants.FLOW_HMER_INDEL_LENGTH);
+        Object attrC = localContext.attributes.get(GATKVCFConstants.FLOW_INDEL_CLASSIFY);
+        Object attrIL = localContext.attributes.get(GATKVCFConstants.FLOW_INDEL_LENGTH);
+        
+        if (attrN instanceof List && attrL instanceof List && attrC instanceof List && attrIL instanceof List) {
+            List<?> hmerNucList = (List<?>) attrN;
+            List<?> hmerLengthList = (List<?>) attrL;
+            List<?> indelClassifyList = (List<?>) attrC;
+            List<?> indelLengthList = (List<?>) attrIL;
+            
+            List<Allele> alternateAlleles = vc.getAlternateAlleles();
+            
+            // Process each alternate allele
+            for (int i = 0; i < alternateAlleles.size(); i++) {
+                Allele allele = alternateAlleles.get(i);
+                
+                if (i < hmerNucList.size() && hmerNucList.get(i) != null) {
+                    char hmerBase = ((String) hmerNucList.get(i)).charAt(0);
+                    int hmerLength = ((Number) hmerLengthList.get(i)).intValue();
+                    String indelClassify = (String) indelClassifyList.get(i);
+                    int indelLength = ((Number) indelLengthList.get(i)).intValue();
+                    
+                    // Calculate the homopolymer length for this allele
+                    int alleleHmerLength = 0 ;
+                    if (indelClassify.equals(FlowAnnotatorBase.C_INSERT)) {
+                        alleleHmerLength = hmerLength; // Alt allele has the longer homopolymer
+                    } else if (indelClassify.equals(FlowAnnotatorBase.C_DELETE)) {
+                        alleleHmerLength = hmerLength - indelLength; // Alt allele has shorter homopolymer
+                    }
+                    
+                    alleleToHmerLength.put(allele, alleleHmerLength);
+                    alleleToHmerBase.put(allele, hmerBase);
+                }
+            }
+            
+            // Also add reference allele information
+            if (!alternateAlleles.isEmpty() && !indelClassifyList.isEmpty()) {
+                String firstIndelClassify = (String) indelClassifyList.get(0);
+                int firstHmerLength = ((Number) hmerLengthList.get(0)).intValue();
+                int firstIndelLength = ((Number) indelLengthList.get(0)).intValue();
+                char firstHmerBase = ((String) hmerNucList.get(0)).charAt(0);
+                
+                int refHmerLength = 0;
+                if (firstIndelClassify.equals(FlowAnnotatorBase.C_INSERT)) {
+                    refHmerLength = firstHmerLength - firstIndelLength; // Ref has shorter homopolymer
+                } else if (firstIndelClassify.equals(FlowAnnotatorBase.C_DELETE)) {
+                    refHmerLength = firstHmerLength; // Ref has the longer homopolymer
+                }
+                
+                alleleToHmerLength.put(vc.getReference(), refHmerLength);
+                alleleToHmerBase.put(vc.getReference(), firstHmerBase);
+            }
         }
         // Get best alleles for each read using likelihoods
         Collection<AlleleLikelihoods<GATKRead, Allele>.BestAllele> bestAlleles = likelihoods.bestAllelesBreakingTies(sampleName);
@@ -158,25 +211,29 @@ public class HmerIndelBias extends FlowAnnotatorBase implements GenotypeAnnotati
             if (bestAllele == null) {
                 continue; // Skip if no best allele
             }
-            if (element.getFlowNuc()!=hmerBase){
+            
+            // Get homopolymer base for this allele
+            Character hmerBase = alleleToHmerBase.get(bestAllele);
+            if (hmerBase == null || element.getFlowNuc() != hmerBase) {
                 continue;
             }
+            Integer hmerLength = alleleToHmerLength.get(bestAllele);
+            
             // Get call probabilities and determine bias direction
             double[] callProbs = element.getCallProbs();
             if (callProbs == null || callProbs.length == 0) {
                 continue; // Skip if no probabilities available
             }
-            
-            int hpolCall = element.getHpolCall();
-            
+
+
             // Calculate probability mass below and above the call
             double probBelow = 0.0;
             double probAbove = 0.0;
             
             for (int j = 0; j < callProbs.length; j++) {
-                if (j < hpolCall) {
+                if (j < hmerLength) {
                     probBelow += callProbs[j];
-                } else if (j > hpolCall) {
+                } else if (j > hmerLength) {
                     probAbove += callProbs[j];
                 }
             }
