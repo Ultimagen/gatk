@@ -231,22 +231,23 @@ public class HmerIndelBias extends FlowAnnotatorBase implements GenotypeAnnotati
             double probAbove = 0.0;
             
             for (int j = 0; j < callProbs.length; j++) {
-                if (j < hmerLength) {
+                if ((j < hmerLength) && (hmerLength-j <=2)) {
                     probBelow += callProbs[j];
-                } else if (j > hmerLength) {
+                } else if ((j > hmerLength)&&(j-hmerLength <=2)) {
                     probAbove += callProbs[j];
                 }
             }
             
             // Determine bias direction (any difference)
             boolean tendsDown = probBelow > probAbove;
+            boolean tendsUp = probAbove > probBelow;
             
             // Accumulate counts
             int[] counts = biasCounts.get(bestAllele);
             if (counts != null) {
                 if (tendsDown) {
                     counts[0]++; // down count
-                } else {
+                } else if (tendsUp) {
                     counts[1]++; // up count
                 }
             }
