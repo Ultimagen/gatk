@@ -59,14 +59,13 @@ public class HmerIndelBias extends FlowAnnotatorBase implements GenotypeAnnotati
         return C_H_MER.equals(variantType);
     }
 
-    // Required by InfoFieldAnnotation interface (inherited through FlowAnnotatorBase)
-    @Override
-    public Map<String, Object> annotate(final ReferenceContext ref,
-                                        final VariantContext vc,
-                                        final AlleleLikelihoods<GATKRead, Allele> likelihoods) {
-        // This method is required by InfoFieldAnnotation but not used for GenotypeAnnotation
-        return java.util.Collections.emptyMap();
-    }
+//    // Required by InfoFieldAnnotation interface (inherited through GenotypeAnnotation -> VariantAnnotation)
+//    public Map<String, Object> annotate(final ReferenceContext ref,
+//                                        final VariantContext vc,
+//                                        final AlleleLikelihoods<GATKRead, Allele> likelihoods) {
+//        // This method is required by InfoFieldAnnotation but not used for GenotypeAnnotation
+//        return java.util.Collections.emptyMap();
+//    }
 
     @Override
     public void annotate(final ReferenceContext ref,

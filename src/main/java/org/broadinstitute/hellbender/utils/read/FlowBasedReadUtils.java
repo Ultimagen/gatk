@@ -275,6 +275,25 @@ public class FlowBasedReadUtils {
         return new FlowBasedRead(read, readGroupInfo.flowOrder, readGroupInfo.maxClass, DEFAULT_FLOW_BASED_ARGUMENT_COLLECTION);
     }
 
+    /**
+     * Service function - used to convert realigned reads back to flow based
+     * @param reads
+     * @param header
+     * @return
+     */
+    static public Map<GATKRead, GATKRead> convertToFlowBasedReadIfNeeded(Map<GATKRead, GATKRead> reads, SAMFileHeader header) {
+        Map<GATKRead, GATKRead> result = new LinkedHashMap<>();
+        for ( Map.Entry<GATKRead, GATKRead> e : reads.entrySet() ) {
+            final GATKRead r = e.getKey();
+            if ( isFlowPlatform(header, r) ) {
+                result.put(convertToFlowBasedRead(r, header), convertToFlowBasedRead(e.getValue(), header));
+            } else {
+                result.put(r, e.getValue());
+            }
+        }
+        return result;
+    }
+
     public static int getStrandedUnclippedStartForFlow(final GATKRead read, final SAMFileHeader header, final MarkDuplicatesSparkArgumentCollection mdArgs) {
         return read.isReverseStrand() ? getMarkDupReadEnd(read, false, header, mdArgs) : getMarkDupReadStart(read, false, header, mdArgs);
     }

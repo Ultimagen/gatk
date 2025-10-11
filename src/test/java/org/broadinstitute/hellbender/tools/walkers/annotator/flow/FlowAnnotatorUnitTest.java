@@ -20,7 +20,7 @@ import java.util.*;
 
 public class FlowAnnotatorUnitTest extends GATKBaseTest {
 
-    private FlowAnnotatorBase[]     allAnnotators = {
+    private StandardFlowBasedAnnotation[]     allAnnotators = {
             new IndelClassify(),
             new IndelLength(),
             new HmerIndelLength(),
@@ -141,7 +141,7 @@ public class FlowAnnotatorUnitTest extends GATKBaseTest {
 
         final Map<String, Object>     attrs = new LinkedHashMap<>();
 
-        for ( FlowAnnotatorBase a : allAnnotators ) {
+        for ( StandardFlowBasedAnnotation a : allAnnotators ) {
             attrs.putAll(a.annotate(ref, vc, null));
         }
 
@@ -152,9 +152,9 @@ public class FlowAnnotatorUnitTest extends GATKBaseTest {
 
         List<String>     keys = new LinkedList<>();
 
-        for ( FlowAnnotatorBase a : allAnnotators ) {
-            keys.addAll(a.getKeyNames());
-            a.setFlowOrder(Collections.singletonList(FlowBasedRead.DEFAULT_FLOW_ORDER));
+        for ( StandardFlowBasedAnnotation a : allAnnotators ) {
+            keys.addAll(((FlowAnnotatorBase)a).getKeyNames());
+            ((FlowAnnotatorBase)a).setFlowOrder(Collections.singletonList(FlowBasedRead.DEFAULT_FLOW_ORDER));
         }
 
         return keys;

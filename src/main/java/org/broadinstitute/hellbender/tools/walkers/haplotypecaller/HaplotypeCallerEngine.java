@@ -50,6 +50,7 @@ import org.broadinstitute.hellbender.utils.haplotype.EventMap;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.haplotype.HaplotypeBAMWriter;
 import org.broadinstitute.hellbender.utils.read.AlignmentUtils;
+import org.broadinstitute.hellbender.utils.read.FlowBasedReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
@@ -974,7 +975,8 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         // TODO the bases of the haplotypes used for calling no longer reflect specified variants present.
         if (!(hcArgs.pileupDetectionArgs.generatePDHaplotypes && !hcArgs.pileupDetectionArgs.useDeterminedHaplotypesDespitePdhmmMode)) {
             final Map<GATKRead, GATKRead> readRealignments = AssemblyBasedCallerUtils.realignReadsToTheirBestHaplotype(subsettedReadLikelihoodsFinal, assemblyResult.getReferenceHaplotype(), assemblyResult.getPaddedReferenceLoc(), aligner, readToHaplotypeSWParameters);
-            subsettedReadLikelihoodsFinal.changeEvidence(readRealignments);
+            final Map<GATKRead, GATKRead> readRealignmentsFlow = FlowBasedReadUtils.convertToFlowBasedReadIfNeeded(readRealignments, readsHeader);
+            subsettedReadLikelihoodsFinal.changeEvidence(readRealignmentsFlow);
         }
 
         if (HaplotypeCallerGenotypingDebugger.isEnabled()) {

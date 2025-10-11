@@ -2,12 +2,9 @@ package org.broadinstitute.hellbender.tools.walkers.annotator.flow;
 
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.exceptions.GATKException;
-import org.broadinstitute.hellbender.tools.walkers.annotator.InfoFieldAnnotation;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.logging.OneShotLogger;
@@ -33,9 +30,13 @@ import java.util.stream.Collectors;
  * State between such calls is kept in a LocalContext, a local class. Its is there were annotations
  * are accumulated as well.
  */
-public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
+public abstract class FlowAnnotatorBase {
     protected final OneShotLogger flowMissingOneShotLogger = new OneShotLogger(FlowAnnotatorBase.class);
 
+    /**
+     * @return the list of key names that this annotation generates
+     */
+    public abstract List<String> getKeyNames();
 
     // additional constants
     protected static final String   C_INSERT = "ins";
@@ -95,7 +96,7 @@ public abstract class FlowAnnotatorBase implements InfoFieldAnnotation {
                 return Collections.emptyMap();
             } else {
                 return attributes.entrySet().stream()
-                        .filter(x -> getKeyNames().contains(x.getKey()))
+                        .filter(x -> FlowAnnotatorBase.this.getKeyNames().contains(x.getKey()))
                         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
             }
         }
