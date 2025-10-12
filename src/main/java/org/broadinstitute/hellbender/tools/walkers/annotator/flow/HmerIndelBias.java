@@ -165,18 +165,25 @@ public class HmerIndelBias extends FlowAnnotatorBase implements GenotypeAnnotati
             
             // Also add reference allele information
             if (!alternateAlleles.isEmpty() && !indelClassifyList.isEmpty()) {
-                String firstIndelClassify = (String) indelClassifyList.get(0);
-                int firstHmerLength = ((Number) hmerLengthList.get(0)).intValue();
-                int firstIndelLength = ((Number) indelLengthList.get(0)).intValue();
-                char firstHmerBase = ((String) hmerNucList.get(0)).charAt(0);
-                
+                int indel_idx = 0;
+                for (int i = 0 ; i < indelLengthList.size(); i++){
+                    if ((indelLengthList.get(i) != null)&&( ((Number) hmerLengthList.get(i)).intValue() > 0)){
+                        indel_idx = i;
+                        break;
+                    }
+                }
+                String firstIndelClassify = (String) indelClassifyList.get(indel_idx);
+                int firstHmerLength = ((Number) hmerLengthList.get(indel_idx)).intValue();
+                int firstIndelLength = ((Number) indelLengthList.get(indel_idx)).intValue();
+                char firstHmerBase = ((String) hmerNucList.get(indel_idx)).charAt(0);
+
                 int refHmerLength = 0;
                 if (firstIndelClassify.equals(FlowAnnotatorBase.C_INSERT)) {
                     refHmerLength = firstHmerLength - firstIndelLength; // Ref has shorter homopolymer
                 } else if (firstIndelClassify.equals(FlowAnnotatorBase.C_DELETE)) {
                     refHmerLength = firstHmerLength; // Ref has the longer homopolymer
                 }
-                
+
                 alleleToHmerLength.put(vc.getReference(), refHmerLength);
                 alleleToHmerBase.put(vc.getReference(), firstHmerBase);
             }
