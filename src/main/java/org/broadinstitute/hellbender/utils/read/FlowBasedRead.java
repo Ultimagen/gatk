@@ -277,7 +277,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         key = FlowBasedKeyCodec.baseArrayToKey(samRecord.getReadBases(), _flowOrder);
         flow2base = FlowBasedKeyCodec.getKeyToBase(key);
         base2flow = FlowBasedKeyCodec.getBaseToFlow(key);
-        flowOrder = FlowBasedKeyCodec.getFlowToBase(_flowOrder, key.length);
+        flowOrder = FlowBasedKeyCodec.getFlowToBase(_flowOrder, Math.max(key.length, DEFAULT_FLOW_ORDER.length()));
 
         if (perHmerMinErrorProb == 0){
             // estimate the lowest possible error probability and fill the matrix with it
