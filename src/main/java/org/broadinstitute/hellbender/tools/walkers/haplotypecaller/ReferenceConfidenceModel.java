@@ -277,7 +277,11 @@ public class ReferenceConfidenceModel {
         // Assume infinite population on a single sample.
         final int refOffset = offset + globalRefOffset;
         final byte refBase = ref[refOffset];
-        final ReferenceConfidenceResult homRefCalc = calcGenotypeLikelihoodsOfRefVsAny(ploidy, pileup, refBase, BASE_QUAL_THRESHOLD, -1, null, true);
+        final ReferenceConfidenceResult homRefCalc = calcGenotypeLikelihoodsOfRefVsAny(ploidy, pileup, refBase,
+                BASE_QUAL_THRESHOLD, MAP_QUAL_THRESHOLD,
+                null,
+                true,
+                1.0);
 
         final Allele refAllele = Allele.create(refBase, true);
         final List<Allele> refSiteAlleles = Arrays.asList(refAllele, Allele.NON_REF_ALLELE);
@@ -436,15 +440,6 @@ public class ReferenceConfidenceModel {
             result.genotypeLikelihoods[i] -= denominator;
         }
         return result;
-    }
-
-    public ReferenceConfidenceResult calcGenotypeLikelihoodsOfRefVsAny(final int ploidy,
-                                                                       final ReadPileup pileup,
-                                                                       final byte refBase,
-                                                                       final byte minBaseQual,
-                                                                       final MathUtils.RunningAverage hqSoftClips,
-                                                                       final boolean readsWereRealigned) {
-        return calcGenotypeLikelihoodsOfRefVsAny(ploidy, pileup, refBase, minBaseQual, hqSoftClips, readsWereRealigned, 1.0);
     }
 
     private int getOriginalSoftStart(GATKRead read) {

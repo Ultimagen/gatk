@@ -63,7 +63,8 @@ public class SomaticReferenceConfidenceModel extends ReferenceConfidenceModel {
                                                                        final byte minBaseQual,
                                                                        final int minMapQual,
                                                                        final MathUtils.RunningAverage hqSoftClips,
-                                                                       final boolean readsWereRealigned) {
+                                                                       final boolean readsWereRealigned,
+                                                                       final double altReadsWeight) {
 
         final SomaticRefVsAnyResult result = new SomaticRefVsAnyResult();
         final Map<String, List<GATKRead>> perSampleReadMap = new HashMap<>();
