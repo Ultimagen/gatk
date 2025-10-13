@@ -153,7 +153,7 @@ public class GATKVCFHeaderLines {
 
         addFormatLine(new VCFFormatHeaderLine(FEATURIZED_READ_SETS_KEY, VCFHeaderLineCount.UNBOUNDED, VCFHeaderLineType.Integer, "Featurized read sets by allele for Mutect3 training"));
         addFormatLine(new VCFFormatHeaderLine(FEATURIZED_READ_SETS_COUNTS_KEY, VCFHeaderLineCount.R, VCFHeaderLineType.Integer, "Counts by allele of reads contributing to the featurized read sets annotation"));
-        addFormatLine(new VCFFormatHeaderLine(FLOW_HMER_INDEL_BIAS_KEY, VCFHeaderLineCount.R, VCFHeaderLineType.String, "Flow: hmer indel bias, string tuple per allele: FWD_DOWN_BIAS, FWD_UP_BIAS, REV_DOWN_BIAS, REV_UP_BIAS"));
+        addFormatLine(new VCFFormatHeaderLine(FLOW_HMER_INDEL_BIAS_KEY, 1, VCFHeaderLineType.String, "Flow: hmer indel bias, string tuple per allele: FWD_DOWN_BIAS, FWD_UP_BIAS, REV_DOWN_BIAS, REV_UP_BIAS"));
 
         addInfoLine(new VCFInfoHeaderLine(MLE_ALLELE_COUNT_KEY, VCFHeaderLineCount.A, VCFHeaderLineType.Integer, "Maximum likelihood expectation (MLE) for the allele counts (not necessarily the same as the AC), for each ALT allele, in the same order as listed"));
         addInfoLine(new VCFInfoHeaderLine(MLE_ALLELE_FREQUENCY_KEY, VCFHeaderLineCount.A, VCFHeaderLineType.Float, "Maximum likelihood expectation (MLE) for the allele frequency (not necessarily the same as the AF), for each ALT allele, in the same order as listed"));
