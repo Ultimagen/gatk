@@ -16,6 +16,7 @@ import org.broadinstitute.hellbender.engine.FeatureDataSource;
 import org.broadinstitute.hellbender.engine.FeatureInput;
 import org.broadinstitute.hellbender.engine.GATKPath;
 import org.broadinstitute.hellbender.engine.spark.AssemblyRegionArgumentCollection;
+import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeAssignmentMethod;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeCalculationArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.StandardCallerArgumentCollection;
@@ -374,8 +375,17 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
                 LikelihoodEngineArgumentCollection.DYNAMIC_READ_DISQUALIFICATION_THRESHOLD_LONG_NAME, "10",
                 APPLY_FRD_LONG_NAME, "true",
                 MAX_FOREIGN_READ_FRACTION_LONG_NAME, "0.35",
-                ReadFilterArgumentDefinitions.MINIMUM_MAPPING_QUALITY_NAME, "1",
-                MAPPING_QUALITY_THRESHOLD_FOR_GENOTYPING_LONG_NAME, "1"
+                ReadFilterArgumentDefinitions.MINIMUM_MAPPING_QUALITY_NAME, "0",
+                ReadThreadingAssemblerArgumentCollection.MIN_MAPPING_QUALITY_IN_ASSEMBLY_PILEUP_LONG_NAME, "1",
+                MAPPING_QUALITY_THRESHOLD_FOR_GENOTYPING_LONG_NAME, "1",
+                FlowBasedArgumentCollection.FLOW_USE_T0_TAG, "true",
+                "assembly-complexity-reference-mode", "true",
+                PileupDetectionArgumentCollection.PILEUP_DETECTION_LONG_NAME, "true",
+                PileupDetectionArgumentCollection.PILEUP_DETECTION_SNP_THRESHOLD, "0.05",
+                PileupDetectionArgumentCollection.PILEUP_DETECTION_EDIT_DISTANCE_BADNESS_LONG_NAME, "0.08",
+                PileupDetectionArgumentCollection.PILEUP_DETECTION_EDIT_DISTANCE_BADNESS_FOR_ASSEMBLY_LONG_NAME, "0",
+                PileupDetectionArgumentCollection.PILEUP_DETECTION_BAD_READ_RATIO_LONG_NAME, "0.40",
+                PileupDetectionArgumentCollection.PILEUP_DETECTION_PROPER_PAIR_READ_BADNESS_LONG_NAME, "false",
         }, STANDARD);
 
         final private String[] nameValuePairs;
