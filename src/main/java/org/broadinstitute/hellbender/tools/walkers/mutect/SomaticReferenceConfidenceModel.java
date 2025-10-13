@@ -76,7 +76,7 @@ public class SomaticReferenceConfidenceModel extends ReferenceConfidenceModel {
             if (!element.isDeletion() && element.getQual() <= minBaseQual) {
                 continue;
             }
-            if (element.getMappingQual() >= minMapQual){
+            if (element.getMappingQual() <= minMapQual){
                 continue;
             }
 
