@@ -220,7 +220,7 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
 
     @Advanced
     @Argument(fullName = MAX_FOREIGN_READ_FRACTION_LONG_NAME, doc = "Maximal fraction of reads that can be excluded and considered foreign", optional = false)
-    public double maxForeignReadFraction = 0.35;
+    public double maxForeignReadFraction = 1.0;
 
     @Hidden
     @Argument(fullName = KEEP_RG_LONG_NAME, doc = "Only use reads from this read group when making calls (but use all reads to build the assembly)", optional = true)
@@ -373,6 +373,7 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
                 LikelihoodEngineArgumentCollection.ENABLE_DYNAMIC_READ_DISQUALIFICATION_FOR_GENOTYPING_LONG_NAME, "true",
                 LikelihoodEngineArgumentCollection.DYNAMIC_READ_DISQUALIFICATION_THRESHOLD_LONG_NAME, "10",
                 APPLY_FRD_LONG_NAME, "true",
+                MAX_FOREIGN_READ_FRACTION_LONG_NAME, "0.35",
                 ReadFilterArgumentDefinitions.MINIMUM_MAPPING_QUALITY_NAME, "1",
                 MAPPING_QUALITY_THRESHOLD_FOR_GENOTYPING_LONG_NAME, "1"
         }, STANDARD);
