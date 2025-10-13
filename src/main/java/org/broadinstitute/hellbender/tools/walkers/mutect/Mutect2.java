@@ -288,10 +288,6 @@ public final class Mutect2 extends AssemblyRegionWalker {
     @Override
     public Collection<Annotation> makeVariantAnnotations(){
         final Collection<Annotation> annotations = super.makeVariantAnnotations();
-
-        if (MTAC.mitochondria) {
-            annotations.add(new OriginalAlignment());
-        }
         if (MTAC.addMismatchCountAnnotation) {
             annotations.add(new MismatchCount());
         }
