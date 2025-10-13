@@ -421,7 +421,7 @@ public class ReferenceConfidenceModel {
             //a strong evidence against reference.
             final byte qual = p.isDeletion() ? getDeletionQuality(p, refBase, readsWereRealigned) : p.getQual();
             final int  mapQual = p.getMappingQual();
-            if ( (qual <= minBaseQual) && (flowBasedModel || !p.isDeletion()) && ( mapQual >= minMappingQual )) {
+            if (((qual <= minBaseQual) && (flowBasedModel || !p.isDeletion())) || ( mapQual < minMappingQual )) {
                 continue;
             }
             if (!useSoftClippedBases && readsWereRealigned){
