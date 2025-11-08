@@ -363,6 +363,7 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
                 FILTER_ALLELES_SOR_THRESHOLD, "3",
                 FLOW_ASSEMBLY_COLLAPSE_HMER_SIZE_LONG_NAME, String.valueOf(AssemblyBasedCallerUtils.DETERMINE_COLLAPSE_THRESHOLD),
                 OVERRIDE_FRAGMENT_SOFTCLIP_CHECK_LONG_NAME, "true",
+                FlowBasedArgumentCollection.FLOW_USE_T0_TAG, "true",
                 FlowBasedAlignmentArgumentCollection.FLOW_LIKELIHOOD_PARALLEL_THREADS_LONG_NAME, "2",
                 FlowBasedAlignmentArgumentCollection.FLOW_LIKELIHOOD_OPTIMIZED_COMP_LONG_NAME, "true",
                 LikelihoodEngineArgumentCollection.LIKELIHOOD_CALCULATION_ENGINE_FULL_NAME, ReadLikelihoodCalculationEngine.Implementation.FlowBased.toString()
@@ -382,7 +383,6 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
                 "assembly-complexity-reference-mode", "true",
                 PileupDetectionArgumentCollection.PILEUP_DETECTION_LONG_NAME, "true",
                 PileupDetectionArgumentCollection.PILEUP_DETECTION_SNP_THRESHOLD, "0.05",
-                PileupDetectionArgumentCollection.PILEUP_DETECTION_EDIT_DISTANCE_BADNESS_LONG_NAME, "0.08",
                 PileupDetectionArgumentCollection.PILEUP_DETECTION_EDIT_DISTANCE_BADNESS_FOR_ASSEMBLY_LONG_NAME, "0",
                 PileupDetectionArgumentCollection.PILEUP_DETECTION_BAD_READ_RATIO_LONG_NAME, "0.40",
                 PileupDetectionArgumentCollection.PILEUP_DETECTION_PROPER_PAIR_READ_BADNESS_LONG_NAME, "false",
