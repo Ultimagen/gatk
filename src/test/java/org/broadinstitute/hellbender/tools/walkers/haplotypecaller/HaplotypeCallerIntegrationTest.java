@@ -1853,6 +1853,40 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
     }
 
     @Test
+    public void testVcfFlowModeWithHomopolymerThresholdsConsistentWithPreviousResults() throws Exception {
+        Utils.resetRandomGenerator();
+        final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
+        final File output = createTempFile("output", ".vcf");
+
+        final File expected = new File(TEST_FILES_DIR, "testVcfFlowModeWithHomopolymerThresholds.expected.flowbased.vcf");
+        final String outputPath = UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ? expected.getAbsolutePath() : output.getAbsolutePath();
+
+        final ArgumentsBuilder args = new ArgumentsBuilder()
+                .addReference(hg38Reference)
+                .addInterval("chr9:81149486-81177047")
+                .addOutput(outputPath)
+                .addInput(input)
+                .add("smith-waterman", "FASTEST_AVAILABLE")
+                .add("likelihood-calculation-engine", "FlowBased")
+                .add("mbq", "0")
+                .add("kmer-size", 10)
+                .add("flow-filter-alleles", true)
+                .add("flow-filter-alleles-sor-threshold", 40)
+                .add("flow-assembly-collapse-hmer-size", 12)
+                .add("flow-matrix-mods", "10,12,11,12")
+                .add("flow-filter-lone-alleles", true)
+                .add("homopolymer-indel-qual-threshold", 10)
+                .add("genotype-homopolymer-length-threshold", 5)
+                .add(StandardArgumentDefinitions.ADD_OUTPUT_VCF_COMMANDLINE, false);
+
+        runCommandLine(args);
+
+        if ( ! UPDATE_EXACT_MATCH_EXPECTED_OUTPUTS ) {
+            IntegrationTestSpec.assertEqualTextFiles(output, expected, "#");
+        }
+    }
+
+    @Test
     public void testVcfWithAssemblyComplexityAnnotation() throws Exception {
         Utils.resetRandomGenerator();
         final File input = new File(largeFileTestDir, "input_jukebox_for_test.bam");
