@@ -1876,7 +1876,8 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
                 .add("flow-matrix-mods", "10,12,11,12")
                 .add("flow-filter-lone-alleles", true)
                 .add("homopolymer-indel-qual-threshold", 10)
-                .add("genotype-homopolymer-length-threshold", 5)
+                .add("genotype-homopolymer-length-threshold", 3)
+                .add("homopolymer-insertion-ref-bias", 0.85)
                 .add(StandardArgumentDefinitions.ADD_OUTPUT_VCF_COMMANDLINE, false);
 
         runCommandLine(args);

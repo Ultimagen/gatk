@@ -204,7 +204,7 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
     public int homopolymerGenotypingThreshold = 0;
 
     @Advanced
-    @Argument(fullName = HPOL_REF_BIAS_LONG_NAME, doc = "Expected reference bias for homopolymer insertions longer than homopolymerGenotypingThreshold (0.5 - no bias)", optional = true)
+    @Argument(fullName = HPOL_REF_BIAS_LONG_NAME, doc = "Expected reference bias for homopolymer insertions longer than homopolymerGenotypingThreshold (0.5 - no bias, 0.7 - expected AF of reference in heterozygous variant is 70%)", optional = true)
     public double insertionRefBias = 0.5;
 
     @Advanced
