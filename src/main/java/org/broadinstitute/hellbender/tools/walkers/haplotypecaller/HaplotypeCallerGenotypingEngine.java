@@ -45,13 +45,14 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
     private static final Logger logger = LogManager.getLogger(HaplotypeCallerGenotypingEngine.class);
     private static final OneShotLogger DRAGENConaminationWarning = new OneShotLogger(logger);
 
+
     private final GenotypingModel genotypingModel;
 
     private final PloidyModel ploidyModel;
     private final ReferenceConfidenceMode referenceConfidenceMode;
     protected final double snpHeterozygosity;
     protected final double indelHeterozygosity;
-
+    protected final int hpolIndelThreshold;
     private final int maxGenotypeCountToEnumerate;
     private final Map<Integer, Integer> practicalAlleleCountForPloidy = new HashMap<>();
 
@@ -67,17 +68,22 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
      * @param samples {@inheritDoc}
      * @param doPhysicalPhasing whether to try physical phasing.
      */
-    public HaplotypeCallerGenotypingEngine(final HaplotypeCallerArgumentCollection configuration, final SampleList samples, final boolean doPhysicalPhasing, final boolean applyBQD) {
+    public HaplotypeCallerGenotypingEngine(final HaplotypeCallerArgumentCollection configuration, final SampleList samples,
+                                           final boolean doPhysicalPhasing, final boolean applyBQD, final boolean flow_genotyping) {
         super(configuration.standardArgs, samples, false);
         hcArgs = configuration;
         this.doPhysicalPhasing = doPhysicalPhasing;
         ploidyModel = new HomogeneousPloidyModel(samples,configuration.standardArgs.genotypeArgs.samplePloidy);
         dragstrParams = DragstrParamUtils.parse(configuration.likelihoodArgs.dragstrParams);
-        genotypingModel = hcArgs.applyBQD || hcArgs.applyFRD ?
-                new DRAGENGenotypesModel(applyBQD, hcArgs.applyFRD, hcArgs.informativeReadOverlapMargin, hcArgs.maxEffectiveDepthAdjustment, dragstrParams) :
-                new IndependentSampleGenotypesModel();
+        genotypingModel = flow_genotyping ? new FlowBasedGenotypesModel(false, hcArgs.applyFRD, hcArgs.informativeReadOverlapMargin,
+                hcArgs.maxEffectiveDepthAdjustment, hcArgs.maxForeignReadFraction, dragstrParams, hcArgs.insertionRefBias, hcArgs.homopolymerGenotypingThreshold) :
+                (hcArgs.applyBQD || hcArgs.applyFRD ?
+                new DRAGENGenotypesModel(applyBQD, hcArgs.applyFRD, hcArgs.informativeReadOverlapMargin, hcArgs.maxEffectiveDepthAdjustment,
+                        hcArgs.maxForeignReadFraction, dragstrParams) :
+                new IndependentSampleGenotypesModel());
         maxGenotypeCountToEnumerate = configuration.standardArgs.genotypeArgs.maxGenotypeCount;
         referenceConfidenceMode = configuration.emitReferenceConfidence;
+        hpolIndelThreshold = configuration.homopolymerGenotypingThreshold;
         snpHeterozygosity = configuration.standardArgs.genotypeArgs.snpHeterozygosity;
         indelHeterozygosity = configuration.standardArgs.genotypeArgs.indelHeterozygosity;
     }
@@ -160,6 +166,15 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
 
         // null if there is no potential uses of DRAGstr in this region.
         final DragstrReferenceAnalyzer dragstrs = constructDragstrReferenceSTRAnalyzerIfNecessary(haplotypes, ref, refLoc, eventStarts);
+        DragstrReferenceAnalyzer dragstrsForHpolIndels; // for the analysis of long homopolymer indels we generate a degenerate version of the analyzer
+        boolean longHpolIndel = false;
+        if ((hpolIndelThreshold > 0) && (!eventStarts.isEmpty())){
+            final int offset = eventStarts.first() - refLoc.getStart();
+            final int to = eventStarts.last() - refLoc.getStart() + 2;
+            dragstrsForHpolIndels = DragstrReferenceAnalyzer.of(ref, offset, to, 1);
+        } else {
+            dragstrsForHpolIndels = null;
+        }
 
         final BiPredicate<GATKRead, SimpleInterval> readQualifiesForGenotypingPredicate = composeReadQualifiesForGenotypingPredicate(hcArgs);
 
@@ -181,6 +196,11 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
             }
             
             int mergedAllelesListSizeBeforePossibleTrimming = mergedVC.getAlleles().size();
+
+            if (hpolIndelThreshold > 0){
+                longHpolIndel = FlowBasedGenotypesModel.isEligibleHomopolymerIndel(mergedVC, loc - refLoc.getStart() + 1, dragstrsForHpolIndels, hpolIndelThreshold);
+            }
+
             final Map<Allele, List<Haplotype>> alleleMapper = AssemblyBasedCallerUtils.createAlleleMapper(mergedVC, loc, haplotypes, !hcArgs.disableSpanningEventGenotyping);
 
             if( hcArgs.assemblerArgs.debugAssembly && logger != null ) {
@@ -258,9 +278,10 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
                 mergedAllelesListSizeBeforePossibleTrimming++;
             }
 
-            final GenotypesContext genotypes = calculateGLsForThisEvent(readAlleleLikelihoods, mergedVC, noCallAlleles, ref, loc - refLoc.getStart(), dragstrs);
+            final GenotypesContext genotypes = calculateGLsForThisEvent(readAlleleLikelihoods, mergedVC, noCallAlleles, ref, loc - refLoc.getStart(),
+                    dragstrs != null ? dragstrs : dragstrsForHpolIndels);
             final GenotypePriorCalculator gpc = resolveGenotypePriorCalculator(dragstrs, loc - refLoc.getStart() + 1, snpHeterozygosity, indelHeterozygosity);
-            final VariantContext call = calculateGenotypes(new VariantContextBuilder(mergedVC).genotypes(genotypes).make(), gpc, givenAlleles);
+            final VariantContext call = calculateGenotypes(new VariantContextBuilder(mergedVC).genotypes(genotypes).make(), gpc, givenAlleles, longHpolIndel);
             if( call != null ) {
                 readAlleleLikelihoods = prepareReadAlleleLikelihoodsForAnnotation(readLikelihoods, perSampleFilteredReadList,
                         emitReferenceConfidence, alleleMapper, readAlleleLikelihoods, call, variantCallingRelevantOverlap);
@@ -639,4 +660,8 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
         }
         return overlappingFilteredReads;
     }
+    public GenotypingModel getGenotypingModel() {
+        return genotypingModel;
+    }
+
 }

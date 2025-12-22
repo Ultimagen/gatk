@@ -295,20 +295,21 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         minTailQuality = (byte)(hcArgs.minBaseQualityScore - 1);
 
         initializeActiveRegionEvaluationGenotyperEngine();
+        boolean isFlowBased = (hcArgs.likelihoodArgs.likelihoodEngineImplementation == ReadLikelihoodCalculationEngine.Implementation.FlowBased)
+                || (hcArgs.likelihoodArgs.likelihoodEngineImplementation == ReadLikelihoodCalculationEngine.Implementation.FlowBasedHMM);
 
-        defaultGenotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samplesList, ! hcArgs.doNotRunPhysicalPhasing, hcArgs.applyBQD);
+        defaultGenotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samplesList, ! hcArgs.doNotRunPhysicalPhasing, hcArgs.applyBQD, isFlowBased);
         defaultGenotypingEngine.setAnnotationEngine(annotationEngine);
 
         // Create other custom genotyping engines if user provided ploidyRegions
+
         for (final int ploidy : this.allCustomPloidies) {
             HaplotypeCallerArgumentCollection newPloidyHcArgs = hcArgs.copyWithNewPloidy(ploidy);
-            HaplotypeCallerGenotypingEngine newGenotypingEngine = new HaplotypeCallerGenotypingEngine(newPloidyHcArgs, samplesList, ! hcArgs.doNotRunPhysicalPhasing, hcArgs.applyBQD);
+            HaplotypeCallerGenotypingEngine newGenotypingEngine = new HaplotypeCallerGenotypingEngine(newPloidyHcArgs, samplesList, ! hcArgs.doNotRunPhysicalPhasing, hcArgs.applyBQD, isFlowBased);
             newGenotypingEngine.setAnnotationEngine(annotationEngine);
             this.ploidyToGenotyperMap.put(ploidy, newGenotypingEngine);
         }
 
-        boolean isFlowBased = (hcArgs.likelihoodArgs.likelihoodEngineImplementation == ReadLikelihoodCalculationEngine.Implementation.FlowBased)
-                || (hcArgs.likelihoodArgs.likelihoodEngineImplementation == ReadLikelihoodCalculationEngine.Implementation.FlowBasedHMM);
         referenceConfidenceModel = new ReferenceConfidenceModel(samplesList, readsHeader,
                 hcArgs.indelSizeToEliminateInRefModel,
                 hcArgs.standardArgs.genotypeArgs.numRefIfMissing,
@@ -661,13 +662,16 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
     @Override
     public ActivityProfileState isActive(final AlignmentContext context, final ReferenceContext ref, final FeatureContext features) {
         MinimalGenotypingEngine localActiveGenotypingEngine = getLocalActiveGenotyper(ref);
-
+        boolean forceCallFlag = false;
         if (forceCallingAllelesPresent && features.getValues(hcArgs.alleles, ref).stream().anyMatch(vc -> hcArgs.forceCallFiltered || vc.isNotFiltered())) {
-            return new ActivityProfileState(ref.getInterval(), 1.0);
+            forceCallFlag = true;
         }
 
         if (context == null || context.getBasePileup().isEmpty()) {
             // if we don't have any data, just abort early
+            if (forceCallFlag){
+                return new ActivityProfileState(ref.getInterval(),1.0);
+            }
             return new ActivityProfileState(ref.getInterval(), 0.0);
         }
 
@@ -695,8 +699,13 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                     activeRegionDetectionHackishSamplePloidy,
                     sample.getValue().getBasePileup(), ref.getBase(),
                     hcArgs.minBaseQualityScore,
+                    hcArgs.assemblerArgs.minMappingQualityInAssemblyPileup,
                     averageHQSoftClips, false, hcArgs.activeRegionAltMultiplier)).genotypeLikelihoods;
             genotypes.add(new GenotypeBuilder(sample.getKey()).alleles(noCall).PL(genotypeLikelihoods).make());
+        }
+
+        if (forceCallFlag){
+            return new ActivityProfileState(ref.getInterval(), 1.0);
         }
 
         final List<Allele> alleles = Arrays.asList(FAKE_REF_ALLELE, FAKE_ALT_ALLELE);
@@ -928,14 +937,16 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         if (hcArgs.filterAlleles) {
             logger.debug("Filtering alleles");
 
-            AlleleFilteringHC alleleFilter = new AlleleFilteringHC(hcArgs, assemblyDebugOutStream, localGenotypingEngine);
+            AlleleFilteringHC alleleFilter = new AlleleFilteringHC(hcArgs, assemblyDebugOutStream, localGenotypingEngine, readsHeader);
             //need to update haplotypes to find the alleles
             EventMap.buildEventMapsForHaplotypes(readLikelihoods.alleles(),
                     assemblyResult.getFullReferenceWithPadding(),
                     assemblyResult.getPaddedReferenceLoc(),
                     hcArgs.assemblerArgs.debugAssembly,
                     hcArgs.maxMnpDistance);
-            subsettedReadLikelihoodsFinal = alleleFilter.filterAlleles(readLikelihoods, assemblyResult.getPaddedReferenceLoc().getStart(), suspiciousLocations);
+            subsettedReadLikelihoodsFinal = alleleFilter.filterAlleles(readLikelihoods,
+                    assemblyResult.getPaddedReferenceLoc().getStart(),
+                    suspiciousLocations);
 
         } else {
             subsettedReadLikelihoodsFinal = readLikelihoods;
@@ -1087,7 +1098,9 @@ public class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
                         ! hcArgs.doNotCorrectOverlappingBaseQualities,
                         hcArgs.softClipLowQualityEnds,
                         hcArgs.overrideSoftclipFragmentCheck,
-                        hcArgs.pileupDetectionArgs.usePileupDetection);
+                        hcArgs.pileupDetectionArgs.usePileupDetection,
+                        hcArgs.addMismatchCountAnnotation,
+                        referenceReader);
             }
 
             filterNonPassingReads(region);
