@@ -426,4 +426,5 @@ public final class BaseUtils {
         // In any case, bother haplotypes should be out of hmers by now
         return i1.hasNext() == i2.hasNext();
     }
+
 }

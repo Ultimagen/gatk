@@ -55,12 +55,39 @@ public class GenotypeLikelihoodCalculator {
     }
 
     /**
+     * Calculate the log10AlleleLikelihoods given the list of alleles and the likelihood map.
+     *
+     * @param log10AlleleLikelihoods the likelihood matrix all alleles vs all reads.
+     * @param refBias the bias to apply to the reference allele (1-refBias to the alternative alleles)
+     * @throws IllegalArgumentException if {@code alleleList} is {@code null} or {@code log10AlleleLikelihoods} is {@code null}
+     *     or the alleleList size does not match the allele-count of this calculator, or there are missing allele vs
+     *     read combinations in {@code log10AlleleLikelihoods}.
+     *
+     * @return never {@code null}.
+     */
+    public static <EVIDENCE, A extends Allele> GenotypeLikelihoods log10GenotypeLikelihoods(final int ploidy, final LikelihoodMatrix<EVIDENCE, A> log10AlleleLikelihoods, double refBias) {
+        final double[] log10GenotypeLikelihoods = computeLog10GenotypeLikelihoods(ploidy, log10AlleleLikelihoods, refBias);
+        return GenotypeLikelihoods.fromLog10Likelihoods(log10GenotypeLikelihoods);
+    }
+
+
+    /**
      * Compute the genotype log10 likelihoods as an array in the canonical genotype order.  That is, result[i] = Pr(reads | ith genotype)
      *
      * @param log10AlleleLikelihoods   log 10 likelihood matrix indexed by allele, then read
      * @return the log 10 likelihood of each genotype as an array
      */
     protected static <EVIDENCE, A extends Allele> double[] computeLog10GenotypeLikelihoods(final int ploidy, final LikelihoodMatrix<EVIDENCE, A> log10AlleleLikelihoods) {
+        return computeLog10GenotypeLikelihoods(ploidy, log10AlleleLikelihoods, 1.0/ploidy);
+    }
+
+    /**
+     * Compute the genotype log10 likelihoods as an array in the canonical genotype order.  That is, result[i] = Pr(reads | ith genotype)
+     *
+     * @param log10AlleleLikelihoods   log 10 likelihood matrix indexed by allele, then read
+     * @return the log 10 likelihood of each genotype as an array
+     */
+    protected static <EVIDENCE, A extends Allele> double[] computeLog10GenotypeLikelihoods(final int ploidy, final LikelihoodMatrix<EVIDENCE, A> log10AlleleLikelihoods, double referenceBias) {
         Utils.nonNull(log10AlleleLikelihoods);
         final int alleleCount = log10AlleleLikelihoods.numberOfAlleles();
         final int readCount = log10AlleleLikelihoods.evidenceCount();
@@ -77,6 +104,11 @@ public class GenotypeLikelihoodCalculator {
 
         final double[] result = new double[GenotypeIndexCalculator.genotypeCount(ploidy, alleleCount)];
 
+        referenceBias *= ploidy;
+        final double altBias = ploidy > 1 ? (ploidy-referenceBias) / (ploidy-1) : 1-referenceBias ; // if ploidy is 1 there is no meaning for heterozygous, but keep for consistency
+        final double log10RefBias = Math.log10(referenceBias);
+        final double log10AltBias = Math.log10(altBias);
+
         for (final GenotypeAlleleCounts gac : GenotypeAlleleCounts.iterable(ploidy, alleleCount)) {
             final int componentCount = gac.distinctAlleleCount();
             final int genotypeIndex = gac.index();
@@ -91,24 +123,36 @@ public class GenotypeLikelihoodCalculator {
                 final double log10Count1 = Math.log10(count1);
                 final double[] log10ReadLks2  = log10LikelihoodsByAlleleAndRead[gac.alleleIndexAt(1)];
                 final double log10Count2 = Math.log10(ploidy - count1);
-
+                boolean containsRefAllele = gac.alleleCountFor(0) > 0;
+                boolean containsAltAllele = gac.alleleCountFor(0) < ploidy;
                 // note: if you are reading the multiallelic case below and have gotten paranoid about cache efficiency,
                 // here the log10 likelihood matrix rows for *both* alleles are in the cache at once
-                result[genotypeIndex] = new IndexRange(0, readCount).sum(r -> MathUtils.approximateLog10SumLog10(log10ReadLks1[r] + log10Count1, log10ReadLks2[r] + log10Count2))
-                        - readCount * Math.log10(ploidy);
+                if (containsRefAllele & containsAltAllele) {
+                    result[genotypeIndex] = new IndexRange(0, readCount).sum(r -> MathUtils.approximateLog10SumLog10(log10ReadLks1[r] + log10Count1 + log10RefBias, log10ReadLks2[r] + log10Count2 + log10AltBias))
+                            - readCount * Math.log10(ploidy);
+                } else {
+                    result[genotypeIndex] = new IndexRange(0, readCount).sum(r -> MathUtils.approximateLog10SumLog10(log10ReadLks1[r] + log10Count1, log10ReadLks2[r] + log10Count2))
+                            - readCount * Math.log10(ploidy);
+                }
             } else {
                 // the multiallelic case is conceptually the same as the biallelic case but done in non-log space
                 // We implement in a cache-friendly way by summing nA * P(read|A) over all alleles for each read, but iterating over reads as the inner loop
-                Arrays.fill(perReadBuffer,0, readCount, 0);
+                Arrays.fill(perReadBuffer, 0, readCount, 0);
                 final double[][] rescaledNonLogLikelihoods = rescaledNonLogLikelihoodsAndCorrection.getLeft();
                 final double log10Rescaling = rescaledNonLogLikelihoodsAndCorrection.getRight();
-                gac.forEachAlleleIndexAndCount((a, f) -> new IndexRange(0, readCount).forEach(r -> perReadBuffer[r] += f * rescaledNonLogLikelihoods[a][r]));
+                final double finalReferenceBias = referenceBias;
+                boolean containsRefAllele = gac.alleleCountFor(0) > 0;
+                boolean containsAltAllele = gac.alleleCountFor(0) < ploidy;
+                if (containsRefAllele && containsAltAllele) {
+                    gac.forEachAlleleIndexAndCount((a, f) -> new IndexRange(0, readCount).forEach(r -> perReadBuffer[r] += f * rescaledNonLogLikelihoods[a][r] * ((a == 0) ? finalReferenceBias : altBias)));
+                } else {
+                    gac.forEachAlleleIndexAndCount((a, f) -> new IndexRange(0, readCount).forEach(r -> perReadBuffer[r] += f * rescaledNonLogLikelihoods[a][r]));
+                }
                 result[genotypeIndex] = new IndexRange(0, readCount).sum(r -> Math.log10(perReadBuffer[r])) - readCount * Math.log10(ploidy) + log10Rescaling;
             }
         }
         return result;
     }
-
 
     /**
      * Given an input log10 log10Likelihoods matrix, subtract off the maximum of each read column so that each column's maximum is zero for numerical
