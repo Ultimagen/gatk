@@ -2,7 +2,6 @@ package org.broadinstitute.hellbender.tools.walkers.genotyper;
 
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.GenotypeLikelihoods;
-import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.utils.dragstr.DragstrParams;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerGenotypingDebugger;
 import org.broadinstitute.hellbender.transformers.DRAGENMappingQualityReadTransformer;
@@ -143,12 +142,12 @@ public class DRAGENGenotypesModel implements GenotypingModel {
             }
 
             if (computeBQD) {
-                applyLikelihoodsAdjusmentToBaseline(ploidyModelGenotypeLikelihoods, "BQD",
+                applyLikelihoodsAdjustmentToBaseline(ploidyModelGenotypeLikelihoods, "BQD",
                 GenotypeLikelihoodCalculatorDRAGEN.calculateBQDLikelihoods(samplePloidy, sampleLikelihoods, strandForward, strandReverse,
                         paddedReference, offsetForRefIntoEvent));
             }
             if (computeFRD) {
-                applyLikelihoodsAdjusmentToBaseline(ploidyModelGenotypeLikelihoods, "FRD",
+                applyLikelihoodsAdjustmentToBaseline(ploidyModelGenotypeLikelihoods, "FRD",
                         GenotypeLikelihoodCalculatorDRAGEN.calculateFRDLikelihoods(samplePloidy, sampleLikelihoods, ploidyModelGenotypeLikelihoods,
                                 Stream.of(strandForward, strandReverse).flatMap(Collection::stream).collect(Collectors.toList()), // We filter out the HMM filtered reads as they do not apply to FRD
                                 FLAT_SNP_HET_PRIOR, api, maxEffectiveDepthAdjustment, maxForeignReadFraction));
@@ -164,7 +163,7 @@ public class DRAGENGenotypesModel implements GenotypingModel {
         return new GenotypingLikelihoods<>(genotypingAlleles, ploidyModel, genotypeLikelihoods);
     }
 
-    protected void applyLikelihoodsAdjusmentToBaseline(final double[] initialLikelihoods, final String name, final double[] adjustmentLikelihoods) {
+    protected void applyLikelihoodsAdjustmentToBaseline(final double[] initialLikelihoods, final String name, final double[] adjustmentLikelihoods) {
         if (HaplotypeCallerGenotypingDebugger.isEnabled()) {
             HaplotypeCallerGenotypingDebugger.println(name + " adjusted likelihoods:");
             HaplotypeCallerGenotypingDebugger.println(Arrays.toString(adjustmentLikelihoods));

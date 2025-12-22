@@ -123,18 +123,31 @@ public class GenotypeLikelihoodCalculator {
                 final double log10Count1 = Math.log10(count1);
                 final double[] log10ReadLks2  = log10LikelihoodsByAlleleAndRead[gac.alleleIndexAt(1)];
                 final double log10Count2 = Math.log10(ploidy - count1);
+                boolean containsRefAllele = gac.alleleCountFor(0) > 0;
+                boolean containsAltAllele = gac.alleleCountFor(0) < ploidy;
                 // note: if you are reading the multiallelic case below and have gotten paranoid about cache efficiency,
                 // here the log10 likelihood matrix rows for *both* alleles are in the cache at once
-                result[genotypeIndex] = new IndexRange(0, readCount).sum(r -> MathUtils.approximateLog10SumLog10(log10ReadLks1[r] + log10Count1 + log10RefBias, log10ReadLks2[r] + log10Count2 + log10AltBias))
-                        - readCount * Math.log10(ploidy);
+                if (containsRefAllele & containsAltAllele) {
+                    result[genotypeIndex] = new IndexRange(0, readCount).sum(r -> MathUtils.approximateLog10SumLog10(log10ReadLks1[r] + log10Count1 + log10RefBias, log10ReadLks2[r] + log10Count2 + log10AltBias))
+                            - readCount * Math.log10(ploidy);
+                } else {
+                    result[genotypeIndex] = new IndexRange(0, readCount).sum(r -> MathUtils.approximateLog10SumLog10(log10ReadLks1[r] + log10Count1, log10ReadLks2[r] + log10Count2))
+                            - readCount * Math.log10(ploidy);
+                }
             } else {
                 // the multiallelic case is conceptually the same as the biallelic case but done in non-log space
                 // We implement in a cache-friendly way by summing nA * P(read|A) over all alleles for each read, but iterating over reads as the inner loop
-                Arrays.fill(perReadBuffer,0, readCount, 0);
+                Arrays.fill(perReadBuffer, 0, readCount, 0);
                 final double[][] rescaledNonLogLikelihoods = rescaledNonLogLikelihoodsAndCorrection.getLeft();
                 final double log10Rescaling = rescaledNonLogLikelihoodsAndCorrection.getRight();
-                gac.forEachAlleleIndexAndCount((a, f) -> new IndexRange(0, readCount).forEach(r -> perReadBuffer[r] += f * rescaledNonLogLikelihoods[a][r]));
-                gac.forEachAlleleIndexAndCount((a, f) -> new IndexRange(0, readCount).forEach(r -> perReadBuffer[r] += (a==0)? log10RefBias : log10AltBias));
+                final double finalReferenceBias = referenceBias;
+                boolean containsRefAllele = gac.alleleCountFor(0) > 0;
+                boolean containsAltAllele = gac.alleleCountFor(0) < ploidy;
+                if (containsRefAllele && containsAltAllele) {
+                    gac.forEachAlleleIndexAndCount((a, f) -> new IndexRange(0, readCount).forEach(r -> perReadBuffer[r] += f * rescaledNonLogLikelihoods[a][r] * ((a == 0) ? finalReferenceBias : altBias)));
+                } else {
+                    gac.forEachAlleleIndexAndCount((a, f) -> new IndexRange(0, readCount).forEach(r -> perReadBuffer[r] += f * rescaledNonLogLikelihoods[a][r]));
+                }
                 result[genotypeIndex] = new IndexRange(0, readCount).sum(r -> Math.log10(perReadBuffer[r])) - readCount * Math.log10(ploidy) + log10Rescaling;
             }
         }

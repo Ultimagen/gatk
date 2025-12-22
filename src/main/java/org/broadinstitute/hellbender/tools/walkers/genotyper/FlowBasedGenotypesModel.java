@@ -3,8 +3,6 @@ package org.broadinstitute.hellbender.tools.walkers.genotyper;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.GenotypeLikelihoods;
 import htsjdk.variant.variantcontext.VariantContext;
-import org.apache.commons.lang3.tuple.Pair;
-import org.broadinstitute.hellbender.utils.BaseUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.dragstr.DragstrParams;
 import org.broadinstitute.hellbender.utils.dragstr.DragstrReferenceAnalyzer;
@@ -12,7 +10,6 @@ import org.broadinstitute.hellbender.utils.genotyper.AlleleList;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleListPermutation;
 import org.broadinstitute.hellbender.utils.genotyper.LikelihoodMatrix;
 import org.broadinstitute.hellbender.utils.haplotype.Event;
-import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
 import java.util.ArrayList;
@@ -77,7 +74,7 @@ public class FlowBasedGenotypesModel extends DRAGENGenotypesModel {
 
             final LikelihoodMatrix<GATKRead, A> sampleLikelihoods = alleleLikelihoodMatrixMapper.mapAlleles(data.readLikelihoods().sampleMatrix(i));
             if (isRefBiasExpected) {
-                applyLikelihoodsAdjusmentToBaseline(genotypeLikelihoods.sampleLikelihoods(i).getAsVector(), "BIAS",
+                applyLikelihoodsAdjustmentToBaseline(genotypeLikelihoods.sampleLikelihoods(i).getAsVector(), "BIAS",
                         GenotypeLikelihoodCalculator.log10GenotypeLikelihoods(samplePloidy, sampleLikelihoods, refBias).getAsVector());
             }
         }

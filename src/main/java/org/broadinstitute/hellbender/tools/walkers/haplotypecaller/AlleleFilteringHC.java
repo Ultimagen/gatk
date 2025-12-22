@@ -41,7 +41,13 @@ public class AlleleFilteringHC extends AlleleFiltering {
         genotypingEngine = _genotypingEngine;
         GenotypeCalculationArgumentCollection config = genotypingEngine.getConfiguration().genotypeArgs;
          afCalc = AlleleFrequencyCalculator.makeCalculator(config);
-         genotypingModel = (FlowBasedGenotypesModel) _genotypingEngine.getGenotypingModel();
+         final Object model = _genotypingEngine.getGenotypingModel();
+         if (model instanceof FlowBasedGenotypesModel) {
+             genotypingModel = (FlowBasedGenotypesModel) model;
+         } else {
+             final String modelDescription = (model == null) ? "null" : model.getClass().getSimpleName();
+             throw new IllegalArgumentException("AlleleFilteringHC requires FlowBasedGenotypesModel but found: " + modelDescription);
+         }
          if (_hcargs==null){
              this.insertionRefBias = 0.5;
          } else {
