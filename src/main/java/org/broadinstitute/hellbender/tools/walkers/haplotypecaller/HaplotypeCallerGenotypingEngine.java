@@ -51,7 +51,7 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
     private final ReferenceConfidenceMode referenceConfidenceMode;
     protected final double snpHeterozygosity;
     protected final double indelHeterozygosity;
-
+    protected final int hpolIndelThreshold;
     private final int maxGenotypeCountToEnumerate;
     private final Map<Integer, Integer> practicalAlleleCountForPloidy = new HashMap<>();
 
@@ -79,6 +79,7 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
                 new IndependentSampleGenotypesModel();
         maxGenotypeCountToEnumerate = configuration.standardArgs.genotypeArgs.maxGenotypeCount;
         referenceConfidenceMode = configuration.emitReferenceConfidence;
+        hpolIndelThreshold = configuration.homopolymerGenotypingThreshold;
         snpHeterozygosity = configuration.standardArgs.genotypeArgs.snpHeterozygosity;
         indelHeterozygosity = configuration.standardArgs.genotypeArgs.indelHeterozygosity;
     }
@@ -161,6 +162,15 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
 
         // null if there is no potential uses of DRAGstr in this region.
         final DragstrReferenceAnalyzer dragstrs = constructDragstrReferenceSTRAnalyzerIfNecessary(haplotypes, ref, refLoc, eventStarts);
+        DragstrReferenceAnalyzer dragstrsForHpolIndels; // for the analysis of long homopolymer indels we generate a degenerate version of the analyzer
+        boolean longHpolIndel = false;
+        if ((hpolIndelThreshold > 0) && (!eventStarts.isEmpty())){
+            final int offset = eventStarts.first() - refLoc.getStart();
+            final int to = eventStarts.last() - refLoc.getStart() + 2;
+            dragstrsForHpolIndels = DragstrReferenceAnalyzer.of(ref, offset, to, 1);
+        } else {
+            dragstrsForHpolIndels = null;
+        }
 
         final BiPredicate<GATKRead, SimpleInterval> readQualifiesForGenotypingPredicate = composeReadQualifiesForGenotypingPredicate(hcArgs);
 
@@ -182,6 +192,11 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
             }
             
             int mergedAllelesListSizeBeforePossibleTrimming = mergedVC.getAlleles().size();
+
+            if (hpolIndelThreshold > 0){
+                longHpolIndel = isEligibleHomopolymerIndel(mergedVC, loc - refLoc.getStart() + 1, dragstrsForHpolIndels, hpolIndelThreshold);
+            }
+
             final Map<Allele, List<Haplotype>> alleleMapper = AssemblyBasedCallerUtils.createAlleleMapper(mergedVC, loc, haplotypes, !hcArgs.disableSpanningEventGenotyping);
 
             if( hcArgs.assemblerArgs.debugAssembly && logger != null ) {
@@ -261,7 +276,7 @@ public class HaplotypeCallerGenotypingEngine extends GenotypingEngine<StandardCa
 
             final GenotypesContext genotypes = calculateGLsForThisEvent(readAlleleLikelihoods, mergedVC, noCallAlleles, ref, loc - refLoc.getStart(), dragstrs);
             final GenotypePriorCalculator gpc = resolveGenotypePriorCalculator(dragstrs, loc - refLoc.getStart() + 1, snpHeterozygosity, indelHeterozygosity);
-            final VariantContext call = calculateGenotypes(new VariantContextBuilder(mergedVC).genotypes(genotypes).make(), gpc, givenAlleles);
+            final VariantContext call = calculateGenotypes(new VariantContextBuilder(mergedVC).genotypes(genotypes).make(), gpc, givenAlleles, longHpolIndel);
             if( call != null ) {
                 readAlleleLikelihoods = prepareReadAlleleLikelihoodsForAnnotation(readLikelihoods, perSampleFilteredReadList,
                         emitReferenceConfidence, alleleMapper, readAlleleLikelihoods, call, variantCallingRelevantOverlap);

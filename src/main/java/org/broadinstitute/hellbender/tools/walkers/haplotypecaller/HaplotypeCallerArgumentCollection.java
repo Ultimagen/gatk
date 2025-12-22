@@ -41,6 +41,7 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
     public static final String DRAGEN_378_GATK_MODE_LONG_NAME = "dragen-378-concordance-mode";
     public static final String APPLY_BQD_LONG_NAME = "apply-bqd";
     public static final String APPLY_FRD_LONG_NAME = "apply-frd";
+    public static final String APPLY_HPOLGT_THRESHOLD_LONG_NAME = "genotype-homopolymer-length-threshold";
     public static final String TRANSFORM_DRAGEN_MAPPING_QUALITY_LONG_NAME = "transform-dragen-mapping-quality";
     public static final String MAPPING_QUALITY_THRESHOLD_FOR_GENOTYPING_LONG_NAME = "mapping-quality-threshold-for-genotyping";
 
@@ -198,6 +199,10 @@ public class HaplotypeCallerArgumentCollection extends AssemblyBasedCallerArgume
     @Advanced
     @Argument(fullName = APPLY_FRD_LONG_NAME, doc = "If enabled this argument will apply the DRAGEN-GATK ForeignReadDetection model to the genotyping model for filtering sites.", optional = true)
     public boolean applyFRD = false;
+
+    @Advanced
+    @Argument(fullName = APPLY_HPOLGT_THRESHOLD_LONG_NAME, doc = "If larger than zero, special genotyping algorithm would be applied for homopolymers longer than this threshold", optional = true)
+    public int homopolymerGenotypingThreshold = 0;
 
     @Advanced
     @Argument(fullName = DISABLE_SPANNING_EVENT_GENOTYPING_LONG_NAME, doc = "If enabled this argument will disable inclusion of the '*' spanning event when genotyping events that overlap deletions", optional = true)

@@ -17,6 +17,7 @@ import org.broadinstitute.hellbender.tools.walkers.annotator.allelespecific.AS_R
 import org.broadinstitute.hellbender.tools.walkers.genotyper.*;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
+import org.broadinstitute.hellbender.utils.dragstr.DragstrReferenceAnalyzer;
 import org.broadinstitute.hellbender.utils.genotyper.IndexedSampleList;
 import org.broadinstitute.hellbender.utils.genotyper.SampleList;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
@@ -68,6 +69,8 @@ public class GenotypeGVCFsEngine
 
     final boolean   keepSB;
 
+    final int homopolymerLengthThreshold;
+
     /**
      * Create and initialize a new GenotypeGVCFsEngine given a collection of GenotypeGVCF arguments and a VCF header
      *  @param annotationEngine variantAnnotatorEngine with annotations to process already added
@@ -77,13 +80,14 @@ public class GenotypeGVCFsEngine
      * @param keepSB keep SB attribute (STRAND_BIAS_BY_SAMPLE)
      */
     public GenotypeGVCFsEngine(final VariantAnnotatorEngine annotationEngine, final GenotypeCalculationArgumentCollection genotypeArgs,
-                               final boolean includeNonVariants, final VCFHeader inputVCFHeader, final boolean keepSB)
+                               final boolean includeNonVariants, final VCFHeader inputVCFHeader, final boolean keepSB, final int homopolymerLengthThreshold)
     {
         this.annotationEngine = annotationEngine;
         this.genotypeArgs = genotypeArgs;
         this.includeNonVariants = includeNonVariants;
         this.inputVCFHeader = inputVCFHeader;
         this.keepSB = keepSB;
+        this.homopolymerLengthThreshold = homopolymerLengthThreshold;
         initialize();
     }
 
@@ -126,26 +130,34 @@ public class GenotypeGVCFsEngine
                                      double sqThreshold, double afTolerance, final boolean outputNonVariants) //do work for apply
     {
         final List<VariantContext> variantsToProcess = getVariantSubsetToProcess(loc, variants);
-
+        int offset;
         if (dragStrParams == null || genotypeArgs.dontUseDragstrPriors) {
-            ref.setWindow(10, 10); //TODO this matches the gatk3 behavior but may be unnecessary
+            ref.setWindow(10, 10 + homopolymerLengthThreshold ); //TODO this matches the gatk3 behavior but may be unnecessary
+            offset = 11;
         } else {
             ref.setWindow(dragStrParams.maximumLengthInBasePairs(), dragStrParams.maximumLengthInBasePairs());
+            offset = dragStrParams.maximumLengthInBasePairs()+1;
         }
+        boolean longHpolIndel = false;
         genotypingEngine.setReferenceContext(ref);
         final VariantContext mergedVC = merger.merge(variantsToProcess, loc, ref.getBase(), true, false);
+
+        if (homopolymerLengthThreshold > 0){
+            DragstrReferenceAnalyzer dragStrForHpolIndels = DragstrReferenceAnalyzer.of(ref.getBases(), 0, ref.getBases().length, 1);
+            longHpolIndel = GenotypingEngine.isEligibleHomopolymerIndel(mergedVC, offset, dragStrForHpolIndels, homopolymerLengthThreshold);
+        }
+
         final VariantContext regenotypedVC = somaticInput ? regenotypeSomaticVC(mergedVC, ref, features, outputNonVariants, tlodThreshold, sqThreshold, afTolerance) :
-                regenotypeVC(mergedVC, ref, features, outputNonVariants);
+                regenotypeVC(mergedVC, ref, features, outputNonVariants, longHpolIndel);
 
         return regenotypedVC;
     }
-
 
     /**
      * Re-genotype (and re-annotate) a combined genomic VC
      * @return a new VariantContext or null if the site turned monomorphic and we don't want such sites
      */
-    private VariantContext regenotypeVC(final VariantContext originalVC, final ReferenceContext ref, final FeatureContext features, boolean includeNonVariants) {
+    private VariantContext regenotypeVC(final VariantContext originalVC, final ReferenceContext ref, final FeatureContext features, boolean includeNonVariants, boolean longHpolIndel) {
         Utils.nonNull(originalVC);
 
         final VariantContext result;
@@ -153,7 +165,7 @@ public class GenotypeGVCFsEngine
         // only re-genotype polymorphic sites
         if ( originalVC.isVariant()  && originalVC.getAttributeAsInt(VCFConstants.DEPTH_KEY,0) > 0 ) {
             // note that the calculateGenotypes method also calculates the QUAL score
-            final VariantContext regenotypedVC = calculateGenotypes(originalVC, includeNonVariants);
+            final VariantContext regenotypedVC = calculateGenotypes(originalVC, includeNonVariants, longHpolIndel);
             if (regenotypedVC == null) {
                 return null;
             }
@@ -244,8 +256,8 @@ public class GenotypeGVCFsEngine
         return new VariantContextBuilder(newVC).attributes(attrs).make();
     }
 
-    private VariantContext calculateGenotypes(VariantContext vc, final boolean forceOutput) {
-        return (forceOutput ? forceOutputGenotypingEngine : genotypingEngine).calculateGenotypes(vc, null, Collections.emptyList());
+    private VariantContext calculateGenotypes(VariantContext vc, final boolean forceOutput, final boolean longHpolIndel) {
+        return (forceOutput ? forceOutputGenotypingEngine : genotypingEngine).calculateGenotypes(vc, null, Collections.emptyList(), longHpolIndel);
     }
 
     /**

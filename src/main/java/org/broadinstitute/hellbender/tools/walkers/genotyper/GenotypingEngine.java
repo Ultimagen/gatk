@@ -7,6 +7,7 @@ import htsjdk.variant.vcf.VCFConstants;
 import htsjdk.variant.vcf.VCFInfoHeaderLine;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.broadinstitute.hellbender.utils.dragstr.DragstrReferenceAnalyzer;
 import org.broadinstitute.hellbender.utils.genotyper.GenotypePriorCalculator;
 import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.afcalc.*;
@@ -125,7 +126,7 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
      * @param vc                                 Input variant context to complete.
      * @return                                   VC with assigned genotypes
      */
-    public VariantContext calculateGenotypes(final VariantContext vc, final GenotypePriorCalculator gpc, final List<Event> givenAlleles) {
+    public VariantContext calculateGenotypes(final VariantContext vc, final GenotypePriorCalculator gpc, final List<Event> givenAlleles, final boolean longHpolIndel) {
         // if input VC can't be genotyped, exit with either null VCC or, in case where we need to emit all sites, an empty call
         if (cannotBeGenotyped(vc) || vc.getNSamples() == 0) {
             return null;
@@ -152,7 +153,7 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
 
         final AFCalculationResult AFresult = alleleFrequencyCalculator.calculate(reducedVC, defaultPloidy);
         final Set<Allele> forcedAlleles = AssemblyBasedCallerUtils.allelesConsistentWithGivenAlleles(givenAlleles, vc);
-        final OutputAlleleSubset outputAlternativeAlleles = calculateOutputAlleleSubset(AFresult, vc, forcedAlleles);
+        final OutputAlleleSubset outputAlternativeAlleles = calculateOutputAlleleSubset(AFresult, vc, forcedAlleles, longHpolIndel);
 
         // note the math.abs is necessary because -10 * 0.0 => -0.0 which isn't nice
         final double log10Confidence =
@@ -164,7 +165,9 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
 
         // return a null call if we don't pass the confidence cutoff or the most likely allele frequency is zero
         // skip this if we are already looking at a vc with NON_REF as the first alt allele i.e. if we are in GenotypeGVCFs
-        if ( !passesEmitThreshold(phredScaledConfidence, outputAlternativeAlleles.siteIsMonomorphic) && !emitAllActiveSites()
+        if ( ! ( passesEmitThreshold(phredScaledConfidence, outputAlternativeAlleles.siteIsMonomorphic) ||
+                (longHpolIndel && passesEmitThresholdHpolIndel(phredScaledConfidence, outputAlternativeAlleles.siteIsMonomorphic)))
+                && !emitAllActiveSites()
                 && noAllelesOrFirstAlleleIsNotNonRef(outputAlternativeAlleles.alleles) && forcedAlleles.isEmpty()) {
             return null;
         }
@@ -244,7 +247,7 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
     }
 
     public VariantContext calculateGenotypes(final VariantContext vc) {
-        return calculateGenotypes(vc, null, Collections.emptyList());
+        return calculateGenotypes(vc, null, Collections.emptyList(), false);
     }
 
     @VisibleForTesting
@@ -293,7 +296,7 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
      * @param forcedAlleles alleles from the vc input that are consistent with forced alleles in the assembly region {@link AssemblyBasedCallerUtils#allelesConsistentWithGivenAlleles}
      * @return information about the alternative allele subsetting {@code null}.
      */
-    private OutputAlleleSubset calculateOutputAlleleSubset(final AFCalculationResult afCalculationResult, final VariantContext vc, final Set<Allele> forcedAlleles) {
+    private OutputAlleleSubset calculateOutputAlleleSubset(final AFCalculationResult afCalculationResult, final VariantContext vc, final Set<Allele> forcedAlleles, final boolean longHpolIndel) {
         final List<Allele> outputAlleles = new ArrayList<>();
         final List<Integer> mleCounts = new ArrayList<>();
         boolean siteIsMonomorphic = true;
@@ -308,7 +311,8 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
                 // we want to keep the NON_REF symbolic allele but only in the absence of a non-symbolic allele, e.g.
                 // if we combined a ref / NON_REF gVCF with a ref / alt gVCF
                 final boolean isNonRefWhichIsLoneAltAllele = alternativeAlleleCount == 1 && allele.equals(Allele.NON_REF_ALLELE);
-                final boolean isPlausible = afCalculationResult.passesThreshold(allele, configuration.genotypeArgs.standardConfidenceForCalling);
+                final boolean isPlausible = afCalculationResult.passesThreshold(allele, configuration.genotypeArgs.standardConfidenceForCalling) ||
+                        (longHpolIndel && afCalculationResult.passesThreshold(allele, configuration.genotypeArgs.homopolymerIndelQualThreshold));
 
                 //it's possible that the upstream deletion that spanned this site was not emitted, mooting the symbolic spanning deletion allele
                 final boolean isSpuriousSpanningDeletion = GATKVCFConstants.isSpanningDeletion(allele) && !isVcCoveredByDeletion(vc);
@@ -426,10 +430,18 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
         return (configuration.outputMode == OutputMode.EMIT_ALL_CONFIDENT_SITES || !bestGuessIsRef) &&
                 passesCallThreshold(conf);
     }
+    protected final boolean passesEmitThresholdHpolIndel(final double conf, final boolean bestGuessIsRef) {
+        return (configuration.outputMode == OutputMode.EMIT_ALL_CONFIDENT_SITES || !bestGuessIsRef) &&
+                passesCallThresholdHpolIndel(conf);
+    }
 
     protected final boolean passesCallThreshold(final double conf) {
         return conf >= configuration.genotypeArgs.standardConfidenceForCalling;
     }
+    protected final boolean passesCallThresholdHpolIndel(final double conf) {
+        return conf >= configuration.genotypeArgs.homopolymerIndelQualThreshold;
+    }
+
 
     protected Map<String,Object> composeCallAttributes(final VariantContext vc, final List<Integer> alleleCountsofMLE,
                                                        final AFCalculationResult AFresult, final List<Allele> allAllelesToUse, final GenotypesContext genotypes) {
@@ -483,4 +495,33 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
         Utils.nonNull(log10GenotypeLikelihoods, "the input likelihoods cannot be null");
         return alleleFrequencyCalculator.calculateSingleSampleBiallelicNonRefPosterior(log10GenotypeLikelihoods, true);
     }
+
+    static public boolean isEligibleHomopolymerIndel(final VariantContext vc, final int loc,
+                                                     final DragstrReferenceAnalyzer dragstrs, final int hpolIndelThreshold) {
+        if (vc==null) {
+            return false;
+        }
+
+        final int period = dragstrs.period(loc);
+        final int repeats = dragstrs.repeatLength(loc);
+        final byte ru = dragstrs.repeatUnit(loc)[0];
+        if ((period == 1) && (repeats >= hpolIndelThreshold)){
+            if (!vc.isIndel() || !vc.getAlleles().stream().allMatch(a -> isHmerIndel(a,ru))) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+        return true;
+    }
+
+    static protected boolean isHmerIndel(final Allele al, final byte hmer_base){
+        for (int i = 1; i< al.length(); i++){
+            if (al.getBases()[i] != hmer_base){
+                return false;
+            }
+        }
+        return true;
+    }
+
 }

@@ -9,9 +9,11 @@ import org.broadinstitute.hellbender.engine.FeatureContext;
 import org.broadinstitute.hellbender.engine.FeatureInput;
 import org.broadinstitute.hellbender.testutils.VariantContextTestUtils;
 import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine;
+import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypingEngine;
 import org.broadinstitute.hellbender.utils.QualityUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
+import org.broadinstitute.hellbender.utils.dragstr.DragstrReferenceAnalyzer;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.genotyper.IndexedAlleleList;
 import org.broadinstitute.hellbender.utils.genotyper.SampleList;
@@ -372,5 +374,122 @@ public final class HaplotypeCallerGenotypingEngineUnitTest extends GATKBaseTest 
         VariantContextTestUtils.assertVariantContextsAreEqual(spanDelWithGTReplacement,
                 expectedSpanDelReplacement, Collections.emptyList(), Collections.emptyList());
 
+    }
+
+    @DataProvider(name = "HomopolymerIndelTestProvider")
+    public Object[][] makeHomopolymerIndelTests() {
+        return new Object[][] {
+                // ref sequence, loc in ref (0-based), ref allele, alt allele, hpolThreshold, expected result
+                // Homopolymer insertion in long A run (10 As) - should be eligible with threshold 8
+                { "GGGAAAAAAAAAAGGG", 3, "A", "AA", 8, true },
+                // Homopolymer deletion in long A run (10 As) - should be eligible with threshold 8
+                { "GGGAAAAAAAAAAGGG", 3, "AA", "A", 8, true },
+                // Homopolymer insertion in short A run (5 As) - should NOT be eligible with threshold 8
+                { "GGGAAAAAGGG", 3, "A", "AA", 8, false },
+                // Homopolymer deletion in short A run (5 As) - should NOT be eligible with threshold 8
+                { "GGGAAAAAGGG", 3, "AA", "A", 8, false },
+                // Homopolymer insertion in T run (12 Ts) - should be eligible with threshold 10
+                { "CCCTTTTTTTTTTTTCCC", 3, "T", "TT", 10, true },
+                // Homopolymer deletion in T run (12 Ts) - should be eligible with threshold 10
+                { "CCCTTTTTTTTTTTTCCC", 3, "TT", "T", 10, true },
+                // SNP in homopolymer region - should NOT be eligible (not an indel)
+                { "GGGAAAAAAAAAAGGG", 3, "A", "T", 8, false },
+                // Indel not matching homopolymer base - should NOT be eligible
+                { "GGGAAAAAAAAAAGGG", 3, "A", "AT", 8, false },
+                // Homopolymer insertion with exactly threshold length - should be eligible
+                { "GGGAAAAAAAAGGG", 3, "A", "AA", 8, true },
+                // Homopolymer insertion with one less than threshold length - should NOT be eligible
+                { "GGGAAAAAAAGGG", 3, "A", "AA", 8, false },
+                // Null VC - should return false
+                { "GGGAAAAAAAAAAGGG", 3, null, null, 8, false },
+        };
+    }
+
+    @Test(dataProvider = "HomopolymerIndelTestProvider")
+    public void testIsEligibleHomopolymerIndel(final String refSequence, final int loc,
+                                               final String refAllele, final String altAllele,
+                                               final int hpolThreshold, final boolean expected) {
+        final byte[] ref = refSequence.getBytes();
+        // Create DragstrReferenceAnalyzer with period 1 for homopolymer analysis
+        final DragstrReferenceAnalyzer dragstrs = DragstrReferenceAnalyzer.of(ref, 0, ref.length, 1);
+
+        final VariantContext vc;
+        if (refAllele == null || altAllele == null) {
+            vc = null;
+        } else {
+            vc = new VariantContextBuilder("source", "1", 1000000, 1000000 + refAllele.length() - 1,
+                    Arrays.asList(Allele.create(refAllele, true), Allele.create(altAllele, false))).make();
+        }
+
+        final boolean result = GenotypingEngine.isEligibleHomopolymerIndel(vc, loc, dragstrs, hpolThreshold);
+        Assert.assertEquals(result, expected,
+                String.format("Failed for ref=%s, loc=%d, refAllele=%s, altAllele=%s, threshold=%d",
+                        refSequence, loc, refAllele, altAllele, hpolThreshold));
+    }
+
+    @Test
+    public void testIsHmerIndelViaIsEligibleHomopolymerIndel() {
+        // Test homopolymer indel allele detection indirectly through isEligibleHomopolymerIndel
+        // A 10-A homopolymer run
+        final byte[] hpolRef = "GGGAAAAAAAAAAGGG".getBytes();
+        final DragstrReferenceAnalyzer dragstrs = DragstrReferenceAnalyzer.of(hpolRef, 0, hpolRef.length, 1);
+
+        // Position 3 is the first A in the homopolymer run
+        final int loc = 3;
+
+        // Test homopolymer A insertion (AAA allele) - should match A base and be eligible
+        final VariantContext hmerInsertionA = new VariantContextBuilder("source", "1", 1000000, 1000000,
+                Arrays.asList(Allele.create("A", true), Allele.create("AAA", false))).make();
+        Assert.assertTrue(GenotypingEngine.isEligibleHomopolymerIndel(hmerInsertionA, loc, dragstrs, 8),
+                "Homopolymer A insertion should be eligible in A homopolymer run");
+
+        // Test mixed allele insertion (ATG allele) - should NOT be eligible (not a homopolymer allele)
+        final VariantContext mixedInsertion = new VariantContextBuilder("source", "1", 1000000, 1000000,
+                Arrays.asList(Allele.create("A", true), Allele.create("ATG", false))).make();
+        Assert.assertFalse(GenotypingEngine.isEligibleHomopolymerIndel(mixedInsertion, loc, dragstrs, 8),
+                "Mixed allele insertion should NOT be eligible");
+
+        // Test homopolymer T insertion in A run - should NOT be eligible (wrong base)
+        final VariantContext hmerInsertionT = new VariantContextBuilder("source", "1", 1000000, 1000000,
+                Arrays.asList(Allele.create("A", true), Allele.create("TT", false))).make();
+        Assert.assertFalse(GenotypingEngine.isEligibleHomopolymerIndel(hmerInsertionT, loc, dragstrs, 8),
+                "Homopolymer T insertion should NOT be eligible in A homopolymer run");
+    }
+
+    @Test
+    public void testHomopolymerGenotypingThresholdNonZero() {
+        // Test that homopolymer indels are correctly identified with various thresholds
+
+        // 15 As in a row - should be eligible with reasonable thresholds
+        final byte[] longHpolRef = "CCCAAAAAAAAAAAAAAACCC".getBytes();
+        final DragstrReferenceAnalyzer dragstrsLong = DragstrReferenceAnalyzer.of(longHpolRef, 0, longHpolRef.length, 1);
+
+        // Verify the period and repeat length at position 3 (first A)
+        Assert.assertEquals(dragstrsLong.period(3), 1, "Period should be 1 for homopolymer");
+        Assert.assertTrue(dragstrsLong.repeatLength(3) >= 10, "Repeat length should be >= 10 for long homopolymer");
+
+        // Create an insertion in the homopolymer
+        final VariantContext hpolInsertion = new VariantContextBuilder("source", "1", 1000000, 1000000,
+                Arrays.asList(Allele.create("A", true), Allele.create("AA", false))).make();
+
+        // Should be eligible with threshold of 8
+        Assert.assertTrue(GenotypingEngine.isEligibleHomopolymerIndel(hpolInsertion, 3, dragstrsLong, 8));
+        // Should be eligible with threshold of 10
+        Assert.assertTrue(GenotypingEngine.isEligibleHomopolymerIndel(hpolInsertion, 3, dragstrsLong, 10));
+        // Should NOT be eligible with threshold of 20 (exceeds homopolymer length)
+        Assert.assertFalse(GenotypingEngine.isEligibleHomopolymerIndel(hpolInsertion, 3, dragstrsLong, 20));
+
+        // Create a deletion in the homopolymer
+        final VariantContext hpolDeletion = new VariantContextBuilder("source", "1", 1000000, 1000001,
+                Arrays.asList(Allele.create("AA", true), Allele.create("A", false))).make();
+
+        // Should be eligible with threshold of 8
+        Assert.assertTrue(GenotypingEngine.isEligibleHomopolymerIndel(hpolDeletion, 3, dragstrsLong, 8));
+
+        // 5 As in a row - should NOT be eligible with threshold of 8
+        final byte[] shortHpolRef = "CCCAAAAACCC".getBytes();
+        final DragstrReferenceAnalyzer dragstrsShort = DragstrReferenceAnalyzer.of(shortHpolRef, 0, shortHpolRef.length, 1);
+
+        Assert.assertFalse(GenotypingEngine.isEligibleHomopolymerIndel(hpolInsertion, 3, dragstrsShort, 8));
     }
 }
