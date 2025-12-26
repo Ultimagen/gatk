@@ -256,7 +256,7 @@ public class HmerIndelBias extends FlowAnnotatorBase implements GenotypeAnnotati
         List<String> alleleBiasStrings = new ArrayList<>();
         for (Allele allele : vc.getAlleles()) {
             int[] counts = biasCounts.get(allele);
-            alleleBiasStrings.add(counts[0] + "," + counts[1]);
+            alleleBiasStrings.add(counts[0] + ";" + counts[1]);
         }
         
         String biasAnnotation = String.join("|", alleleBiasStrings);
