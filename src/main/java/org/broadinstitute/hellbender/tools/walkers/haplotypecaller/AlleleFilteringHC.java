@@ -1,13 +1,18 @@
 package org.broadinstitute.hellbender.tools.walkers.haplotypecaller;
 
+import htsjdk.samtools.SAMFileHeader;
 import htsjdk.variant.variantcontext.Allele;
+import org.apache.commons.lang3.tuple.Pair;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.*;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.afcalc.AFCalculationResult;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.afcalc.AlleleFrequencyCalculator;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.graphs.InverseAllele;
+import org.broadinstitute.hellbender.utils.BaseUtils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleList;
 import org.broadinstitute.hellbender.utils.genotyper.IndexedAlleleList;
+import org.broadinstitute.hellbender.utils.haplotype.Event;
+import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
 import java.io.OutputStreamWriter;
@@ -28,14 +33,23 @@ import java.util.List;
 public class AlleleFilteringHC extends AlleleFiltering {
     private HaplotypeCallerGenotypingEngine genotypingEngine;
     private AlleleFrequencyCalculator afCalc;
-
-    public AlleleFilteringHC(HaplotypeCallerArgumentCollection _hcargs, OutputStreamWriter assemblyDebugStream, HaplotypeCallerGenotypingEngine _genotypingEngine){
-        super(_hcargs, assemblyDebugStream);
+    final double insertionRefBias;
+    FlowBasedGenotypesModel genotypingModel = null;
+    public AlleleFilteringHC(HaplotypeCallerArgumentCollection _hcargs, OutputStreamWriter assemblyDebugStream,
+                             HaplotypeCallerGenotypingEngine _genotypingEngine, final SAMFileHeader header) {
+        super(_hcargs, assemblyDebugStream, header, _hcargs == null ? 0:_hcargs.homopolymerGenotypingThreshold);
         genotypingEngine = _genotypingEngine;
         GenotypeCalculationArgumentCollection config = genotypingEngine.getConfiguration().genotypeArgs;
          afCalc = AlleleFrequencyCalculator.makeCalculator(config);
+         genotypingModel = (FlowBasedGenotypesModel) _genotypingEngine.getGenotypingModel();
+         if (_hcargs==null){
+             this.insertionRefBias = 0.5;
+         } else {
+             this.insertionRefBias = _hcargs.insertionRefBias;
+         }
     }
 
+    protected double getStringentQuality() { return 1; }
     /**
      * Calculate genotype likelihood of requirement of an allele. Specifically, calculates the likelihood
      * of the data given that allele versus the likelihood of the data when all haplotypes containing the allele are removed
@@ -47,29 +61,27 @@ public class AlleleFilteringHC extends AlleleFiltering {
      * @return likelihood, expressed as phred-scaled confidence
      */
     @Override
-    int getAlleleLikelihoodVsInverse(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, Allele allele) {
+    int getAlleleLikelihoodVsInverse(final AlleleLikelihoods<GATKRead, Allele> alleleLikelihoods, final Allele allele, final boolean isRefBiasExpected) {
         final Allele notAllele = InverseAllele.of(allele, true);
 
         // iterate over contigs and see what their qual is.
 
         GenotypingData<Allele> genotypingData = new GenotypingData<>(genotypingEngine.getPloidyModel(), alleleLikelihoods);
 
-        IndependentSampleGenotypesModel genotypesModel = new IndependentSampleGenotypesModel();
-
         AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(notAllele, allele));
 
-        final GenotypingLikelihoods<Allele> genotypingLikelihoods = genotypesModel.calculateLikelihoods(alleleList,
-                genotypingData, null, 0, null);
+        final GenotypingLikelihoods<Allele> genotypingLikelihoods = genotypingModel.calculateLikelihoods(alleleList,
+                genotypingData, null, 0, null, isRefBiasExpected);
 
         List<Integer> perSamplePLs = new ArrayList<>();
         for (int i = 0; i < genotypingLikelihoods.numberOfSamples(); i++) {
             final int[] pls = genotypingLikelihoods.sampleLikelihoods(i).getAsPLs();
             perSamplePLs.add(Math.min(pls[1] - pls[0], pls[2] - pls[0]));
+
             final int finalI = i;
             logger.debug(() -> String.format("GAL (%s):: %s: %d %d %d",
                     genotypingLikelihoods.getSample(finalI), allele.toString(), pls[0], pls[1], pls[2]));
         }
         return Collections.min(perSamplePLs);
     }
-
 }

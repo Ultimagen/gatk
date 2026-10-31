@@ -119,6 +119,7 @@ public final class GenotypeGVCFs extends VariantLocusWalker {
     public static final String KEEP_COMBINED_LONG_NAME = "keep-combined-raw-annotations";
     public static final String KEEP_COMBINED_SHORT_NAME = "keep-combined";
     public static final String FORCE_OUTPUT_INTERVALS_NAME = "force-output-intervals";
+    public static final String HPOL_LENGTH_THRESHOLD_LONG_NAME = "hpol-length-threshold";
     public static final String SOMATIC_QUALITY_THRESHOLD_NAME = "somatic-quality-threshold";
 
     @Argument(fullName = StandardArgumentDefinitions.OUTPUT_LONG_NAME, shortName = StandardArgumentDefinitions.OUTPUT_SHORT_NAME,
@@ -167,6 +168,11 @@ public final class GenotypeGVCFs extends VariantLocusWalker {
     @Argument(fullName=CombineGVCFs.ALLELE_FRACTION_DELTA_LONG_NAME, doc = "Margin of error in allele fraction to consider a somatic variant homoplasmic")
     protected double afTolerance = 1e-3;  //based on Q30 as a "good" base quality score
 
+    /**
+     * Threshold of length for homopolymer runs to have a separate confidence threshold
+     */
+    @Argument(fullName=HPOL_LENGTH_THRESHOLD_LONG_NAME, doc = "Threshold of length for homopolymer runs to have a separate confidence threshold")
+    protected int homopolymerLengthThreshold = 0;
     /**
      * If specified, keep all the combined raw annotations (e.g. AS_SB_TABLE) after genotyping.  This is applicable to Allele-Specific annotations. See {@link ReducibleAnnotation}
      */
@@ -309,7 +315,7 @@ public final class GenotypeGVCFs extends VariantLocusWalker {
 
         //create engine object
         final boolean   keepSB = variantAnnotations.stream().map(a -> a.getClass().getSimpleName()).collect(Collectors.toList()).contains(StrandBiasBySample.class.getSimpleName());
-        gvcfEngine = new GenotypeGVCFsEngine(annotationEngine, genotypeArgs, includeNonVariants, inputVCFHeader, keepSB);
+        gvcfEngine = new GenotypeGVCFsEngine(annotationEngine, genotypeArgs, includeNonVariants, inputVCFHeader, keepSB, homopolymerLengthThreshold);
 
         //call initialize method in engine class that creates VCFWriter object and writes a header to it
         vcfWriter = gvcfEngine.setupVCFWriter(defaultToolVCFHeaderLines, keepCombined, dbsnp, vcfWriter);
