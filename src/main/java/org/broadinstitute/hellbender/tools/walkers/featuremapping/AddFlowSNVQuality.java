@@ -195,7 +195,7 @@ public final class AddFlowSNVQuality extends ReadWalker {
             // access data
             final byte[] bases = read.getBasesNoCopy();
             final byte[] quals = read.getBaseQualitiesNoCopy();
-            final byte[] tp = read.getAttributeAsByteArray(FlowBasedRead.FLOW_MATRIX_TAG_NAME);
+            final byte[] tp = FlowBasedReadUtils.getTpValues(read, getHeaderForReads());
             final byte[] t0 = read.getAttributeAsByteArray(FlowBasedRead.FLOW_MATRIX_T0_TAG_NAME);
             final byte[] bq = (aqArgs.outputQualityAttribute != null)
                     ? read.getAttributeAsString(aqArgs.outputQualityAttribute).getBytes()

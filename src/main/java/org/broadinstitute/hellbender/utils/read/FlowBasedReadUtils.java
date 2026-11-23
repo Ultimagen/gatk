@@ -165,6 +165,93 @@ public class FlowBasedReadUtils {
         }
     }
 
+    /** name of the read group attribute holding the maximal QUAL character (tp:Z sparse format) */
+    public static final String READ_GROUP_MAX_QUAL_ATTRIBUTE = "mq";
+
+    /**
+     * @return the maximal quality (phred, not ascii) declared by the read group's mq attribute, or null if absent
+     */
+    public static Byte getReadGroupMaxQual(final SAMReadGroupRecord rg) {
+        if ( rg == null ) {
+            return null;
+        }
+        final String mq = rg.getAttribute(READ_GROUP_MAX_QUAL_ATTRIBUTE);
+        if ( mq == null ) {
+            return null;
+        }
+        if ( mq.length() != 1 ) {
+            throw new GATKException("Illegal read group mq attribute (expected a single character): " + mq);
+        }
+        return (byte)(mq.charAt(0) - 33);
+    }
+
+    /**
+     * Decode the tp tag of a record into a dense per-base array of -1/0/+1.
+     * Supports the old format (tp:B:c, one value per base) and the sparse format (tp:Z containing only '+' and '-'
+     * for bases whose QUAL differs from the read group's mq; an absent tag means all zeros when mq is present).
+     *
+     * @param rec record
+     * @param header header used to find the read group (if null, the record's own header is used)
+     * @return dense tp array, or null if the read has no tp tag and its read group has no mq
+     * @throws GATKException if the sparse tag is malformed, or mq is missing for a tp:Z tag
+     */
+    public static byte[] getTpValues(final SAMRecord rec, final SAMFileHeader header) {
+        final Object tp = rec.getAttribute(FlowBasedRead.FLOW_MATRIX_TAG_NAME);
+        if ( tp != null && !(tp instanceof String) ) {
+            return rec.getSignedByteArrayAttribute(FlowBasedRead.FLOW_MATRIX_TAG_NAME);
+        }
+
+        final SAMFileHeader hdr = (header != null) ? header : rec.getHeader();
+        final String rgName = (String)rec.getAttribute("RG");
+        final Byte mq = (hdr != null && rgName != null) ? getReadGroupMaxQual(hdr.getReadGroup(rgName)) : null;
+        if ( mq == null ) {
+            if ( tp == null ) {
+                return null;
+            }
+            throw new GATKException("tp:Z tag requires read group mq attribute: " + rec.getReadName());
+        }
+
+        final byte[] quals = rec.getBaseQualities();
+        final byte[] result = new byte[quals.length];
+        final String sparse = (tp == null) ? "" : (String)tp;
+        int next = 0;
+        for ( int i = 0 ; i < quals.length ; i++ ) {
+            if ( quals[i] == mq ) {
+                continue;
+            }
+            if ( next >= sparse.length() ) {
+                throw new GATKException("tp string too short for read " + rec.getReadName());
+            }
+            final char c = sparse.charAt(next++);
+            if ( c == '+' ) {
+                result[i] = 1;
+            } else if ( c == '-' ) {
+                result[i] = -1;
+            } else {
+                throw new GATKException("Illegal character '" + c + "' in tp string of read " + rec.getReadName());
+            }
+        }
+        if ( next != sparse.length() ) {
+            throw new GATKException("tp string has leftover characters for read " + rec.getReadName());
+        }
+        return result;
+    }
+
+    /** same as {@link #getTpValues(SAMRecord, SAMFileHeader)} for a GATKRead */
+    public static byte[] getTpValues(final GATKRead read, final SAMFileHeader header) {
+        if ( read instanceof SAMRecordToGATKReadAdapter ) {
+            return getTpValues(((SAMRecordToGATKReadAdapter)read).getEncapsulatedSamRecord(), header);
+        }
+        // no access to the underlying record type: only the old format can be handled
+        return read.getAttributeAsByteArray(FlowBasedRead.FLOW_MATRIX_TAG_NAME);
+    }
+
+    /** true if the read has flow tags, or (header permitting) belongs to a read group declaring mq (absent tp == all zeros) */
+    public static boolean hasFlowTags(final GATKRead rec, final SAMFileHeader hdr) {
+        return hasFlowTags(rec) || (hdr != null && rec.getReadGroup() != null
+                && getReadGroupMaxQual(hdr.getReadGroup(rec.getReadGroup())) != null);
+    }
+
     public static boolean hasFlowTags(final GATKRead rec) {
         return rec.hasAttribute(FlowBasedRead.FLOW_MATRIX_TAG_NAME)
                 || rec.hasAttribute(FlowBasedRead.FLOW_MATRiX_OLD_TAG_KR)
@@ -173,6 +260,8 @@ public class FlowBasedReadUtils {
 
     public static boolean hasFlowTags(final SAMRecord rec) {
         return rec.hasAttribute(FlowBasedRead.FLOW_MATRIX_TAG_NAME)
+                || (rec.getHeader() != null && rec.getAttribute("RG") != null
+                    && getReadGroupMaxQual(rec.getHeader().getReadGroup((String)rec.getAttribute("RG"))) != null)
                 || rec.hasAttribute(FlowBasedRead.FLOW_MATRiX_OLD_TAG_KR)
                 || rec.hasAttribute(FlowBasedRead.FLOW_MATRiX_OLD_TAG_TI);
 
@@ -187,14 +276,14 @@ public class FlowBasedReadUtils {
      * @return true if the read is flow-based
      */
     public static boolean isFlowPlatform(final SAMFileHeader hdr, final GATKRead read) {
-        if (!hasFlowTags(read)){
+        if (!hasFlowTags(read, hdr)){
             return false;
         }
         return getReadGroupInfo(hdr, read).isFlowPlatform;
     }
     public static synchronized ReadGroupInfo getReadGroupInfo(final SAMFileHeader hdr, final GATKRead read) {
 
-        if ( !hasFlowTags(read) ) {
+        if ( !hasFlowTags(read, hdr) ) {
             throw new IllegalArgumentException("read must be flow based: " + read);
         }
 
