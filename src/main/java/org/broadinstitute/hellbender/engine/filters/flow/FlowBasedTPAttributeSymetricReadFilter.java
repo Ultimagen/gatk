@@ -3,7 +3,7 @@ package org.broadinstitute.hellbender.engine.filters.flow;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.utils.help.HelpConstants;
-import org.broadinstitute.hellbender.utils.read.FlowBasedRead;
+import org.broadinstitute.hellbender.utils.read.FlowBasedReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
 /**
@@ -26,7 +26,7 @@ public class FlowBasedTPAttributeSymetricReadFilter extends ReadFilter implement
 
     @Override
     public byte[] getValuesOfInterest(GATKRead read) {
-        return read.getAttributeAsByteArray(FlowBasedRead.FLOW_MATRIX_TAG_NAME);
+        return FlowBasedReadUtils.getTpValues(read, samHeader);
     }
 
     @Override

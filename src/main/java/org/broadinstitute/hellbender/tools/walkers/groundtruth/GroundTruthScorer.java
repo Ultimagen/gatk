@@ -693,7 +693,7 @@ public class GroundTruthScorer extends ReadWalker {
 
         final int[] key = flowRead.getKey();
         byte[] result = new byte[key.length];
-        final byte[] tp = flowRead.getAttributeAsByteArray("tp");
+        final byte[] tp = FlowBasedReadUtils.getTpValues(flowRead, null);
         final byte[] qual = flowRead.getBaseQualitiesNoCopy();
 
         // loop om key

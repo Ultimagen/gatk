@@ -186,7 +186,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
      * @param fbargs arguments that control resolution etc. of the flow matrix
      */
     public FlowBasedRead(final GATKRead read, final String flowOrder, final int maxHmer, final FlowBasedArgumentCollection fbargs) {
-        this(read.convertToSAMRecord(null), flowOrder, maxHmer, fbargs);
+        this((read instanceof SAMRecordToGATKReadAdapter) ? ((SAMRecordToGATKReadAdapter)read).getEncapsulatedSamRecord() : read.convertToSAMRecord(null), flowOrder, maxHmer, fbargs);
     }
 
     /**
@@ -205,7 +205,8 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
         this.samRecord = samRecord;
 
         // read flow matrix in. note that below code contains accommodates for old formats
-        if ( samRecord.hasAttribute(FLOW_MATRIX_TAG_NAME) ) {
+        if ( samRecord.hasAttribute(FLOW_MATRIX_TAG_NAME)
+                || (FlowBasedReadUtils.hasFlowTags(samRecord) && !samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_KR) && !samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_TI)) ) {
             perHmerMinErrorProb = fbargs.fillingValue;
             totalMinErrorProb = perHmerMinErrorProb;
             // this path is the production path. A flow read should contain a FLOW_MATRIX_TAG_NAME tag
@@ -298,7 +299,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
 
         // access qual, convert to flow representation
         final byte[]      quals = samRecord.getBaseQualities();
-        final byte[]      tp = samRecord.getSignedByteArrayAttribute(FLOW_MATRIX_TAG_NAME);
+        final byte[]      tp = FlowBasedReadUtils.getTpValues(samRecord, null);
 
         boolean specialTreatmentForZeroCalls = false;
         final byte[]      t0 = SAMUtils.fastqToPhred(samRecord.getStringAttribute(FLOW_MATRIX_T0_TAG_NAME));
@@ -476,7 +477,7 @@ public class FlowBasedRead extends SAMRecordToGATKReadAdapter implements GATKRea
     }
 
     private boolean isBaseFormat() {
-       return samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_TI) || samRecord.hasAttribute(FLOW_MATRIX_TAG_NAME);
+       return samRecord.hasAttribute(FLOW_MATRiX_OLD_TAG_TI) || FlowBasedReadUtils.getTpValues(samRecord, null) != null;
     }
 
     private void fillFlowMatrix(final int [] kh, final int [] kf,

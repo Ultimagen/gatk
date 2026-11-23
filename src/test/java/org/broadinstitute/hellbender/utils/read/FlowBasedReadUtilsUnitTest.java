@@ -1,6 +1,7 @@
 package org.broadinstitute.hellbender.utils.read;
 import htsjdk.samtools.*;
 import org.broadinstitute.hellbender.GATKBaseTest;
+import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.FlowBasedArgumentCollection;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
@@ -138,4 +139,78 @@ public class FlowBasedReadUtilsUnitTest extends GATKBaseTest{
         FlowBasedReadUtils.isFlowPlatform(hdr, read);
     }
 
+
+    // ---- tp tag decoding (old tp:B:c and sparse tp:Z + @RG mq) ----
+
+    private static SAMFileHeader tpHeader(final String mq) {
+        final SAMFileHeader header = new SAMFileHeader();
+        final SAMReadGroupRecord rg = new SAMReadGroupRecord("rg1");
+        rg.setPlatform("ULTIMA");
+        rg.setFlowOrder("TGCA");
+        if (mq != null) {
+            rg.setAttribute("mq", mq);
+        }
+        header.addReadGroup(rg);
+        return header;
+    }
+
+    private static SAMRecord tpRecord(final SAMFileHeader header, final String qual, final Object tp) {
+        final SAMRecord rec = new SAMRecord(header);
+        rec.setReadName("r1");
+        rec.setReadUnmappedFlag(true);
+        rec.setReadString("CAGAGCCACCCACG".substring(0, qual.length()));
+        rec.setBaseQualityString(qual);
+        rec.setAttribute("RG", "rg1");
+        if (tp != null) {
+            rec.setAttribute("tp", tp);
+        }
+        return rec;
+    }
+
+    @Test
+    public void testTpOldFormat() {
+        final byte[] tp = {0, 1, 1, 0, 1, -1, -1, 1, 1, -1, 1, 0, 1, 1};
+        final SAMRecord rec = tpRecord(tpHeader(null), "DDDD:::*:D:D::", tp);
+        Assert.assertEquals(FlowBasedReadUtils.getTpValues(rec, null), tp);
+        Assert.assertEquals(FlowBasedReadUtils.getTpValues(new SAMRecordToGATKReadAdapter(rec), rec.getHeader()), tp);
+    }
+
+    @Test
+    public void testTpSparse() {
+        final SAMRecord rec = tpRecord(tpHeader("D"), "DDDD:::*:D:D::", "+--+++++");
+        final byte[] expected = {0, 0, 0, 0, 1, -1, -1, 1, 1, 0, 1, 0, 1, 1};
+        Assert.assertEquals(FlowBasedReadUtils.getTpValues(rec, null), expected);
+        Assert.assertEquals(FlowBasedReadUtils.getTpValues(new SAMRecordToGATKReadAdapter(rec), rec.getHeader()), expected);
+    }
+
+    @Test
+    public void testTpAbsent() {
+        final SAMRecord withMq = tpRecord(tpHeader("D"), "DDDD", null);
+        Assert.assertEquals(FlowBasedReadUtils.getTpValues(withMq, null), new byte[4]);
+        Assert.assertTrue(FlowBasedReadUtils.hasFlowTags(withMq));
+        Assert.assertTrue(FlowBasedReadUtils.isFlowPlatform(withMq.getHeader(), new SAMRecordToGATKReadAdapter(withMq)));
+
+        // empty string is also all zeros
+        Assert.assertEquals(FlowBasedReadUtils.getTpValues(tpRecord(tpHeader("D"), "DDDD", ""), null), new byte[4]);
+
+        // no tp and no mq: not a tp read
+        final SAMRecord noMq = tpRecord(tpHeader(null), "DDDD", null);
+        Assert.assertNull(FlowBasedReadUtils.getTpValues(noMq, null));
+        Assert.assertFalse(FlowBasedReadUtils.hasFlowTags(noMq));
+    }
+
+    @DataProvider(name = "badTp")
+    public Object[][] badTp() {
+        return new Object[][] {
+                {"D", "D::", "+"},      // too short
+                {"D", "D::", "+-+"},    // leftover
+                {"D", "D::", "+0"},     // bad character
+                {null, "D::", "+-"},    // tp:Z without mq
+        };
+    }
+
+    @Test(dataProvider = "badTp", expectedExceptions = GATKException.class)
+    public void testTpInvalid(final String mq, final String qual, final String tp) {
+        FlowBasedReadUtils.getTpValues(tpRecord(tpHeader(mq), qual, tp), null);
+    }
 }
